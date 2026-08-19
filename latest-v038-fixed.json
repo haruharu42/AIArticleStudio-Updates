@@ -1,7 +1,7 @@
 {
-  "version": "0.3.8",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.8_WebAIQualityModelSync_Fixed.zip",
-  "sha256": "9AF080BA02FAF6D84A6F2D569141796304359898D6794D783539C79448DA84C2",
+  "version": "0.3.9",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.9_WebAIModelCleanup_PublishLinks.zip",
+  "sha256": "00C387701831A3F3E9663783F9BD16CA87251931AE2388FE7BE9AA795050C6F0",
   "channel": "stable",
-  "notes": "Fixed v0.3.8 package: avoids Windows PowerShell 5.1 mojibake by using ASCII-only inline validation. Feature patch is unchanged."
+  "notes": "Standard ChatGPT Web choices exclude Sol Pro/Terra/Luna; quality and model dropdowns sync both ways; note/Tips/Brain launch buttons added."
 }
