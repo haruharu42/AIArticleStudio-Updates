@@ -1,0 +1,57 @@
+name: Validate update release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'latest*.json'
+      - 'updates/**'
+      - 'scripts/**'
+      - '.github/workflows/validate-release.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'latest*.json'
+      - 'updates/**'
+      - 'scripts/**'
+      - '.github/workflows/validate-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-package:
+    name: ZIP / SHA256 / Python validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate latest release
+        run: python scripts/validate_release.py latest.json
+
+  validate-windows-powershell51:
+    name: Windows PowerShell 5.1 validation
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate package with Python
+        shell: powershell
+        run: python scripts/validate_release.py latest.json
+
+      - name: Parse and expand with Windows PowerShell 5.1
+        shell: powershell
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\latest.json
