@@ -1,0 +1,7 @@
+{
+  "version": "0.3.7",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.7_WebAIModelDefaults_Recovery.zip",
+  "sha256": "E4100CAC7E14250499CF9BBE49148FBD7E860406EC57E9DC1EE9429782FBECDE",
+  "channel": "stable",
+  "notes": "Recovery package for v0.3.7. Uses a verified valid ZIP and patches only the Web AI model defaults plus version metadata."
+}
