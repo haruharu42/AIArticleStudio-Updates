@@ -9,6 +9,45 @@ CORE_IMPORTS='''from ..core.web_ai_config import load_web_ai_model_config\nfrom 
 
 INIT_INSERT='''        # v0.4.0 Phase 3.5 integrated Web AI\n        _data_base = Path(os.getenv("LOCALAPPDATA") or str(Path.home())) / "AIArticleStudio" / "data"\n        self.web_ai_model_config = load_web_ai_model_config(_data_base)\n        self.web_ai_bridge = WebAIUIBridge()\n'''
 
+PUBLISH_CONSTANTS='''PUBLISH_PLATFORM_URLS = {\n    "note": "https://note.com/",\n    "Tips": "https://tips.jp/",\n    "Brain": "https://brain-market.com/",\n}\n'''
+
+WEB_SETTINGS=r'''        self.web_settings_card = self.card(body, bg=SURFACE_2)
+        self._section_title(self.web_settings_card, "WEB", "Web版AIの設定", "使用するAI・生成品質・モデルを連動して選べます")
+        webgrid = tk.Frame(self.web_settings_card, bg=SURFACE_2)
+        webgrid.pack(fill="x", padx=20, pady=(0,12)); webgrid.grid_columnconfigure(1,weight=1); webgrid.grid_columnconfigure(3,weight=1)
+        self.vars["web_ai_service"] = tk.StringVar(value="ChatGPT")
+        self.vars["web_ai_quality"] = tk.StringVar(value="標準")
+        self.vars["web_ai_model"] = tk.StringVar(value=self.web_ai_model_config.default_label("ChatGPT", "標準"))
+        self._label(webgrid,"使用するWeb AI",size=9,fg=SOFT,bg=SURFACE_2).grid(row=0,column=0,sticky="w",padx=(0,8),pady=6)
+        self.web_ai_cb = ttk.Combobox(webgrid,textvariable=self.vars["web_ai_service"],values=["ChatGPT","Claude","Gemini","その他"],state="readonly",style="Dark.TCombobox")
+        self.web_ai_cb.grid(row=0,column=1,sticky="ew",padx=(0,16),pady=6)
+        self.web_ai_cb.bind("<<ComboboxSelected>>", self._web_ai_service_changed)
+        self._label(webgrid,"生成品質",size=9,fg=SOFT,bg=SURFACE_2).grid(row=0,column=2,sticky="w",padx=(0,8),pady=6)
+        self.web_ai_quality_cb = ttk.Combobox(webgrid,textvariable=self.vars["web_ai_quality"],values=["速さ優先","標準","高品質"],state="readonly",style="Dark.TCombobox")
+        self.web_ai_quality_cb.grid(row=0,column=3,sticky="ew",pady=6)
+        self.web_ai_quality_cb.bind("<<ComboboxSelected>>", self._web_ai_quality_changed)
+        self._label(webgrid,"モデル / 推論モード",size=9,fg=SOFT,bg=SURFACE_2).grid(row=1,column=0,sticky="w",padx=(0,8),pady=6)
+        self.web_ai_model_cb = ttk.Combobox(webgrid,textvariable=self.vars["web_ai_model"],values=self.web_ai_model_config.labels("ChatGPT"),state="readonly",style="Dark.TCombobox")
+        self.web_ai_model_cb.grid(row=1,column=1,columnspan=3,sticky="ew",pady=6)
+        self.web_ai_model_cb.bind("<<ComboboxSelected>>", self._web_ai_model_changed)
+        self.web_ai_model_note = self._label(webgrid,f"モデル一覧は外部設定と24時間キャッシュで更新します（{self.web_ai_model_config.source}）。",size=8,fg=MUTED,bg=SURFACE_2)
+        self.web_ai_model_note.grid(row=2,column=1,columnspan=3,sticky="w",pady=(0,4))
+        guide=tk.Frame(self.web_settings_card,bg="#131B31",highlightthickness=1,highlightbackground="#2E315C")
+        guide.pack(fill="x",padx=20,pady=(0,16))
+        self._label(guide,"💡 チャットの使い方",size=9,bold=True,fg="#C4B5FD",bg="#131B31").pack(anchor="w",padx=12,pady=(10,4))
+        self._label(guide,"新しい記事は『1記事につき1チャット』がおすすめです。同じ記事の修正・特典追加は同じチャットでもOKです。完成記事用プロンプトは自己完結型なので、新しいチャットに貼っても使えます。",size=8,fg=SOFT,bg="#131B31",wraplength=760,justify="left").pack(anchor="w",padx=12,pady=(0,8))
+        openrow = tk.Frame(guide, bg="#131B31")
+        openrow.pack(fill="x", padx=12, pady=(0,10))
+        self.web_ai_open_btn = self._primary_button(openrow,"ChatGPTを開く",self._open_selected_web_ai)
+        self.web_ai_open_btn.pack(side="left")
+        self._secondary_button(openrow,"ChatGPT",lambda:self._open_web_ai_site("ChatGPT")).pack(side="left",padx=(8,4))
+        self._secondary_button(openrow,"Claude",lambda:self._open_web_ai_site("Claude")).pack(side="left",padx=4)
+        self._secondary_button(openrow,"Gemini",lambda:self._open_web_ai_site("Gemini")).pack(side="left",padx=4)
+        self._label(guide,"※ 外部ブラウザで公式Web版を開きます。ログインや送信操作はアプリから自動操作しません。",size=8,fg=MUTED,bg="#131B31").pack(anchor="w",padx=12,pady=(0,10))
+
+        # Basic settings
+'''
+
 SERVICE_METHODS=r'''    def _web_ai_service_changed(self, _event=None):
         service = self.vars.get("web_ai_service").get() if self.vars.get("web_ai_service") else "ChatGPT"
         if hasattr(self, "web_ai_open_btn"):
@@ -70,6 +109,36 @@ SERVICE_METHODS=r'''    def _web_ai_service_changed(self, _event=None):
     def _genre_changed(self, _event=None):
 '''
 
+PUBLISH_LINKS=r'''        publish_links=tk.Frame(step4,bg=SURFACE)
+        publish_links.pack(fill="x",padx=18,pady=(0,14))
+        self._label(publish_links,"掲載先を開く",size=8,fg=MUTED).pack(side="left",padx=(0,8))
+        self._secondary_button(publish_links,"note",lambda:self._open_publish_platform("note")).pack(side="left",padx=(0,4))
+        self._secondary_button(publish_links,"Tips",lambda:self._open_publish_platform("Tips")).pack(side="left",padx=4)
+        self._secondary_button(publish_links,"Brain",lambda:self._open_publish_platform("Brain")).pack(side="left",padx=4)
+'''
+
+COMPLETION=r'''        def finish_web_article():
+            text_now=current_publish_text()
+            ready=self.web_ai_bridge.publish_step(text_now, platform=req.platform) if text_now else {"can_publish":False}
+            if not ready.get("can_publish"):
+                messagebox.showwarning("作成完了", "記事を掲載用に整えてから完了してください。")
+                return
+            self.web_ai_bridge.mark_completed()
+            messagebox.showinfo("作成完了", "記事作成を完了しました。掲載先で最終確認して公開してください。")
+        self._primary_button(publish_links,"✓ 作成完了",finish_web_article).pack(side="right")
+'''
+
+RESUME_PREFILL=r'''        _snap = self.web_ai_bridge.current_snapshot()
+        if _resume.get("visible"):
+            if _snap.get("selected_title"):
+                selected_title.set(_snap.get("selected_title", ""))
+                prompt_status.configure(text=f"再開：{selected_title.get()}", fg="#86EFAC")
+            if _snap.get("raw_web_output"):
+                final_text.delete("1.0","end"); final_text.insert("1.0", _snap.get("raw_web_output", ""))
+            if _snap.get("formatted_output"):
+                formatted_text.configure(state="normal"); formatted_text.delete("1.0","end"); formatted_text.insert("1.0", _snap.get("formatted_output", ""))
+'''
+
 def replace_once(text, pattern, replacement, label, flags=0):
     new,n=re.subn(pattern, lambda m: replacement, text, count=1, flags=flags)
     if n!=1: raise RuntimeError(f'{label}: expected 1 match, got {n}')
@@ -100,11 +169,13 @@ def main():
     if init_anchor not in text: raise RuntimeError('App init anchor not found')
     text=text.replace(init_anchor, init_anchor+INIT_INSERT,1)
 
-    text=text.replace('self.vars["web_ai_model"] = tk.StringVar(value="GPT-5.6 Sol（Medium）")', 'self.vars["web_ai_model"] = tk.StringVar(value=self.web_ai_model_config.default_label("ChatGPT", "標準"))',1)
-    text=re.sub(r'values=(?:WEB_AI_MODEL_OPTIONS\["ChatGPT"\]|web_ai_models_for\("ChatGPT"\))', 'values=self.web_ai_model_config.labels("ChatGPT")', text, count=1)
-    text=re.sub(r'self\.web_ai_model_note = self\._label\(webgrid,.*?\)\n        self\.web_ai_model_note\.grid\(row=2,column=1,columnspan=3,sticky="w",pady=\(0,4\)\)',
-                'self.web_ai_model_note = self._label(webgrid,f"モデル一覧は外部設定と24時間キャッシュで更新します（{self.web_ai_model_config.source}）。",size=8,fg=MUTED,bg=SURFACE_2)\n        self.web_ai_model_note.grid(row=2,column=1,columnspan=3,sticky="w",pady=(0,4))',text,count=1,flags=re.S)
+    text=replace_once(text,r'        self\.web_settings_card = self\.card\(body, bg=SURFACE_2\)\n.*?        # Basic settings\n',WEB_SETTINGS,'Web AI settings block',flags=re.S)
     text=replace_once(text,r'    def _web_ai_service_changed\(self, _event=None\):\n.*?    def _genre_changed\(self, _event=None\):\n',SERVICE_METHODS,'web ai helper methods',flags=re.S)
+
+    if 'PUBLISH_PLATFORM_URLS = {' not in text:
+        class_pos=text.find('\n\nclass App(tk.Tk):')
+        if class_pos<0: raise RuntimeError('class App marker not found')
+        text=text[:class_pos]+'\n\n'+PUBLISH_CONSTANTS.rstrip()+text[class_pos:]
 
     old='        title_prompt_text = title_prompt(req.__dict__)\n'
     new='''        _provider = getattr(req, "web_ai_service", "ChatGPT")\n        _quality = getattr(req, "web_ai_quality", "標準")\n        _model = getattr(req, "web_ai_model", "")\n        _title_step = self.web_ai_bridge.build_title_step(req.__dict__, provider=_provider, quality=_quality, model_label=_model)\n        title_prompt_text = _title_step["prompt"]\n'''
@@ -118,7 +189,12 @@ def main():
 
     top_anchor='        self._label(top, f"使用AI: {getattr(req, \'web_ai_service\', \'Web版AI\')} / 品質: {getattr(req, \'web_ai_quality\', \'標準\')}　｜　新しい記事は『1記事につき1チャット』推奨", size=8, fg="#C4B5FD", bg=BG).pack(anchor="w", pady=(5,0))\n'
     resume='''        _resume = self.web_ai_bridge.resume_card()\n        if _resume.get("visible"):\n            self._label(top, "続きから：" + _resume.get("label", ""), size=8, fg="#86EFAC", bg=BG).pack(anchor="w", pady=(5,0))\n'''
-    if top_anchor in text: text=text.replace(top_anchor,top_anchor+resume,1)
+    if top_anchor in text:
+        text=text.replace(top_anchor,top_anchor+resume,1)
+    else:
+        win_anchor='        win.configure(bg=BG)\n'
+        if win_anchor not in text: raise RuntimeError('Web AI window anchor not found')
+        text=text.replace(win_anchor,win_anchor+'        _resume = self.web_ai_bridge.resume_card()\n',1)
 
     pattern=r'        def local_format\(\):\n.*?\n        web_saved_record=\{"value":None\}\n'
     replacement=r'''        def local_format():
@@ -166,15 +242,16 @@ def main():
     if controls_anchor not in text: raise RuntimeError('controls4 anchor not found')
     text=text.replace(controls_anchor,repair_fn+controls_anchor,1)
     button_anchor='        self._secondary_button(controls4,"元＋掲載用を保存",save_markdown).pack(side="left")\n'
-    text=text.replace(button_anchor,button_anchor+'        self._secondary_button(controls4,"修正用プロンプト",copy_repair_prompt).pack(side="left",padx=8)\n',1)
+    if button_anchor not in text: raise RuntimeError('save button anchor not found')
+    repair_button='        self._secondary_button(controls4,"修正用プロンプト",copy_repair_prompt).pack(side="left",padx=8)\n'
+    text=text.replace(button_anchor,button_anchor+repair_button,1)
 
     publish_anchor='        self._secondary_button(publish_links,"Brain",lambda:self._open_publish_platform("Brain")).pack(side="left",padx=4)\n'
-    completion='''        def finish_web_article():\n            text_now=current_publish_text()\n            ready=self.web_ai_bridge.publish_step(text_now, platform=req.platform) if text_now else {"can_publish":False}\n            if not ready.get("can_publish"):\n                messagebox.showwarning("作成完了", "記事を掲載用に整えてから完了してください。")\n                return\n            self.web_ai_bridge.mark_completed()\n            messagebox.showinfo("作成完了", "記事作成を完了しました。掲載先で最終確認して公開してください。")\n        self._primary_button(publish_links,"✓ 作成完了",finish_web_article).pack(side="right")\n'''
-    if publish_anchor not in text: raise RuntimeError('publish links anchor not found')
-    text=text.replace(publish_anchor,publish_anchor+completion,1)
-
-    resume_prefill='''        _snap = self.web_ai_bridge.current_snapshot()\n        if _resume.get("visible"):\n            if _snap.get("selected_title"):\n                selected_title.set(_snap.get("selected_title", ""))\n                prompt_status.configure(text=f"再開：{selected_title.get()}", fg="#86EFAC")\n            if _snap.get("raw_web_output"):\n                final_text.delete("1.0","end"); final_text.insert("1.0", _snap.get("raw_web_output", ""))\n            if _snap.get("formatted_output"):\n                formatted_text.configure(state="normal"); formatted_text.delete("1.0","end"); formatted_text.insert("1.0", _snap.get("formatted_output", ""))\n'''
-    text=text.replace(completion,completion+resume_prefill,1)
+    if publish_anchor not in text:
+        text=text.replace(repair_button,repair_button+PUBLISH_LINKS,1)
+    if publish_anchor not in text:
+        raise RuntimeError('publish links could not be created')
+    text=text.replace(publish_anchor,publish_anchor+COMPLETION+RESUME_PREFILL,1)
 
     class_anchor='\n\nclass App(tk.Tk):'
     if class_anchor not in text: raise RuntimeError('class App anchor not found')
