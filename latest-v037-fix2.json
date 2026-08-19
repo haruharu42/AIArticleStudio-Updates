@@ -1,0 +1,7 @@
+{
+  "version": "0.3.7",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.7_WebAIModelDefaults.zip",
+  "sha256": "D702BB26F79A314383B347969A7BBEC138181B0296B192F88B1EDF53B93AD0E0",
+  "channel": "stable",
+  "notes": "Unique-path manifest to bypass stale raw.githubusercontent.com cache."
+}
