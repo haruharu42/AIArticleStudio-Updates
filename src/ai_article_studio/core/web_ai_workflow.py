@@ -6,7 +6,7 @@ from typing import Any
 from .paid_value import build_paid_value_profile, paid_value_prompt_lines
 from .web_ai_ingest import WebAIIngestResult, ingest_web_ai_output
 from .web_ai_prompt_builder import WebAIContext, build_final_article_prompt, build_title_prompt
-from .web_ai_publish import PublishReadiness, build_publish_readiness
+from .web_ai_publish import PublishReadyState, build_publish_ready_state
 from .web_ai_repair import RepairIssue, build_repair_issues
 from .web_ai_state import WebAIStateStore, WebAIWorkflowState, update_state
 
@@ -117,10 +117,15 @@ class WebAIWorkflow:
         *,
         platform: str,
         state: WebAIWorkflowState | None = None,
-    ) -> PublishReadiness:
+    ) -> PublishReadyState:
         state = state or self.state_store.load() or WebAIWorkflowState()
         text = state.publish_text or state.normalized_output or state.raw_web_output
-        return build_publish_readiness(text, platform=platform, blocking_issues=[w for w in state.repair_warnings if w == "empty_output"])
+        return build_publish_ready_state(
+            text,
+            platform=platform,
+            selected_title=state.selected_title,
+            blocking_issues=[w for w in state.repair_warnings if w == "empty_output"],
+        )
 
     def mark_completed(self, state: WebAIWorkflowState | None = None) -> WebAIWorkflowState:
         state = state or self.state_store.load() or WebAIWorkflowState()
