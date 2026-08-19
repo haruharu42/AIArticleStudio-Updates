@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - 'latest*.json'
+      - 'candidate-v040.json'
       - 'updates/**'
+      - 'release/v040/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -14,7 +16,9 @@ on:
     branches: [main]
     paths:
       - 'latest*.json'
+      - 'candidate-v040.json'
       - 'updates/**'
+      - 'release/v040/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -40,6 +44,9 @@ jobs:
       - name: Validate latest release
         run: python scripts/validate_release.py latest.json
 
+      - name: Validate v0.4.0 candidate
+        run: python scripts/validate_release.py candidate-v040.json
+
       - name: Test Phase 3.5 core
         run: python scripts/test_phase35_core.py
 
@@ -61,9 +68,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Validate package with Python
+      - name: Validate latest package with Python
         shell: powershell
         run: python scripts/validate_release.py latest.json
+
+      - name: Validate v0.4.0 candidate with Python
+        shell: powershell
+        run: python scripts/validate_release.py candidate-v040.json
 
       - name: Test Phase 3.5 core
         shell: powershell
@@ -77,6 +88,10 @@ jobs:
         shell: powershell
         run: python scripts/phase35_v040_preflight.py --self-test
 
-      - name: Parse and expand with Windows PowerShell 5.1
+      - name: Parse stable package with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\latest.json
+
+      - name: Parse v0.4.0 candidate with Windows PowerShell 5.1
+        shell: powershell
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v040.json
