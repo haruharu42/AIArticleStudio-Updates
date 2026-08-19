@@ -46,6 +46,9 @@ jobs:
       - name: Test Phase 3.5 integrated workflow
         run: python scripts/test_phase35_workflow.py
 
+      - name: Test v0.4.0 UI preflight
+        run: python scripts/phase35_v040_preflight.py --self-test
+
   validate-windows-powershell51:
     name: Windows PowerShell 5.1 validation
     runs-on: windows-latest
@@ -69,6 +72,10 @@ jobs:
       - name: Test Phase 3.5 integrated workflow
         shell: powershell
         run: python scripts/test_phase35_workflow.py
+
+      - name: Test v0.4.0 UI preflight
+        shell: powershell
+        run: python scripts/phase35_v040_preflight.py --self-test
 
       - name: Parse and expand with Windows PowerShell 5.1
         shell: powershell
