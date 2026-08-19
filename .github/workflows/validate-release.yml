@@ -56,6 +56,9 @@ jobs:
       - name: Test v0.4.0 UI preflight
         run: python scripts/phase35_v040_preflight.py --self-test
 
+      - name: Test v0.4.0 patch compatibility
+        run: python scripts/test_v040_patch_compat.py
+
   validate-windows-powershell51:
     name: Windows PowerShell 5.1 validation
     runs-on: windows-latest
@@ -87,6 +90,10 @@ jobs:
       - name: Test v0.4.0 UI preflight
         shell: powershell
         run: python scripts/phase35_v040_preflight.py --self-test
+
+      - name: Test v0.4.0 patch compatibility
+        shell: powershell
+        run: python scripts/test_v040_patch_compat.py
 
       - name: Parse stable package with Windows PowerShell 5.1
         shell: powershell
