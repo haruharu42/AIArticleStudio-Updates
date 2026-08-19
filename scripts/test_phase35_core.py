@@ -26,6 +26,11 @@ from ai_article_studio.core.web_ai_prompt_builder import (  # noqa: E402
     build_repair_prompt,
     build_title_prompt,
 )
+from ai_article_studio.core.web_ai_repair import (  # noqa: E402
+    build_issue_repair_prompt,
+    build_repair_issues,
+    repair_summary,
+)
 
 
 def check_model_config() -> None:
@@ -173,11 +178,42 @@ def check_web_ai_ingest() -> None:
     assert "empty_output" in empty.warnings
 
 
+def check_repair_guidance() -> None:
+    ctx = WebAIContext(provider="ChatGPT", quality="標準", model_label="GPT-5.6 Sol（Medium）")
+    missing = ingest_web_ai_output("# タイトル\n\n本文だけです。", expect_paid=True)
+    issues = build_repair_issues(missing)
+    codes = [i.code for i in issues]
+    assert "missing_paid_boundary" in codes
+    assert "missing_bonus" in codes
+    assert "missing_summary" in codes
+    assert "missing_cta" in codes
+
+    paid_issue = next(i for i in issues if i.code == "missing_paid_boundary")
+    assert paid_issue.title == "有料部分の区切りが見つかりませんでした"
+    assert paid_issue.actions[0].kind == "copy_prompt"
+    assert paid_issue.actions[0].primary is True
+    repair_prompt = build_issue_repair_prompt(paid_issue, missing, sample_request(), ctx)
+    assert "全文を作り直さず" in repair_prompt
+    assert "有料境界" in repair_prompt
+
+    summary = repair_summary(missing)
+    assert summary["can_continue"] is True
+    assert "missing_paid_boundary" in summary["warnings"]
+    assert "missing_cta" in summary["info"]
+
+    empty = ingest_web_ai_output("   ")
+    empty_issues = build_repair_issues(empty)
+    assert empty_issues[0].severity == "blocking"
+    assert empty_issues[0].actions[0].label == "回答を貼り付ける"
+    assert repair_summary(empty)["can_continue"] is False
+
+
 def main() -> None:
     check_model_config()
     check_prompts()
     check_paid_value()
     check_web_ai_ingest()
+    check_repair_guidance()
     print("PHASE 3.5 CORE TESTS OK")
 
 
