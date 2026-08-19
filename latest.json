@@ -1,7 +1,7 @@
 {
-  "version": "0.3.9",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.9_WebAIModelCleanup_PublishLinks.zip",
-  "sha256": "00C387701831A3F3E9663783F9BD16CA87251931AE2388FE7BE9AA795050C6F0",
+  "version": "0.4.0",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.0_Phase35WebAIProduction.zip",
+  "sha256": "01ACE4C47D4E5B4B1E35F45EC7AFD9342BF1166255CB1A5062BD8E8553A06A56",
   "channel": "stable",
-  "notes": "Standard ChatGPT Web choices exclude Sol Pro/Terra/Luna; quality and model dropdowns sync both ways; note/Tips/Brain launch buttons added."
+  "notes": "Phase 3.5 Web AI production workflow: external model config, paid-value engine, ingest/repair, save/resume, and publish-ready UI integration."
 }
