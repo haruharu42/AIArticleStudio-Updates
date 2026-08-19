@@ -1,7 +1,7 @@
 {
   "version": "0.3.6",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.6_AutoUpdateTest.zip",
-  "sha256": "B0215A17195A17070852851FA965D55302FFCF40EC28774713BF494C4B3CD2BC",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.6_AutoUpdateTest_Fixed.zip",
+  "sha256": "42CA1D2081F494AE9EB4D8A5543095BCACFC70A463CF0578D8C00F17D0643B37",
   "channel": "stable",
-  "notes": "Auto update end-to-end test package with cache-busting updater."
+  "notes": "Auto update end-to-end test with cache-bypass support."
 }
