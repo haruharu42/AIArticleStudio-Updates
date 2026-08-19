@@ -16,7 +16,7 @@ class WebAIWorkflow:
 
     UI code should call this facade instead of stitching B4-B8 modules together
     independently. The raw Web-AI output is always preserved in state, while
-    normalized/publish text is stored separately.
+    normalized/formatted publish text is stored separately.
     """
 
     def __init__(self, state_store: WebAIStateStore | None = None):
@@ -108,7 +108,7 @@ class WebAIWorkflow:
         state: WebAIWorkflowState | None = None,
     ) -> WebAIWorkflowState:
         state = state or self.state_store.load() or WebAIWorkflowState()
-        update_state(state, publish_text=publish_text, publish_platform=platform, current_step="04")
+        update_state(state, formatted_output=publish_text, publish_platform=platform, current_step="04")
         self.state_store.save(state)
         return state
 
@@ -119,7 +119,7 @@ class WebAIWorkflow:
         state: WebAIWorkflowState | None = None,
     ) -> PublishReadyState:
         state = state or self.state_store.load() or WebAIWorkflowState()
-        text = state.publish_text or state.normalized_output or state.raw_web_output
+        text = state.formatted_output or state.normalized_output or state.raw_web_output
         return build_publish_ready_state(
             text,
             platform=platform,
