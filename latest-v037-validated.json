@@ -1,0 +1,7 @@
+{
+  "version": "0.3.7",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.7_WebAIModelDefaults_Recovery3_Validated.zip",
+  "sha256": "A0EA68BE97BD64623DD40D502ED9BD1B194F6554166240E8D357479E996B039C",
+  "channel": "stable",
+  "notes": "Validated recovery package: ZIP integrity checked locally, patch applied to v0.3.4 source successfully, Python syntax validation passed."
+}
