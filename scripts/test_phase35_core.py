@@ -16,6 +16,10 @@ from ai_article_studio.core.web_ai_config import (  # noqa: E402
     WebAIModelConfig,
     _validate,
 )
+from ai_article_studio.core.web_ai_ingest import (  # noqa: E402
+    ingest_web_ai_output,
+    recommended_repair_types,
+)
 from ai_article_studio.core.web_ai_prompt_builder import (  # noqa: E402
     WebAIContext,
     build_final_article_prompt,
@@ -112,10 +116,68 @@ def check_paid_value() -> None:
     assert "文字数だけを増やさない" in text
 
 
+def check_web_ai_ingest() -> None:
+    raw = """```markdown
+以下が記事です。
+# AI副業を始めるための実践ガイド
+
+## はじめに
+初心者向けの本文です。
+
+🔒 ここから有料
+
+## STEP 1 準備
+具体的な手順です。
+
+## 🎁 特典：開始前チェックリスト
+- 環境を確認する
+- 目的を決める
+- 作業時間を確保する
+- 出力先を決める
+- 公開前に見直す
+
+## まとめ
+まずは小さく実践してみてください。
+```"""
+    result = ingest_web_ai_output(raw, expect_paid=True)
+    assert result.raw_web_output == raw
+    assert result.normalized_output != raw
+    assert result.code_fence_removed is True
+    assert result.removed_wrappers == ["以下が記事です。"]
+    assert result.title_detected == "AI副業を始めるための実践ガイド"
+    assert result.paid_boundary_detected is True
+    assert result.bonus_headings
+    assert "checklist" in result.actionable_outputs_detected
+    assert "practical_steps" in result.actionable_outputs_detected
+    assert result.summary_detected is True
+    assert result.cta_detected is True
+    assert not recommended_repair_types(result)
+
+    missing = ingest_web_ai_output("# タイトル\n\n本文だけです。", expect_paid=True)
+    assert "missing_paid_boundary" in missing.warnings
+    assert "missing_bonus" in missing.warnings
+    assert "missing_summary" in missing.warnings
+    assert "missing_cta" in missing.warnings
+    repairs = recommended_repair_types(missing)
+    assert "missing_paid_boundary" in repairs
+    assert "missing_bonus" in repairs
+    assert "incomplete_article" in repairs
+    assert "missing_cta" in repairs
+
+    free = ingest_web_ai_output("# 無料記事\n\n## まとめ\n試してみてください。", expect_paid=False)
+    assert free.paid_boundary_detected is False
+    assert "unexpected_paid_boundary" not in free.warnings
+
+    empty = ingest_web_ai_output("   ")
+    assert empty.is_empty
+    assert "empty_output" in empty.warnings
+
+
 def main() -> None:
     check_model_config()
     check_prompts()
     check_paid_value()
+    check_web_ai_ingest()
     print("PHASE 3.5 CORE TESTS OK")
 
 
