@@ -1,7 +1,7 @@
 {
-  "version": "0.3.6",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.6_AutoUpdateTest_Fixed.zip",
-  "sha256": "42CA1D2081F494AE9EB4D8A5543095BCACFC70A463CF0578D8C00F17D0643B37",
+  "version": "0.3.7",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.7_WebAIModelDefaults.zip",
+  "sha256": "478921271073A84B78381248DB248A14D60E8C1ABCBC1A667BE00DAF57105872",
   "channel": "stable",
-  "notes": "Auto update end-to-end test with cache-bypass support."
+  "notes": "Web AI model-name field now auto-fills the current recommended model for ChatGPT, Claude, and Gemini while remaining editable."
 }
