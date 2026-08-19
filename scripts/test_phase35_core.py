@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
+import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -30,6 +31,12 @@ from ai_article_studio.core.web_ai_repair import (  # noqa: E402
     build_issue_repair_prompt,
     build_repair_issues,
     repair_summary,
+)
+from ai_article_studio.core.web_ai_state import (  # noqa: E402
+    WebAIStateStore,
+    WebAIWorkflowState,
+    record_repair,
+    update_state,
 )
 
 
@@ -208,12 +215,77 @@ def check_repair_guidance() -> None:
     assert repair_summary(empty)["can_continue"] is False
 
 
+def check_state_persistence() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = pathlib.Path(tmpdir) / "state.json"
+        store = WebAIStateStore(path)
+        state = WebAIWorkflowState(article_id="draft-001")
+
+        update_state(
+            state,
+            current_step="03",
+            article_request=sample_request(),
+            provider="ChatGPT",
+            quality="高品質",
+            model_label="GPT-5.6 Sol（High）",
+            title_candidates=["候補1", "候補2", "候補3", "候補4", "候補5"],
+            selected_title="AI副業を始めるための実践ガイド",
+            title_prompt="TITLE PROMPT",
+            title_response_raw="1. 候補1",
+            final_prompt="FINAL PROMPT",
+            raw_web_output="# 元の回答",
+            normalized_output="# 正規化済み",
+            repair_warnings=["missing_cta"],
+            publish_platform="note",
+        )
+        record_repair(state, "missing_cta")
+        saved_path = store.save(state)
+        assert saved_path == path
+        assert path.exists()
+
+        loaded = store.load()
+        assert loaded is not None
+        assert loaded.article_id == "draft-001"
+        assert loaded.current_step == "03"
+        assert loaded.provider == "ChatGPT"
+        assert loaded.quality == "高品質"
+        assert loaded.model_label == "GPT-5.6 Sol（High）"
+        assert loaded.article_request["genre"] == "AI副業"
+        assert loaded.selected_title == "AI副業を始めるための実践ガイド"
+        assert loaded.raw_web_output == "# 元の回答"
+        assert loaded.normalized_output == "# 正規化済み"
+        assert loaded.repair_warnings == ["missing_cta"]
+        assert loaded.repair_history[0]["repair_type"] == "missing_cta"
+        assert loaded.can_resume is True
+        assert "STEP 03" in loaded.resume_label
+
+        loaded.current_step = "99"
+        store.save(loaded)
+        normalized = store.load()
+        assert normalized is not None
+        assert normalized.current_step == "00"
+
+        completed_path = store.mark_completed(normalized)
+        assert completed_path == path
+        completed = store.load()
+        assert completed is not None
+        assert completed.current_step == "05"
+        assert completed.is_completed is True
+        assert completed.can_resume is False
+
+        path.write_text("{broken", encoding="utf-8")
+        assert store.load() is None
+        assert store.clear() is True
+        assert store.clear() is False
+
+
 def main() -> None:
     check_model_config()
     check_prompts()
     check_paid_value()
     check_web_ai_ingest()
     check_repair_guidance()
+    check_state_persistence()
     print("PHASE 3.5 CORE TESTS OK")
 
 
