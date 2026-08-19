@@ -1,7 +1,7 @@
 {
-  "version": "0.3.5",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.5_AutoUpdaterBootstrap.zip",
-  "sha256": "887EDD26EEA21C740310A2BEE261F16EEEC3E9C5E043156E1C8615C401296000",
+  "version": "0.3.6",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.6_AutoUpdateTest.zip",
+  "sha256": "CA85E4D0455612A7313541785853F2D909D34361A2EDE1D0BB2450EA598A2DB3",
   "channel": "stable",
-  "notes": "Auto updater bootstrap and terminal update command support."
+  "notes": "Auto update end-to-end test package. No article-generation or UI logic changes."
 }
