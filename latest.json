@@ -1,0 +1,7 @@
+{
+  "version": "0.3.5",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.5_AutoUpdaterBootstrap.zip",
+  "sha256": "887EDD26EEA21C740310A2BEE261F16EEEC3E9C5E043156E1C8615C401296000",
+  "channel": "stable",
+  "notes": "Auto updater bootstrap and terminal update command support."
+}
