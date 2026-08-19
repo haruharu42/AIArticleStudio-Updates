@@ -7,6 +7,8 @@ on:
       - 'latest*.json'
       - 'updates/**'
       - 'scripts/**'
+      - 'config/**'
+      - 'src/**'
       - '.github/workflows/validate-release.yml'
   pull_request:
     branches: [main]
@@ -14,6 +16,8 @@ on:
       - 'latest*.json'
       - 'updates/**'
       - 'scripts/**'
+      - 'config/**'
+      - 'src/**'
       - '.github/workflows/validate-release.yml'
   workflow_dispatch:
 
@@ -36,6 +40,9 @@ jobs:
       - name: Validate latest release
         run: python scripts/validate_release.py latest.json
 
+      - name: Test Phase 3.5 core
+        run: python scripts/test_phase35_core.py
+
   validate-windows-powershell51:
     name: Windows PowerShell 5.1 validation
     runs-on: windows-latest
@@ -51,6 +58,10 @@ jobs:
       - name: Validate package with Python
         shell: powershell
         run: python scripts/validate_release.py latest.json
+
+      - name: Test Phase 3.5 core
+        shell: powershell
+        run: python scripts/test_phase35_core.py
 
       - name: Parse and expand with Windows PowerShell 5.1
         shell: powershell
