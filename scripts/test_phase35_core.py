@@ -3,11 +3,14 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
-import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from ai_article_studio.core.paid_value import (  # noqa: E402
+    build_paid_value_profile,
+    paid_value_prompt_lines,
+)
 from ai_article_studio.core.web_ai_config import (  # noqa: E402
     QUALITY_UI_TO_ID,
     WebAIModelConfig,
@@ -36,10 +39,10 @@ def check_model_config() -> None:
     assert set(QUALITY_UI_TO_ID) == {"速さ優先", "標準", "高品質"}
 
 
-def sample_request(article_type: str = "有料") -> dict:
+def sample_request(article_type: str = "有料", genre: str = "AI副業", price: str = "980") -> dict:
     return {
         "platform": "note",
-        "genre": "AI副業",
+        "genre": genre,
         "subgenre": "AIおまかせ",
         "target_age": "30代",
         "target_gender": "指定なし",
@@ -47,8 +50,10 @@ def sample_request(article_type: str = "有料") -> dict:
         "length_mode": "標準",
         "writing_style": "初心者向け",
         "angle": "実践・ハウツー",
-        "price": "980",
+        "price": price,
         "experience_text": "",
+        "bonus_enabled": True,
+        "bonus_mode": "auto",
     }
 
 
@@ -72,9 +77,45 @@ def check_prompts() -> None:
     assert "CTA" in repair
 
 
+def check_paid_value() -> None:
+    free_profile = build_paid_value_profile(sample_request("無料"))
+    assert free_profile.enabled is False
+    assert not free_profile.actionable_outputs
+
+    low = build_paid_value_profile(sample_request(price="300"))
+    assert low.enabled is True
+    assert low.price_jpy == 300
+    assert len(low.actionable_outputs) == 1
+    assert low.value_elements[0] in {"practical_steps", "copy_paste_prompt", "checklist", "template", "roadmap"}
+    assert "primary_experience" not in low.value_elements
+
+    standard = build_paid_value_profile(sample_request(price="980"))
+    assert len(standard.actionable_outputs) == 2
+    assert len(standard.bonus_items) <= 1
+    assert len(standard.actionable_outputs) <= 3
+    assert any("成果を保証しない" in warning for warning in standard.warnings)
+
+    high = build_paid_value_profile(sample_request(price="2980"))
+    assert len(high.actionable_outputs) == 3
+    assert high.price_fit == "good"
+
+    gadget = build_paid_value_profile(sample_request(genre="ガジェット・PC・デジタル", price="980"))
+    assert gadget.value_elements[:2] == ["comparison", "decision_framework"]
+    assert any("価格・在庫・評価" in warning for warning in gadget.warnings)
+
+    deduped = build_paid_value_profile(sample_request(price="980"), existing_output_types=["practical_steps", "copy_paste_prompt"])
+    assert "practical_steps" not in deduped.value_elements
+    assert "copy_paste_prompt" not in deduped.value_elements
+
+    text = "\n".join(paid_value_prompt_lines(standard))
+    assert "名前だけでなく中身まで生成" in text
+    assert "文字数だけを増やさない" in text
+
+
 def main() -> None:
     check_model_config()
     check_prompts()
+    check_paid_value()
     print("PHASE 3.5 CORE TESTS OK")
 
 
