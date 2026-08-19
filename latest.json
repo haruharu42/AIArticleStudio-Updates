@@ -1,7 +1,7 @@
 {
-  "version": "0.3.7",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.7_WebAIModelDefaults_Recovery3.zip",
-  "sha256": "A0EA68BE97BD64623DD40D502ED9BD1B194F6554166240E8D357479E996B039C",
+  "version": "0.3.8",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.3.8_WebAIQualityModelSync_Patch.zip",
+  "sha256": "C1CDA1CEBF1F4C93918E60502994D6CCF2D9A228A1CEC5F9FBAB514ECA62FD09",
   "channel": "stable",
-  "notes": "Recovery3: patch existing UTF-8 app.py in place, validate before completing, then set v0.3.7. Web AI model defaults: GPT-5.6 Sol, Claude Sonnet 5, Gemini 3.6 Flash."
+  "notes": "Web AI generation quality and model dropdown are synchronized in both directions. Provider model list changes for ChatGPT, Claude, and Gemini."
 }
