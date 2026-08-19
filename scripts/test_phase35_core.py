@@ -27,6 +27,15 @@ from ai_article_studio.core.web_ai_prompt_builder import (  # noqa: E402
     build_repair_prompt,
     build_title_prompt,
 )
+from ai_article_studio.core.web_ai_publish import (  # noqa: E402
+    PUBLISH_PLATFORM_URLS,
+    build_publish_ready_state,
+    completion_steps,
+    markdown_filename,
+    primary_platform_action,
+    primary_publish_action,
+    save_markdown_text,
+)
 from ai_article_studio.core.web_ai_repair import (  # noqa: E402
     build_issue_repair_prompt,
     build_repair_issues,
@@ -279,6 +288,44 @@ def check_state_persistence() -> None:
         assert store.clear() is False
 
 
+def check_publish_completion() -> None:
+    article = "# AI副業ガイド\n\n本文\n\n## まとめ\n試してみてください。"
+    state = build_publish_ready_state(
+        article,
+        platform="note",
+        selected_title="AI副業ガイド",
+    )
+    assert state.can_publish is True
+    assert PUBLISH_PLATFORM_URLS["note"] == "https://note.com/"
+    assert PUBLISH_PLATFORM_URLS["Tips"] == "https://tips.jp/"
+    assert PUBLISH_PLATFORM_URLS["Brain"] == "https://brain-market.com/"
+    assert primary_publish_action(state) is not None
+    assert primary_publish_action(state).label == "掲載用をコピー"
+    platform_action = primary_platform_action(state)
+    assert platform_action is not None
+    assert platform_action.label == "noteを開く"
+    assert platform_action.value == "https://note.com/"
+    assert markdown_filename(state) == "AI副業ガイド.md"
+    steps = completion_steps(state)
+    assert steps[0] == "掲載用をコピーする"
+    assert "noteを開く" in steps[2]
+
+    tips_state = build_publish_ready_state(article, platform="Tips", selected_title="Tips向け")
+    assert primary_platform_action(tips_state).label == "Tipsを開く"
+    brain_state = build_publish_ready_state(article, platform="Brain", selected_title="Brain向け")
+    assert primary_platform_action(brain_state).label == "Brainを開く"
+
+    blocked = build_publish_ready_state("", platform="note", blocking_issues=["empty_output"])
+    assert blocked.can_publish is False
+    assert "article_empty" in blocked.missing_requirements
+    assert completion_steps(blocked) == ["記事の不足項目を修正する"]
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = save_markdown_text(state, tmpdir)
+        assert path.name == "AI副業ガイド.md"
+        assert path.read_text(encoding="utf-8").startswith("# AI副業ガイド")
+
+
 def main() -> None:
     check_model_config()
     check_prompts()
@@ -286,6 +333,7 @@ def main() -> None:
     check_web_ai_ingest()
     check_repair_guidance()
     check_state_persistence()
+    check_publish_completion()
     print("PHASE 3.5 CORE TESTS OK")
 
 
