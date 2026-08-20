@@ -27,6 +27,16 @@ class WebAIUIBridge:
     def image_settings_snapshot(self) -> dict[str, Any]:
         return dict(self.workflow.snapshot().get("image_settings") or {})
 
+    def image_prompt_status(self, article_text: str | None = None) -> dict[str, Any]:
+        errors = self.workflow.validate_image_prompt_requirements(article_text=article_text)
+        snap = self.workflow.snapshot()
+        return {
+            "ready": not errors,
+            "errors": errors,
+            "selected_title": snap.get("selected_title", ""),
+            "has_article": bool((article_text or snap.get("formatted_output") or snap.get("normalized_output") or snap.get("raw_web_output") or "").strip()),
+        }
+
     def build_image_prompts(self, article_text: str | None = None) -> dict[str, Any]:
         return self.workflow.build_image_prompts(article_text=article_text)
 
