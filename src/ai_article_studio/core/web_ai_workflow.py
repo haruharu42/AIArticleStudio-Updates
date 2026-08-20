@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
+from .gpu_diagnostic import diagnose_gpu
+from .image_assets import ArticleImageStore
+from .image_prompt_builder import build_image_prompt_bundle
+from .image_settings import normalize_image_settings
 from .paid_value import build_paid_value_profile, paid_value_prompt_lines
 from .web_ai_ingest import WebAIIngestResult, ingest_web_ai_output
 from .web_ai_prompt_builder import WebAIContext
@@ -13,19 +17,50 @@ from .web_ai_state import WebAIStateStore, WebAIWorkflowState, update_state
 
 
 class WebAIWorkflow:
-    """Integration facade for the Web AI production workflow.
+    """Integration facade for the Web AI production workflow."""
 
-    UI code should call this facade instead of stitching modules together
-    independently. Raw Web-AI output is preserved in state, while normalized
-    and publish-ready text are stored separately.
-    """
-
-    def __init__(self, state_store: WebAIStateStore | None = None):
+    def __init__(self, state_store: WebAIStateStore | None = None, image_store: ArticleImageStore | None = None):
         self.state_store = state_store or WebAIStateStore()
+        self.image_store = image_store or ArticleImageStore()
 
     @staticmethod
     def _context(provider: str, quality: str, model_label: str) -> WebAIContext:
         return WebAIContext(provider=provider or "ChatGPT", quality=quality or "標準", model_label=model_label or "")
+
+    @staticmethod
+    def _request_dict(request: Any) -> dict[str, Any]:
+        return dict(request) if isinstance(request, dict) else dict(getattr(request, "__dict__", {}))
+
+    @staticmethod
+    def _request_with_image_settings(request: Any, state: WebAIWorkflowState) -> dict[str, Any]:
+        data = WebAIWorkflow._request_dict(request)
+        cfg = normalize_image_settings(state.image_settings)
+        if cfg.enabled:
+            data["illustration_enabled"] = cfg.target in {"illustrations", "both"}
+            data["illustration_count"] = "自動" if cfg.illustration_count == "auto" else cfg.illustration_count
+            data["illustration_style"] = {
+                "auto": "AIおまかせ",
+                "business": "ビジネス",
+                "tech": "テック",
+                "gentle": "やさしい",
+                "diagram": "図解風",
+            }.get(cfg.style, "AIおまかせ")
+            data["hide_illustration_list"] = not cfg.include_illustration_summary
+        else:
+            data["illustration_enabled"] = False
+        return data
+
+    def set_image_settings(
+        self,
+        settings: dict[str, Any] | None,
+        *,
+        state: WebAIWorkflowState | None = None,
+    ) -> WebAIWorkflowState:
+        state = state or self.state_store.load() or WebAIWorkflowState()
+        cfg = normalize_image_settings(settings)
+        update_state(state, image_settings=cfg.to_dict())
+        self.state_store.save(state)
+        return state
 
     def prepare_title_prompt(
         self,
@@ -38,11 +73,12 @@ class WebAIWorkflow:
     ) -> tuple[str, WebAIWorkflowState]:
         state = state or self.state_store.load() or WebAIWorkflowState()
         ctx = self._context(provider, quality, model_label)
-        prompt = build_title_prompt_v2(request, ctx)
+        request_data = self._request_with_image_settings(request, state)
+        prompt = build_title_prompt_v2(request_data, ctx)
         update_state(
             state,
             current_step="02",
-            article_request=dict(request) if isinstance(request, dict) else dict(getattr(request, "__dict__", {})),
+            article_request=request_data,
             provider=ctx.provider,
             quality=ctx.quality,
             model_label=ctx.model_label,
@@ -65,14 +101,16 @@ class WebAIWorkflow:
     ) -> tuple[str, WebAIWorkflowState]:
         state = state or self.state_store.load() or WebAIWorkflowState()
         ctx = self._context(provider, quality, model_label)
-        paid = build_paid_value_profile(request)
-        prompt = build_final_article_prompt_v2(request, selected_title, ctx)
+        request_data = self._request_with_image_settings(request, state)
+        paid = build_paid_value_profile(request_data)
+        prompt = build_final_article_prompt_v2(request_data, selected_title, ctx)
         extra = paid_value_prompt_lines(paid)
         if extra:
             prompt = prompt.rstrip() + "\n\n【有料価値設計】\n" + "\n".join(extra) + "\n"
         update_state(
             state,
             current_step="03",
+            article_request=request_data,
             title_candidates=list(title_candidates or []),
             selected_title=selected_title,
             title_response_raw=title_response_raw,
@@ -100,6 +138,39 @@ class WebAIWorkflow:
         )
         self.state_store.save(state)
         return result, issues, state
+
+    def build_image_prompts(
+        self,
+        *,
+        article_text: str | None = None,
+        state: WebAIWorkflowState | None = None,
+    ) -> dict[str, Any]:
+        state = state or self.state_store.load() or WebAIWorkflowState()
+        cfg = normalize_image_settings(state.image_settings)
+        text = article_text if article_text is not None else (state.formatted_output or state.normalized_output or state.raw_web_output)
+        bundle = build_image_prompt_bundle(
+            state.article_request,
+            state.selected_title,
+            text,
+            cfg,
+        )
+        payload = bundle.to_dict()
+        payload["generator_mode"] = cfg.mode
+        update_state(state, image_assets_meta=payload)
+        self.state_store.save(state)
+        if state.article_id:
+            try:
+                self.image_store.save_payload(state.article_id, {"image_settings": cfg.to_dict(), **payload})
+            except OSError:
+                pass
+        return payload
+
+    def run_gpu_diagnostic(self, *, state: WebAIWorkflowState | None = None) -> dict[str, Any]:
+        state = state or self.state_store.load() or WebAIWorkflowState()
+        snapshot = diagnose_gpu().to_dict()
+        update_state(state, gpu_diagnostic=snapshot)
+        self.state_store.save(state)
+        return snapshot
 
     def set_publish_text(
         self,
