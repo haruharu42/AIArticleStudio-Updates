@@ -55,6 +55,8 @@ jobs:
             exit 0
           fi
           git commit -m "Build v0.4.2.3 anime style tuning package"
+          git fetch origin "${{ github.head_ref }}"
+          git rebase "origin/${{ github.head_ref }}"
           git push origin HEAD:${{ github.head_ref }}
 
   windows-validation:
