@@ -7,13 +7,15 @@ import os
 from pathlib import Path
 import tempfile
 from typing import Any
+from uuid import uuid4
 
 from .image_settings import normalize_image_settings
 
 
-STATE_SCHEMA_VERSION = 2
+STATE_SCHEMA_VERSION = 3
 DEFAULT_STEP = "00"
 VALID_STEPS = {"00", "01", "02", "03", "04", "05"}
+DEFAULT_HISTORY_LIMIT = 10
 
 
 def default_state_path() -> Path:
@@ -23,6 +25,10 @@ def default_state_path() -> Path:
     else:
         base = Path.home() / ".ai_article_studio" / "data"
     return base / "web_ai_workflow_state.json"
+
+
+def default_history_path() -> Path:
+    return default_state_path().with_name("web_ai_workflow_history.json")
 
 
 def _utc_now_iso() -> str:
@@ -116,27 +122,96 @@ class WebAIWorkflowState:
             title = str(self.article_request.get("theme") or self.article_request.get("genre") or "作成中の記事")
         return f"{title}（STEP {self.current_step} から続ける）"
 
+    @property
+    def history_title(self) -> str:
+        title = self.selected_title.strip()
+        if title:
+            return title
+        for key in ("theme", "genre", "subgenre"):
+            value = str(self.article_request.get(key) or "").strip()
+            if value:
+                return value
+        return "新しい記事"
+
+    @property
+    def history_status(self) -> str:
+        return "完成" if self.is_completed else "作成中"
+
+    @property
+    def is_meaningful(self) -> bool:
+        return any(
+            [
+                self.article_request,
+                self.title_prompt.strip(),
+                self.title_candidates,
+                self.selected_title.strip(),
+                self.final_prompt.strip(),
+                self.raw_web_output.strip(),
+                self.normalized_output.strip(),
+                self.formatted_output.strip(),
+            ]
+        )
+
+
+def _atomic_write_json(path: Path, payload: Any) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(path.parent))
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, path)
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink(missing_ok=True)
+    return path
+
 
 class WebAIStateStore:
-    def __init__(self, path: str | Path | None = None):
+    def __init__(
+        self,
+        path: str | Path | None = None,
+        *,
+        history_path: str | Path | None = None,
+        history_limit: int = DEFAULT_HISTORY_LIMIT,
+    ):
         self.path = Path(path) if path else default_state_path()
+        self.history_path = Path(history_path) if history_path else self.path.with_name("web_ai_workflow_history.json")
+        self.history_limit = max(1, min(int(history_limit or DEFAULT_HISTORY_LIMIT), 50))
+
+    def _load_history_payload(self) -> list[dict[str, Any]]:
+        if not self.history_path.exists():
+            return []
+        try:
+            payload = json.loads(self.history_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            return []
+        rows = payload.get("items", []) if isinstance(payload, dict) else payload
+        return [dict(item) for item in rows if isinstance(item, dict)]
+
+    def _save_history_payload(self, rows: list[dict[str, Any]]) -> Path:
+        return _atomic_write_json(
+            self.history_path,
+            {"schema_version": STATE_SCHEMA_VERSION, "limit": self.history_limit, "items": rows[: self.history_limit]},
+        )
+
+    def _record_history(self, state: WebAIWorkflowState) -> None:
+        if not state.is_meaningful:
+            return
+        rows = [item for item in self._load_history_payload() if str(item.get("article_id") or "") != state.article_id]
+        rows.insert(0, state.to_dict())
+        self._save_history_payload(rows)
 
     def save(self, state: WebAIWorkflowState) -> Path:
+        if not state.article_id:
+            state.article_id = uuid4().hex
         state.touch()
         payload = state.to_dict()
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp_name = tempfile.mkstemp(prefix=self.path.name + ".", suffix=".tmp", dir=str(self.path.parent))
-        tmp_path = Path(tmp_name)
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
-                json.dump(payload, handle, ensure_ascii=False, indent=2)
-                handle.write("\n")
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(tmp_path, self.path)
-        finally:
-            if tmp_path.exists():
-                tmp_path.unlink(missing_ok=True)
+        _atomic_write_json(self.path, payload)
+        self._record_history(state)
         return self.path
 
     def load(self) -> WebAIWorkflowState | None:
@@ -153,6 +228,69 @@ class WebAIStateStore:
             return False
         self.path.unlink()
         return True
+
+    def recent(self, limit: int = DEFAULT_HISTORY_LIMIT) -> list[WebAIWorkflowState]:
+        result: list[WebAIWorkflowState] = []
+        for payload in self._load_history_payload()[: max(1, min(int(limit or DEFAULT_HISTORY_LIMIT), self.history_limit))]:
+            try:
+                result.append(WebAIWorkflowState.from_dict(payload))
+            except (TypeError, ValueError):
+                continue
+        return result
+
+    def recent_summaries(self, limit: int = DEFAULT_HISTORY_LIMIT) -> list[dict[str, Any]]:
+        return [
+            {
+                "article_id": state.article_id,
+                "title": state.history_title,
+                "status": state.history_status,
+                "step": state.current_step,
+                "platform": state.publish_platform,
+                "updated_at": state.updated_at,
+            }
+            for state in self.recent(limit)
+        ]
+
+    def load_history(self, article_id: str) -> WebAIWorkflowState | None:
+        wanted = str(article_id or "").strip()
+        for state in self.recent(self.history_limit):
+            if state.article_id == wanted:
+                self.save(state)
+                return state
+        return None
+
+    def delete_history(self, article_id: str) -> bool:
+        wanted = str(article_id or "").strip()
+        rows = self._load_history_payload()
+        kept = [item for item in rows if str(item.get("article_id") or "") != wanted]
+        if len(kept) == len(rows):
+            return False
+        self._save_history_payload(kept)
+        current = self.load()
+        if current and current.article_id == wanted:
+            self.clear()
+        return True
+
+    def start_new(self, *, generation_method: str = "web") -> WebAIWorkflowState:
+        current = self.load()
+        if current and current.is_meaningful:
+            self.save(current)
+        state = WebAIWorkflowState(article_id=uuid4().hex, generation_method=generation_method)
+        _atomic_write_json(self.path, state.to_dict())
+        return state
+
+    def clear_article_content(self) -> WebAIWorkflowState:
+        state = self.load() or WebAIWorkflowState(article_id=uuid4().hex)
+        state.raw_web_output = ""
+        state.normalized_output = ""
+        state.formatted_output = ""
+        state.repair_warnings = []
+        state.image_assets_meta = {}
+        state.is_completed = False
+        if state.current_step in {"04", "05"}:
+            state.current_step = "03"
+        self.save(state)
+        return state
 
     def mark_completed(self, state: WebAIWorkflowState) -> Path:
         state.is_completed = True

@@ -77,7 +77,7 @@ def main() -> None:
 
         reloaded = state_store.load()
         assert reloaded is not None
-        assert reloaded.schema_version == 2
+        assert reloaded.schema_version == 3
         assert reloaded.image_settings["enabled"] is True
         assert reloaded.image_assets_meta["generator_mode"] == "web"
 
