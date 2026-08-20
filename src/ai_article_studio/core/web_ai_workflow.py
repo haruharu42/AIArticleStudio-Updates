@@ -5,18 +5,19 @@ from typing import Any
 
 from .paid_value import build_paid_value_profile, paid_value_prompt_lines
 from .web_ai_ingest import WebAIIngestResult, ingest_web_ai_output
-from .web_ai_prompt_builder import WebAIContext, build_final_article_prompt, build_title_prompt
+from .web_ai_prompt_builder import WebAIContext
+from .web_prompt_engine_v2 import build_final_article_prompt_v2, build_title_prompt_v2
 from .web_ai_publish import PublishReadyState, build_publish_ready_state
 from .web_ai_repair import RepairIssue, build_repair_issues
 from .web_ai_state import WebAIStateStore, WebAIWorkflowState, update_state
 
 
 class WebAIWorkflow:
-    """Integration facade for Phase 3.5 B1-B8.
+    """Integration facade for the Web AI production workflow.
 
-    UI code should call this facade instead of stitching B4-B8 modules together
-    independently. The raw Web-AI output is always preserved in state, while
-    normalized/formatted publish text is stored separately.
+    UI code should call this facade instead of stitching modules together
+    independently. Raw Web-AI output is preserved in state, while normalized
+    and publish-ready text are stored separately.
     """
 
     def __init__(self, state_store: WebAIStateStore | None = None):
@@ -37,7 +38,7 @@ class WebAIWorkflow:
     ) -> tuple[str, WebAIWorkflowState]:
         state = state or self.state_store.load() or WebAIWorkflowState()
         ctx = self._context(provider, quality, model_label)
-        prompt = build_title_prompt(request, ctx)
+        prompt = build_title_prompt_v2(request, ctx)
         update_state(
             state,
             current_step="02",
@@ -65,10 +66,10 @@ class WebAIWorkflow:
         state = state or self.state_store.load() or WebAIWorkflowState()
         ctx = self._context(provider, quality, model_label)
         paid = build_paid_value_profile(request)
-        prompt = build_final_article_prompt(request, selected_title, ctx)
+        prompt = build_final_article_prompt_v2(request, selected_title, ctx)
         extra = paid_value_prompt_lines(paid)
         if extra:
-            prompt = prompt.rstrip() + "\n\n【有料価値設計】\n" + "\n".join(extra)
+            prompt = prompt.rstrip() + "\n\n【有料価値設計】\n" + "\n".join(extra) + "\n"
         update_state(
             state,
             current_step="03",
