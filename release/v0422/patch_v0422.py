@@ -109,7 +109,7 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 def replace_show_method(text: str) -> str:
     pattern = re.compile(r"    def _show_image_prompts\(self\):\n.*?(?=    def _genre_changed\(self, _event=None\):\n)", re.S)
-    new, count = pattern.subn(NEW_SHOW_METHOD, text, count=1)
+    new, count = pattern.subn(lambda _match: NEW_SHOW_METHOD, text, count=1)
     if count != 1:
         raise RuntimeError(f"image prompt method: expected exactly one block, got {count}")
     return new
@@ -140,8 +140,6 @@ def main() -> None:
         print("v0.4.2.2 linked image UI already applied")
         return
 
-    # v0.4.2.1 made the original card visible at the top. v0.4.2.2 moves
-    # controls into the Web article preview flow, so remove that top-level pack.
     text = replace_once(text, TOP_IMAGE_PACK, "", "top image settings pack")
     if OLD_STYLE_VALUES in text:
         text = text.replace(OLD_STYLE_VALUES, NEW_STYLE_VALUES, 1)
