@@ -14,6 +14,7 @@ on:
       - 'candidate-v0424.json'
       - 'candidate-v0425.json'
       - 'candidate-v0426.json'
+      - 'candidate-v0427.json'
       - 'updates/**'
       - 'release/v040/**'
       - 'release/v0401/**'
@@ -25,6 +26,7 @@ on:
       - 'release/v0424/**'
       - 'release/v0425/**'
       - 'release/v0426/**'
+      - 'release/v0427/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -42,6 +44,7 @@ on:
       - 'candidate-v0424.json'
       - 'candidate-v0425.json'
       - 'candidate-v0426.json'
+      - 'candidate-v0427.json'
       - 'updates/**'
       - 'release/v040/**'
       - 'release/v0401/**'
@@ -53,6 +56,7 @@ on:
       - 'release/v0424/**'
       - 'release/v0425/**'
       - 'release/v0426/**'
+      - 'release/v0427/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -100,6 +104,9 @@ jobs:
       - name: Validate v0.4.2.6 candidate
         if: ${{ hashFiles('candidate-v0426.json') != '' }}
         run: python scripts/validate_release.py candidate-v0426.json
+      - name: Validate v0.4.2.7 candidate
+        if: ${{ hashFiles('candidate-v0427.json') != '' }}
+        run: python scripts/validate_release.py candidate-v0427.json
       - name: Test Phase 3.5 core
         run: python scripts/test_phase35_core.py
       - name: Test Phase 3.5 integrated workflow
@@ -132,6 +139,8 @@ jobs:
         run: python scripts/test_v0425_guided_wizard.py
       - name: Test v0.4.2.6 embedded single-item wizard
         run: python scripts/test_v0426_embedded_wizard.py
+      - name: Test v0.4.2.7 visual six-step wizard
+        run: python scripts/test_v0427_visual_wizard.py
 
   validate-windows-powershell51:
     name: Windows PowerShell 5.1 validation
@@ -181,6 +190,10 @@ jobs:
         if: ${{ hashFiles('candidate-v0426.json') != '' }}
         shell: powershell
         run: python scripts/validate_release.py candidate-v0426.json
+      - name: Validate v0.4.2.7 candidate with Python
+        if: ${{ hashFiles('candidate-v0427.json') != '' }}
+        shell: powershell
+        run: python scripts/validate_release.py candidate-v0427.json
       - name: Test Phase 3.5 core
         shell: powershell
         run: python scripts/test_phase35_core.py
@@ -229,6 +242,9 @@ jobs:
       - name: Test v0.4.2.6 embedded single-item wizard
         shell: powershell
         run: python scripts/test_v0426_embedded_wizard.py
+      - name: Test v0.4.2.7 visual six-step wizard
+        shell: powershell
+        run: python scripts/test_v0427_visual_wizard.py
       - name: Parse stable package with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\latest.json
@@ -269,3 +285,7 @@ jobs:
         if: ${{ hashFiles('candidate-v0426.json') != '' }}
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0426.json
+      - name: Parse v0.4.2.7 candidate with Windows PowerShell 5.1
+        if: ${{ hashFiles('candidate-v0427.json') != '' }}
+        shell: powershell
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0427.json
