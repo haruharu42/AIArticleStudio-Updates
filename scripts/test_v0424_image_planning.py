@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -78,6 +79,7 @@ def test_cross_platform_package_bytes() -> None:
     build_ns = runpy.run_path(str(RELEASE / "build_package.py"))
     canonical_bytes = build_ns["canonical_bytes"]
     deterministic_zip_info = build_ns["deterministic_zip_info"]
+    write_deterministic_zip = build_ns["write_deterministic_zip"]
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp)
         lf = root / "lf.py"
@@ -90,6 +92,16 @@ def test_cross_platform_package_bytes() -> None:
         assert info.compress_type == 0
         assert info.date_time == (2026, 8, 20, 0, 0, 0)
         assert info.external_attr == 0o644 << 16
+
+        source = root / "zip-order"
+        (source / "payload").mkdir(parents=True)
+        (source / "README.txt").write_text("readme\n", encoding="utf-8")
+        (source / "Update.ps1").write_text("update\n", encoding="utf-8")
+        (source / "payload" / "core.py").write_text("core\n", encoding="utf-8")
+        package = root / "order.zip"
+        write_deterministic_zip(source, package)
+        with zipfile.ZipFile(package) as archive:
+            assert archive.namelist() == ["README.txt", "Update.ps1", "payload/core.py"]
 
 
 def test_patch() -> None:

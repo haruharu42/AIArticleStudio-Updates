@@ -52,7 +52,8 @@ def write_deterministic_zip(source_root: Path, output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.unlink(missing_ok=True)
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_STORED) as archive:
-        for path in sorted(item for item in source_root.rglob("*") if item.is_file()):
+        files = (item for item in source_root.rglob("*") if item.is_file())
+        for path in sorted(files, key=lambda item: item.relative_to(source_root).as_posix()):
             info = deterministic_zip_info(path.relative_to(source_root).as_posix())
             archive.writestr(info, canonical_bytes(path), compress_type=zipfile.ZIP_STORED)
 
