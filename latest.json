@@ -1,7 +1,7 @@
 {
   "version": "0.4.2",
   "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.2_Phase36ImageWorkflow.zip",
-  "sha256": "0F2245C018A051A253AA07F61E8B0197CCD8747068D3709557FB943318F8E662",
+  "sha256": "4A757FAA499DCBD6E256376C0C90E3DBBA47980058F4E61E76C37AFD20B3BED2",
   "channel": "stable",
   "notes": "Phase 3.6 image workflow with corrected v0.4.1 preflight: beginner image settings, Web eyecatch/illustration prompts, illustration positions, metadata storage, and safe GPU diagnostics."
 }
