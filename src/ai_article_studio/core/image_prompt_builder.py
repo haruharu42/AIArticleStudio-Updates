@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
-from .image_marker_parser import IllustrationMarker, parse_illustration_markers
+from .image_marker_parser import IllustrationMarker, extract_markers
 from .image_settings import ImageSettings, normalize_image_settings
 
 
@@ -92,13 +92,7 @@ def _context_excerpt(article_text: str, marker: IllustrationMarker, radius: int 
     return _clean(excerpt, 850)
 
 
-def build_illustration_prompt(
-    request: Any,
-    title: str,
-    marker: IllustrationMarker,
-    article_text: str,
-    settings: Mapping[str, Any] | ImageSettings | None = None,
-) -> str:
+def build_illustration_prompt(request: Any, title: str, marker: IllustrationMarker, article_text: str, settings: Mapping[str, Any] | ImageSettings | None = None) -> str:
     cfg = settings if isinstance(settings, ImageSettings) else normalize_image_settings(settings)
     style = STYLE_HINTS.get(cfg.style, STYLE_HINTS["auto"])
     excerpt = _context_excerpt(article_text, marker)
@@ -118,42 +112,26 @@ def build_illustration_prompt(
     return "\n".join(lines).strip() + "\n"
 
 
-def build_image_prompt_bundle(
-    request: Any,
-    title: str,
-    article_text: str,
-    settings: Mapping[str, Any] | ImageSettings | None = None,
-) -> ImagePromptBundle:
+def build_image_prompt_bundle(request: Any, title: str, article_text: str, settings: Mapping[str, Any] | ImageSettings | None = None) -> ImagePromptBundle:
     cfg = settings if isinstance(settings, ImageSettings) else normalize_image_settings(settings)
     if not cfg.enabled:
         return ImagePromptBundle()
-
     target_eyecatch = cfg.target in {"eyecatch", "both"}
     target_inline = cfg.target in {"illustrations", "both"}
     eyecatch = build_eyecatch_prompt(request, title, cfg) if target_eyecatch else ""
-
-    markers: Sequence[IllustrationMarker] = parse_illustration_markers(article_text) if target_inline else ()
+    markers: Sequence[IllustrationMarker] = extract_markers(article_text) if target_inline else ()
     prompts: list[dict[str, Any]] = []
     for marker in markers:
-        prompts.append(
-            {
-                "label": f"挿絵{marker.number}",
-                "number": marker.number,
-                "position": marker.position,
-                "description": marker.description,
-                "marker": marker.raw,
-                "prompt": build_illustration_prompt(request, title, marker, article_text, cfg),
-            }
-        )
-
+        prompts.append({
+            "label": f"挿絵{marker.number}",
+            "number": marker.number,
+            "position": marker.position,
+            "description": marker.description,
+            "marker": marker.raw,
+            "prompt": build_illustration_prompt(request, title, marker, article_text, cfg),
+        })
     summary = ""
     if cfg.include_illustration_summary and prompts:
-        lines = ["【挿絵一覧】"]
-        lines += [f"{p['number']}. {p['position']}：{p['description']}" for p in prompts]
+        lines = ["【挿絵一覧】"] + [f"{p['number']}. {p['position']}：{p['description']}" for p in prompts]
         summary = "\n".join(lines)
-
-    return ImagePromptBundle(
-        eyecatch_prompt=eyecatch,
-        illustration_prompts=tuple(prompts),
-        illustration_summary=summary,
-    )
+    return ImagePromptBundle(eyecatch_prompt=eyecatch, illustration_prompts=tuple(prompts), illustration_summary=summary)
