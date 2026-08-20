@@ -6,6 +6,7 @@ on:
     paths:
       - 'release/v0401/**'
       - 'scripts/test_v0401_bridge.py'
+      - 'scripts/validate_release.py'
       - '.github/workflows/build-v0401-bridge.yml'
   workflow_dispatch:
 
