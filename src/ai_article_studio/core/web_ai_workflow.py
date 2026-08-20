@@ -6,7 +6,7 @@ from typing import Any
 from .gpu_diagnostic import diagnose_gpu
 from .image_assets import ArticleImageStore
 from .image_prompt_builder import build_image_prompt_bundle
-from .image_settings import normalize_image_settings
+from .image_settings import normalize_image_settings, style_label
 from .paid_value import build_paid_value_profile, paid_value_prompt_lines
 from .web_ai_ingest import WebAIIngestResult, ingest_web_ai_output
 from .web_ai_prompt_builder import WebAIContext
@@ -38,17 +38,23 @@ class WebAIWorkflow:
         if cfg.enabled:
             data["illustration_enabled"] = cfg.target in {"illustrations", "both"}
             data["illustration_count"] = "自動" if cfg.illustration_count == "auto" else cfg.illustration_count
-            data["illustration_style"] = {
-                "auto": "AIおまかせ",
-                "business": "ビジネス",
-                "tech": "テック",
-                "gentle": "やさしい",
-                "diagram": "図解風",
-            }.get(cfg.style, "AIおまかせ")
+            data["illustration_style"] = style_label(cfg.style)
             data["hide_illustration_list"] = not cfg.include_illustration_summary
         else:
             data["illustration_enabled"] = False
         return data
+
+    @staticmethod
+    def _article_text_and_source(state: WebAIWorkflowState, article_text: str | None = None) -> tuple[str, str]:
+        if article_text is not None:
+            return str(article_text or ""), "ui_current_text"
+        if state.formatted_output.strip():
+            return state.formatted_output, "formatted_output"
+        if state.normalized_output.strip():
+            return state.normalized_output, "normalized_output"
+        if state.raw_web_output.strip():
+            return state.raw_web_output, "raw_web_output"
+        return "", "none"
 
     def set_image_settings(
         self,
@@ -139,6 +145,24 @@ class WebAIWorkflow:
         self.state_store.save(state)
         return result, issues, state
 
+    def validate_image_prompt_requirements(
+        self,
+        *,
+        article_text: str | None = None,
+        state: WebAIWorkflowState | None = None,
+    ) -> list[str]:
+        state = state or self.state_store.load() or WebAIWorkflowState()
+        cfg = normalize_image_settings(state.image_settings)
+        text, _source = self._article_text_and_source(state, article_text)
+        errors: list[str] = []
+        if not cfg.enabled:
+            errors.append("「画像を作る」をONにしてください。")
+        if not state.selected_title.strip():
+            errors.append("記事タイトルがまだ選択されていません。")
+        if not text.strip():
+            errors.append("記事本文がまだありません。Web版AIの完成記事を貼り付けて『掲載用に整える』まで進めてください。")
+        return errors
+
     def build_image_prompts(
         self,
         *,
@@ -147,15 +171,26 @@ class WebAIWorkflow:
     ) -> dict[str, Any]:
         state = state or self.state_store.load() or WebAIWorkflowState()
         cfg = normalize_image_settings(state.image_settings)
-        text = article_text if article_text is not None else (state.formatted_output or state.normalized_output or state.raw_web_output)
+        text, source = self._article_text_and_source(state, article_text)
+        errors = self.validate_image_prompt_requirements(article_text=article_text, state=state)
         bundle = build_image_prompt_bundle(
             state.article_request,
             state.selected_title,
             text,
             cfg,
-        )
+        ) if not errors else build_image_prompt_bundle({}, "", "", {"enabled": False})
         payload = bundle.to_dict()
-        payload["generator_mode"] = cfg.mode
+        payload.update(
+            {
+                "generator_mode": cfg.mode,
+                "image_settings": cfg.to_dict(),
+                "style_label": style_label(cfg.style),
+                "article_source": source,
+                "selected_title": state.selected_title,
+                "errors": errors,
+                "ready": not errors,
+            }
+        )
         update_state(state, image_assets_meta=payload)
         self.state_store.save(state)
         if state.article_id:
