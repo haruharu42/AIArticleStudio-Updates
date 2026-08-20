@@ -8,8 +8,10 @@ from pathlib import Path
 import tempfile
 from typing import Any
 
+from .image_settings import normalize_image_settings
 
-STATE_SCHEMA_VERSION = 1
+
+STATE_SCHEMA_VERSION = 2
 DEFAULT_STEP = "00"
 VALID_STEPS = {"00", "01", "02", "03", "04", "05"}
 
@@ -53,6 +55,9 @@ class WebAIWorkflowState:
     repair_warnings: list[str] = field(default_factory=list)
     repair_history: list[dict[str, Any]] = field(default_factory=list)
     publish_platform: str = "note"
+    image_settings: dict[str, Any] = field(default_factory=dict)
+    image_assets_meta: dict[str, Any] = field(default_factory=dict)
+    gpu_diagnostic: dict[str, Any] = field(default_factory=dict)
     is_completed: bool = False
     updated_at: str = field(default_factory=_utc_now_iso)
 
@@ -68,6 +73,9 @@ class WebAIWorkflowState:
         self.repair_warnings = [str(x) for x in (self.repair_warnings or []) if str(x)]
         self.repair_history = [dict(x) for x in (self.repair_history or []) if isinstance(x, dict)]
         self.publish_platform = str(self.publish_platform or self.article_request.get("platform") or "note")
+        self.image_settings = normalize_image_settings(self.image_settings).to_dict()
+        self.image_assets_meta = dict(self.image_assets_meta or {})
+        self.gpu_diagnostic = dict(self.gpu_diagnostic or {})
         self.updated_at = str(self.updated_at or _utc_now_iso())
         return self
 
@@ -170,6 +178,9 @@ def update_state(
     formatted_output: str | None = None,
     repair_warnings: list[str] | None = None,
     publish_platform: str | None = None,
+    image_settings: dict[str, Any] | None = None,
+    image_assets_meta: dict[str, Any] | None = None,
+    gpu_diagnostic: dict[str, Any] | None = None,
 ) -> WebAIWorkflowState:
     if current_step is not None:
         state.current_step = _safe_step(current_step)
@@ -201,6 +212,12 @@ def update_state(
         state.repair_warnings = list(repair_warnings)
     if publish_platform is not None:
         state.publish_platform = publish_platform
+    if image_settings is not None:
+        state.image_settings = normalize_image_settings(image_settings).to_dict()
+    if image_assets_meta is not None:
+        state.image_assets_meta = dict(image_assets_meta)
+    if gpu_diagnostic is not None:
+        state.gpu_diagnostic = dict(gpu_diagnostic)
     state.is_completed = False
     state.touch()
     return state.normalize()

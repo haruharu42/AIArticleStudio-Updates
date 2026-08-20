@@ -4,18 +4,12 @@ from dataclasses import asdict
 from typing import Any
 
 from .web_ai_publish import completion_steps
-from .web_ai_repair import build_repair_issues
 from .web_ai_state import WebAIWorkflowState
 from .web_ai_workflow import WebAIWorkflow
 
 
 class WebAIUIBridge:
-    """Toolkit-agnostic UI bridge for Phase 3.5.
-
-    Existing desktop UI code can bind buttons and widgets to this class without
-    importing individual B1-B8 modules. This keeps UI integration thin and makes
-    the workflow reusable from Tkinter, CustomTkinter, Qt, or CLI shells.
-    """
+    """Toolkit-agnostic UI bridge for the Web AI + image workflow."""
 
     def __init__(self, workflow: WebAIWorkflow | None = None):
         self.workflow = workflow or WebAIWorkflow()
@@ -24,12 +18,20 @@ class WebAIUIBridge:
         state = self.workflow.state_store.load()
         if not state or not state.can_resume:
             return {"visible": False, "label": "", "step": "00"}
-        return {
-            "visible": True,
-            "label": state.resume_label,
-            "step": state.current_step,
-            "article_id": state.article_id,
-        }
+        return {"visible": True, "label": state.resume_label, "step": state.current_step, "article_id": state.article_id}
+
+    def set_image_settings(self, settings: dict[str, Any]) -> dict[str, Any]:
+        state = self.workflow.set_image_settings(settings)
+        return dict(state.image_settings)
+
+    def image_settings_snapshot(self) -> dict[str, Any]:
+        return dict(self.workflow.snapshot().get("image_settings") or {})
+
+    def build_image_prompts(self, article_text: str | None = None) -> dict[str, Any]:
+        return self.workflow.build_image_prompts(article_text=article_text)
+
+    def gpu_diagnostic(self) -> dict[str, Any]:
+        return self.workflow.run_gpu_diagnostic()
 
     def build_title_step(
         self,
@@ -41,11 +43,7 @@ class WebAIUIBridge:
         state: WebAIWorkflowState | None = None,
     ) -> dict[str, Any]:
         prompt, state = self.workflow.prepare_title_prompt(
-            request,
-            provider=provider,
-            quality=quality,
-            model_label=model_label,
-            state=state,
+            request, provider=provider, quality=quality, model_label=model_label, state=state
         )
         return {
             "step": state.current_step,
@@ -92,11 +90,7 @@ class WebAIUIBridge:
         expect_paid: bool | None,
         state: WebAIWorkflowState | None = None,
     ) -> dict[str, Any]:
-        result, issues, state = self.workflow.ingest_article(
-            raw_text,
-            expect_paid=expect_paid,
-            state=state,
-        )
+        result, issues, state = self.workflow.ingest_article(raw_text, expect_paid=expect_paid, state=state)
         return {
             "step": state.current_step,
             "raw_web_output": result.raw_web_output,
@@ -113,11 +107,7 @@ class WebAIUIBridge:
         platform: str,
         state: WebAIWorkflowState | None = None,
     ) -> dict[str, Any]:
-        state = self.workflow.set_publish_text(
-            publish_text,
-            platform=platform,
-            state=state,
-        )
+        state = self.workflow.set_publish_text(publish_text, platform=platform, state=state)
         readiness = self.workflow.publish_readiness(platform=platform, state=state)
         return {
             "step": state.current_step,
@@ -133,8 +123,4 @@ class WebAIUIBridge:
 
     def mark_completed(self) -> dict[str, Any]:
         state = self.workflow.mark_completed()
-        return {
-            "step": state.current_step,
-            "is_completed": state.is_completed,
-            "resume_visible": state.can_resume,
-        }
+        return {"step": state.current_step, "is_completed": state.is_completed, "resume_visible": state.can_resume}
