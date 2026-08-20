@@ -43,7 +43,7 @@ def canonical_bytes(path: Path) -> bytes:
 def deterministic_zip_info(arcname: str) -> zipfile.ZipInfo:
     info = zipfile.ZipInfo(arcname, FIXED_DATE)
     info.create_system = 3
-    info.compress_type = zipfile.ZIP_DEFLATED
+    info.compress_type = zipfile.ZIP_STORED
     info.external_attr = 0o644 << 16
     return info
 
@@ -51,10 +51,10 @@ def deterministic_zip_info(arcname: str) -> zipfile.ZipInfo:
 def write_deterministic_zip(source_root: Path, output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.unlink(missing_ok=True)
-    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_STORED) as archive:
         for path in sorted(item for item in source_root.rglob("*") if item.is_file()):
             info = deterministic_zip_info(path.relative_to(source_root).as_posix())
-            archive.writestr(info, canonical_bytes(path), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            archive.writestr(info, canonical_bytes(path), compress_type=zipfile.ZIP_STORED)
 
 
 def main() -> None:

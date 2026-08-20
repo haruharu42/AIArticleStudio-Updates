@@ -87,6 +87,7 @@ def test_cross_platform_package_bytes() -> None:
         assert canonical_bytes(lf) == canonical_bytes(crlf) == b"first\nsecond\n"
         info = deterministic_zip_info("payload/core/test.py")
         assert info.create_system == 3
+        assert info.compress_type == 0
         assert info.date_time == (2026, 8, 20, 0, 0, 0)
         assert info.external_attr == 0o644 << 16
 
