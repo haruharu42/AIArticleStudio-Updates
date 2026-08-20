@@ -68,6 +68,9 @@ jobs:
       - name: Test Web Prompt Engine v2
         run: python scripts/test_web_prompt_v2.py
 
+      - name: Test Phase 3.6 Step 1 image core
+        run: python scripts/test_phase36_step1.py
+
       - name: Test v0.4.0 UI preflight
         run: python scripts/phase35_v040_preflight.py --self-test
 
@@ -119,6 +122,10 @@ jobs:
       - name: Test Web Prompt Engine v2
         shell: powershell
         run: python scripts/test_web_prompt_v2.py
+
+      - name: Test Phase 3.6 Step 1 image core
+        shell: powershell
+        run: python scripts/test_phase36_step1.py
 
       - name: Test v0.4.0 UI preflight
         shell: powershell
