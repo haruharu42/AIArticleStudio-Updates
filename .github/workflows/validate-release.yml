@@ -9,6 +9,7 @@ on:
       - 'candidate-v041.json'
       - 'updates/**'
       - 'release/v040/**'
+      - 'release/v0401/**'
       - 'release/v041/**'
       - 'scripts/**'
       - 'config/**'
@@ -22,6 +23,7 @@ on:
       - 'candidate-v041.json'
       - 'updates/**'
       - 'release/v040/**'
+      - 'release/v0401/**'
       - 'release/v041/**'
       - 'scripts/**'
       - 'config/**'
@@ -51,6 +53,9 @@ jobs:
       - name: Validate v0.4.0 candidate
         run: python scripts/validate_release.py candidate-v040.json
 
+      - name: Validate v0.4.0.1 bridge
+        run: python scripts/validate_release.py latest-v0401.json
+
       - name: Validate v0.4.1 candidate
         run: python scripts/validate_release.py candidate-v041.json
 
@@ -68,6 +73,9 @@ jobs:
 
       - name: Test v0.4.0 patch compatibility
         run: python scripts/test_v040_patch_compat.py
+
+      - name: Test v0.4.0.1 bridge compatibility
+        run: python scripts/test_v0401_bridge.py
 
       - name: Test v0.4.1 patch compatibility
         run: python scripts/test_v041_patch_compat.py
@@ -91,6 +99,10 @@ jobs:
       - name: Validate v0.4.0 candidate with Python
         shell: powershell
         run: python scripts/validate_release.py candidate-v040.json
+
+      - name: Validate v0.4.0.1 bridge with Python
+        shell: powershell
+        run: python scripts/validate_release.py latest-v0401.json
 
       - name: Validate v0.4.1 candidate with Python
         shell: powershell
@@ -116,6 +128,10 @@ jobs:
         shell: powershell
         run: python scripts/test_v040_patch_compat.py
 
+      - name: Test v0.4.0.1 bridge compatibility
+        shell: powershell
+        run: python scripts/test_v0401_bridge.py
+
       - name: Test v0.4.1 patch compatibility
         shell: powershell
         run: python scripts/test_v041_patch_compat.py
@@ -127,6 +143,10 @@ jobs:
       - name: Parse v0.4.0 candidate with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v040.json
+
+      - name: Parse v0.4.0.1 bridge with Windows PowerShell 5.1
+        shell: powershell
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\latest-v0401.json
 
       - name: Parse v0.4.1 candidate with Windows PowerShell 5.1
         shell: powershell
