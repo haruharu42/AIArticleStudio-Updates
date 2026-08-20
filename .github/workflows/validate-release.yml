@@ -7,10 +7,12 @@ on:
       - 'latest*.json'
       - 'candidate-v040.json'
       - 'candidate-v041.json'
+      - 'candidate-v042.json'
       - 'updates/**'
       - 'release/v040/**'
       - 'release/v0401/**'
       - 'release/v041/**'
+      - 'release/v042/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -21,10 +23,12 @@ on:
       - 'latest*.json'
       - 'candidate-v040.json'
       - 'candidate-v041.json'
+      - 'candidate-v042.json'
       - 'updates/**'
       - 'release/v040/**'
       - 'release/v0401/**'
       - 'release/v041/**'
+      - 'release/v042/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -39,122 +43,109 @@ jobs:
     name: ZIP / SHA256 / Python validation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
       - name: Validate latest release
         run: python scripts/validate_release.py latest.json
-
       - name: Validate v0.4.0 candidate
         run: python scripts/validate_release.py candidate-v040.json
-
       - name: Validate v0.4.0.1 bridge package
         run: python scripts/validate_release.py latest-v0401.json
-
       - name: Validate v0.4.1 candidate
         run: python scripts/validate_release.py candidate-v041.json
-
+      - name: Validate v0.4.2 candidate
+        if: ${{ hashFiles('candidate-v042.json') != '' }}
+        run: python scripts/validate_release.py candidate-v042.json
       - name: Test Phase 3.5 core
         run: python scripts/test_phase35_core.py
-
       - name: Test Phase 3.5 integrated workflow
         run: python scripts/test_phase35_workflow.py
-
       - name: Test Web Prompt Engine v2
         run: python scripts/test_web_prompt_v2.py
-
       - name: Test Phase 3.6 Step 1 image core
         run: python scripts/test_phase36_step1.py
-
+      - name: Test Phase 3.6 complete image core
+        run: python scripts/test_phase36_complete.py
       - name: Test v0.4.0 UI preflight
         run: python scripts/phase35_v040_preflight.py --self-test
-
       - name: Test v0.4.0 patch compatibility
         run: python scripts/test_v040_patch_compat.py
-
       - name: Test v0.4.0.1 bridge compatibility
         run: python scripts/test_v0401_bridge.py
-
       - name: Test v0.4.1 patch compatibility
         run: python scripts/test_v041_patch_compat.py
+      - name: Test v0.4.2 patch compatibility
+        run: python scripts/test_v042_patch_compat.py
 
   validate-windows-powershell51:
     name: Windows PowerShell 5.1 validation
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
       - name: Validate latest package with Python
         shell: powershell
         run: python scripts/validate_release.py latest.json
-
       - name: Validate v0.4.0 candidate with Python
         shell: powershell
         run: python scripts/validate_release.py candidate-v040.json
-
       - name: Validate v0.4.0.1 bridge package with Python
         shell: powershell
         run: python scripts/validate_release.py latest-v0401.json
-
       - name: Validate v0.4.1 candidate with Python
         shell: powershell
         run: python scripts/validate_release.py candidate-v041.json
-
+      - name: Validate v0.4.2 candidate with Python
+        if: ${{ hashFiles('candidate-v042.json') != '' }}
+        shell: powershell
+        run: python scripts/validate_release.py candidate-v042.json
       - name: Test Phase 3.5 core
         shell: powershell
         run: python scripts/test_phase35_core.py
-
       - name: Test Phase 3.5 integrated workflow
         shell: powershell
         run: python scripts/test_phase35_workflow.py
-
       - name: Test Web Prompt Engine v2
         shell: powershell
         run: python scripts/test_web_prompt_v2.py
-
       - name: Test Phase 3.6 Step 1 image core
         shell: powershell
         run: python scripts/test_phase36_step1.py
-
+      - name: Test Phase 3.6 complete image core
+        shell: powershell
+        run: python scripts/test_phase36_complete.py
       - name: Test v0.4.0 UI preflight
         shell: powershell
         run: python scripts/phase35_v040_preflight.py --self-test
-
       - name: Test v0.4.0 patch compatibility
         shell: powershell
         run: python scripts/test_v040_patch_compat.py
-
       - name: Test v0.4.0.1 bridge compatibility
         shell: powershell
         run: python scripts/test_v0401_bridge.py
-
       - name: Test v0.4.1 patch compatibility
         shell: powershell
         run: python scripts/test_v041_patch_compat.py
-
+      - name: Test v0.4.2 patch compatibility
+        shell: powershell
+        run: python scripts/test_v042_patch_compat.py
       - name: Parse stable package with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\latest.json
-
       - name: Parse v0.4.0 candidate with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v040.json
-
       - name: Parse v0.4.0.1 bridge with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\latest-v0401.json
-
       - name: Parse v0.4.1 candidate with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v041.json
+      - name: Parse v0.4.2 candidate with Windows PowerShell 5.1
+        if: ${{ hashFiles('candidate-v042.json') != '' }}
+        shell: powershell
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v042.json
