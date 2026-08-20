@@ -514,7 +514,7 @@ def _design_page(app, parent):
         editor.delete("1.0", "end")
         if bool(_value(theme_auto, False)):
             editor.insert("1.0", "AIおまかせ")
-            editor.configure(state="disabled", disabledforeground="#C4B5FD")
+            editor.configure(state="disabled")
             theme.set("AIおまかせ")
         else:
             editor.insert("1.0", manual_theme["value"])
