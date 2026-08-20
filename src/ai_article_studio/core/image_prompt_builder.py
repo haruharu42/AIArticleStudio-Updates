@@ -12,16 +12,34 @@ STYLE_HINTS = {
     "auto": "記事テーマに合う自然で見やすいデザイン",
     "business": "清潔感のあるビジネス向け、整理された構図、信頼感",
     "tech": "モダンなテック系、未来感、情報が整理された構図",
-    "gentle": "やさしく親しみやすい雰囲気、落ち着いた構図",
+    "gentle": "やさしい商用イラスト風。柔らかな色、親しみやすい人物、穏やかな陰影で読みやすくする",
     "diagram": "図解風、要素の関係が一目で分かる構図",
-    "anime": "日本の現代的なアニメ調、親しみやすいキャラクター表現、明快な構図。既存作品や特定作家の画風は模倣しない",
-    "manga": "オリジナル漫画風、読みやすい線画とメリハリのある演出。既存作品・漫画家・キャラクターの模倣は避ける",
+    "anime": "日本の現代的な2Dアニメ調。クリーンで明瞭な線画、セル塗り寄りの2〜3段階の陰影、整理された髪の束感、印象的だが自然な目元、アニメ背景美術らしい空気感を使う。既存作品や特定作家の画風は模倣しない",
+    "manga": "オリジナルの現代的な漫画調。はっきりした線画、メリハリのある陰影、漫画的な表情と視線誘導、必要に応じてコマ・集中線・吹き出し風の演出を使う。既存作品・漫画家・キャラクターの模倣は避ける",
     "pop": "明るくポップ、軽快で親しみやすい、視認性の高い構図",
     "luxury": "余白を活かした上品で洗練された高級感、落ち着いた質感",
     "catchy_thumbnail": "縮小表示でも主題が一目で分かる、強い視認性と明快な焦点、過剰な煽りは避ける",
     "natural_blog": "自然光を感じる柔らかなブログ向け、生活になじむ自然体の雰囲気",
     "minimal": "要素を絞ったミニマルデザイン、広い余白、主題が明確",
     "infographic": "インフォグラフィック風、情報の階層と関係性が分かりやすい整理された構図",
+}
+
+STYLE_RULES = {
+    "anime": (
+        "画風の優先ルール: 人物・背景・小物・UIモチーフまで一貫して2Dアニメ表現にする。",
+        "線画とセル塗りが視覚的に分かる仕上げにし、柔らかい光やグラデーションだけでアニメ感を表現しない。",
+        "人物は成人向け記事に合う自然な頭身と落ち着いた表情にし、必要がない限りデフォルメやちびキャラにはしない。",
+        "避ける方向: 写真、フォトリアル、半写実、3Dレンダー、水彩、絵本、フラットな企業広告イラスト、ベクター素材風。",
+    ),
+    "manga": (
+        "画風の優先ルール: 線画の存在感を強くし、人物・背景・説明要素を同じ漫画的タッチで統一する。",
+        "必要に応じてコマ割り、集中線、効果線、漫画的な視線誘導を使うが、情報を詰め込みすぎない。",
+        "カラーの場合も線画を埋もれさせず、セル塗りまたは限定色で漫画らしいメリハリを保つ。",
+        "避ける方向: 写真、フォトリアル、半写実、3Dレンダー、水彩、企業向け抽象イラスト、一般的なストック素材風。",
+    ),
+    "gentle": (
+        "このプリセットはアニメ風とは分け、やさしい商用イラストとして自然で柔らかな表現を優先する。",
+    ),
 }
 
 SIZE_HINTS = {
@@ -64,6 +82,13 @@ def _get(data: Any, key: str, default: Any = "") -> Any:
 def _clean(text: Any, limit: int = 500) -> str:
     value = " ".join(str(text or "").split())
     return value[:limit]
+
+
+def _style_lines(cfg: ImageSettings) -> list[str]:
+    style = STYLE_HINTS.get(cfg.style, STYLE_HINTS["auto"])
+    lines = [f"デザイン: {style}"]
+    lines.extend(STYLE_RULES.get(cfg.style, ()))
+    return lines
 
 
 def _article_context(request: Any, title: str) -> list[str]:
@@ -122,11 +147,7 @@ def _requested_illustration_count(cfg: ImageSettings) -> int:
 
 
 def _derived_markers(article_text: str, cfg: ImageSettings) -> list[IllustrationMarker]:
-    """Create safe illustration positions from an already-created Web article.
-
-    This lets users enable image generation after importing an article that was
-    originally generated without explicit [挿絵...] markers.
-    """
+    """Create safe illustration positions from an already-created Web article."""
 
     text = str(article_text or "")
     if not text.strip():
@@ -141,7 +162,6 @@ def _derived_markers(article_text: str, cfg: ImageSettings) -> list[Illustration
         heading = _clean(match.group(2), 100)
         if not heading:
             continue
-        # Skip the H1 article title; illustrations are more useful around H2/H3 sections.
         if len(match.group(1)) == 1:
             continue
         number = len(markers) + 1
@@ -158,7 +178,6 @@ def _derived_markers(article_text: str, cfg: ImageSettings) -> list[Illustration
     if markers:
         return markers
 
-    # Articles without Markdown headings still get one useful linked illustration.
     for line in text.splitlines():
         stripped = line.strip()
         if not stripped or stripped.startswith("#") or stripped.startswith("[挿絵"):
@@ -181,7 +200,6 @@ def build_eyecatch_prompt(
     article_text: str = "",
 ) -> str:
     cfg = settings if isinstance(settings, ImageSettings) else normalize_image_settings(settings)
-    style = STYLE_HINTS.get(cfg.style, STYLE_HINTS["auto"])
     text_policy = {
         "none": "画像内に文字を入れない。タイトル文字はアプリ側で後から重ねられる余白を確保する。",
         "title": "タイトルを入れる前提の余白を確保する。ただし画像生成モデル側では文字を無理に描画しない。",
@@ -191,7 +209,7 @@ def build_eyecatch_prompt(
     lines = [
         "次の記事用アイキャッチ画像を1枚作成してください。",
         *_article_context(request, title),
-        f"デザイン: {style}",
+        *_style_lines(cfg),
         f"サイズ方針: {SIZE_HINTS.get(cfg.size_preset, SIZE_HINTS['note'])}",
         f"文字方針: {text_policy}",
         "タイトルだけでなく、実際の記事本文の主題・見出し・要点と一致するビジュアルにする。",
@@ -225,7 +243,6 @@ def build_illustration_prompt(
     settings: Mapping[str, Any] | ImageSettings | None = None,
 ) -> str:
     cfg = settings if isinstance(settings, ImageSettings) else normalize_image_settings(settings)
-    style = STYLE_HINTS.get(cfg.style, STYLE_HINTS["auto"])
     excerpt = _context_excerpt(article_text, marker)
     lines = [
         "次の記事に差し込む挿絵を1枚作成してください。",
@@ -233,7 +250,7 @@ def build_illustration_prompt(
         f"挿絵番号: {marker.number}",
         f"推奨位置: {marker.position}",
         f"画像の役割: {marker.description}",
-        f"デザイン: {style}",
+        *_style_lines(cfg),
         "実際の記事本文と意味的に一致させ、本文に存在しない製品・人物・数値・成果を勝手に追加しない。",
         "記事本文の理解を助けることを最優先にし、装飾だけの画像にはしない。",
         "画像内に長い文章や細かい日本語テキストを描画しない。必要なラベルは最小限にする。",
