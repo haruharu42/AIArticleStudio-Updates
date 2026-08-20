@@ -1,7 +1,7 @@
 {
-  "version": "0.4.2.1",
-  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.2.1_ImageSettingsVisible.zip",
-  "sha256": "6F4B2DD2166CA02356525C2B70FDB6709F3B8D5792BB987C5A299E61E4EA35D3",
+  "version": "0.4.2.2",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.2.2_ArticleLinkedImages.zip",
+  "sha256": "DEC619FED3A9974555C7718AA00C301EDA952D864AC367EB4C364F200464F9BB",
   "channel": "stable",
-  "notes": "v0.4.2.1 hotfix: makes image generation settings and Web AI settings visible in the article creation screen."
+  "notes": "v0.4.2.2: moves image controls into the Web article preview flow, links prompts to article content, and adds anime/manga plus additional image styles."
 }
