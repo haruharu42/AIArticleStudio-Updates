@@ -66,6 +66,7 @@ def test_core() -> None:
         assert payload["ready"] is True
         assert payload["article_source"] == "normalized_output"
         assert payload["article_linked"] is True
+        assert payload["marker_source"] == "derived_from_article"
         assert payload["style_label"] == "アニメ風"
 
         off = WebAIWorkflowState(selected_title="AI副業入門", article_request=request(), normalized_output=article)
@@ -89,7 +90,6 @@ def test_patch() -> None:
         for name in ("image_settings.py", "image_prompt_builder.py", "web_ai_workflow.py", "web_ai_ui_bridge.py"):
             shutil.copy2(ROOT / "src" / "ai_article_studio" / "core" / name, core_dir / name)
             shutil.copy2(ROOT / "src" / "ai_article_studio" / "core" / name, payload / name)
-        # Additional required files used by imported core modules are present in a real install.
         for name in ("image_marker_parser.py", "image_assets.py", "gpu_diagnostic.py", "paid_value.py", "web_ai_ingest.py", "web_ai_prompt_builder.py", "web_prompt_engine_v2.py", "web_ai_publish.py", "web_ai_repair.py", "web_ai_state.py"):
             src = ROOT / "src" / "ai_article_studio" / "core" / name
             if src.is_file():
@@ -108,7 +108,6 @@ def test_patch() -> None:
         assert "article_text=article_text" in text
         compile(text, "app.py", "exec")
 
-        # Core-copy portion is idempotent; UI marker prevents duplication on re-run.
         run(str(RELEASE / "patch_v0422.py"), str(install), str(package))
         text2 = (app_dir / "app.py").read_text(encoding="utf-8")
         assert text2.count('# v0.4.2.2 linked image controls') == 1
