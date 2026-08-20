@@ -69,6 +69,9 @@ jobs:
       - name: Test v0.4.0 patch compatibility
         run: python scripts/test_v040_patch_compat.py
 
+      - name: Test v0.4.1 patch compatibility
+        run: python scripts/test_v041_patch_compat.py
+
   validate-windows-powershell51:
     name: Windows PowerShell 5.1 validation
     runs-on: windows-latest
@@ -112,6 +115,10 @@ jobs:
       - name: Test v0.4.0 patch compatibility
         shell: powershell
         run: python scripts/test_v040_patch_compat.py
+
+      - name: Test v0.4.1 patch compatibility
+        shell: powershell
+        run: python scripts/test_v041_patch_compat.py
 
       - name: Parse stable package with Windows PowerShell 5.1
         shell: powershell
