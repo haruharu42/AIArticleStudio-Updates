@@ -1,0 +1,7 @@
+{
+  "version": "0.4.0.1",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.0.1_Phase35BridgeFix.zip",
+  "sha256": "A58D3E14DA11350B9CBCC6EF972E52EBF6CEBB8126307E6502D08ABD9017BFDF",
+  "channel": "bridge",
+  "notes": "Compatibility bridge for v0.3.9: fixes Phase 3.5 preflight backup detection, installs integrated Web AI core/UI, and prepares the app for v0.4.1."
+}

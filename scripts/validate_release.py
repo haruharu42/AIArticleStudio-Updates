@@ -12,7 +12,10 @@ from urllib.parse import urlparse
 REPO = "haruharu42/AIArticleStudio-Updates"
 RAW_HOST = "raw.githubusercontent.com"
 SHA_RE = re.compile(r"^[0-9A-Fa-f]{64}$")
-VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+# Normal releases use x.y.z. A four-component numeric version (x.y.z.w) is
+# also accepted for compatibility bridge packages because the Windows updater
+# compares versions using System.Version, which supports four components.
+VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:\.\d+)?$")
 
 
 def fail(message: str) -> None:

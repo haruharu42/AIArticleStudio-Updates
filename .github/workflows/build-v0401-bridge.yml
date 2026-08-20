@@ -1,11 +1,12 @@
 name: Build v0.4.0.1 bridge package
 
 on:
-  push:
+  pull_request:
     branches: [main]
     paths:
       - 'release/v0401/**'
       - 'scripts/test_v0401_bridge.py'
+      - 'scripts/validate_release.py'
       - '.github/workflows/build-v0401-bridge.yml'
   workflow_dispatch:
 
@@ -14,12 +15,14 @@ permissions:
 
 jobs:
   build-and-commit:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout PR head
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.head_ref || 'publish-v0401-bridge' }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -35,7 +38,8 @@ jobs:
       - name: Validate generated bridge manifest
         run: python scripts/validate_release.py latest-v0401.json
 
-      - name: Commit generated package and manifest
+      - name: Commit generated package and manifest to PR branch
+        if: github.event_name == 'pull_request'
         shell: bash
         run: |
           set -euo pipefail
@@ -47,4 +51,4 @@ jobs:
             exit 0
           fi
           git commit -m "Build v0.4.0.1 Phase 3.5 bridge package"
-          git push origin HEAD:main
+          git push origin HEAD:${{ github.head_ref }}
