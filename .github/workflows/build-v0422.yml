@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   linux-build-and-commit:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'feature-v0422-') || startsWith(github.head_ref, 'release-v0422')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR head
@@ -69,6 +69,7 @@ jobs:
           git push origin HEAD:${{ github.head_ref }}
 
   windows-validation:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'feature-v0422-') || startsWith(github.head_ref, 'release-v0422')
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
