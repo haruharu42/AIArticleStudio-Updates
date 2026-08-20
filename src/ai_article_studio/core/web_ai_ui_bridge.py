@@ -131,6 +131,33 @@ class WebAIUIBridge:
     def current_snapshot(self) -> dict[str, Any]:
         return self.workflow.snapshot()
 
+    def history_items(self, limit: int = 10) -> list[dict[str, Any]]:
+        return self.workflow.state_store.recent_summaries(limit)
+
+    def load_history(self, article_id: str) -> dict[str, Any]:
+        state = self.workflow.state_store.load_history(article_id)
+        return asdict(state) if state else {}
+
+    def delete_history(self, article_id: str) -> bool:
+        return self.workflow.state_store.delete_history(article_id)
+
+    def new_article(self) -> dict[str, Any]:
+        state = self.workflow.state_store.start_new(generation_method="web")
+        return asdict(state)
+
+    def clear_article_content(self) -> dict[str, Any]:
+        state = self.workflow.state_store.clear_article_content()
+        return asdict(state)
+
+    def save_editor_draft(self, raw_text: str | None = None, formatted_text: str | None = None) -> dict[str, Any]:
+        state = self.workflow.state_store.load() or WebAIWorkflowState()
+        if raw_text is not None:
+            state.raw_web_output = str(raw_text)
+        if formatted_text is not None:
+            state.formatted_output = str(formatted_text)
+        self.workflow.state_store.save(state)
+        return asdict(state)
+
     def mark_completed(self) -> dict[str, Any]:
         state = self.workflow.mark_completed()
         return {"step": state.current_step, "is_completed": state.is_completed, "resume_visible": state.can_resume}
