@@ -11,6 +11,7 @@ VERSION = "0.4.2"
 PACKAGE_NAME = "AIArticleStudio_Update_v0.4.2_Phase36ImageWorkflow.zip"
 PACKAGE_PATH = ROOT / "updates" / PACKAGE_NAME
 STAGE = ROOT / ".build_v042"
+ZIP_TIMESTAMP = (2020, 1, 1, 0, 0, 0)
 CORE_FILES = [
     "image_settings.py",
     "image_marker_parser.py",
@@ -39,6 +40,25 @@ def sha256(path: Path) -> str:
     return h.hexdigest().upper()
 
 
+def write_reproducible_zip(source_root: Path, output: Path) -> None:
+    """Build byte-for-byte reproducible archives across CI reruns.
+
+    Git checkouts assign fresh filesystem mtimes, and ZipFile.write preserves
+    those timestamps. That made the package SHA change on every rebuild even
+    when the source was identical. Fixed metadata keeps stable manifests safe.
+    """
+
+    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+        for path in sorted(p for p in source_root.rglob("*") if p.is_file()):
+            arcname = path.relative_to(source_root).as_posix()
+            info = zipfile.ZipInfo(arcname, date_time=ZIP_TIMESTAMP)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.create_system = 3
+            info.external_attr = 0o100644 << 16
+            info.flag_bits |= 0x800  # UTF-8 filenames
+            zf.writestr(info, path.read_bytes())
+
+
 def main() -> None:
     if STAGE.exists():
         shutil.rmtree(STAGE)
@@ -50,9 +70,7 @@ def main() -> None:
 
     PACKAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
     PACKAGE_PATH.unlink(missing_ok=True)
-    with zipfile.ZipFile(PACKAGE_PATH, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-        for path in sorted(p for p in STAGE.rglob("*") if p.is_file()):
-            zf.write(path, path.relative_to(STAGE).as_posix())
+    write_reproducible_zip(STAGE, PACKAGE_PATH)
 
     digest = sha256(PACKAGE_PATH)
     manifest = {
