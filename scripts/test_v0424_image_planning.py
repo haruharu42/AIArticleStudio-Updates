@@ -77,6 +77,7 @@ def test_auto_count_and_manual_range() -> None:
 def test_cross_platform_package_bytes() -> None:
     build_ns = runpy.run_path(str(RELEASE / "build_package.py"))
     canonical_bytes = build_ns["canonical_bytes"]
+    deterministic_zip_info = build_ns["deterministic_zip_info"]
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp)
         lf = root / "lf.py"
@@ -84,6 +85,10 @@ def test_cross_platform_package_bytes() -> None:
         lf.write_bytes(b"first\nsecond\n")
         crlf.write_bytes(b"first\r\nsecond\r\n")
         assert canonical_bytes(lf) == canonical_bytes(crlf) == b"first\nsecond\n"
+        info = deterministic_zip_info("payload/core/test.py")
+        assert info.create_system == 3
+        assert info.date_time == (2026, 8, 20, 0, 0, 0)
+        assert info.external_attr == 0o644 << 16
 
 
 def test_patch() -> None:
