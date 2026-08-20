@@ -1,0 +1,1 @@
+Trigger full Linux and Windows PowerShell 5.1 validation for the published v0.4.2 candidate package before stable promotion.
