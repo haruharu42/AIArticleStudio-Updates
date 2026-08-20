@@ -156,7 +156,7 @@ class WebAIWorkflow:
         text, _source = self._article_text_and_source(state, article_text)
         errors: list[str] = []
         if not cfg.enabled:
-            errors.append("「画像を作る」をONにしてください。")
+            errors.append("「アイキャッチを作成」または「記事内の挿絵を作成」をONにしてください。")
         if not state.selected_title.strip():
             errors.append("記事タイトルがまだ選択されていません。")
         if not text.strip():

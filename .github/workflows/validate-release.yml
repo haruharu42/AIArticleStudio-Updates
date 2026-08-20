@@ -10,6 +10,8 @@ on:
       - 'candidate-v042.json'
       - 'candidate-v0421.json'
       - 'candidate-v0422.json'
+      - 'candidate-v0423.json'
+      - 'candidate-v0424.json'
       - 'updates/**'
       - 'release/v040/**'
       - 'release/v0401/**'
@@ -17,6 +19,8 @@ on:
       - 'release/v042/**'
       - 'release/v0421/**'
       - 'release/v0422/**'
+      - 'release/v0423/**'
+      - 'release/v0424/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -30,6 +34,8 @@ on:
       - 'candidate-v042.json'
       - 'candidate-v0421.json'
       - 'candidate-v0422.json'
+      - 'candidate-v0423.json'
+      - 'candidate-v0424.json'
       - 'updates/**'
       - 'release/v040/**'
       - 'release/v0401/**'
@@ -37,6 +43,8 @@ on:
       - 'release/v042/**'
       - 'release/v0421/**'
       - 'release/v0422/**'
+      - 'release/v0423/**'
+      - 'release/v0424/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -72,6 +80,12 @@ jobs:
       - name: Validate v0.4.2.2 candidate
         if: ${{ hashFiles('candidate-v0422.json') != '' }}
         run: python scripts/validate_release.py candidate-v0422.json
+      - name: Validate v0.4.2.3 candidate
+        if: ${{ hashFiles('candidate-v0423.json') != '' }}
+        run: python scripts/validate_release.py candidate-v0423.json
+      - name: Validate v0.4.2.4 candidate
+        if: ${{ hashFiles('candidate-v0424.json') != '' }}
+        run: python scripts/validate_release.py candidate-v0424.json
       - name: Test Phase 3.5 core
         run: python scripts/test_phase35_core.py
       - name: Test Phase 3.5 integrated workflow
@@ -96,6 +110,10 @@ jobs:
         run: python scripts/test_v0421_hotfix.py
       - name: Test v0.4.2.2 article-linked images
         run: python scripts/test_v0422_image_linkage.py
+      - name: Test v0.4.2.3 anime style
+        run: python scripts/test_v0423_anime_style.py
+      - name: Test v0.4.2.4 image planning
+        run: python scripts/test_v0424_image_planning.py
 
   validate-windows-powershell51:
     name: Windows PowerShell 5.1 validation
@@ -129,6 +147,14 @@ jobs:
         if: ${{ hashFiles('candidate-v0422.json') != '' }}
         shell: powershell
         run: python scripts/validate_release.py candidate-v0422.json
+      - name: Validate v0.4.2.3 candidate with Python
+        if: ${{ hashFiles('candidate-v0423.json') != '' }}
+        shell: powershell
+        run: python scripts/validate_release.py candidate-v0423.json
+      - name: Validate v0.4.2.4 candidate with Python
+        if: ${{ hashFiles('candidate-v0424.json') != '' }}
+        shell: powershell
+        run: python scripts/validate_release.py candidate-v0424.json
       - name: Test Phase 3.5 core
         shell: powershell
         run: python scripts/test_phase35_core.py
@@ -165,6 +191,12 @@ jobs:
       - name: Test v0.4.2.2 article-linked images
         shell: powershell
         run: python scripts/test_v0422_image_linkage.py
+      - name: Test v0.4.2.3 anime style
+        shell: powershell
+        run: python scripts/test_v0423_anime_style.py
+      - name: Test v0.4.2.4 image planning
+        shell: powershell
+        run: python scripts/test_v0424_image_planning.py
       - name: Parse stable package with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\latest.json
@@ -189,3 +221,11 @@ jobs:
         if: ${{ hashFiles('candidate-v0422.json') != '' }}
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0422.json
+      - name: Parse v0.4.2.3 candidate with Windows PowerShell 5.1
+        if: ${{ hashFiles('candidate-v0423.json') != '' }}
+        shell: powershell
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0423.json
+      - name: Parse v0.4.2.4 candidate with Windows PowerShell 5.1
+        if: ${{ hashFiles('candidate-v0424.json') != '' }}
+        shell: powershell
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0424.json
