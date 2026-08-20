@@ -28,7 +28,7 @@ STYLE_LABELS = {
     "auto": "おまかせ",
     "business": "ビジネス",
     "tech": "テック",
-    "gentle": "やさしい",
+    "gentle": "やさしいイラスト",
     "diagram": "図解風",
     "anime": "アニメ風",
     "manga": "漫画風",
