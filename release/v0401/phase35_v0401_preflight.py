@@ -129,7 +129,8 @@ def main() -> None:
         return
     root = args.app_root or default_app_root()
     result = probe(root)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    # Keep stdout ASCII-safe for Windows PowerShell 5.1 / legacy console code pages.
+    print(json.dumps(result, ensure_ascii=True, indent=2))
     raise SystemExit(0 if result["safe_to_patch"] else 2)
 
 
