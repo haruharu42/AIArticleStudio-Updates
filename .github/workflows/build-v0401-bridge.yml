@@ -2,7 +2,7 @@ name: Build v0.4.0.1 bridge package
 
 on:
   push:
-    branches: [hotfix-v0401-upgrade-path]
+    branches: [main]
     paths:
       - 'release/v0401/**'
       - 'scripts/test_v0401_bridge.py'
@@ -19,7 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: hotfix-v0401-upgrade-path
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -47,4 +47,4 @@ jobs:
             exit 0
           fi
           git commit -m "Build v0.4.0.1 Phase 3.5 bridge package"
-          git push origin HEAD:hotfix-v0401-upgrade-path
+          git push origin HEAD:main
