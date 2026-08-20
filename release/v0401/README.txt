@@ -17,3 +17,5 @@ Fix:
 After this update:
 - Confirm Installed version : v0.4.0.1
 - Then update once more to v0.4.1.
+
+Build revision: 1
