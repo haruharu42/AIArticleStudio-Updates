@@ -74,6 +74,18 @@ def test_auto_count_and_manual_range() -> None:
     assert len(manual_bundle.illustration_prompts) == 6
 
 
+def test_cross_platform_package_bytes() -> None:
+    build_ns = runpy.run_path(str(RELEASE / "build_package.py"))
+    canonical_bytes = build_ns["canonical_bytes"]
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        lf = root / "lf.py"
+        crlf = root / "crlf.py"
+        lf.write_bytes(b"first\nsecond\n")
+        crlf.write_bytes(b"first\r\nsecond\r\n")
+        assert canonical_bytes(lf) == canonical_bytes(crlf) == b"first\nsecond\n"
+
+
 def test_patch() -> None:
     fixture_ns = runpy.run_path(str(ROOT / "scripts" / "test_v0422_image_linkage.py"))
     fixture = fixture_ns["APP_FIXTURE"]
@@ -132,6 +144,7 @@ def test_patch() -> None:
 def main() -> None:
     test_four_states()
     test_auto_count_and_manual_range()
+    test_cross_platform_package_bytes()
     test_patch()
     print("V0.4.2.4 IMAGE PLANNING TESTS OK")
 

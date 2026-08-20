@@ -21,6 +21,7 @@ RELEASE_FILES = [
     "validate_v0424.py",
 ]
 FIXED_DATE = (2026, 8, 20, 0, 0, 0)
+TEXT_SUFFIXES = {".json", ".md", ".ps1", ".py", ".txt", ".yml", ".yaml"}
 
 
 def sha256(path: Path) -> str:
@@ -31,6 +32,14 @@ def sha256(path: Path) -> str:
     return digest.hexdigest().upper()
 
 
+def canonical_bytes(path: Path) -> bytes:
+    raw = path.read_bytes()
+    if path.suffix.lower() not in TEXT_SUFFIXES:
+        return raw
+    text = raw.decode("utf-8-sig")
+    return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+
+
 def write_deterministic_zip(source_root: Path, output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.unlink(missing_ok=True)
@@ -39,7 +48,7 @@ def write_deterministic_zip(source_root: Path, output: Path) -> None:
             info = zipfile.ZipInfo(path.relative_to(source_root).as_posix(), FIXED_DATE)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o644 << 16
-            archive.writestr(info, path.read_bytes(), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+            archive.writestr(info, canonical_bytes(path), compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
 
 
 def main() -> None:
