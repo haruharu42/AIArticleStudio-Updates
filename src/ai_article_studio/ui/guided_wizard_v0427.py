@@ -473,19 +473,57 @@ def _design_page(app, parent):
     inner.pack(fill="both", expand=True, padx=22, pady=20)
     _heading(inner, "記事の内容を設計", "テーマを入力すると、読者と掲載先に合う構成をAIが提案します")
     theme = _var(app, ("theme", "topic", "article_theme"), "")
-    _label(inner, "記事テーマ・伝えたいこと", size=8, bold=True, fg=SOFT).pack(anchor="w", pady=(0, 6))
+    theme_auto = _var(
+        app,
+        ("theme_ai_auto",),
+        not bool(str(_value(theme) or "").strip()) or str(_value(theme)).strip() == "AIおまかせ",
+        boolean=True,
+    )
+    theme_header = tk.Frame(inner, bg=SURFACE_2)
+    theme_header.pack(fill="x", pady=(0, 6))
+    _label(theme_header, "記事テーマ・伝えたいこと", size=8, bold=True, fg=SOFT).pack(side="left")
+    auto_check = tk.Checkbutton(
+        theme_header,
+        text="AIおまかせ",
+        variable=theme_auto,
+        bg=SURFACE_2,
+        fg="#C4B5FD",
+        activebackground=SURFACE_2,
+        activeforeground=TEXT,
+        selectcolor=PURPLE,
+        cursor="hand2",
+    )
+    auto_check.pack(side="right")
     editor = tk.Text(inner, height=4, wrap="word", bg="#0D182A", fg=TEXT, insertbackground=TEXT, relief="flat", padx=12, pady=10, highlightthickness=1, highlightbackground=LINE)
     editor.pack(fill="x")
-    if _value(theme):
-        editor.insert("1.0", str(_value(theme)))
+    manual_theme = {"value": "" if str(_value(theme)).strip() == "AIおまかせ" else str(_value(theme) or "")}
 
     def sync_theme(_event=None):
         try:
-            theme.set(editor.get("1.0", "end").strip())
+            if bool(_value(theme_auto, False)):
+                theme.set("AIおまかせ")
+                return
+            value = editor.get("1.0", "end").strip()
+            manual_theme["value"] = value
+            theme.set(value)
         except Exception:
             pass
 
+    def refresh_theme_mode():
+        editor.configure(state="normal")
+        editor.delete("1.0", "end")
+        if bool(_value(theme_auto, False)):
+            editor.insert("1.0", "AIおまかせ")
+            editor.configure(state="disabled", disabledforeground="#C4B5FD")
+            theme.set("AIおまかせ")
+        else:
+            editor.insert("1.0", manual_theme["value"])
+            theme.set(manual_theme["value"])
+        editor.configure(highlightbackground=PURPLE_2 if bool(_value(theme_auto, False)) else LINE)
+
     editor.bind("<KeyRelease>", sync_theme)
+    auto_check.configure(command=refresh_theme_mode)
+    refresh_theme_mode()
     additions = tk.Frame(inner, bg=SURFACE_2)
     additions.pack(fill="x", pady=(14, 0))
     for column in range(3):
@@ -505,6 +543,8 @@ def _design_page(app, parent):
     info.pack(fill="x", pady=(14, 0))
     _label(info, "次の画面でタイトル候補を作成し、1つ選んでから完成記事へ進みます。", size=8, fg="#C4B5FD", bg="#151D35").pack(anchor="w", padx=15, pady=11)
     app._v0427_sync_theme = sync_theme
+    app._v0430_theme_editor = editor
+    app._v0430_theme_auto = theme_auto
     return card
 
 
@@ -550,16 +590,33 @@ def install_article_wizard(app, body):
             if hasattr(app, "_sync_image_settings"):
                 app._sync_image_settings()
             selected = str(generation.get())
-            if selected == "Web版AIで作成" and hasattr(app, "_open_web_ai_mode"):
-                app._open_web_ai_mode()
-                return
             candidates = _find_buttons(existing)
-            wanted = ("API", "記事を作成") if selected == "OpenAI APIで作成" else ("プロンプト", "書き出")
-            for button in candidates:
-                text = str(button.cget("text") or "")
-                if any(word in text for word in wanted):
+            if selected == "Web版AIで作成":
+                priorities = (
+                    lambda text: "Web版AI" in text and "作成" in text,
+                    lambda text: "Web" in text and "作成" in text,
+                )
+            elif selected == "OpenAI APIで作成":
+                priorities = (
+                    lambda text: "API" in text and "作成" in text,
+                    lambda text: "記事を作成" in text,
+                )
+            else:
+                priorities = (
+                    lambda text: "プロンプト" in text and ("書き出" in text or "作成" in text),
+                )
+            for matches in priorities:
+                for button in candidates:
+                    text = str(button.cget("text") or "")
+                    if not matches(text):
+                        continue
+                    app._v0430_creation_action = text
                     button.invoke()
                     return
+            if selected == "Web版AIで作成" and hasattr(app, "_open_web_ai_mode"):
+                app._v0430_creation_action = "direct_web_fallback"
+                app._open_web_ai_mode()
+                return
             messagebox.showinfo("記事作成", "選択した生成方法の準備画面を開けませんでした。設定を確認してください。")
         except Exception as exc:
             messagebox.showerror("記事作成", f"作成画面へ進めませんでした。\n{exc}")

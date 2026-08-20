@@ -17,6 +17,7 @@ on:
       - 'candidate-v0427.json'
       - 'candidate-v0428.json'
       - 'candidate-v0429.json'
+      - 'candidate-v0430.json'
       - 'updates/**'
       - 'release/v040/**'
       - 'release/v0401/**'
@@ -31,6 +32,7 @@ on:
       - 'release/v0427/**'
       - 'release/v0428/**'
       - 'release/v0429/**'
+      - 'release/v0430/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -51,6 +53,7 @@ on:
       - 'candidate-v0427.json'
       - 'candidate-v0428.json'
       - 'candidate-v0429.json'
+      - 'candidate-v0430.json'
       - 'updates/**'
       - 'release/v040/**'
       - 'release/v0401/**'
@@ -65,6 +68,7 @@ on:
       - 'release/v0427/**'
       - 'release/v0428/**'
       - 'release/v0429/**'
+      - 'release/v0430/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -121,6 +125,9 @@ jobs:
       - name: Validate v0.4.2.9 candidate
         if: ${{ hashFiles('candidate-v0429.json') != '' }}
         run: python scripts/validate_release.py candidate-v0429.json
+      - name: Validate v0.4.3.0 candidate
+        if: ${{ hashFiles('candidate-v0430.json') != '' }}
+        run: python scripts/validate_release.py candidate-v0430.json
       - name: Test Phase 3.5 core
         run: python scripts/test_phase35_core.py
       - name: Test Phase 3.5 integrated workflow
@@ -163,6 +170,10 @@ jobs:
         run: python scripts/test_v0429_live_hook.py
       - name: Test v0.4.2.9 live event when display is available
         run: python scripts/test_v0429_live_event_runtime.py
+      - name: Test v0.4.3.0 STEP 4 to STEP 5 and AI-auto
+        run: python scripts/test_v0430_step_five.py
+      - name: Test v0.4.3.0 event when display is available
+        run: python scripts/test_v0430_step_five_tk_runtime.py
 
   validate-windows-powershell51:
     name: Windows PowerShell 5.1 validation
@@ -224,6 +235,10 @@ jobs:
         if: ${{ hashFiles('candidate-v0429.json') != '' }}
         shell: powershell
         run: python scripts/validate_release.py candidate-v0429.json
+      - name: Validate v0.4.3.0 candidate with Python
+        if: ${{ hashFiles('candidate-v0430.json') != '' }}
+        shell: powershell
+        run: python scripts/validate_release.py candidate-v0430.json
       - name: Test Phase 3.5 core
         shell: powershell
         run: python scripts/test_phase35_core.py
@@ -287,6 +302,12 @@ jobs:
       - name: Test v0.4.2.9 real show_create event
         shell: powershell
         run: python scripts/test_v0429_live_event_runtime.py --require-display
+      - name: Test v0.4.3.0 STEP 4 to STEP 5 and AI-auto
+        shell: powershell
+        run: python scripts/test_v0430_step_five.py
+      - name: Test v0.4.3.0 real STEP 4 to STEP 5 event
+        shell: powershell
+        run: python scripts/test_v0430_step_five_tk_runtime.py --require-display
       - name: Parse stable package with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\latest.json
@@ -339,3 +360,7 @@ jobs:
         if: ${{ hashFiles('candidate-v0429.json') != '' }}
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0429.json
+      - name: Parse v0.4.3.0 candidate with Windows PowerShell 5.1
+        if: ${{ hashFiles('candidate-v0430.json') != '' }}
+        shell: powershell
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0430.json
