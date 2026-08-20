@@ -6,8 +6,10 @@ on:
     paths:
       - 'latest*.json'
       - 'candidate-v040.json'
+      - 'candidate-v041.json'
       - 'updates/**'
       - 'release/v040/**'
+      - 'release/v041/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -17,8 +19,10 @@ on:
     paths:
       - 'latest*.json'
       - 'candidate-v040.json'
+      - 'candidate-v041.json'
       - 'updates/**'
       - 'release/v040/**'
+      - 'release/v041/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -47,6 +51,9 @@ jobs:
       - name: Validate v0.4.0 candidate
         run: python scripts/validate_release.py candidate-v040.json
 
+      - name: Validate v0.4.1 candidate
+        run: python scripts/validate_release.py candidate-v041.json
+
       - name: Test Phase 3.5 core
         run: python scripts/test_phase35_core.py
 
@@ -61,6 +68,9 @@ jobs:
 
       - name: Test v0.4.0 patch compatibility
         run: python scripts/test_v040_patch_compat.py
+
+      - name: Test v0.4.1 patch compatibility
+        run: python scripts/test_v041_patch_compat.py
 
   validate-windows-powershell51:
     name: Windows PowerShell 5.1 validation
@@ -82,6 +92,10 @@ jobs:
         shell: powershell
         run: python scripts/validate_release.py candidate-v040.json
 
+      - name: Validate v0.4.1 candidate with Python
+        shell: powershell
+        run: python scripts/validate_release.py candidate-v041.json
+
       - name: Test Phase 3.5 core
         shell: powershell
         run: python scripts/test_phase35_core.py
@@ -102,6 +116,10 @@ jobs:
         shell: powershell
         run: python scripts/test_v040_patch_compat.py
 
+      - name: Test v0.4.1 patch compatibility
+        shell: powershell
+        run: python scripts/test_v041_patch_compat.py
+
       - name: Parse stable package with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\latest.json
@@ -109,3 +127,7 @@ jobs:
       - name: Parse v0.4.0 candidate with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v040.json
+
+      - name: Parse v0.4.1 candidate with Windows PowerShell 5.1
+        shell: powershell
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v041.json
