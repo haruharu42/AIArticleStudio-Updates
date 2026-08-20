@@ -20,7 +20,10 @@ permissions:
 
 jobs:
   build-and-commit:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    # This builder is frozen for the original v0.4.2 preview branch. New Phase
+    # 3.6 releases have their own deterministic builders and must not rewrite
+    # the historical v0.4.2 ZIP/SHA when shared core files change.
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'phase36-v042-complete'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR head
