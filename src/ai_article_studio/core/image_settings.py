@@ -5,10 +5,40 @@ from typing import Any, Mapping
 
 VALID_TARGETS = {"eyecatch", "illustrations", "both"}
 VALID_MODES = {"web", "api", "local"}
-VALID_STYLES = {"auto", "business", "tech", "gentle", "diagram"}
+VALID_STYLES = {
+    "auto",
+    "business",
+    "tech",
+    "gentle",
+    "diagram",
+    "anime",
+    "manga",
+    "pop",
+    "luxury",
+    "catchy_thumbnail",
+    "natural_blog",
+    "minimal",
+    "infographic",
+}
 VALID_COUNTS = {"auto", "1", "2", "3"}
 VALID_TEXT_MODES = {"none", "title", "title_and_catchcopy"}
 VALID_SIZE_PRESETS = {"note", "tips", "brain", "blog_landscape", "square"}
+
+STYLE_LABELS = {
+    "auto": "おまかせ",
+    "business": "ビジネス",
+    "tech": "テック",
+    "gentle": "やさしい",
+    "diagram": "図解風",
+    "anime": "アニメ風",
+    "manga": "漫画風",
+    "pop": "ポップ風",
+    "luxury": "高級感",
+    "catchy_thumbnail": "サムネ映え重視",
+    "natural_blog": "ナチュラル",
+    "minimal": "ミニマル",
+    "infographic": "インフォグラフィック",
+}
 
 
 @dataclass(frozen=True)
@@ -84,3 +114,7 @@ def merge_image_settings(raw: Mapping[str, Any] | None, **changes: Any) -> Image
 
 def image_feature_active(raw: Mapping[str, Any] | None) -> bool:
     return normalize_image_settings(raw).enabled
+
+
+def style_label(style: str) -> str:
+    return STYLE_LABELS.get(str(style or "auto"), STYLE_LABELS["auto"])
