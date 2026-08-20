@@ -20,7 +20,7 @@ VALID_STYLES = {
     "minimal",
     "infographic",
 }
-VALID_COUNTS = {"auto", "1", "2", "3"}
+VALID_COUNTS = {"auto", "1", "2", "3", "4", "5", "6"}
 VALID_TEXT_MODES = {"none", "title", "title_and_catchcopy"}
 VALID_SIZE_PRESETS = {"note", "tips", "brain", "blog_landscape", "square"}
 

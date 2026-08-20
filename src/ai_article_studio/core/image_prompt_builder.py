@@ -140,10 +140,54 @@ def _article_digest(article_text: str, limit: int = 1100) -> str:
     return _clean("\n".join(parts), limit)
 
 
-def _requested_illustration_count(cfg: ImageSettings) -> int:
-    if cfg.illustration_count in {"1", "2", "3"}:
+SKIP_ILLUSTRATION_HEADINGS = {
+    "はじめに",
+    "おわりに",
+    "まとめ",
+    "さいごに",
+    "最後に",
+    "よくある質問",
+    "faq",
+}
+
+
+def _meaningful_headings(article_text: str) -> list[tuple[str, str]]:
+    headings: list[tuple[str, str]] = []
+    for line in str(article_text or "").splitlines():
+        stripped = line.strip()
+        match = HEADING_RE.match(stripped)
+        if not match or len(match.group(1)) == 1:
+            continue
+        heading = _clean(match.group(2), 100)
+        normalized = re.sub(r"[\s:：!?！？・\-—]+", "", heading).lower()
+        if not heading or normalized in SKIP_ILLUSTRATION_HEADINGS:
+            continue
+        headings.append((stripped, heading))
+    return headings
+
+
+def _requested_illustration_count(cfg: ImageSettings, article_text: str = "") -> int:
+    if cfg.illustration_count in {"1", "2", "3", "4", "5", "6"}:
         return int(cfg.illustration_count)
-    return 3
+    text = str(article_text or "").strip()
+    if not text:
+        return 1
+    meaningful_count = len(_meaningful_headings(text))
+    if len(text) <= 2400:
+        suggested = 1
+    elif len(text) <= 5000:
+        suggested = 2
+    elif len(text) <= 8000:
+        suggested = 3
+    elif len(text) <= 11000:
+        suggested = 4
+    elif len(text) <= 15000:
+        suggested = 5
+    else:
+        suggested = 6
+    if meaningful_count:
+        suggested = min(suggested, meaningful_count)
+    return max(1, min(6, suggested))
 
 
 def _derived_markers(article_text: str, cfg: ImageSettings) -> list[IllustrationMarker]:
@@ -152,18 +196,16 @@ def _derived_markers(article_text: str, cfg: ImageSettings) -> list[Illustration
     text = str(article_text or "")
     if not text.strip():
         return []
-    count = _requested_illustration_count(cfg)
+    count = _requested_illustration_count(cfg, text)
     markers: list[IllustrationMarker] = []
-    for line in text.splitlines():
-        stripped = line.strip()
-        match = HEADING_RE.match(stripped)
-        if not match:
-            continue
-        heading = _clean(match.group(2), 100)
-        if not heading:
-            continue
-        if len(match.group(1)) == 1:
-            continue
+    candidates = _meaningful_headings(text)
+    if len(candidates) > count:
+        if count == 1:
+            candidates = [candidates[len(candidates) // 2]]
+        else:
+            indexes = [round(i * (len(candidates) - 1) / (count - 1)) for i in range(count)]
+            candidates = [candidates[index] for index in indexes]
+    for stripped, heading in candidates:
         number = len(markers) + 1
         markers.append(
             IllustrationMarker(
@@ -173,8 +215,6 @@ def _derived_markers(article_text: str, cfg: ImageSettings) -> list[Illustration
                 raw=stripped,
             )
         )
-        if len(markers) >= count:
-            break
     if markers:
         return markers
 
@@ -282,9 +322,11 @@ def build_image_prompt_bundle(
         if markers:
             marker_source = "derived_from_article"
 
-    limit = _requested_illustration_count(cfg)
-    if cfg.illustration_count in {"1", "2", "3"}:
+    limit = _requested_illustration_count(cfg, text)
+    if cfg.illustration_count in {"1", "2", "3", "4", "5", "6"}:
         markers = list(markers)[:limit]
+    else:
+        markers = list(markers)[:6]
 
     prompts: list[dict[str, Any]] = []
     for marker in markers:
