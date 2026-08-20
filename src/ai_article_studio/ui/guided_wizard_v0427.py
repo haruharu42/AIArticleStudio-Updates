@@ -488,7 +488,8 @@ def _design_page(app, parent):
     editor.bind("<KeyRelease>", sync_theme)
     additions = tk.Frame(inner, bg=SURFACE_2)
     additions.pack(fill="x", pady=(14, 0))
-    additions.grid_columnconfigure((0, 1, 2), weight=1)
+    for column in range(3):
+        additions.grid_columnconfigure(column, weight=1)
     bonus = _var(app, ("paid_bonus_enabled", "bonus_enabled"), True, boolean=True)
     affiliate = _var(app, ("affiliate_enabled",), False, boolean=True)
     magazine = _var(app, ("magazine_enabled",), False, boolean=True)
