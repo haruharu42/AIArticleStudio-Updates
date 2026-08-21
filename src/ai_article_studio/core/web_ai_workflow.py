@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
+from .article_publish_text import build_article_text_variants
 from .gpu_diagnostic import diagnose_gpu
 from .image_assets import ArticleImageStore
 from .image_prompt_builder import build_image_prompt_bundle
@@ -215,7 +216,8 @@ class WebAIWorkflow:
         state: WebAIWorkflowState | None = None,
     ) -> WebAIWorkflowState:
         state = state or self.state_store.load() or WebAIWorkflowState()
-        update_state(state, formatted_output=publish_text, publish_platform=platform, current_step="04")
+        variants = build_article_text_variants(publish_text)
+        update_state(state, formatted_output=variants.publish_text, publish_platform=platform, current_step="04")
         self.state_store.save(state)
         return state
 
