@@ -1,0 +1,7 @@
+{
+  "version": "0.4.3.1",
+  "package_url": "https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/AIArticleStudio_Update_v0.4.3.1_EmbeddedSixStepFlow.zip",
+  "sha256": "77F91C8CB4B1528043EBF9BBACA44F4B1488EDB51AE1CCCC5EF508B5AF73ACB4",
+  "channel": "stable",
+  "notes": "v0.4.3.1: implements the approved single-screen six-step Web AI flow, decorated completion preview, article-linked image prompts, and ten-item recent history."
+}
