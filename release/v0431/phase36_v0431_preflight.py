@@ -29,7 +29,7 @@ def main() -> None:
         "v0430_flow": False,
         "wizard_modules": all(path.is_file() for path in required),
         "safe_to_update": False,
-        "reason": "canonical_v0430_required",
+        "reason": "canonical_v0429_or_v0430_required",
     }
     if app.is_file():
         text = app.read_text(encoding="utf-8")
@@ -38,14 +38,15 @@ def main() -> None:
         if source27.is_file():
             source_text = source27.read_text(encoding="utf-8")
             result["v0430_flow"] = "app._v0430_creation_action = text" in source_text and 'text="AIおまかせ"' in source_text
+        from_v0429 = result["installed_version"] == "0.4.2.9"
+        from_v0430 = result["installed_version"] == "0.4.3.0" and result["v0430_flow"]
         result["safe_to_update"] = (
-            result["installed_version"] == "0.4.3.0"
+            (from_v0429 or from_v0430)
             and result["v0429_hook"]
-            and result["v0430_flow"]
             and result["wizard_modules"]
         )
         if result["safe_to_update"]:
-            result["reason"] = "canonical_v0430_verified"
+            result["reason"] = f"canonical_v{result['installed_version'].replace('.', '')}_verified"
     print(json.dumps(result, ensure_ascii=False, indent=2))
     if not result["safe_to_update"]:
         raise SystemExit(1)

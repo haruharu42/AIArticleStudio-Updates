@@ -9,7 +9,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 VERSION = "0.4.3.1"
-PACKAGE_NAME = "AIArticleStudio_Update_v0.4.3.1_EmbeddedSixStepFlow.zip"
+PACKAGE_NAME = "AIArticleStudio_Update_v0.4.3.1_EmbeddedSixStepFlowBridge.zip"
 PACKAGE_PATH = ROOT / "updates" / PACKAGE_NAME
 STAGE = ROOT / ".build_v0431"
 RELEASE_FILES = (
@@ -71,7 +71,7 @@ def main() -> None:
         "package_url": f"https://raw.githubusercontent.com/haruharu42/AIArticleStudio-Updates/main/updates/{PACKAGE_NAME}",
         "sha256": digest,
         "channel": "stable",
-        "notes": "v0.4.3.1: implements the approved single-screen six-step Web AI flow, decorated completion preview, article-linked image prompts, and ten-item recent history.",
+        "notes": "v0.4.3.1: implements the approved single-screen six-step Web AI flow and safely supports direct updates from v0.4.2.9 or v0.4.3.0.",
     }
     (ROOT / "candidate-v0431.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     (ROOT / "release" / "v0431" / "SHA256.txt").write_text(digest + "  " + PACKAGE_NAME + "\n", encoding="ascii")
