@@ -13,4 +13,4 @@ This update implements the approved interactive six-step preview in the Windows 
 - Existing API generation remains connected to the validated legacy API action.
 - Article data, settings, history, and updater backups are preserved.
 
-The updater accepts only canonical v0.4.3.0 and validates the embedded UI before setting v0.4.3.1.
+The updater accepts canonical v0.4.2.9 or v0.4.3.0, applies the complete embedded-flow payload, and validates the UI before setting v0.4.3.1.

@@ -11,7 +11,7 @@ import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 RELEASE = ROOT / "release" / "v0431"
-PACKAGE_NAME = "AIArticleStudio_Update_v0.4.3.1_EmbeddedSixStepFlow.zip"
+PACKAGE_NAME = "AIArticleStudio_Update_v0.4.3.1_EmbeddedSixStepFlowBridge.zip"
 
 
 APP_FIXTURE = '''class App:
@@ -27,21 +27,21 @@ def run(*args: str) -> None:
     subprocess.run([sys.executable, *args], cwd=ROOT, check=True)
 
 
-def build_fixture(root: pathlib.Path) -> pathlib.Path:
+def build_fixture(root: pathlib.Path, version: str = "0.4.3.0") -> pathlib.Path:
     install = root / "AIArticleStudio"
     ui = install / "src" / "ai_article_studio" / "ui"
     ui.mkdir(parents=True)
-    (install / "src" / "ai_article_studio" / "__init__.py").write_text('__version__ = "0.4.3.0"\n', encoding="utf-8")
+    (install / "src" / "ai_article_studio" / "__init__.py").write_text(f'__version__ = "{version}"\n', encoding="utf-8")
     (ui / "app.py").write_text(APP_FIXTURE, encoding="utf-8")
     for number in (7, 8, 9):
         shutil.copy2(ROOT / "src" / "ai_article_studio" / "ui" / f"guided_wizard_v042{number}.py", ui)
     return install
 
 
-def test_patch_and_validation() -> None:
+def test_patch_and_validation(version: str) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp)
-        install = build_fixture(root)
+        install = build_fixture(root, version)
         package = root / "package"
         payload = package / "payload" / "ui"
         payload.mkdir(parents=True)
@@ -74,7 +74,8 @@ def test_package() -> None:
 
 
 def main() -> None:
-    test_patch_and_validation()
+    test_patch_and_validation("0.4.2.9")
+    test_patch_and_validation("0.4.3.0")
     test_package()
     print("V0.4.3.1 EMBEDDED FLOW PATCH AND PACKAGE TESTS OK")
 
