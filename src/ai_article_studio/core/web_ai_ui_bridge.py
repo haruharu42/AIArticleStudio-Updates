@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
+from .article_publish_text import build_article_text_variants
 from .web_ai_publish import completion_steps
 from .web_ai_state import WebAIWorkflowState
 from .web_ai_workflow import WebAIWorkflow
@@ -117,7 +118,8 @@ class WebAIUIBridge:
         platform: str,
         state: WebAIWorkflowState | None = None,
     ) -> dict[str, Any]:
-        state = self.workflow.set_publish_text(publish_text, platform=platform, state=state)
+        variants = build_article_text_variants(publish_text)
+        state = self.workflow.set_publish_text(variants.source_text, platform=platform, state=state)
         readiness = self.workflow.publish_readiness(platform=platform, state=state)
         return {
             "step": state.current_step,
@@ -126,6 +128,7 @@ class WebAIUIBridge:
             "missing_requirements": list(readiness.missing_requirements or []),
             "actions": [asdict(action) for action in readiness.actions or []],
             "completion_steps": completion_steps(readiness),
+            **variants.to_dict(),
         }
 
     def current_snapshot(self) -> dict[str, Any]:

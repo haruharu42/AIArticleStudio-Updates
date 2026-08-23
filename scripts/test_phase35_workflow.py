@@ -98,6 +98,8 @@ def main() -> None:
         assert publish_vm["actions"][0]["key"] == "copy_publish"
         assert any(a["key"] == "open_note" for a in publish_vm["actions"])
         assert publish_vm["completion_steps"][0] == "掲載用をコピーする"
+        assert publish_vm["source_text"] == ingest_vm["normalized_output"]
+        assert publish_vm["publish_text"] == ingest_vm["normalized_output"]
 
         completed = ui.mark_completed()
         assert completed["step"] == "05"

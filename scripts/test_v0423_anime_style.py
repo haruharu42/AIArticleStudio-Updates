@@ -35,7 +35,7 @@ def test_prompts() -> None:
     anime = normalize_image_settings({"enabled": True, "target": "both", "style": "anime", "illustration_count": "1"})
     bundle = build_image_prompt_bundle(request(), "AI副業入門", article, anime)
     text = bundle.eyecatch_prompt + "\n" + bundle.illustration_prompts[0]["prompt"]
-    for token in ("2Dアニメ", "セル塗り", "線画", "フォトリアル", "企業広告イラスト"):
+    for token in ("2Dアニメ", "セル塗り", "線画", "フォトリアル", "企業広告イラスト", "2Dアニメ素材", "光沢の強いアプリアイコン", "発光するバブルUI"):
         assert token in text, token
 
     manga = normalize_image_settings({"enabled": True, "target": "eyecatch", "style": "manga"})
