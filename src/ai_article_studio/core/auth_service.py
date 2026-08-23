@@ -434,12 +434,10 @@ class SupabaseAuthService:
             raise AuthConfigurationError("Googleログインのredirect_urlにはポート番号が必要です。")
         verifier = secrets.token_urlsafe(64)
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode("ascii")).digest()).rstrip(b"=").decode("ascii")
-        state = secrets.token_urlsafe(24)
         callback = _OAuthCallbackServer(
             host=redirect.hostname,
             port=redirect.port,
             path=redirect.path or "/",
-            expected_state=state,
         )
         query = parse.urlencode(
             {
@@ -447,7 +445,6 @@ class SupabaseAuthService:
                 "redirect_to": self.config.redirect_url,
                 "code_challenge": challenge,
                 "code_challenge_method": "s256",
-                "state": state,
             }
         )
         authorization_url = self._auth_url(f"authorize?{query}")
@@ -508,7 +505,7 @@ class SupabaseAuthService:
 
 
 class _OAuthCallbackServer:
-    def __init__(self, host: str, port: int, path: str, expected_state: str):
+    def __init__(self, host: str, port: int, path: str, expected_state: str | None = None):
         self.result: dict[str, str] = {}
         self.path = path
         self.expected_state = expected_state
@@ -522,7 +519,7 @@ class _OAuthCallbackServer:
                     return
                 values = parse.parse_qs(parsed.query)
                 state = (values.get("state") or [""])[0]
-                if state and state != outer.expected_state:
+                if outer.expected_state and state != outer.expected_state:
                     outer.result["error"] = "OAuth stateが一致しません。"
                 elif values.get("error"):
                     outer.result["error"] = (values.get("error_description") or values.get("error") or ["OAuthログインに失敗しました。"])[0]
