@@ -20,6 +20,7 @@ on:
       - 'candidate-v0430.json'
       - 'candidate-v0431.json'
       - 'candidate-v0432.json'
+      - 'candidate-v0433.json'
       - 'updates/**'
       - 'release/v040/**'
       - 'release/v0401/**'
@@ -37,6 +38,7 @@ on:
       - 'release/v0430/**'
       - 'release/v0431/**'
       - 'release/v0432/**'
+      - 'release/v0433/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -60,6 +62,7 @@ on:
       - 'candidate-v0430.json'
       - 'candidate-v0431.json'
       - 'candidate-v0432.json'
+      - 'candidate-v0433.json'
       - 'updates/**'
       - 'release/v040/**'
       - 'release/v0401/**'
@@ -77,6 +80,7 @@ on:
       - 'release/v0430/**'
       - 'release/v0431/**'
       - 'release/v0432/**'
+      - 'release/v0433/**'
       - 'scripts/**'
       - 'config/**'
       - 'src/**'
@@ -142,6 +146,9 @@ jobs:
       - name: Validate v0.4.3.2 candidate
         if: ${{ hashFiles('candidate-v0432.json') != '' }}
         run: python scripts/validate_release.py candidate-v0432.json
+      - name: Validate v0.4.3.3 candidate
+        if: ${{ hashFiles('candidate-v0433.json') != '' }}
+        run: python scripts/validate_release.py candidate-v0433.json
       - name: Test Phase 3.5 core
         run: python scripts/test_phase35_core.py
       - name: Test Phase 3.5 integrated workflow
@@ -198,6 +205,12 @@ jobs:
         run: python scripts/test_v0432_update_package.py
       - name: Test v0.4.3.2 event when display is available
         run: python scripts/test_v0432_publish_copy_tk_runtime.py
+      - name: Test v0.4.3.3 Auth/UI foundation
+        run: python scripts/test_v0433_auth_foundation.py
+      - name: Test v0.4.3.3 update package
+        run: python scripts/test_v0433_update_package.py
+      - name: Test v0.4.3.3 UI when display is available
+        run: python scripts/test_v0433_auth_ui_tk_runtime.py
 
   validate-windows-powershell51:
     name: Windows PowerShell 5.1 validation
@@ -271,6 +284,10 @@ jobs:
         if: ${{ hashFiles('candidate-v0432.json') != '' }}
         shell: powershell
         run: python scripts/validate_release.py candidate-v0432.json
+      - name: Validate v0.4.3.3 candidate with Python
+        if: ${{ hashFiles('candidate-v0433.json') != '' }}
+        shell: powershell
+        run: python scripts/validate_release.py candidate-v0433.json
       - name: Test Phase 3.5 core
         shell: powershell
         run: python scripts/test_phase35_core.py
@@ -355,6 +372,15 @@ jobs:
       - name: Test v0.4.3.2 real publish-copy flow
         shell: powershell
         run: python scripts/test_v0432_publish_copy_tk_runtime.py --require-display
+      - name: Test v0.4.3.3 Auth/UI foundation
+        shell: powershell
+        run: python scripts/test_v0433_auth_foundation.py
+      - name: Test v0.4.3.3 update package
+        shell: powershell
+        run: python scripts/test_v0433_update_package.py
+      - name: Test v0.4.3.3 real Auth UI
+        shell: powershell
+        run: python scripts/test_v0433_auth_ui_tk_runtime.py --require-display
       - name: Parse stable package with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\latest.json
@@ -419,3 +445,7 @@ jobs:
         if: ${{ hashFiles('candidate-v0432.json') != '' }}
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0432.json
+      - name: Parse v0.4.3.3 candidate with Windows PowerShell 5.1
+        if: ${{ hashFiles('candidate-v0433.json') != '' }}
+        shell: powershell
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0433.json
