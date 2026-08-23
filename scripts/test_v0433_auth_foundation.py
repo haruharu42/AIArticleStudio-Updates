@@ -163,11 +163,9 @@ def test_google_pkce_flow() -> None:
 
         def open_browser(url: str) -> bool:
             opened["url"] = url
-            query = parse.parse_qs(parse.urlparse(url).query)
-            state = query["state"][0]
 
             def callback() -> None:
-                with request.urlopen(f"{redirect}?code=test-auth-code&state={parse.quote(state)}", timeout=5) as response:
+                with request.urlopen(f"{redirect}?code=test-auth-code", timeout=5) as response:
                     assert response.status == 200
 
             threading.Thread(target=callback, daemon=True).start()
@@ -177,6 +175,7 @@ def test_google_pkce_flow() -> None:
         assert user.profile.role == "user"
         auth_query = parse.parse_qs(parse.urlparse(opened["url"]).query)
         assert auth_query["provider"] == ["google"]
+        assert "state" not in auth_query
         assert auth_query["code_challenge_method"] == ["s256"]
         assert auth_query["redirect_to"] == [redirect]
         assert "code_verifier" in http.calls[0]["body"]
