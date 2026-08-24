@@ -9,6 +9,7 @@ from ..core.auth_service import (
     AuthConfigurationError,
     AuthError,
     AuthenticatedUser,
+    ManagedUserProfile,
     SupabaseAuthService,
     UserProfile,
     build_auth_service,
@@ -29,6 +30,20 @@ PURPLE_DARK = "#6D28D9"
 BLUE = "#38BDF8"
 GREEN = "#34D399"
 RED = "#F87171"
+
+STATUS_LABELS = {
+    "pending": "承認待ち",
+    "active": "利用中",
+    "suspended": "一時停止",
+    "disabled": "無効",
+}
+
+STATUS_COLORS = {
+    "pending": "#FBBF24",
+    "active": GREEN,
+    "suspended": "#FB923C",
+    "disabled": MUTED,
+}
 
 AI_NOTICE = (
     "※ AI生成機能の一部は、ユーザー自身のAIサービス\n"
@@ -71,6 +86,9 @@ ADMIN_MENU = (
     ("▣", "バックアップ", "backups"),
     ("⚙", "設定", "settings"),
 )
+
+USER_ROUTES = frozenset(route for _icon, _label_text, route in USER_MENU)
+ADMIN_ONLY_ROUTES = frozenset(route for _icon, _label_text, route in ADMIN_MENU) - USER_ROUTES
 
 
 def _font(size: int = 10, weight: str = "normal") -> tuple[str, int, str]:
@@ -115,6 +133,17 @@ def _entry(parent: tk.Misc, textvariable: tk.Variable, *, show: str = ""):
         highlightthickness=1,
         highlightbackground=LINE,
         highlightcolor=PURPLE,
+    )
+
+
+def can_manage_users(profile: UserProfile, current_user: AuthenticatedUser | None) -> bool:
+    return bool(
+        current_user is not None
+        and profile.role == "admin"
+        and profile.status == "active"
+        and current_user.profile.id == profile.id
+        and current_user.profile.role == "admin"
+        and current_user.profile.status == "active"
     )
 
 
@@ -411,7 +440,14 @@ class AuthUIController:
         if self.auth_frame is not None:
             self.auth_frame.destroy()
             self.auth_frame = None
-        self.role_shell = RoleShell(self.app, profile, self.logout)
+        self.role_shell = RoleShell(
+            self.app,
+            profile,
+            self.logout,
+            service=self.service,
+            current_user=self.current_user,
+            run_async=self._run_async,
+        )
         self.role_shell.start()
 
     def logout(self) -> None:
@@ -465,17 +501,30 @@ class RoleShell:
         "settings": ("show_settings",),
     }
 
-    def __init__(self, app: tk.Misc, profile: UserProfile, logout):
+    def __init__(
+        self,
+        app: tk.Misc,
+        profile: UserProfile,
+        logout,
+        *,
+        service: SupabaseAuthService | None = None,
+        current_user: AuthenticatedUser | None = None,
+        run_async=None,
+    ):
         self.app = app
         self.profile = profile
         self.logout = logout
+        self.service = service
+        self.current_user = current_user
+        self.run_async = run_async
+        self.ui_mode = "admin" if profile.role == "admin" and profile.status == "active" else "user"
         self.sidebar: tk.Frame | None = None
         self.placeholder: tk.Frame | None = None
         self.buttons: dict[str, tk.Button] = {}
 
     def start(self) -> None:
         self._build_sidebar()
-        self.navigate("dashboard" if self.profile.role == "admin" else "home")
+        self.navigate("dashboard" if self.ui_mode == "admin" else "home")
 
     def destroy(self) -> None:
         if self.placeholder is not None:
@@ -488,13 +537,17 @@ class RoleShell:
     def _build_sidebar(self) -> None:
         if self.sidebar is not None:
             self.sidebar.destroy()
+        self.buttons = {}
         self.sidebar = tk.Frame(self.app, bg=SIDEBAR, width=228)
         self.sidebar.place(x=0, y=0, width=228, relheight=1)
         _label(self.sidebar, "✦", size=22, color=PURPLE, bg=SIDEBAR, weight="bold").place(x=24, y=38)
         _label(self.sidebar, "AI ARTICLE", size=13, bg=SIDEBAR, weight="bold").place(x=66, y=39)
-        _label(self.sidebar, "ADMIN" if self.profile.role == "admin" else "STUDIO", size=8, color=BLUE, bg=SIDEBAR).place(x=67, y=66)
+        brand_mode = "ADMIN" if self.ui_mode == "admin" else "STUDIO"
+        _label(self.sidebar, brand_mode, size=8, color=BLUE, bg=SIDEBAR).place(x=67, y=66)
+        if self.ui_mode == "user" and self.profile.role == "admin":
+            _label(self.sidebar, "ADMIN USER MODE", size=7, color=PURPLE, bg=SIDEBAR, weight="bold").place(x=116, y=66)
 
-        menu = ADMIN_MENU if self.profile.role == "admin" else USER_MENU
+        menu = ADMIN_MENU if self.ui_mode == "admin" else USER_MENU
         menu_frame = tk.Frame(self.sidebar, bg=SIDEBAR)
         menu_frame.place(x=8, y=112, width=212, relheight=0.70)
         for icon, label, route in menu:
@@ -512,7 +565,7 @@ class RoleShell:
                 bd=0,
                 cursor="hand2",
                 padx=14,
-                pady=8 if self.profile.role == "admin" else 12,
+                pady=8 if self.ui_mode == "admin" else 12,
             )
             button.pack(fill="x", pady=1)
             self.buttons[route] = button
@@ -521,13 +574,43 @@ class RoleShell:
         account.pack(side="bottom", fill="x", padx=16, pady=14)
         _label(account, self.profile.display_name or "ユーザー", size=8, bg=SIDEBAR, weight="bold", anchor="w").pack(fill="x")
         _label(account, self.profile.aas_user_id, size=7, color=MUTED, bg=SIDEBAR, anchor="w").pack(fill="x", pady=(1, 5))
+        if self._can_switch_modes():
+            switch_text = "ユーザーモードへ" if self.ui_mode == "admin" else "管理者モードへ"
+            _button(account, switch_text, self._switch_mode, primary=False, padx=8, pady=7).pack(fill="x", pady=(0, 6))
         _button(account, "ログアウト", self.logout, primary=False).pack(fill="x")
         self.sidebar.lift()
+
+    def _can_switch_modes(self) -> bool:
+        return can_manage_users(self.profile, self.current_user)
+
+    def _switch_mode(self) -> None:
+        if not self._can_switch_modes():
+            self._show_placeholder("アクセスできません", "表示モードの切り替えには、有効な管理者アカウントが必要です。")
+            return
+        self.ui_mode = "user" if self.ui_mode == "admin" else "admin"
+        if self.placeholder is not None:
+            self.placeholder.destroy()
+            self.placeholder = None
+        self._build_sidebar()
+        self.navigate("home" if self.ui_mode == "user" else "dashboard")
 
     def navigate(self, route: str) -> None:
         for key, button in self.buttons.items():
             active = key == route
             button.configure(bg="#26194B" if active else SIDEBAR, fg=TEXT if active else SOFT)
+        if self.ui_mode != "admin" and route in ADMIN_ONLY_ROUTES:
+            self._show_placeholder("アクセスできません", "管理者専用機能は、管理者モードでのみ利用できます。")
+            if self.sidebar is not None:
+                self.sidebar.lift()
+            return
+        if route == "users":
+            if self.ui_mode == "admin" and can_manage_users(self.profile, self.current_user) and self.service is not None and self.run_async is not None:
+                self._show_user_management()
+            else:
+                self._show_placeholder("アクセスできません", "ユーザー管理には、有効な管理者アカウントでのログインが必要です。")
+            if self.sidebar is not None:
+                self.sidebar.lift()
+            return
         method = self._resolve_route(route)
         if method is not None:
             if self.placeholder is not None:
@@ -538,7 +621,8 @@ class RoleShell:
             except Exception as exc:
                 self._show_placeholder("機能を開けませんでした", f"既存画面の呼び出しでエラーが発生しました。\n{type(exc).__name__}")
         else:
-            title = next((label for _icon, label, key in (ADMIN_MENU if self.profile.role == "admin" else USER_MENU) if key == route), route)
+            active_menu = ADMIN_MENU if self.ui_mode == "admin" else USER_MENU
+            title = next((label for _icon, label, key in active_menu if key == route), route)
             subtitle = "このFoundationでは安全な導線のみ用意しています。機能本体は次のPhaseで共通Coreへ接続します。"
             self._show_placeholder(title, subtitle)
         if self.sidebar is not None:
@@ -563,6 +647,158 @@ class RoleShell:
         _label(content, subtitle, size=10, color=SOFT, justify="left", wraplength=640).pack(anchor="w", padx=36, pady=(14, 10))
         _label(content, "既存の記事・履歴・設定・Web AI・画像計画・Updaterには変更を加えていません。", size=8, color=GREEN).pack(anchor="w", padx=36, pady=(10, 0))
         self.placeholder.lift()
+
+    def _show_user_management(self) -> None:
+        if self.placeholder is not None:
+            self.placeholder.destroy()
+        self.placeholder = tk.Frame(self.app, bg=BG)
+        self.placeholder.place(x=228, y=0, relwidth=1, relheight=1, width=-228)
+        page = self.placeholder
+
+        header = tk.Frame(page, bg=BG)
+        header.pack(fill="x", padx=30, pady=(24, 12))
+        _label(header, "USER MANAGEMENT", size=8, color=PURPLE, bg=BG, weight="bold").pack(anchor="w")
+        _label(header, "ユーザー管理", size=22, bg=BG, weight="bold").pack(anchor="w", pady=(4, 2))
+        _label(header, "AAS IDを中心に、承認待ち・利用中・一時停止の状態を管理します。", size=9, color=MUTED, bg=BG).pack(anchor="w")
+
+        controls = tk.Frame(page, bg=SURFACE, highlightthickness=1, highlightbackground=LINE)
+        controls.pack(fill="x", padx=30, pady=(0, 10))
+        search_value = tk.StringVar()
+        summary_value = tk.StringVar(value="承認待ち 0　 利用中 0　 停止中 0　 無効 0")
+        status_value = tk.StringVar()
+        _label(controls, "AASユーザーID", size=8, color=SOFT).grid(row=0, column=0, padx=(16, 8), pady=14, sticky="w")
+        search = _entry(controls, search_value)
+        search.grid(row=0, column=1, padx=(0, 8), pady=12, ipady=7, sticky="ew")
+        controls.grid_columnconfigure(1, weight=1)
+        _label(controls, "", size=8, color=BLUE).grid(row=0, column=4, padx=14, sticky="e")
+        summary_label = controls.grid_slaves(row=0, column=4)[0]
+        summary_label.configure(textvariable=summary_value)
+
+        table = tk.Frame(page, bg=SURFACE, highlightthickness=1, highlightbackground=LINE)
+        table.pack(fill="both", expand=True, padx=30, pady=(0, 10))
+        columns = (
+            ("AASユーザーID", 3, 120),
+            ("表示名", 3, 140),
+            ("role", 1, 55),
+            ("status", 2, 80),
+            ("登録日時", 3, 145),
+            ("操作", 1, 82),
+        )
+        heading = tk.Frame(table, bg=SURFACE_3)
+        heading.pack(fill="x")
+        for index, (caption, weight, minimum) in enumerate(columns):
+            _label(heading, caption, size=8, color=SOFT, bg=SURFACE_3, weight="bold", anchor="w").grid(row=0, column=index, padx=6, pady=10, sticky="ew")
+            heading.grid_columnconfigure(index, weight=weight, minsize=minimum, uniform="user_columns")
+
+        canvas = tk.Canvas(table, bg=SURFACE, highlightthickness=0)
+        scrollbar = tk.Scrollbar(table, orient="vertical", command=canvas.yview)
+        rows = tk.Frame(canvas, bg=SURFACE)
+        window = canvas.create_window((0, 0), window=rows, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
+        rows.bind("<Configure>", lambda _event: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.bind("<Configure>", lambda event: canvas.itemconfigure(window, width=event.width))
+
+        footer = tk.Frame(page, bg=BG)
+        footer.pack(fill="x", padx=30, pady=(0, 18))
+        status_label = _label(footer, "", size=8, color=RED, bg=BG, anchor="w")
+        status_label.configure(textvariable=status_value)
+        status_label.pack(fill="x")
+
+        def action_spec(user: ManagedUserProfile):
+            if user.status == "pending":
+                return "承認", "active", "ユーザー承認", f"{user.aas_user_id} を承認しますか？"
+            if user.status == "active":
+                if self.current_user is not None and user.id == self.current_user.session.user_id:
+                    return None
+                return "停止", "suspended", "ユーザー停止", f"{user.aas_user_id} を一時停止しますか？"
+            if user.status == "suspended":
+                return "再開", "active", "ユーザー再開", f"{user.aas_user_id} を再開しますか？"
+            return None
+
+        def render(users: list[ManagedUserProfile]) -> None:
+            for child in rows.winfo_children():
+                child.destroy()
+            counts = {name: 0 for name in STATUS_LABELS}
+            for user in users:
+                counts[user.status] = counts.get(user.status, 0) + 1
+                row = tk.Frame(rows, bg=SURFACE, highlightthickness=1, highlightbackground=LINE)
+                row.pack(fill="x", padx=8, pady=(7, 0))
+                values = (
+                    (user.aas_user_id, TEXT),
+                    (user.display_name or "未設定", SOFT),
+                    (user.role, SOFT),
+                    (STATUS_LABELS[user.status], STATUS_COLORS[user.status]),
+                    (user.created_at.replace("T", " ")[:19], MUTED),
+                )
+                for index, (value, color) in enumerate(values):
+                    _label(row, value, size=8, color=color, anchor="w").grid(row=0, column=index, padx=6, pady=10, sticky="ew")
+                for index, (_caption, weight, minimum) in enumerate(columns):
+                    row.grid_columnconfigure(index, weight=weight, minsize=minimum, uniform="user_columns")
+                spec = action_spec(user)
+                if spec is None:
+                    caption = "ログイン中" if self.current_user is not None and user.id == self.current_user.session.user_id else "—"
+                    _label(row, caption, size=8, color=MUTED).grid(row=0, column=5, padx=6, pady=7, sticky="ew")
+                else:
+                    caption, desired, title, prompt = spec
+                    _button(
+                        row,
+                        caption,
+                        lambda value=user, new_status=desired, dialog_title=title, dialog_text=prompt: change_status(value, new_status, dialog_title, dialog_text),
+                        primary=desired == "active",
+                        padx=12,
+                        pady=6,
+                    ).grid(row=0, column=5, padx=6, pady=7, sticky="ew")
+            if not users:
+                _label(rows, "該当するユーザーはいません。", size=10, color=MUTED).pack(pady=40)
+            summary_value.set(
+                f"承認待ち {counts['pending']}　 利用中 {counts['active']}　 停止中 {counts['suspended']}　 無効 {counts['disabled']}"
+            )
+
+        def finish_load(result, exc: Exception | None) -> None:
+            if not page.winfo_exists():
+                return
+            if exc:
+                status_value.set(str(exc))
+                return
+            status_value.set("")
+            render(list(result or []))
+
+        def load_users() -> None:
+            status_value.set("ユーザー一覧を読み込んでいます…")
+            self.run_async(
+                lambda: self.service.admin_list_users(self.current_user, search_value.get()),
+                finish_load,
+            )
+
+        def change_status(user: ManagedUserProfile, desired: str, title: str, prompt: str) -> None:
+            if not messagebox.askyesno(title, prompt):
+                return
+            status_value.set("ユーザー状態を更新しています…")
+
+            def finished(_result, exc: Exception | None) -> None:
+                if exc:
+                    status_value.set(str(exc))
+                    return
+                messagebox.showinfo(title, "ユーザー状態を更新しました。")
+                load_users()
+
+            self.run_async(
+                lambda: self.service.admin_set_user_status(self.current_user, user, desired),
+                finished,
+            )
+
+        _button(controls, "検索", load_users).grid(row=0, column=2, padx=(0, 6), pady=10)
+
+        def clear_search() -> None:
+            search_value.set("")
+            load_users()
+
+        _button(controls, "クリア", clear_search, primary=False).grid(row=0, column=3, padx=(0, 4), pady=10)
+        search.bind("<Return>", lambda _event: load_users())
+        self.placeholder.lift()
+        load_users()
 
 
 def install_auth_foundation(app: tk.Misc) -> AuthUIController:
