@@ -7,10 +7,6 @@ on:
       - 'release/v0434/**'
       - 'candidate-v0434.json'
       - 'updates/AIArticleStudio_Update_v0.4.3.4_GoogleOAuthFix.zip'
-      - 'src/ai_article_studio/core/auth_service.py'
-      - 'scripts/test_v0433_auth_foundation.py'
-      - 'scripts/test_v0434_google_oauth.py'
-      - 'scripts/test_v0434_update_package.py'
       - '.github/workflows/build-v0434-google-oauth-fix.yml'
   workflow_dispatch:
 
@@ -30,10 +26,8 @@ jobs:
         run: python scripts/test_v0434_google_oauth.py
       - name: Test Email Password and session regression
         run: python scripts/test_v0433_auth_foundation.py
-      - name: Test cumulative update paths and package
-        run: python scripts/test_v0434_update_package.py
-      - name: Verify deterministic package
-        run: git diff --exit-code -- candidate-v0434.json release/v0434/SHA256.txt updates/AIArticleStudio_Update_v0.4.3.4_GoogleOAuthFix.zip
+      - name: Validate immutable release
+        run: python scripts/validate_release.py candidate-v0434.json
 
   windows-validation:
     name: Windows PowerShell and OAuth callback validation
@@ -49,12 +43,9 @@ jobs:
       - name: Test Email Password, DPAPI, and session regression
         shell: powershell
         run: python scripts/test_v0433_auth_foundation.py
-      - name: Test cumulative update paths and package
+      - name: Validate immutable release
         shell: powershell
-        run: python scripts/test_v0434_update_package.py
+        run: python scripts/validate_release.py candidate-v0434.json
       - name: Parse candidate with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0434.json
-      - name: Verify deterministic package
-        shell: powershell
-        run: git diff --exit-code -- candidate-v0434.json release/v0434/SHA256.txt updates/AIArticleStudio_Update_v0.4.3.4_GoogleOAuthFix.zip

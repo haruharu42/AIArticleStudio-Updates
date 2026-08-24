@@ -148,6 +148,8 @@ class UserProfile:
         status = str(payload.get("status") or "")
         if role not in {"user", "admin"}:
             raise AuthError("プロフィールの権限値が不正です。", code="invalid_profile_role")
+        if status == "pending":
+            raise AuthError("登録は完了しています。管理者の承認をお待ちください。", code="profile_pending")
         if status != "active":
             raise AuthError("このアカウントは現在利用できません。", code="inactive_profile")
         return cls(
@@ -168,6 +170,33 @@ class UserProfile:
             role="user",
             status="active",
             created_at="",
+        )
+
+
+@dataclass(frozen=True)
+class ManagedUserProfile:
+    id: str
+    aas_user_id: str
+    display_name: str
+    role: str
+    status: str
+    created_at: str
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> "ManagedUserProfile":
+        role = str(payload.get("role") or "")
+        status = str(payload.get("status") or "")
+        if role not in {"user", "admin"}:
+            raise AuthError("ユーザー権限値が不正です。", code="invalid_profile_role")
+        if status not in {"pending", "active", "suspended", "disabled"}:
+            raise AuthError("ユーザー状態値が不正です。", code="invalid_profile_status")
+        return cls(
+            id=str(payload.get("id") or ""),
+            aas_user_id=str(payload.get("aas_user_id") or ""),
+            display_name=str(payload.get("display_name") or ""),
+            role=role,
+            status=status,
+            created_at=str(payload.get("created_at") or ""),
         )
 
 
@@ -416,6 +445,61 @@ class SupabaseAuthService:
             pass
         finally:
             self.session_store.clear()
+
+    def admin_list_users(
+        self,
+        actor: AuthenticatedUser,
+        aas_user_id: str = "",
+    ) -> list[ManagedUserProfile]:
+        self._require_active_admin(actor)
+        payload = self.http.request_json(
+            "POST",
+            f"{self.config.supabase_url}/rest/v1/rpc/admin_list_users",
+            headers=self._headers(actor.session.access_token),
+            body={"p_aas_user_id": aas_user_id.strip().upper() or None},
+        )
+        if not isinstance(payload, list) or not all(isinstance(item, Mapping) for item in payload):
+            raise AuthError("ユーザー一覧を確認できません。", code="invalid_admin_users_response")
+        return [ManagedUserProfile.from_payload(item) for item in payload]
+
+    def admin_set_user_status(
+        self,
+        actor: AuthenticatedUser,
+        target: ManagedUserProfile,
+        new_status: str,
+    ) -> ManagedUserProfile:
+        self._require_active_admin(actor)
+        desired = str(new_status or "").strip().lower()
+        if desired not in {"active", "suspended"}:
+            raise AuthError("指定されたユーザー状態へ変更できません。", code="invalid_status")
+        allowed = {
+            ("pending", "active"),
+            ("active", "suspended"),
+            ("suspended", "active"),
+        }
+        if (target.status, desired) not in allowed:
+            raise AuthError("現在の状態からその操作は実行できません。", code="invalid_status_transition")
+        if target.id == actor.session.user_id and desired == "suspended":
+            raise AuthError(
+                "現在ログイン中の管理者アカウントは停止できません。",
+                code="cannot_suspend_self",
+            )
+        payload = self.http.request_json(
+            "POST",
+            f"{self.config.supabase_url}/rest/v1/rpc/admin_set_user_status",
+            headers=self._headers(actor.session.access_token),
+            body={"p_target_user_id": target.id, "p_new_status": desired},
+        )
+        if isinstance(payload, list) and len(payload) == 1 and isinstance(payload[0], Mapping):
+            return ManagedUserProfile.from_payload(payload[0])
+        if isinstance(payload, Mapping):
+            return ManagedUserProfile.from_payload(payload)
+        raise AuthError("ユーザー状態の更新結果を確認できません。", code="invalid_admin_user_response")
+
+    def _require_active_admin(self, actor: AuthenticatedUser) -> None:
+        self._require_config()
+        if actor.profile.role != "admin" or actor.profile.status != "active":
+            raise AuthError("有効な管理者アカウントが必要です。", code="admin_required")
 
     def sign_in_with_google(
         self,
