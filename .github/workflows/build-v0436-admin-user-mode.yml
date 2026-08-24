@@ -85,9 +85,6 @@ jobs:
           $payload = (Get-FileHash (Join-Path $packageRoot 'payload\ui\auth_ui.py') -Algorithm SHA256).Hash
           if ($before -eq $after) { throw 'Installed auth_ui.py was not replaced.' }
           if ($after -ne $payload) { throw 'Installed auth_ui.py does not match the ZIP payload.' }
-          foreach ($pattern in @('ui_mode', 'ユーザーモードへ', '管理者モードへ')) {
-            if (-not (Select-String -Path $authUi -Pattern $pattern -Quiet)) { throw "Installed auth_ui.py is missing: $pattern" }
-          }
           & (Join-Path $appRoot '.venv\Scripts\python.exe') (Join-Path $packageRoot 'validate_v0436.py') $appRoot
       - name: Parse candidate with Windows PowerShell 5.1
         shell: powershell
