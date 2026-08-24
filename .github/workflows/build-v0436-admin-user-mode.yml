@@ -63,6 +63,32 @@ jobs:
       - name: Test v0.4.3.5 to v0.4.3.6 update
         shell: powershell
         run: python scripts/test_v0436_update_package.py
+      - name: Run Update.ps1 against the real LocalAppData install path
+        shell: powershell
+        run: |
+          $fixtureBase = Join-Path $env:RUNNER_TEMP 'v0436-real-install'
+          $appRoot = Join-Path $fixtureBase 'AIArticleStudio'
+          $packageRoot = Join-Path $env:RUNNER_TEMP 'v0436-real-package'
+          python -c "import pathlib,sys; sys.path.insert(0, str(pathlib.Path.cwd() / 'scripts')); import test_v0436_update_package as test; test.build_v0434_fixture(pathlib.Path(r'$fixtureBase'))"
+          python -m venv (Join-Path $appRoot '.venv')
+          Expand-Archive -Path '.\updates\AIArticleStudio_Update_v0.4.3.6_AdminUserMode.zip' -DestinationPath $packageRoot -Force
+          $authUi = Join-Path $appRoot 'src\ai_article_studio\ui\auth_ui.py'
+          $before = (Get-FileHash $authUi -Algorithm SHA256).Hash
+          $savedLocalAppData = $env:LOCALAPPDATA
+          try {
+            $env:LOCALAPPDATA = $fixtureBase
+            powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $packageRoot 'Update.ps1')
+          } finally {
+            $env:LOCALAPPDATA = $savedLocalAppData
+          }
+          $after = (Get-FileHash $authUi -Algorithm SHA256).Hash
+          $payload = (Get-FileHash (Join-Path $packageRoot 'payload\ui\auth_ui.py') -Algorithm SHA256).Hash
+          if ($before -eq $after) { throw 'Installed auth_ui.py was not replaced.' }
+          if ($after -ne $payload) { throw 'Installed auth_ui.py does not match the ZIP payload.' }
+          foreach ($pattern in @('ui_mode', 'ユーザーモードへ', '管理者モードへ')) {
+            if (-not (Select-String -Path $authUi -Pattern $pattern -Quiet)) { throw "Installed auth_ui.py is missing: $pattern" }
+          }
+          & (Join-Path $appRoot '.venv\Scripts\python.exe') (Join-Path $packageRoot 'validate_v0436.py') $appRoot
       - name: Parse candidate with Windows PowerShell 5.1
         shell: powershell
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\validate_windows.ps1 -ManifestPath .\candidate-v0436.json
