@@ -100,6 +100,8 @@ def _label(parent: tk.Misc, text: str, *, size: int = 10, color: str = TEXT, bg:
 
 
 def _button(parent: tk.Misc, text: str, command, *, primary: bool = True, **kwargs):
+    padx = kwargs.pop("padx", 18)
+    pady = kwargs.pop("pady", 10)
     return tk.Button(
         parent,
         text=text,
@@ -112,8 +114,8 @@ def _button(parent: tk.Misc, text: str, command, *, primary: bool = True, **kwar
         relief="flat",
         bd=0,
         cursor="hand2",
-        padx=18,
-        pady=10,
+        padx=padx,
+        pady=pady,
         **kwargs,
     )
 
