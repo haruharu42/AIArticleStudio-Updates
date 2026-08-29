@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from copy import deepcopy
+from datetime import datetime, timezone
 import re
 import tkinter as tk
 import webbrowser
 from tkinter import messagebox
 
 from ..core.article_publish_text import build_article_text_variants
+from ..core.image_settings import normalize_image_settings
+from ..core.models import ArticleRecord
+from ..core.web_ai_state import WebAIWorkflowState
 from .guided_wizard_v0427 import (
     BG,
     GREEN,
@@ -39,6 +44,386 @@ from .guided_wizard_v0428 import _hide_legacy_chrome
 
 ACTIVATION_MARKER = "v0.4.3.2-publish-safe-copy"
 LIVE_BODY_WORDS = ("生成方法を選択", "完成記事を作る前の画像計画", "基本設定")
+
+_IMAGE_MODE_LABELS = {
+    "web": "Web版（おすすめ）",
+    "api": "API版（準備中）",
+    "local": "ローカルGPU（準備中）",
+}
+_IMAGE_STYLE_LABELS = {
+    "auto": "おまかせ",
+    "business": "ビジネス",
+    "tech": "テック",
+    "gentle": "やさしい",
+    "diagram": "図解風",
+    "anime": "アニメ風",
+    "manga": "漫画風",
+    "pop": "ポップ風",
+    "luxury": "高級感",
+    "catchy_thumbnail": "サムネ映え重視",
+    "natural_blog": "ナチュラル",
+    "minimal": "ミニマル",
+    "infographic": "インフォグラフィック",
+}
+_IMAGE_MODE_VALUES = {value: key for key, value in _IMAGE_MODE_LABELS.items()}
+_IMAGE_STYLE_VALUES = {value: key for key, value in _IMAGE_STYLE_LABELS.items()}
+
+
+def _utc_now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _normalize_article_type(value):
+    text = str(value or "").strip()
+    return {"free": "無料", "paid": "有料"}.get(text.lower(), text or "無料")
+
+
+def _content_block_text(content):
+    blocks = dict(content or {}).get("blocks") or []
+    return "\n\n".join(
+        str(item.get("markdown") or "").strip()
+        for item in blocks
+        if isinstance(item, dict) and str(item.get("markdown") or "").strip()
+    )
+
+
+def _history_state_for_article(app, article_id):
+    try:
+        store = app.web_ai_bridge.workflow.state_store
+        for item in store.recent(store.history_limit):
+            if item.article_id == article_id:
+                return item
+    except Exception:
+        pass
+    return None
+
+
+def _request_image_settings(request):
+    request = dict(request or {})
+    eyecatch = bool(request.get("image_eyecatch_enabled", False))
+    illustrations = bool(
+        request.get("image_illustrations_enabled", request.get("illustration_enabled", False))
+    )
+    enabled = eyecatch or illustrations or bool(request.get("image_enabled", False))
+    if eyecatch and illustrations:
+        target = "both"
+    elif eyecatch:
+        target = "eyecatch"
+    elif illustrations:
+        target = "illustrations"
+    else:
+        legacy_target = str(request.get("image_target") or "")
+        target = {
+            "アイキャッチのみ": "eyecatch",
+            "挿絵のみ": "illustrations",
+            "アイキャッチ＋挿絵": "both",
+        }.get(legacy_target, "both")
+    raw_count = request.get("image_count", request.get("illustration_count", "auto"))
+    raw_style = request.get("image_style", request.get("illustration_style", "auto"))
+    raw_mode = request.get("image_mode", "web")
+    return normalize_image_settings(
+        {
+            "enabled": enabled,
+            "target": target,
+            "mode": _IMAGE_MODE_VALUES.get(str(raw_mode), raw_mode),
+            "style": _IMAGE_STYLE_VALUES.get(str(raw_style), raw_style),
+            "illustration_count": "auto" if str(raw_count) in {"自動", "AIにおまかせ"} else raw_count,
+            "insert_markers": request.get("image_insert_markers", illustrations),
+        }
+    ).to_dict()
+
+
+def _load_library_edit_context(app, payload):
+    """Collect one local article without mutating its DB/workflow/image files."""
+
+    existing = deepcopy(dict(payload or {}))
+    article_id = str(existing.get("article_id") or "").strip()
+    if not article_id:
+        raise ValueError("article_id is required")
+    request = deepcopy(dict(existing.get("request") or {}))
+    content = deepcopy(dict(existing.get("content") or {}))
+    workflow_state = _history_state_for_article(app, article_id)
+    workflow_data = workflow_state.to_dict() if workflow_state else {}
+    try:
+        sidecar = deepcopy(app.web_ai_bridge.workflow.image_store.load_payload(article_id) or {})
+    except Exception:
+        sidecar = {}
+
+    image_settings = (
+        dict(sidecar.get("image_settings") or {})
+        or dict(workflow_data.get("image_settings") or {})
+        or _request_image_settings(request)
+    )
+    image_settings = normalize_image_settings(image_settings).to_dict()
+    block_text = _content_block_text(content)
+    source = str(content.get("web_original") or workflow_data.get("raw_web_output") or block_text)
+    publish = str(content.get("web_publish") or workflow_data.get("formatted_output") or block_text)
+    current = str(
+        content.get("web_current")
+        or workflow_data.get("normalized_output")
+        or source
+        or publish
+    )
+    if not publish and current:
+        publish = build_article_text_variants(current).publish_text
+
+    return {
+        "article_id": article_id,
+        "payload": existing,
+        "request": request,
+        "title": str(existing.get("title") or existing.get("theme") or ""),
+        "source_article": source,
+        "publish_article": publish,
+        "current_article": current,
+        "workflow_state": workflow_data,
+        "image_payload": sidecar,
+        "image_settings": image_settings,
+    }
+
+
+def _collect_library_image_settings(app):
+    eyecatch = bool(_app_var(app, "image_eyecatch_enabled", default=False))
+    illustrations = bool(_app_var(app, "image_illustrations_enabled", default=False))
+    if eyecatch and illustrations:
+        target = "both"
+    elif eyecatch:
+        target = "eyecatch"
+    elif illustrations:
+        target = "illustrations"
+    else:
+        target = "both"
+    count = str(_app_var(app, "image_count", default="AIにおまかせ"))
+    return normalize_image_settings(
+        {
+            "enabled": eyecatch or illustrations,
+            "target": target,
+            "mode": _IMAGE_MODE_VALUES.get(
+                str(_app_var(app, "image_mode", default="Web版（おすすめ）")),
+                "web",
+            ),
+            "style": _IMAGE_STYLE_VALUES.get(
+                str(_app_var(app, "image_style", default="おまかせ")),
+                "auto",
+            ),
+            "illustration_count": "auto" if count in {"自動", "AIにおまかせ"} else count,
+            "insert_markers": bool(
+                _app_var(app, "image_insert_markers", default=illustrations)
+            ) if illustrations else False,
+        }
+    ).to_dict()
+
+
+def _restore_text_widget(widget, value):
+    if widget is None:
+        return
+    try:
+        widget.configure(state="normal")
+        widget.delete("1.0", "end")
+        widget.insert("1.0", str(value or ""))
+    except Exception:
+        pass
+
+
+def _restore_library_request(app, context):
+    request = dict(context.get("request") or {})
+    image = normalize_image_settings(context.get("image_settings")).to_dict()
+    aliases = {
+        "price": request.get("price") or request.get("price_jpy") or "980",
+        "word_count": request.get("word_count", request.get("length_mode", "AIにおまかせ")),
+        "reader_level": request.get("reader_level", "初心者"),
+        "theme": request.get("theme", context.get("payload", {}).get("theme", "")),
+    }
+    for key, value in {**request, **aliases}.items():
+        _set_app_var(app, key, value)
+    article_type = _normalize_article_type(request.get("article_type"))
+    _set_app_var(app, "article_type", article_type)
+    try:
+        app._set_article_type(article_type)
+    except Exception:
+        pass
+    try:
+        app._genre_changed()
+        _set_app_var(app, "subgenre", request.get("subgenre", "AIおまかせ"))
+    except Exception:
+        pass
+
+    target = image["target"]
+    _set_app_var(app, "image_eyecatch_enabled", image["enabled"] and target in {"eyecatch", "both"})
+    _set_app_var(app, "image_illustrations_enabled", image["enabled"] and target in {"illustrations", "both"})
+    _set_app_var(app, "image_mode", _IMAGE_MODE_LABELS.get(image["mode"], "Web版（おすすめ）"))
+    _set_app_var(app, "image_style", _IMAGE_STYLE_LABELS.get(image["style"], "おまかせ"))
+    _set_app_var(app, "image_count", "AIにおまかせ" if image["illustration_count"] == "auto" else image["illustration_count"])
+    _set_app_var(app, "image_insert_markers", image["insert_markers"])
+    try:
+        app._update_image_plan_controls()
+    except Exception:
+        pass
+
+    items = list(request.get("affiliate_items") or [])
+    affiliate = dict(items[0]) if items and isinstance(items[0], dict) else {}
+    for key, value in {
+        "affiliate_name": affiliate.get("name", request.get("affiliate_name", "")),
+        "affiliate_url": affiliate.get("url", request.get("affiliate_url", "")),
+        "affiliate_official_url": affiliate.get("official_url", request.get("affiliate_official_url", "")),
+        "affiliate_note": affiliate.get("note", request.get("affiliate_note", "")),
+        "affiliate_used": affiliate.get("used_by_author", request.get("affiliate_used", False)),
+    }.items():
+        _set_app_var(app, key, value)
+    try:
+        app._toggle_affiliate_fields()
+    except Exception:
+        pass
+    _restore_text_widget(getattr(app, "experience", None), request.get("user_experience", ""))
+    _restore_text_widget(getattr(app, "custom", None), request.get("custom_request", ""))
+
+    theme = str(aliases["theme"] or "")
+    theme_auto = not theme or theme == "AIおまかせ"
+    try:
+        app._v0430_theme_auto.set(theme_auto)
+        editor = app._v0430_theme_editor
+        editor.configure(state="normal")
+        editor.delete("1.0", "end")
+        editor.insert("1.0", "AIおまかせ" if theme_auto else theme)
+        if theme_auto:
+            editor.configure(state="disabled")
+        _set_app_var(app, "theme", "AIおまかせ" if theme_auto else theme)
+    except Exception:
+        pass
+
+
+def _save_library_article_edit(app, context, title, current_article):
+    """Update one existing local article in place and preserve all unknown metadata."""
+
+    article_id = str(context.get("article_id") or "").strip()
+    existing = app.db.load(article_id)
+    if not existing:
+        raise RuntimeError("active user's article was not found")
+    if str(existing.get("article_id") or "") != article_id:
+        raise RuntimeError("article_id mismatch")
+
+    request = deepcopy(dict(existing.get("request") or {}))
+    request.update(_request_snapshot(app))
+    try:
+        request.update(dict(getattr(app._make_request(), "__dict__", {}) or {}))
+    except Exception:
+        pass
+    request["article_type"] = _normalize_article_type(request.get("article_type"))
+    image_settings = _collect_library_image_settings(app)
+    target = image_settings["target"]
+    request.update(
+        {
+            "image_enabled": image_settings["enabled"],
+            "image_eyecatch_enabled": image_settings["enabled"] and target in {"eyecatch", "both"},
+            "image_illustrations_enabled": image_settings["enabled"] and target in {"illustrations", "both"},
+            "image_target": {"eyecatch": "アイキャッチのみ", "illustrations": "挿絵のみ", "both": "アイキャッチ＋挿絵"}[target],
+            "image_mode": _IMAGE_MODE_LABELS[image_settings["mode"]],
+            "image_style": _IMAGE_STYLE_LABELS[image_settings["style"]],
+            "image_count": "AIにおまかせ" if image_settings["illustration_count"] == "auto" else image_settings["illustration_count"],
+            "image_insert_markers": image_settings["insert_markers"],
+        }
+    )
+
+    current = str(current_article or "").strip()
+    if not current:
+        raise ValueError("article body is empty")
+    variants = build_article_text_variants(current)
+    source = str(context.get("source_article") or "").strip() or current
+    publish = variants.publish_text or current
+    updated = deepcopy(existing)
+    old_title = str(existing.get("title") or "")
+    updated["article_id"] = article_id
+    updated["title"] = str(title or "").strip() or "無題の記事"
+    updated["theme"] = str(request.get("theme") or existing.get("theme") or updated["title"])
+    updated["status"] = str(existing.get("status") or "完成")
+    updated["request"] = request
+    content = deepcopy(dict(existing.get("content") or {}))
+    content.update(
+        {
+            "blocks": [{"markdown": publish}],
+            "web_original": source,
+            "web_publish": publish,
+            "web_current": current,
+            "source": str(content.get("source") or "web_ai"),
+        }
+    )
+    updated["content"] = content
+    revisions = list(updated.get("revision_history") or [])
+    revisions.append(
+        {
+            "note": "記事ライブラリの6ステップ再編集",
+            "previous_title": old_title,
+            "updated_at": _utc_now_iso(),
+        }
+    )
+    updated["revision_history"] = revisions
+    app.db.save(updated)
+
+    workflow_data = deepcopy(dict(context.get("workflow_state") or {}))
+    workflow_data.update(
+        {
+            "article_id": article_id,
+            "article_request": request,
+            "selected_title": updated["title"],
+            "raw_web_output": source,
+            "normalized_output": current,
+            "formatted_output": publish,
+            "publish_platform": str(request.get("platform") or "note"),
+            "image_settings": image_settings,
+            "is_completed": True,
+            "current_step": "05",
+        }
+    )
+    state = WebAIWorkflowState.from_dict(workflow_data)
+    state.is_completed = True
+    state.current_step = "05"
+    workflow = app.web_ai_bridge.workflow
+    workflow.state_store.save(state)
+
+    original_image_settings = normalize_image_settings(context.get("image_settings")).to_dict()
+    if image_settings != original_image_settings:
+        preserved = deepcopy(dict(context.get("image_payload") or {}))
+        try:
+            workflow.build_image_prompts(article_text=current, state=state)
+            generated = deepcopy(workflow.image_store.load_payload(article_id) or {})
+        except Exception:
+            generated = {}
+        merged = preserved
+        merged.update(generated)
+        merged["image_settings"] = image_settings
+        for key in ("assets", "items", "images"):
+            if key in preserved:
+                merged[key] = preserved[key]
+        workflow.image_store.save_payload(article_id, merged)
+        state.is_completed = True
+        state.current_step = "05"
+        workflow.state_store.save(state)
+
+    app.current_record = ArticleRecord(**{
+        key: deepcopy(value)
+        for key, value in updated.items()
+        if key in ArticleRecord.__dataclass_fields__
+    })
+    return app.db.load(article_id)
+
+
+def open_library_article_editor(app, payload):
+    """Open the existing six-step creator as an in-place library editor."""
+
+    context = _load_library_edit_context(app, payload)
+    app._phase4_library_edit_context = context
+    app.show_create()
+
+    def load_after_create():
+        wizard = activate_live_article_wizard(app)
+        loader = (wizard or {}).get("load_library_article")
+        if not callable(loader):
+            raise RuntimeError("article edit mode could not be initialized")
+        loader(context)
+
+    try:
+        app.after_idle(load_after_create)
+    except Exception:
+        load_after_create()
 
 
 def _manager(widget):
@@ -134,9 +519,106 @@ def _request_snapshot(app):
         "affiliate_enabled": bool(_app_var(app, "affiliate_enabled", default=False)),
         "magazine_enabled": bool(_app_var(app, "magazine_enabled", default=False)),
         "latest_info": _app_var(app, "latest_info", "latest_info_mode", default="必要時のみ"),
+        "generation_provider": str(
+            getattr(app, "_article_generation_method", "")
+            or _app_var(app, "generation_provider", default="Web版AIで作成")
+        ),
     }
     request.update(aliases)
     return request
+
+
+def _save_completed_article(app, title, source_article, publish_article):
+    """Persist one completed wizard article in the active user's local library."""
+
+    request = _request_snapshot(app)
+    try:
+        model_request = app._make_request()
+        request.update(
+            dict(getattr(model_request, "__dict__", {}) or {})
+        )
+    except Exception:
+        pass
+
+    article_type = str(
+        request.get("article_type") or ""
+    ).strip()
+
+    request["article_type"] = {
+        "free": "無料",
+        "paid": "有料",
+    }.get(
+        article_type.lower(),
+        article_type or "無料",
+    )
+
+    snapshot = app.web_ai_bridge.current_snapshot()
+    article_id = str(
+        snapshot.get("article_id") or ""
+    ).strip()
+
+    record = (
+        ArticleRecord(article_id=article_id)
+        if article_id
+        else ArticleRecord()
+    )
+
+    existing = app.db.load(record.article_id) or {}
+
+    if existing:
+        record.created_at = str(
+            existing.get("created_at")
+            or record.created_at
+        )
+        record.generation_history = list(
+            existing.get("generation_history") or []
+        )
+        record.revision_history = list(
+            existing.get("revision_history") or []
+        )
+        record.cost_estimate = dict(
+            existing.get("cost_estimate") or {}
+        )
+        record.cost_actual = dict(
+            existing.get("cost_actual") or {}
+        )
+
+    record.title = (
+        str(title or "").strip()
+        or "Web版AIで作成した記事"
+    )
+    record.theme = record.title
+    record.status = "完成"
+    record.request = request
+
+    record.content = {
+        "blocks": [
+            {
+                "markdown": str(
+                    publish_article or ""
+                ).strip()
+            }
+        ],
+        "web_original": str(
+            source_article or ""
+        ).strip(),
+        "web_publish": str(
+            publish_article or ""
+        ).strip(),
+        "source": "web_ai",
+    }
+
+    record.generation_history.append(
+        {
+            "stage": "web_import",
+            "note": "6ステップ記事作成から記事ライブラリへ保存",
+        }
+    )
+
+    app.db.save(record.to_dict())
+    app.current_record = record
+
+    return record.to_dict()
 
 
 def _parse_title_candidates(raw):
@@ -343,18 +825,25 @@ def install_article_wizard(app, body):
         "source_article": "",
         "insertion_article": "",
         "article": "",
+        "library_edit": None,
     }
     fields = {
         "title_response": None,
         "selected_title": tk.StringVar(master=app, value=""),
         "article_response": None,
         "formatted_text": None,
+        "library_title": None,
+        "library_current": None,
+        "library_publish": None,
+        "library_source": None,
     }
 
     def refresh_history():
         _install_history_panel_10(app, load_history, delete_history)
 
     def start_new():
+        state["library_edit"] = None
+        app._phase4_library_edit_context = None
         try:
             app.web_ai_bridge.new_article()
         except Exception:
@@ -380,6 +869,8 @@ def install_article_wizard(app, body):
         refresh_history()
 
     def load_history(article_id):
+        state["library_edit"] = None
+        app._phase4_library_edit_context = None
         try:
             snapshot = app.web_ai_bridge.load_history(article_id)
         except Exception as exc:
@@ -405,6 +896,36 @@ def install_article_wizard(app, body):
             state["phase"] = 1 if state["candidates"] else 0
             render_creation()
             show_page(4)
+
+    def load_library_article(context):
+        context = deepcopy(dict(context or {}))
+        article_id = str(context.get("article_id") or "").strip()
+        if not article_id:
+            raise ValueError("article_id is required")
+        state["library_edit"] = context
+        app._phase4_library_edit_context = context
+        _restore_library_request(app, context)
+        state["phase"] = 2
+        state["title_prompt"] = str(context.get("workflow_state", {}).get("title_prompt") or "")
+        state["article_prompt"] = str(context.get("workflow_state", {}).get("final_prompt") or "")
+        state["candidates"] = list(context.get("workflow_state", {}).get("title_candidates") or [])
+        state["source_article"] = str(context.get("source_article") or "")
+        state["insertion_article"] = str(context.get("current_article") or "")
+        state["article"] = str(context.get("publish_article") or "")
+        fields["selected_title"].set(str(context.get("title") or ""))
+        generation_value = str(
+            context.get("request", {}).get("generation_provider")
+            or context.get("workflow_state", {}).get("generation_method")
+            or "Web版AIで作成"
+        )
+        if generation_value.lower() == "web" or "Web" in generation_value:
+            generation_value = "Web版AIで作成"
+        elif "OpenAI" in generation_value or generation_value.lower() == "api":
+            generation_value = "OpenAI APIで作成"
+        generation.set(generation_value)
+        app._article_generation_method = generation_value
+        render_library_edit_review()
+        show_page(0)
 
     def delete_history(article_id):
         if not messagebox.askyesno("履歴を削除", "この作業履歴を一覧から削除しますか？"):
@@ -509,10 +1030,54 @@ def install_article_wizard(app, body):
             _set_text(response, snapshot.get("raw_web_output") or "")
         configure_footer()
 
+    def render_library_edit_review():
+        page = pages[4]
+        for child in page.winfo_children():
+            child.destroy()
+        context = dict(state.get("library_edit") or {})
+        inner = tk.Frame(page, bg=SURFACE_2)
+        inner.pack(fill="both", expand=True, padx=20, pady=17)
+        _label(inner, "ARTICLE RE-EDIT MODE", size=7, bold=True, fg="#A855F7").pack(anchor="w")
+        _label(inner, "保存済みの記事設定を確認", size=16, bold=True).pack(anchor="w", pady=(7, 3))
+        _label(
+            inner,
+            "この編集は元の記事IDを維持します。次へ進むと、タイトルと現在の完成本文を編集できます。",
+            size=8,
+            fg=SOFT,
+            wraplength=820,
+            justify="left",
+        ).pack(anchor="w", pady=(0, 13))
+        request = dict(context.get("request") or {})
+        image = normalize_image_settings(context.get("image_settings")).to_dict()
+        eye = image["enabled"] and image["target"] in {"eyecatch", "both"}
+        inline = image["enabled"] and image["target"] in {"illustrations", "both"}
+        count = "AIにおまかせ" if image["illustration_count"] == "auto" else image["illustration_count"]
+        rows = (
+            ("記事ID", str(context.get("article_id") or "")),
+            ("掲載先 / 種別", f"{request.get('platform', 'note')} / {_normalize_article_type(request.get('article_type'))}"),
+            ("ジャンル", f"{request.get('genre', '')} / {request.get('subgenre', '')}"),
+            ("画像計画", f"アイキャッチ {'ON' if eye else 'OFF'} / 挿絵 {'ON' if inline else 'OFF'} / {count}枚"),
+        )
+        for label, value in rows:
+            row = tk.Frame(inner, bg="#0D182A", highlightthickness=1, highlightbackground=LINE)
+            row.pack(fill="x", pady=4)
+            _label(row, label, size=8, bold=True, fg="#C4B5FD", bg="#0D182A").pack(side="left", padx=12, pady=10)
+            _label(row, value, size=8, fg=TEXT, bg="#0D182A", wraplength=650, justify="left").pack(side="left", fill="x", expand=True, padx=12, pady=10)
+        _label(
+            inner,
+            "画像ファイル・画像メタデータは、画像計画を変更しない限り書き換えません。",
+            size=8,
+            fg=GREEN,
+        ).pack(anchor="w", pady=(12, 0))
+
     def render_completion():
         page = pages[5]
         for child in page.winfo_children():
             child.destroy()
+        edit_context = state.get("library_edit")
+        if edit_context:
+            render_library_edit_completion(page, edit_context)
+            return
         article = str(state["article"] or "").strip()
         insertion_article = str(state.get("insertion_article") or article).strip()
         source_article = str(state.get("source_article") or insertion_article).strip()
@@ -545,6 +1110,118 @@ def install_article_wizard(app, body):
         except Exception:
             pass
         refresh_history()
+
+    def render_library_edit_completion(page, context):
+        article = str(state.get("article") or context.get("publish_article") or "").strip()
+        current = str(state.get("insertion_article") or context.get("current_article") or article).strip()
+        source = str(state.get("source_article") or context.get("source_article") or current).strip()
+        left = _card(page)
+        left.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        header = tk.Frame(left, bg=SURFACE_2)
+        header.pack(fill="x", padx=16, pady=(14, 9))
+        _label(header, "記事再編集", size=13, bold=True).pack(side="left")
+        _label(header, "同じ記事IDへ上書き保存", size=8, fg=GREEN).pack(side="right")
+        _label(left, "タイトル", size=8, bold=True, fg=SOFT).pack(anchor="w", padx=16, pady=(0, 4))
+        title_var = tk.StringVar(master=app, value=str(context.get("title") or ""))
+        title_entry = tk.Entry(
+            left,
+            textvariable=title_var,
+            bg="#0D182A",
+            fg=TEXT,
+            insertbackground=TEXT,
+            relief="flat",
+            highlightthickness=1,
+            highlightbackground=LINE,
+            font=("Yu Gothic UI", 10),
+        )
+        title_entry.pack(fill="x", padx=16, pady=(0, 10), ipady=7)
+        tabs = tk.Frame(left, bg=SURFACE_2)
+        tabs.pack(fill="x", padx=16)
+        holder = tk.Frame(left, bg=SURFACE_2)
+        holder.pack(fill="both", expand=True, padx=14, pady=(6, 10))
+        texts = {}
+
+        def show_text(kind):
+            for widget in texts.values():
+                _hide(widget)
+            widget = texts[kind]
+            widget.pack(fill="both", expand=True)
+
+        specs = (
+            ("current", "現在の完成本文", current, True),
+            ("publish", "掲載用本文", article, False),
+            ("source", "元記事", source, False),
+        )
+        for kind, label, value, editable in specs:
+            _secondary(app, tabs, label, lambda selected=kind: show_text(selected)).pack(side="left", padx=(0, 6))
+            widget = tk.Text(
+                holder,
+                wrap="word",
+                bg="#F7F6F2",
+                fg="#252525",
+                insertbackground="#252525",
+                relief="flat",
+                padx=20,
+                pady=16,
+                height=21,
+            )
+            _set_text(widget, value)
+            _decorate_completion_preview(widget)
+            if not editable:
+                widget.configure(state="disabled")
+            texts[kind] = widget
+        show_text("current")
+        fields["library_title"] = title_var
+        fields["library_current"] = texts["current"]
+        fields["library_publish"] = texts["publish"]
+        fields["library_source"] = texts["source"]
+        fields["formatted_text"] = texts["current"]
+
+        image_panel = _card(page)
+        image_panel.configure(width=330)
+        image_panel.pack(side="right", fill="y")
+        image_panel.pack_propagate(False)
+        _label(image_panel, "保存済み画像", size=12, bold=True).pack(anchor="w", padx=16, pady=(16, 4))
+        image = normalize_image_settings(context.get("image_settings")).to_dict()
+        eye = image["enabled"] and image["target"] in {"eyecatch", "both"}
+        inline = image["enabled"] and image["target"] in {"illustrations", "both"}
+        count = "AIにおまかせ" if image["illustration_count"] == "auto" else image["illustration_count"]
+        _label(
+            image_panel,
+            f"アイキャッチ: {'あり' if eye else 'なし'}\n挿絵: {count + '枚' if inline else 'なし'}\n画像メタデータ: {'保持中' if context.get('image_payload') else 'なし'}",
+            size=8,
+            fg=SOFT,
+            wraplength=285,
+            justify="left",
+        ).pack(anchor="w", padx=16, pady=(4, 12))
+        _label(
+            image_panel,
+            "画像計画を変更していない場合、既存の画像・プロンプト・差し込み位置はそのまま保持されます。",
+            size=8,
+            fg=GREEN,
+            wraplength=285,
+            justify="left",
+        ).pack(anchor="w", padx=16, pady=(0, 12))
+
+    def save_library_edit():
+        context = state.get("library_edit")
+        if not context:
+            return
+        title_var = fields.get("library_title")
+        title = str(title_var.get() if title_var is not None else context.get("title") or "").strip()
+        current = _text_value(fields.get("library_current"))
+        if not current:
+            messagebox.showwarning("記事再編集", "現在の完成本文が空です。")
+            return
+        try:
+            saved = _save_library_article_edit(app, context, title, current)
+        except Exception as exc:
+            messagebox.showerror("記事再編集", f"編集内容を保存できませんでした。\n{type(exc).__name__}: {exc}")
+            return
+        state["library_edit"] = _load_library_edit_context(app, saved)
+        app._phase4_library_edit_context = state["library_edit"]
+        messagebox.showinfo("保存完了", "同じ記事IDへ編集内容を保存しました。")
+        app.show_history()
 
     def complete_title_phase():
         raw = _text_value(fields.get("title_response"))
@@ -601,11 +1278,37 @@ def install_article_wizard(app, body):
         state["source_article"] = str(publish_result.get("source_text") or article)
         state["insertion_article"] = str(publish_result.get("insertion_text") or article)
         state["article"] = str(publish_result.get("publish_text") or article)
+        try:
+            _save_completed_article(
+                app,
+                fields["selected_title"].get(),
+                state["source_article"],
+                state["article"],
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                "記事ライブラリ",
+                f"完成記事を記事ライブラリへ保存できませんでした.\n{type(exc).__name__}: {exc}",
+            )
+            return
         render_completion()
         show_page(5)
 
     def advance():
         index = int(state["index"])
+        if state.get("library_edit"):
+            if index < 4:
+                if index == 3 and hasattr(app, "_v0427_sync_theme"):
+                    app._v0427_sync_theme()
+                if index == 3:
+                    render_library_edit_review()
+                show_page(index + 1)
+            elif index == 4:
+                render_completion()
+                show_page(5)
+            else:
+                save_library_edit()
+            return
         if index < 3:
             show_page(index + 1)
         elif index == 3:
@@ -634,6 +1337,15 @@ def install_article_wizard(app, body):
         back_button.configure(state="normal" if index > 0 else "disabled")
         clear_button.pack_forget()
         new_button.pack_forget()
+        if state.get("library_edit"):
+            if index == 4:
+                next_button.configure(text="本文確認へ  ›")
+            elif index == 5:
+                next_button.configure(text="変更を保存")
+            else:
+                next_button.configure(text="次へ  ›")
+            status.configure(text=f"STEP {index + 1} / 6　{STEP_LABELS[index]}（再編集）")
+            return
         if index >= 4:
             clear_button.pack(side="left", padx=(0, 7), pady=9, after=back_button)
             new_button.pack(side="left", pady=9, after=clear_button)
@@ -675,6 +1387,8 @@ def install_article_wizard(app, body):
         "original_widgets": existing,
         "render_creation": render_creation,
         "render_completion": render_completion,
+        "load_library_article": load_library_article,
+        "save_library_edit": save_library_edit,
     }
     app._v0427_article_wizard = app._v0432_article_wizard
     app._article_create_body = body
@@ -695,7 +1409,32 @@ def _phase_heading(parent, number, title, subtitle):
     _label(text, subtitle, size=7, fg=MUTED).pack(anchor="w", pady=(2, 0))
 
 
+def _existing_live_article_wizard(app):
+    """Return the currently displayed wizard before scanning its descendants.
+
+    Once installed, the wizard itself contains every phrase used by
+    ``find_live_article_body``. Scanning first can therefore mistake a child of
+    the active wizard for a fresh host and install a second wizard inside it.
+    """
+
+    current = getattr(app, "_v0432_article_wizard", None)
+    if not isinstance(current, dict):
+        return None
+    try:
+        root = current.get("root")
+        if root and root.winfo_exists() and _manager(root):
+            return current
+    except Exception:
+        pass
+    return None
+
+
 def activate_live_article_wizard(app):
+    current = _existing_live_article_wizard(app)
+    if current:
+        app._v0432_embedded_active = True
+        app._v0432_activation_error = ""
+        return current
     body = find_live_article_body(app)
     if body is None:
         app._v0432_embedded_active = False

@@ -149,6 +149,64 @@ def can_manage_users(profile: UserProfile, current_user: AuthenticatedUser | Non
     )
 
 
+def configure_user_local_storage(
+    app: tk.Misc,
+    profile: UserProfile,
+    *,
+    data_dir=None,
+):
+    """Bind all local article state to the authenticated AAS profile.
+
+    The legacy shared files remain untouched. This binding only changes where
+    subsequent reads and writes are performed for the active profile.
+    """
+
+    from ..core.db import ArticleDB
+    from ..core.image_assets import ArticleImageStore
+    from ..core.user_data import user_data_paths
+    from ..core.web_ai_state import WebAIStateStore
+    from ..core.web_ai_ui_bridge import WebAIUIBridge
+    from ..core.web_ai_workflow import WebAIWorkflow
+    from .guided_wizard_v0432 import open_library_article_editor
+    from types import MethodType
+
+    owner_key = profile.aas_user_id or profile.id or "local"
+    paths = user_data_paths(owner_key, data_dir=data_dir)
+    database = ArticleDB(paths.article_db)
+    state_store = WebAIStateStore(
+        paths.workflow_state,
+        history_path=paths.workflow_history,
+    )
+    image_store = ArticleImageStore(paths.article_images)
+
+    app.db = database
+    pipeline = getattr(app, "pipeline", None)
+    if pipeline is not None:
+        pipeline.db = database
+    app.web_ai_bridge = WebAIUIBridge(
+        WebAIWorkflow(state_store=state_store, image_store=image_store)
+    )
+
+    def open_bound_library_editor(bound_app, payload):
+        return open_library_article_editor(bound_app, payload)
+
+    # The installed app's legacy library calls ``_history_preview``. Binding
+    # the Phase 4 editor here keeps the existing app shell intact while routing
+    # every authenticated profile through the same six-step in-place editor.
+    app._history_preview = MethodType(open_bound_library_editor, app)
+    # Never retain the previous profile's unfinished article in memory.
+    if hasattr(app, "current_record"):
+        app.current_record = None
+    if hasattr(app, "theme_result"):
+        app.theme_result = None
+    selected_theme_id = getattr(app, "selected_theme_id", None)
+    if selected_theme_id is not None and callable(getattr(selected_theme_id, "set", None)):
+        selected_theme_id.set("")
+    app._aas_local_data_scope = paths.scope
+    app._aas_local_data_root = str(paths.root)
+    return paths
+
+
 class AuthUIController:
     def __init__(self, app: tk.Misc):
         self.app = app
@@ -439,6 +497,16 @@ class AuthUIController:
         self._enter_profile(user.profile)
 
     def _enter_profile(self, profile: UserProfile) -> None:
+        try:
+            configure_user_local_storage(self.app, profile)
+        except Exception as exc:
+            self.current_user = None
+            messagebox.showerror(
+                "ローカルデータ",
+                f"ユーザー別の記事保存領域を初期化できませんでした。\n{type(exc).__name__}: {exc}",
+            )
+            self.show_login(status="ユーザー別の記事保存領域を初期化できませんでした。")
+            return
         if self.auth_frame is not None:
             self.auth_frame.destroy()
             self.auth_frame = None
@@ -499,7 +567,7 @@ class RoleShell:
     ROUTES = {
         "home": ("show_home",),
         "create": ("show_create",),
-        "library": ("show_library", "show_articles"),
+        "library": ("show_history", "show_library", "show_articles"),
         "settings": ("show_settings",),
     }
 
