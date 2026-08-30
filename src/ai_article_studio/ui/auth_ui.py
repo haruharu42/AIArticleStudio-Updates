@@ -154,6 +154,8 @@ def configure_user_local_storage(
     profile: UserProfile,
     *,
     data_dir=None,
+    current_user: AuthenticatedUser | None = None,
+    auth_service: SupabaseAuthService | None = None,
 ):
     """Bind all local article state to the authenticated AAS profile.
 
@@ -179,10 +181,35 @@ def configure_user_local_storage(
     )
     image_store = ArticleImageStore(paths.article_images)
 
-    app.db = database
+    bound_database = database
+    cloud_bridge = None
+    if current_user is not None and auth_service is not None:
+        from ..core.cloud_article_sync import CloudArticleSyncCoordinator
+        from ..core.cloud_articles import CloudArticleService
+        from .cloud_sync_ui import CloudArticleUIBridge, CloudAwareArticleDB
+
+        def actor_updated(updated_user: AuthenticatedUser) -> None:
+            controller = getattr(app, "_aas_auth_controller", None)
+            if controller is not None:
+                controller.current_user = updated_user
+                role_shell = getattr(controller, "role_shell", None)
+                if role_shell is not None:
+                    role_shell.current_user = updated_user
+
+        coordinator = CloudArticleSyncCoordinator(
+            database,
+            CloudArticleService(auth_service.config),
+            current_user,
+            auth_service=auth_service,
+            actor_updated=actor_updated,
+        )
+        cloud_bridge = CloudArticleUIBridge(app, coordinator)
+        bound_database = CloudAwareArticleDB(database, cloud_bridge)
+
+    app.db = bound_database
     pipeline = getattr(app, "pipeline", None)
     if pipeline is not None:
-        pipeline.db = database
+        pipeline.db = bound_database
     app.web_ai_bridge = WebAIUIBridge(
         WebAIWorkflow(state_store=state_store, image_store=image_store)
     )
@@ -204,6 +231,10 @@ def configure_user_local_storage(
         selected_theme_id.set("")
     app._aas_local_data_scope = paths.scope
     app._aas_local_data_root = str(paths.root)
+    app._aas_cloud_bridge = cloud_bridge
+    app._aas_cloud_sync_status = {
+        "status": "local_only" if cloud_bridge is None else "ready"
+    }
     return paths
 
 
@@ -484,7 +515,13 @@ class AuthUIController:
         self.show_login()
 
     def _on_restore(self, result, exc: Exception | None) -> None:
-        if exc or result is None:
+        if exc is not None:
+            status = self._friendly_error(exc)
+            if isinstance(exc, AuthError) and exc.code == "network_error":
+                status += "\n暗号化されたログイン情報は保持されています。接続復旧後に再試行してください。"
+            self.show_login(status=status)
+            return
+        if result is None:
             self.show_login()
             return
         self._enter_application(result)
@@ -498,7 +535,12 @@ class AuthUIController:
 
     def _enter_profile(self, profile: UserProfile) -> None:
         try:
-            configure_user_local_storage(self.app, profile)
+            configure_user_local_storage(
+                self.app,
+                profile,
+                current_user=self.current_user,
+                auth_service=self.service,
+            )
         except Exception as exc:
             self.current_user = None
             messagebox.showerror(
@@ -523,6 +565,10 @@ class AuthUIController:
     def logout(self) -> None:
         user = self.current_user
         self.current_user = None
+        cloud_bridge = getattr(self.app, "_aas_cloud_bridge", None)
+        if cloud_bridge is not None:
+            cloud_bridge.close()
+        self.app._aas_cloud_bridge = None
         if self.role_shell is not None:
             self.role_shell.destroy()
             self.role_shell = None
@@ -591,6 +637,9 @@ class RoleShell:
         self.sidebar: tk.Frame | None = None
         self.placeholder: tk.Frame | None = None
         self.buttons: dict[str, tk.Button] = {}
+        self.current_route = ""
+        self.sync_status_label: tk.Label | None = None
+        self.app._aas_cloud_sync_status_changed = self._update_cloud_status
 
     def start(self) -> None:
         self._build_sidebar()
@@ -644,11 +693,42 @@ class RoleShell:
         account.pack(side="bottom", fill="x", padx=16, pady=14)
         _label(account, self.profile.display_name or "ユーザー", size=8, bg=SIDEBAR, weight="bold", anchor="w").pack(fill="x")
         _label(account, self.profile.aas_user_id, size=7, color=MUTED, bg=SIDEBAR, anchor="w").pack(fill="x", pady=(1, 5))
+        self.sync_status_label = _label(
+            account,
+            "",
+            size=7,
+            color=MUTED,
+            bg=SIDEBAR,
+            anchor="w",
+        )
+        self.sync_status_label.pack(fill="x", pady=(0, 6))
+        self._update_cloud_status(getattr(self.app, "_aas_cloud_sync_status", {}))
         if self._can_switch_modes():
             switch_text = "ユーザーモードへ" if self.ui_mode == "admin" else "管理者モードへ"
             _button(account, switch_text, self._switch_mode, primary=False, padx=8, pady=7).pack(fill="x", pady=(0, 6))
         _button(account, "ログアウト", self.logout, primary=False).pack(fill="x")
         self.sidebar.lift()
+
+    def _update_cloud_status(self, value) -> None:
+        label = self.sync_status_label
+        if label is None:
+            return
+        status = str(dict(value or {}).get("status") or "")
+        category = str(dict(value or {}).get("category") or "")
+        if status == "synced":
+            text, color = "クラウド同期：完了", GREEN
+        elif status == "error" and category == "entitlement_denied":
+            text, color = "クラウド同期：利用権なし", MUTED
+        elif status == "error":
+            text, color = "クラウド同期：保留", "#FBBF24"
+        elif status == "local_only":
+            text, color = "保存：ローカルのみ", MUTED
+        else:
+            text, color = "クラウド同期：準備完了", BLUE
+        try:
+            label.configure(text=text, fg=color)
+        except Exception:
+            pass
 
     def _can_switch_modes(self) -> bool:
         return can_manage_users(self.profile, self.current_user)
@@ -665,6 +745,7 @@ class RoleShell:
         self.navigate("home" if self.ui_mode == "user" else "dashboard")
 
     def navigate(self, route: str) -> None:
+        self.current_route = route
         for key, button in self.buttons.items():
             active = key == route
             button.configure(bg="#26194B" if active else SIDEBAR, fg=TEXT if active else SOFT)
@@ -690,11 +771,28 @@ class RoleShell:
                 method()
             except Exception as exc:
                 self._show_placeholder("機能を開けませんでした", f"既存画面の呼び出しでエラーが発生しました。\n{type(exc).__name__}")
+            else:
+                if route == "library":
+                    cloud_bridge = getattr(self.app, "_aas_cloud_bridge", None)
+                    if cloud_bridge is not None:
+                        cloud_bridge.refresh_library(
+                            lambda _result: self._refresh_library_view(method)
+                        )
         else:
             active_menu = ADMIN_MENU if self.ui_mode == "admin" else USER_MENU
             title = next((label for _icon, label, key in active_menu if key == route), route)
             subtitle = "このFoundationでは安全な導線のみ用意しています。機能本体は次のPhaseで共通Coreへ接続します。"
             self._show_placeholder(title, subtitle)
+        if self.sidebar is not None:
+            self.sidebar.lift()
+
+    def _refresh_library_view(self, method) -> None:
+        if self.current_route != "library":
+            return
+        try:
+            method()
+        except Exception:
+            return
         if self.sidebar is not None:
             self.sidebar.lift()
 

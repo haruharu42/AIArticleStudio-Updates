@@ -29,11 +29,10 @@ class CloudArticleError(RuntimeError):
 
 
 class CloudArticleService:
-    """Minimal authenticated Data API client for Phase 5A.
+    """Authenticated Data API client used by the Windows article sync layer.
 
-    It is intentionally not connected to the article library or six-step UI.
     Every cloud operation is entitlement-gated and write requests are never
-    retried automatically.
+    retried automatically.  The service deliberately contains no Tk/UI code.
     """
 
     def __init__(self, config: AuthConfig, *, timeout: float = 20.0):
@@ -96,6 +95,38 @@ class CloudArticleService:
                 status=404,
             )
         return self._mapping(result[0], "articles read")
+
+    def list_articles(
+        self,
+        actor: AuthenticatedUser,
+        *,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Return the active actor's cloud articles in newest-first order."""
+
+        self._require_entitlement(actor)
+        limit_value = int(limit)
+        if limit_value < 1 or limit_value > 1000:
+            raise ValueError("limit must be between 1 and 1000")
+        query = parse.urlencode(
+            {
+                "select": "*",
+                "order": "updated_at.desc,id.asc",
+                "limit": str(limit_value),
+            }
+        )
+        result = self._request(
+            actor,
+            "GET",
+            f"{self.config.supabase_url}/rest/v1/articles?{query}",
+        )
+        if not isinstance(result, list):
+            raise CloudArticleError(
+                "クラウド記事一覧の応答形式が不正です。",
+                category="server_error",
+                code="invalid_response",
+            )
+        return [self._mapping(item, "articles list") for item in result]
 
     def read_workspace(
         self,
@@ -260,8 +291,12 @@ class CloudArticleService:
         normalized_message = str(message or "").lower()
         if normalized_code == "40001":
             return "revision_conflict"
+        if normalized_code == "P0002" or status == 404:
+            return "not_found"
         if normalized_code == "P0001" and "article_quota_exceeded" in normalized_message:
             return "quota_exceeded"
+        if normalized_code == "P0001" and "article_has_assets" in normalized_message:
+            return "asset_dependency"
         if normalized_code == "42501" and "active profile" in normalized_message:
             return "inactive"
         if normalized_code == "42501" or status == 403:

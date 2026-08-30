@@ -428,9 +428,29 @@ class SupabaseAuthService:
             if session.expires_at <= time.time() + 60:
                 session = self._refresh(session.refresh_token)
             return self._complete_session(session)
-        except AuthError:
+        except AuthError as exc:
+            # A temporary network failure must not destroy the only encrypted
+            # refresh token.  Keep the DPAPI session so the user can retry when
+            # connectivity returns.  Definitive authentication/profile errors
+            # still invalidate the local session as before.
+            if exc.code == "network_error":
+                raise
             self.session_store.clear()
             return None
+
+    def ensure_authenticated(
+        self,
+        user: AuthenticatedUser,
+        *,
+        minimum_valid_seconds: float = 60.0,
+    ) -> AuthenticatedUser:
+        """Refresh an expiring actor without clearing DPAPI on network errors."""
+
+        self._require_config()
+        if user.session.expires_at > time.time() + float(minimum_valid_seconds):
+            return user
+        session = self._refresh(user.session.refresh_token)
+        return self._complete_session(session)
 
     def sign_out(self, session: AuthSession | None = None) -> None:
         try:

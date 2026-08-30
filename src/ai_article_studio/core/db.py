@@ -109,6 +109,22 @@ class ArticleDB:
                 """,
                 (payload["article_id"],),
             )
+            # A mapped article saved by the Windows editor is no longer known
+            # to match the cloud revision.  Mark it for an explicit update;
+            # the sync coordinator performs the authenticated RPC afterwards.
+            # Cloud pull writes use the underlying DB and immediately restore
+            # the authoritative synced mapping, so they cannot loop back into
+            # another upload.
+            c.execute(
+                """
+                UPDATE article_cloud_sync
+                SET sync_status = 'pending_update', last_sync_error = NULL
+                WHERE local_article_id = ?
+                  AND cloud_article_id IS NOT NULL
+                  AND sync_status = 'synced'
+                """,
+                (payload["article_id"],),
+            )
 
     def list_articles(self, limit: int = 100) -> list[dict]:
         with _connect(self.path) as c:
@@ -138,6 +154,31 @@ class ArticleDB:
                 WHERE local_article_id = ?
                 """,
                 (str(local_article_id),),
+            ).fetchone()
+            return dict(row) if row else None
+
+    def get_cloud_sync_by_cloud_id(self, cloud_article_id: str) -> dict | None:
+        cloud_value = str(cloud_article_id or "").strip()
+        try:
+            cloud_value = str(UUID(cloud_value))
+        except (ValueError, AttributeError, TypeError):
+            return None
+        with _connect(self.path) as c:
+            c.row_factory = sqlite3.Row
+            row = c.execute(
+                """
+                SELECT
+                    local_article_id,
+                    cloud_article_id,
+                    cloud_revision,
+                    sync_status,
+                    last_synced_at,
+                    last_sync_error,
+                    last_synced_hash
+                FROM article_cloud_sync
+                WHERE cloud_article_id = ?
+                """,
+                (cloud_value,),
             ).fetchone()
             return dict(row) if row else None
 
