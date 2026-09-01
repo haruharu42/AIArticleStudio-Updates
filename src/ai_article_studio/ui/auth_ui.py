@@ -149,6 +149,51 @@ def can_manage_users(profile: UserProfile, current_user: AuthenticatedUser | Non
     )
 
 
+def _keep_article_library_actions_visible(app: tk.Misc) -> bool:
+    """Move the legacy Edit/Delete row above its table when it is clipped."""
+
+    main = getattr(app, "main", None)
+    if main is None:
+        return False
+
+    def find_tree(widget):
+        for child in widget.winfo_children():
+            try:
+                if str(child.winfo_class()) == "Treeview":
+                    return child
+            except Exception:
+                continue
+            found = find_tree(child)
+            if found is not None:
+                return found
+        return None
+
+    tree = find_tree(main)
+    if tree is None:
+        return False
+    card = getattr(tree, "master", None)
+    if card is None:
+        return False
+    children = list(card.winfo_children())
+    try:
+        tree_index = children.index(tree)
+    except ValueError:
+        return False
+    actions = next(
+        (
+            child
+            for child in children[tree_index + 1 :]
+            if str(child.winfo_class()) in {"Frame", "TFrame"}
+        ),
+        None,
+    )
+    if actions is None:
+        return False
+    actions.pack_forget()
+    actions.pack(fill="x", padx=18, pady=(0, 8), before=tree)
+    return True
+
+
 def configure_user_local_storage(
     app: tk.Misc,
     profile: UserProfile,
@@ -186,6 +231,7 @@ def configure_user_local_storage(
     if current_user is not None and auth_service is not None:
         from ..core.cloud_article_sync import CloudArticleSyncCoordinator
         from ..core.cloud_articles import CloudArticleService
+        from ..core.cloud_assets import CloudArticleAssetService, CloudAssetSyncCoordinator
         from .cloud_sync_ui import CloudArticleUIBridge, CloudAwareArticleDB
 
         def actor_updated(updated_user: AuthenticatedUser) -> None:
@@ -196,14 +242,23 @@ def configure_user_local_storage(
                 if role_shell is not None:
                     role_shell.current_user = updated_user
 
+        asset_coordinator = CloudAssetSyncCoordinator(
+            image_store,
+            CloudArticleAssetService(auth_service.config),
+            current_user,
+            auth_service=auth_service,
+            actor_updated=actor_updated,
+        )
         coordinator = CloudArticleSyncCoordinator(
             database,
             CloudArticleService(auth_service.config),
             current_user,
             auth_service=auth_service,
             actor_updated=actor_updated,
+            asset_coordinator=asset_coordinator,
+            image_store=image_store,
         )
-        cloud_bridge = CloudArticleUIBridge(app, coordinator)
+        cloud_bridge = CloudArticleUIBridge(app, coordinator, asset_coordinator=asset_coordinator)
         bound_database = CloudAwareArticleDB(database, cloud_bridge)
 
     app.db = bound_database
@@ -221,6 +276,17 @@ def configure_user_local_storage(
     # the Phase 4 editor here keeps the existing app shell intact while routing
     # every authenticated profile through the same six-step in-place editor.
     app._history_preview = MethodType(open_bound_library_editor, app)
+    legacy_show_history = getattr(app, "_aas_legacy_show_history", None)
+    if not callable(legacy_show_history):
+        legacy_show_history = getattr(app, "show_history", None)
+        if callable(legacy_show_history):
+            app._aas_legacy_show_history = legacy_show_history
+    if callable(legacy_show_history):
+        def show_bound_library(bound_app):
+            legacy_show_history()
+            _keep_article_library_actions_visible(bound_app)
+
+        app.show_history = MethodType(show_bound_library, app)
     # Never retain the previous profile's unfinished article in memory.
     if hasattr(app, "current_record"):
         app.current_record = None
@@ -231,6 +297,7 @@ def configure_user_local_storage(
         selected_theme_id.set("")
     app._aas_local_data_scope = paths.scope
     app._aas_local_data_root = str(paths.root)
+    app._aas_image_store = image_store
     app._aas_cloud_bridge = cloud_bridge
     app._aas_cloud_sync_status = {
         "status": "local_only" if cloud_bridge is None else "ready"
@@ -721,6 +788,8 @@ class RoleShell:
             text, color = "クラウド同期：利用権なし", MUTED
         elif status == "error":
             text, color = "クラウド同期：保留", "#FBBF24"
+        elif status == "pending":
+            text, color = "クラウド画像同期：保留", "#FBBF24"
         elif status == "local_only":
             text, color = "保存：ローカルのみ", MUTED
         else:

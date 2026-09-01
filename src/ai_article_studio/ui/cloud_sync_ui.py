@@ -6,6 +6,7 @@ from tkinter import messagebox
 
 from ..core.cloud_article_sync import CloudArticleSyncCoordinator, CloudSyncResult
 from ..core.cloud_articles import CloudArticleError
+from ..core.cloud_assets import CloudAssetSyncCoordinator, CloudAssetSyncResult
 from ..core.db import ArticleDB
 
 
@@ -22,19 +23,29 @@ SYNCABLE_STATUSES = {
 class CloudArticleUIBridge:
     """Small async boundary between Tk and the cloud sync coordinator."""
 
-    def __init__(self, app, coordinator: CloudArticleSyncCoordinator):
+    def __init__(
+        self,
+        app,
+        coordinator: CloudArticleSyncCoordinator,
+        *,
+        asset_coordinator: CloudAssetSyncCoordinator | None = None,
+    ):
         self.app = app
         self.coordinator = coordinator
+        self.asset_coordinator = asset_coordinator
         self._lock = threading.Lock()
         self._push_inflight: set[str] = set()
         self._push_queued: set[str] = set()
         self._pull_inflight = False
+        self._asset_inflight: set[str] = set()
+        self._asset_queued: set[str] = set()
         self._closed = False
 
     def close(self) -> None:
         with self._lock:
             self._closed = True
             self._push_queued.clear()
+            self._asset_queued.clear()
 
     def schedule_push(self, payload: Mapping[str, Any]) -> None:
         local_id = str(payload.get("article_id") or "").strip()
@@ -78,6 +89,50 @@ class CloudArticleUIBridge:
             self._after(lambda: self._finish_pull(result, caught, on_changed))
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def schedule_asset_sync(self, local_article_id: str) -> None:
+        """Run one foreground-requested image sync attempt; never auto-retry."""
+
+        local_id = str(local_article_id or "").strip()
+        mapping = self.coordinator.database.get_cloud_sync(local_id) or {}
+        cloud_id = str(mapping.get("cloud_article_id") or "").strip()
+        if not local_id or not cloud_id or self.asset_coordinator is None:
+            self._set_status({"status": "local_only", "local_article_id": local_id, "images": "local_only"})
+            return
+        with self._lock:
+            if self._closed:
+                return
+            if local_id in self._asset_inflight:
+                self._asset_queued.add(local_id)
+                return
+            self._asset_inflight.add(local_id)
+
+        def worker() -> None:
+            while True:
+                result = None
+                caught: Exception | None = None
+                try:
+                    result = self.asset_coordinator.sync_local(local_id, cloud_id)
+                except Exception as exc:
+                    caught = exc
+                with self._lock:
+                    rerun = caught is None and local_id in self._asset_queued
+                    self._asset_queued.discard(local_id)
+                    if not rerun:
+                        self._asset_inflight.discard(local_id)
+                    closed = self._closed
+                if closed:
+                    return
+                self._after(lambda value=result, error=caught: self._finish_asset_sync(value, error))
+                if not rerun:
+                    return
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def signed_asset_url(self, asset: Mapping[str, Any], *, expires_in: int = 60) -> str:
+        if self.asset_coordinator is None:
+            raise CloudArticleError("クラウド画像同期が利用できません。", category="configuration", code="image_sync_unavailable")
+        return self.asset_coordinator.signed_url(asset, expires_in=expires_in)
 
     def delete(self, local_article_id: str) -> bool:
         try:
@@ -129,6 +184,9 @@ class CloudArticleUIBridge:
                 "action": result.action,
                 "local_article_id": result.local_article_id,
                 "cloud_revision": result.cloud_revision,
+                "image_uploaded": result.image_uploaded,
+                "image_deleted": result.image_deleted,
+                "image_pending": result.image_pending,
             })
             return
         if isinstance(exc, CloudArticleError):
@@ -152,6 +210,37 @@ class CloudArticleUIBridge:
                 "クラウド同期",
                 "記事はローカルへ安全に保存しましたが、クラウド同期を完了できませんでした。",
             )
+
+    def _finish_asset_sync(
+        self,
+        result: CloudAssetSyncResult | None,
+        exc: Exception | None,
+    ) -> None:
+        if exc is None and result is not None:
+            self._set_status({
+                "status": "synced" if not result.pending else "pending",
+                "local_article_id": result.local_article_id,
+                "image_uploaded": result.uploaded,
+                "image_deleted": result.deleted,
+                "image_pending": result.pending,
+            })
+            callback = getattr(self.app, "_aas_image_sync_changed", None)
+            if callable(callback):
+                try:
+                    callback(result.local_article_id)
+                except Exception:
+                    pass
+            return
+        if isinstance(exc, CloudArticleError):
+            self._record_error(exc)
+            if exc.category == "entitlement_denied":
+                return
+        elif exc is not None:
+            self._record_unexpected(exc)
+        messagebox.showwarning(
+            "クラウド画像同期",
+            "画像はローカルへ安全に保存されていますが、クラウド同期は完了していません。再試行ボタンで明示的に再実行できます。",
+        )
 
     def _finish_pull(
         self,
@@ -209,7 +298,7 @@ class CloudArticleUIBridge:
     @staticmethod
     def _delete_error_message(exc: CloudArticleError) -> str:
         if exc.category == "asset_dependency" or "article_has_assets" in str(exc):
-            return "クラウド画像が残っているため記事を削除できません。画像の削除機能は後続の画像接続Phaseで行います。"
+            return "クラウド画像を先に削除できなかったため、記事とローカル画像は削除していません。接続を確認して再試行してください。"
         if exc.category == "revision_conflict":
             return "クラウド版が更新されています。記事ライブラリを更新してから削除してください。"
         return "クラウド側の削除を確認できなかったため、ローカル記事は削除していません。"

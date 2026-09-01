@@ -12,6 +12,12 @@ from .cloud_article_serializer import (
 )
 from .cloud_articles import CloudArticleError, CloudArticleService
 from .db import ArticleDB
+from .image_assets import ArticleImageStore
+
+try:
+    from .cloud_assets import CloudAssetSyncCoordinator
+except ImportError:  # Phase 5B recovery compatibility during staged installs.
+    CloudAssetSyncCoordinator = Any  # type: ignore[misc,assignment]
 
 
 @dataclass(frozen=True)
@@ -23,6 +29,9 @@ class CloudSyncResult:
     imported: int = 0
     updated: int = 0
     skipped: int = 0
+    image_uploaded: int = 0
+    image_deleted: int = 0
+    image_pending: int = 0
 
 
 class CloudArticleSyncCoordinator:
@@ -49,12 +58,16 @@ class CloudArticleSyncCoordinator:
         *,
         auth_service: SupabaseAuthService | None = None,
         actor_updated: Callable[[AuthenticatedUser], None] | None = None,
+        asset_coordinator: CloudAssetSyncCoordinator | None = None,
+        image_store: ArticleImageStore | None = None,
     ):
         self.database = database
         self.cloud = cloud
         self.actor = actor
         self.auth_service = auth_service
         self.actor_updated = actor_updated
+        self.asset_coordinator = asset_coordinator
+        self.image_store = image_store
 
     def push_local(self, local_article_id: str) -> CloudSyncResult:
         """Create or update one cloud article from its local cache record."""
@@ -104,12 +117,6 @@ class CloudArticleSyncCoordinator:
                     {"article": article, "workspace": workspace}
                 ),
             )
-            return CloudSyncResult(
-                action=action,
-                local_article_id=local_id,
-                cloud_article_id=cloud_id,
-                cloud_revision=revision,
-            )
         except CloudArticleError as exc:
             self._record_push_error(
                 local_id,
@@ -125,6 +132,22 @@ class CloudArticleSyncCoordinator:
                 error=f"local_sync_error:{type(exc).__name__}",
             )
             raise
+
+        image_uploaded = image_deleted = image_pending = 0
+        if self.asset_coordinator is not None:
+            asset_result = self.asset_coordinator.sync_local(local_id, cloud_id)
+            image_uploaded = asset_result.uploaded
+            image_deleted = asset_result.deleted
+            image_pending = asset_result.pending
+        return CloudSyncResult(
+            action=action,
+            local_article_id=local_id,
+            cloud_article_id=cloud_id,
+            cloud_revision=revision,
+            image_uploaded=image_uploaded,
+            image_deleted=image_deleted,
+            image_pending=image_pending,
+        )
 
     def pull_cloud(self, *, limit: int = 100) -> CloudSyncResult:
         """Refresh safe cloud rows into the local cache without overwriting edits."""
@@ -152,6 +175,8 @@ class CloudArticleSyncCoordinator:
                     skipped += 1
                     continue
                 if known_revision == revision:
+                    if self.asset_coordinator is not None:
+                        self.asset_coordinator.refresh_remote(local_id, cloud_id)
                     skipped += 1
                     continue
             else:
@@ -174,6 +199,8 @@ class CloudArticleSyncCoordinator:
                     {"article": article, "workspace": workspace}
                 ),
             )
+            if self.asset_coordinator is not None:
+                self.asset_coordinator.refresh_remote(local_id, cloud_id)
             if mapping:
                 updated += 1
             else:
@@ -196,10 +223,15 @@ class CloudArticleSyncCoordinator:
         mapping = self.database.get_cloud_sync(local_id) or {}
         cloud_id = str(mapping.get("cloud_article_id") or "").strip()
         if not cloud_id:
-            return self.database.delete(local_id)
+            deleted = self.database.delete(local_id)
+            if deleted and self.image_store is not None:
+                self.image_store.delete_article_files(local_id)
+            return deleted
 
         try:
             revision = self._revision(mapping.get("cloud_revision"))
+            if self.asset_coordinator is not None:
+                self.asset_coordinator.delete_all_for_article(local_id, cloud_id)
             self.cloud.delete(self._current_actor(), cloud_id, revision)
         except CloudArticleError as exc:
             self.database.update_sync_status(
@@ -208,7 +240,10 @@ class CloudArticleSyncCoordinator:
                 error=self._safe_error(exc),
             )
             raise
-        return self.database.delete(local_id)
+        deleted = self.database.delete(local_id)
+        if deleted and self.image_store is not None:
+            self.image_store.delete_article_files(local_id)
+        return deleted
 
     def _current_actor(self) -> AuthenticatedUser:
         if self.auth_service is None:

@@ -39,6 +39,7 @@ from .guided_wizard_v0427 import (
     _update_progress,
     _value,
 )
+from .cloud_image_ui import render_cloud_image_panel
 from .guided_wizard_v0428 import _hide_legacy_chrome
 
 
@@ -1104,7 +1105,21 @@ def install_article_wizard(app, body):
         image_panel.configure(width=330)
         image_panel.pack(side="right", fill="y")
         image_panel.pack_propagate(False)
-        _refresh_image_result_panel(app, image_panel, {"formatted_text": preview, "final_text": preview})
+        current_record = getattr(app, "current_record", None)
+        article_id = str(getattr(current_record, "article_id", "") or "").strip()
+        if not article_id:
+            try:
+                article_id = str(app.web_ai_bridge.current_snapshot().get("article_id") or "").strip()
+            except Exception:
+                article_id = ""
+        render_cloud_image_panel(
+            app,
+            image_panel,
+            article_id=article_id,
+            article_text=insertion_article,
+            prompt_renderer=_refresh_image_result_panel,
+            prompt_fields={"formatted_text": preview, "final_text": preview},
+        )
         try:
             app.web_ai_bridge.mark_completed()
         except Exception:
@@ -1181,27 +1196,14 @@ def install_article_wizard(app, body):
         image_panel.configure(width=330)
         image_panel.pack(side="right", fill="y")
         image_panel.pack_propagate(False)
-        _label(image_panel, "保存済み画像", size=12, bold=True).pack(anchor="w", padx=16, pady=(16, 4))
-        image = normalize_image_settings(context.get("image_settings")).to_dict()
-        eye = image["enabled"] and image["target"] in {"eyecatch", "both"}
-        inline = image["enabled"] and image["target"] in {"illustrations", "both"}
-        count = "AIにおまかせ" if image["illustration_count"] == "auto" else image["illustration_count"]
-        _label(
+        render_cloud_image_panel(
+            app,
             image_panel,
-            f"アイキャッチ: {'あり' if eye else 'なし'}\n挿絵: {count + '枚' if inline else 'なし'}\n画像メタデータ: {'保持中' if context.get('image_payload') else 'なし'}",
-            size=8,
-            fg=SOFT,
-            wraplength=285,
-            justify="left",
-        ).pack(anchor="w", padx=16, pady=(4, 12))
-        _label(
-            image_panel,
-            "画像計画を変更していない場合、既存の画像・プロンプト・差し込み位置はそのまま保持されます。",
-            size=8,
-            fg=GREEN,
-            wraplength=285,
-            justify="left",
-        ).pack(anchor="w", padx=16, pady=(0, 12))
+            article_id=str(context.get("article_id") or ""),
+            article_text=current,
+            prompt_renderer=_refresh_image_result_panel,
+            prompt_fields={"formatted_text": texts["current"], "final_text": texts["current"]},
+        )
 
     def save_library_edit():
         context = state.get("library_edit")
