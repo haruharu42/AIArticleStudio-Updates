@@ -1,0 +1,17 @@
+{
+  "name": "AI記事スタジオ",
+  "short_name": "AI記事",
+  "description": "AI記事スタジオ PWA",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#081225",
+  "theme_color": "#081225",
+  "lang": "ja",
+  "orientation": "any",
+  "icons": [
+    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
