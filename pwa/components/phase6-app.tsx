@@ -16,6 +16,7 @@ import {
   PublicConfigurationError,
   publicLinks,
 } from "@/lib/supabase";
+import { Phase7Library } from "@/components/phase7-library";
 
 type AuthMode = "login" | "register" | "reset" | "recovery";
 type Screen =
@@ -238,11 +239,11 @@ function AuthScreen({
     <main className="auth-page">
       <section className="auth-intro">
         <Brand />
-        <p className="eyebrow">PWA FOUNDATION · PHASE 6</p>
+        <p className="eyebrow">PWA ARTICLE LIBRARY · PHASE 7</p>
         <h1>記事づくりを、<br />どこからでも。</h1>
         <p className="lead">
           Windows版と同じアカウント・利用権を使うPWA基盤です。
-          Phase 6では安全なログインとアクセス確認までを提供します。
+          安全なログインに加え、クラウド記事をどの端末からでも確認できます。
         </p>
         <div className="trust-row">
           <span>Supabase Auth</span>
@@ -397,15 +398,18 @@ function AccessIssue({
 }
 
 function Dashboard({
+  client,
   profile,
   onRetry,
   onLogout,
 }: {
+  client: SupabaseClient;
   profile: AasProfile;
   onRetry: () => Promise<void>;
   onLogout: () => Promise<void>;
 }) {
   const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
+  const [section, setSection] = useState<"home" | "library">("home");
 
   useEffect(() => {
     const capture = (event: Event) => {
@@ -428,8 +432,8 @@ function Dashboard({
       <aside className="side-nav">
         <Brand compact />
         <nav aria-label="メインナビゲーション">
-          <button className="active" type="button"><span>⌂</span>ホーム</button>
-          <button type="button" disabled><span>▤</span>記事ライブラリ<small>Phase 7</small></button>
+          <button className={section === "home" ? "active" : ""} type="button" onClick={() => setSection("home")}><span>⌂</span>ホーム</button>
+          <button className={section === "library" ? "active" : ""} type="button" onClick={() => setSection("library")}><span>▤</span>記事ライブラリ<small>利用可能</small></button>
           <button type="button" disabled><span>✦</span>記事を作る<small>Phase 8</small></button>
           <button type="button" disabled><span>◫</span>画像<small>Phase 9</small></button>
         </nav>
@@ -440,12 +444,16 @@ function Dashboard({
         </div>
       </aside>
 
-      <main className="dashboard">
+      <main className={section === "home" ? "dashboard" : "dashboard library-dashboard"}>
+        {section === "library" ? (
+          <Phase7Library client={client} ownerId={profile.id} />
+        ) : (
+          <>
         <header className="dashboard-head">
           <div>
             <p className="eyebrow">PWA HOME</p>
             <h1>おかえりなさい</h1>
-            <p>Phase 6の認証・利用権確認が完了しました。</p>
+            <p>認証・利用権確認と共通記事ライブラリが利用できます。</p>
           </div>
           <span className="access-badge">● PWA利用可能</span>
         </header>
@@ -453,17 +461,18 @@ function Dashboard({
         <section className="hero-card">
           <div>
             <span className="hero-icon">✦</span>
-            <p className="eyebrow">FOUNDATION READY</p>
-            <h2>安全なPWA基盤を接続しました</h2>
-            <p>Windows版と同じSupabaseアカウントを使用し、active profileとPWA専用利用権を毎回確認します。</p>
+            <p className="eyebrow">ARTICLE LIBRARY READY</p>
+            <h2>Windows版の記事をPWAでも確認できます</h2>
+            <p>一覧では本文を取得せず、記事を開いた時だけ自分の本文とWorkspaceを安全に読み込みます。</p>
           </div>
           <div className="hero-actions">
+            <button type="button" className="primary-action" onClick={() => setSection("library")}>記事ライブラリを開く</button>
             <button type="button" className="secondary-action" onClick={() => void onRetry()}>アクセスを再確認</button>
             {installPrompt && <button type="button" className="primary-action" onClick={() => void install()}>アプリとして追加</button>}
           </div>
         </section>
 
-        <section className="status-grid" aria-label="Phase 6接続状態">
+        <section className="status-grid" aria-label="Phase 7接続状態">
           <StatusTile label="認証" value="接続済み" detail="Supabase Auth / PKCE" />
           <StatusTile label="プロフィール" value="利用中" detail={`${profile.role} / ${profile.status}`} />
           <StatusTile label="PWA利用権" value="確認済み" detail={PWA_PRODUCT_CODE} />
@@ -475,16 +484,18 @@ function Dashboard({
             <span>段階的に公開</span>
           </div>
           <div className="feature-grid">
-            <FeatureCard number="07" title="共通記事ライブラリ" description="クラウド記事の一覧・閲覧・編集・削除" />
+            <FeatureCard number="07" title="共通記事ライブラリ" description="クラウド記事の一覧・閲覧・編集・削除" ready />
             <FeatureCard number="08" title="PWA記事作成" description="モバイルから記事の作成と再編集" />
             <FeatureCard number="09" title="PWA画像" description="private Storageの画像選択と同期" />
           </div>
         </section>
+          </>
+        )}
       </main>
 
       <nav className="bottom-nav" aria-label="モバイルナビゲーション">
-        <button className="active" type="button"><span>⌂</span>ホーム</button>
-        <button type="button" disabled><span>▤</span>記事</button>
+        <button className={section === "home" ? "active" : ""} type="button" onClick={() => setSection("home")}><span>⌂</span>ホーム</button>
+        <button className={section === "library" ? "active" : ""} type="button" onClick={() => setSection("library")}><span>▤</span>記事</button>
         <button type="button" disabled><span className="create-dot">✦</span>作成</button>
         <button type="button" disabled><span>◫</span>画像</button>
       </nav>
@@ -496,8 +507,8 @@ function StatusTile({ label, value, detail }: { label: string; value: string; de
   return <article className="status-tile"><span>{label}</span><strong><i>●</i>{value}</strong><small>{detail}</small></article>;
 }
 
-function FeatureCard({ number, title, description }: { number: string; title: string; description: string }) {
-  return <article className="feature-card"><span>{number}</span><div><h3>{title}</h3><p>{description}</p></div><b>準備中</b></article>;
+function FeatureCard({ number, title, description, ready = false }: { number: string; title: string; description: string; ready?: boolean }) {
+  return <article className={ready ? "feature-card ready" : "feature-card"}><span>{number}</span><div><h3>{title}</h3><p>{description}</p></div><b>{ready ? "利用可能" : "準備中"}</b></article>;
 }
 
 async function resolveAccess(
@@ -514,7 +525,7 @@ async function resolveAccess(
   }
 }
 
-export function Phase6App() {
+export function Phase7App() {
   const recoveryRef = useRef(false);
   const [client, setClient] = useState<SupabaseClient | null>(null);
   const [screen, setScreen] = useState<Screen>({ kind: "loading" });
@@ -600,7 +611,7 @@ export function Phase6App() {
         <section className="status-card">
           <Brand compact />
           <span className="status-symbol">!</span>
-          <p className="eyebrow">PHASE 6</p>
+          <p className="eyebrow">PHASE 7</p>
           <h1>{screen.kind === "configuration_error" ? "公開設定が必要です" : "接続を確認できません"}</h1>
           <p>{screen.message}</p>
           {screen.kind === "error" && <button className="primary-action" type="button" onClick={() => void refresh()}>再試行</button>}
@@ -619,5 +630,5 @@ export function Phase6App() {
     return <AccessIssue value={screen.value} onRetry={refresh} onLogout={logout} />;
   }
 
-  return <Dashboard profile={screen.value.profile} onRetry={refresh} onLogout={logout} />;
+  return <Dashboard client={client} profile={screen.value.profile} onRetry={refresh} onLogout={logout} />;
 }

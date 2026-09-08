@@ -3,13 +3,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
-  description: "AI記事スタジオのPWA版。Phase 6では認証と利用権を安全に確認します。",
+  description: "AI記事スタジオのPWA版。自分のクラウド記事を安全に閲覧・編集・削除できます。",
   applicationName: "AI記事スタジオ",
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
   other: {
-    "codex-preview": "phase6-local",
-    "aas-phase": "6",
+    "codex-preview": "phase7-local",
+    "aas-phase": "7",
   },
   icons: {
     icon: "/favicon.svg",

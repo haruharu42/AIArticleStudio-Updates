@@ -24,7 +24,6 @@ test("pins the browser client and PWA product contract", async () => {
 
 test("keeps Phase 6 separate from article and image data", async () => {
   const source = [
-    await read("components/phase6-app.tsx"),
     await read("lib/phase6-access.ts"),
     await read("lib/supabase.ts"),
   ].join("\n");
