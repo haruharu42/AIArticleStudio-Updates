@@ -10,6 +10,14 @@ function Normalize-Path([string]$Value) {
     return ([System.IO.Path]::GetFullPath($Value)).TrimEnd('\', '/').Replace('\', '/').ToLowerInvariant()
 }
 
+function Get-RegisteredWorktreePaths {
+    return @(
+        git worktree list --porcelain |
+            Where-Object { $_ -like "worktree *" } |
+            ForEach-Object { Normalize-Path ($_.Substring(9)) }
+    )
+}
+
 if ([string]::IsNullOrWhiteSpace($StateFile)) {
     $Latest = Get-ChildItem -LiteralPath (Join-Path $env:USERPROFILE "Downloads") `
         -Directory `
@@ -51,12 +59,16 @@ if (Get-Process -Id $PidToStop -ErrorAction SilentlyContinue) {
     Stop-Process -Id $PidToStop -Force -ErrorAction Stop
 }
 
-# Vite/Miniflare can leave child node/workerd processes alive after the shell
-# process exits. Stop only processes whose command line is tied to this exact
-# disposable E2E worktree so SQLite files are no longer locked.
+# Vite/Miniflare can leave node/workerd children alive after the launcher exits.
+# Restrict cleanup to those runtime executables and this exact disposable path.
+# Do not match powershell.exe: the helper itself receives -StateFile under the
+# worktree path and would otherwise terminate itself before cleanup completes.
+$RuntimeNames = @("node.exe", "workerd.exe")
 $ChildProcesses = @(
     Get-CimInstance Win32_Process |
         Where-Object {
+            $_.ProcessId -ne $PID -and
+            $RuntimeNames -contains $_.Name.ToLowerInvariant() -and
             $_.CommandLine -and
             $_.CommandLine.IndexOf(
                 $WorktreeFull,
@@ -73,6 +85,8 @@ Start-Sleep -Seconds 2
 $RemainingProcesses = @(
     Get-CimInstance Win32_Process |
         Where-Object {
+            $_.ProcessId -ne $PID -and
+            $RuntimeNames -contains $_.Name.ToLowerInvariant() -and
             $_.CommandLine -and
             $_.CommandLine.IndexOf(
                 $WorktreeFull,
@@ -81,41 +95,47 @@ $RemainingProcesses = @(
         }
 )
 if ($RemainingProcesses.Count -ne 0) {
-    throw "E2E child processes are still using the worktree."
+    $RemainingProcesses |
+        Select-Object ProcessId, ParentProcessId, Name, CommandLine |
+        Format-Table -Wrap
+    throw "E2E runtime processes are still using the worktree."
 }
 
 if (Test-Path -LiteralPath $RepoRoot -PathType Container) {
     Set-Location $RepoRoot
 
-    $RegisteredPaths = @(
-        git worktree list --porcelain |
-            Where-Object { $_ -like "worktree *" } |
-            ForEach-Object { Normalize-Path ($_.Substring(9)) }
-    )
     $NormalizedWorktree = Normalize-Path $WorktreeFull
+    $RegisteredPaths = Get-RegisteredWorktreePaths
     $IsRegistered = $RegisteredPaths -contains $NormalizedWorktree
 
     if ($IsRegistered) {
         git worktree remove --force $WorktreeFull
-        if ($LASTEXITCODE -ne 0) {
-            throw "git worktree remove failed: $WorktreeFull"
+        $RemoveExitCode = $LASTEXITCODE
+
+        if ($RemoveExitCode -ne 0) {
+            # Git on Windows can unregister a worktree before directory removal
+            # fails because a recently stopped process still had a file handle.
+            # Re-check registration before deciding whether this is fatal.
+            Start-Sleep -Milliseconds 750
+            $RegisteredAfterFailure = Get-RegisteredWorktreePaths
+            if ($RegisteredAfterFailure -contains $NormalizedWorktree) {
+                throw "git worktree remove failed and metadata still remains: $WorktreeFull"
+            }
         }
     }
-    elseif (Test-Path -LiteralPath $WorktreeFull -PathType Container) {
-        # A previous failed removal may unregister the worktree before Windows
-        # releases a locked Miniflare SQLite file. At this point the directory
-        # is an orphan, so remove only the validated disposable E2E directory.
+
+    $RegisteredNow = Get-RegisteredWorktreePaths
+    if (-not ($RegisteredNow -contains $NormalizedWorktree) -and
+        (Test-Path -LiteralPath $WorktreeFull -PathType Container)) {
+        # The path is no longer a registered worktree. Remove only the validated
+        # disposable E2E directory; never run git clean/reset/restore here.
         Write-Host "Removing orphaned E2E directory" $WorktreeFull -ForegroundColor Yellow
         Remove-Item -LiteralPath $WorktreeFull -Recurse -Force -ErrorAction Stop
     }
 
     git worktree prune
 
-    $RegisteredAfter = @(
-        git worktree list --porcelain |
-            Where-Object { $_ -like "worktree *" } |
-            ForEach-Object { Normalize-Path ($_.Substring(9)) }
-    )
+    $RegisteredAfter = Get-RegisteredWorktreePaths
     if ($RegisteredAfter -contains $NormalizedWorktree) {
         throw "Worktree metadata still remains: $WorktreeFull"
     }
