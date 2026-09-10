@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
-test("pins patched framework versions, Phase 8 UI metadata, and current PWA cache generation", async () => {
+test("pins patched framework versions, current release metadata, and PWA cache generation", async () => {
   const packageJson = JSON.parse(await read("package.json"));
   const layout = await read("app/layout.tsx");
   const worker = await read("public/sw.js");
@@ -18,8 +18,9 @@ test("pins patched framework versions, Phase 8 UI metadata, and current PWA cach
   assert.equal(packageJson.devDependencies.vite, "8.2.2");
   assert.equal(packageJson.devDependencies.wrangler, "4.129.0");
   assert.equal(packageJson.devDependencies["eslint-config-next"], "16.3.4");
-  assert.match(layout, /phase8-local/);
-  assert.match(layout, /"aas-phase": "8"/);
+  assert.match(layout, /"aas-phase": "17"/);
+  assert.match(layout, /"aas-release-stage": "production-preview"/);
+  assert.doesNotMatch(layout, /phase8-local/);
   assert.match(worker, /aas-pwa-phase17-prod-v1/);
   assert.doesNotMatch(worker, /aas-pwa-phase8-v1/);
 });
