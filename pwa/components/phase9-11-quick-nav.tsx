@@ -26,16 +26,6 @@ export function Phase9To11QuickNav() {
     };
   }, []);
 
-  if (
-    state.kind === "loading" ||
-    state.kind === "unavailable" ||
-    state.kind === "signed_out" ||
-    state.kind === "suspended" ||
-    state.kind === "disabled"
-  ) {
-    return null;
-  }
-
   const showInvite =
     state.kind === "pending" || state.kind === "entitlement_denied";
   const showCreate = state.kind === "ready";
@@ -49,6 +39,10 @@ export function Phase9To11QuickNav() {
           記事を作る
         </a>
       )}
+      <a href="/tools">
+        <span>▦</span>
+        機能
+      </a>
       {showInvite && (
         <a href="/invite">
           <span>⌁</span>

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./phase9-11.css";
+import "./phase12-17.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
