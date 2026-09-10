@@ -60,3 +60,23 @@ test("build configuration rejects secret browser keys", async () => {
   assert.match(config, /service\[_-\]\?role/);
   assert.doesNotMatch(config, /SUPABASE_SERVICE_ROLE_KEY/);
 });
+
+test("registration legal links have first-party routes and remain explicit preview drafts", async () => {
+  const client = await read("lib/supabase.ts");
+  const config = await read("next.config.ts");
+  const shell = await read("components/legal-document.tsx");
+  const terms = await read("app/terms/page.tsx");
+  const privacy = await read("app/privacy/page.tsx");
+  const aiTerms = await read("app/ai-terms/page.tsx");
+
+  assert.match(client, /NEXT_PUBLIC_AAS_TERMS_URL \?\? "\/terms"/);
+  assert.match(client, /NEXT_PUBLIC_AAS_PRIVACY_URL \?\? "\/privacy"/);
+  assert.match(client, /NEXT_PUBLIC_AAS_AI_TERMS_URL \?\? "\/ai-terms"/);
+  assert.match(config, /"\/terms"/);
+  assert.match(config, /"\/privacy"/);
+  assert.match(config, /"\/ai-terms"/);
+  assert.match(shell, /公開準備ドラフト/);
+  assert.match(terms, /正式販売前/);
+  assert.match(privacy, /個人情報/);
+  assert.match(aiTerms, /AI利用条件/);
+});
