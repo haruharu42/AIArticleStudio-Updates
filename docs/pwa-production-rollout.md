@@ -60,6 +60,7 @@ Cloudflare Worker名は `AAS_CLOUDFLARE_WORKER_NAME` で指定できる。未指
 - `ASSETS` / `IMAGES` bindingを検出
 - generated config内にsecret/service-role markerがない
 - `wrangler deploy --dry-run` PASS
+- Windows PowerShell 5.1でpreflight helper本体をpublic-only fixtureに対して実行してPASS
 
 `wrangler deploy --dry-run` はbundle/設定検証のみで、Cloudflareへ公開しない。
 
