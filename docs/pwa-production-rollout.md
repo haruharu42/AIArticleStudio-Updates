@@ -73,6 +73,8 @@ previewでのE2Eは可能だが、ドラフト状態のまま一般販売や正�
 
 `wrangler deploy --dry-run` はbundle/設定検証のみで、Cloudflareへ公開しない。
 
+2026-09-11 JST時点で、Windows実機でも実Supabase公開設定を使ったproduction build、64件の回帰テスト、generated Wrangler config、`ASSETS` / `IMAGES` binding、secret marker scan、`wrangler deploy --dry-run` がPASSしている。Cloudflareへのupload/deployはこの確認では行っていない。
+
 ## Gate PWA-PROD-2: Cloudflare preview setup
 
 Cloudflare Workersを採用する場合:
@@ -84,6 +86,8 @@ Cloudflare Workersを採用する場合:
 5. 明示承認後に `wrangler versions upload --preview-alias aas-preview` でpreview versionだけをuploadする。
 6. 通常のproduction deploymentは行わない。
 7. Preview URLを販売ページへ掲載しない。
+
+2026-09-11 JST時点で、Cloudflare OAuth認証はPASSし、`ai-article-studio-pwa-preview` はread-only確認で未使用と判定済み。Workerはまだ作成・更新・upload・deployしていない。
 
 専用スクリプト `scripts/Publish-AAS-PWA-Preview-Version.ps1` は `-ConfirmPreviewUpload` がない限りCloudflareへ何もuploadしない。実行時も `wrangler deploy` ではなく `wrangler versions upload` を使用し、production trafficへ昇格させない。
 
