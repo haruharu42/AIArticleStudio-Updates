@@ -35,6 +35,9 @@ export async function redeemPwaInvite(
   });
   if (error) {
     const message = String(error.message ?? "").toLowerCase();
+    if (message.includes("entitlement already active")) {
+      throw new Error("このアカウントには有効なPWA利用権がすでにあります。");
+    }
     if (message.includes("unavailable") || message.includes("not found")) {
       throw new Error("この招待コードは使用できません。期限・利用回数を確認してください。");
     }
