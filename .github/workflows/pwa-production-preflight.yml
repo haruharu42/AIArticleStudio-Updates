@@ -7,6 +7,7 @@ on:
     paths:
       - "pwa/**"
       - "scripts/Prepare-AAS-PWA-Production.ps1"
+      - "scripts/Test-AAS-Cloudflare-Connection.ps1"
       - "docs/pwa-production-rollout.md"
       - ".github/workflows/pwa-production-preflight.yml"
   workflow_dispatch:
@@ -149,18 +150,42 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $tokens = $null
-          $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path '.\scripts\Prepare-AAS-PWA-Production.ps1'),
-            [ref]$tokens,
-            [ref]$errors
-          ) | Out-Null
-          if ($errors.Count -ne 0) {
-            $errors | Format-List
-            throw 'Production preflight helper has PowerShell syntax errors'
+          foreach ($relativePath in @(
+            '.\scripts\Prepare-AAS-PWA-Production.ps1',
+            '.\scripts\Test-AAS-Cloudflare-Connection.ps1'
+          )) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $relativePath),
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -ne 0) {
+              $errors | Format-List
+              throw "$relativePath has PowerShell syntax errors"
+            }
           }
-          Write-Host 'PowerShell 5.1 syntax: PASS'
+          Write-Host 'PowerShell 5.1 helper syntax: PASS'
+
+      - name: Validate Cloudflare connection checker safety
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Get-Content -LiteralPath '.\scripts\Test-AAS-Cloudflare-Connection.ps1' -Raw -Encoding UTF8
+          if ($source -notmatch 'whoami\s+--json') {
+            throw 'Connection checker must verify Wrangler authentication with whoami --json'
+          }
+          if ($source -notmatch 'login\s+--use-keyring') {
+            throw 'Connection checker must opt in to OS-keyring credential storage'
+          }
+          if ($source -match '(?i)&\s+\$WranglerCmd\s+deploy\b') {
+            throw 'Connection checker must never invoke wrangler deploy'
+          }
+          if ($source -match '(?i)sb_secret_|service[_-]?role') {
+            throw 'Connection checker contains a forbidden secret marker'
+          }
+          Write-Host 'Cloudflare connection checker safety: PASS'
 
       - name: Run production helper against public-only fixture
         shell: powershell
