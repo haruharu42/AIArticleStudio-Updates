@@ -11,7 +11,7 @@ test("Phase 12 specializes article prompts without weakening editorial safety", 
   const profiles = await read("lib/phase12-prompt-profiles.ts");
   const creator = await read("lib/phase11-create.ts");
 
-  assert.match(profiles, /AI\s*副業/);
+  assert.match(profiles, /AI\\s\*副業/);
   assert.match(profiles, /美容/);
   assert.match(profiles, /ガジェット/);
   assert.match(profiles, /生活/);
