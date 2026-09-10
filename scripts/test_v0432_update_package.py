@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 import shutil
@@ -17,6 +18,14 @@ CORE_MODULES = ("article_publish_text.py", "web_ai_workflow.py", "web_ai_ui_brid
 
 def run(*args: str) -> None:
     subprocess.run([sys.executable, *args], cwd=ROOT, check=True)
+
+
+def sha256(path: pathlib.Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest().upper()
 
 
 def build_fixture(root: pathlib.Path, version: str) -> pathlib.Path:
@@ -77,11 +86,23 @@ def test_patch(version: str) -> None:
 
 
 def test_package() -> None:
-    run(str(RELEASE / "build_package.py"))
-    manifest = json.loads((ROOT / "candidate-v0432.json").read_text(encoding="utf-8"))
+    manifest_path = ROOT / "candidate-v0432.json"
+    package_path = ROOT / "updates" / PACKAGE_NAME
+    checksum_path = RELEASE / "SHA256.txt"
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["version"] == "0.4.3.2"
-    run(str(ROOT / "scripts" / "validate_release.py"), str(ROOT / "candidate-v0432.json"))
-    with zipfile.ZipFile(ROOT / "updates" / PACKAGE_NAME) as archive:
+    expected = str(manifest["sha256"]).strip().upper()
+    assert len(expected) == 64
+    assert sha256(package_path) == expected
+    checksum_line = checksum_path.read_text(encoding="ascii").strip()
+    assert checksum_line == f"{expected}  {PACKAGE_NAME}"
+
+    # Historical release artifacts are immutable. Validate the committed package
+    # instead of rebuilding it from today's mutable src/ tree, which legitimately
+    # contains post-v0.4.3.2 fixes and would produce a different ZIP.
+    run(str(ROOT / "scripts" / "validate_release.py"), str(manifest_path))
+    with zipfile.ZipFile(package_path) as archive:
         assert archive.testzip() is None
         for name in CORE_MODULES:
             assert f"payload/core/{name}" in archive.namelist()
