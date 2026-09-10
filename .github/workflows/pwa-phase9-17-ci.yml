@@ -40,6 +40,16 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
 
+      - name: Production readiness preflight
+        env:
+          AAS_PWA_PRODUCTION_ORIGIN: https://aas-pwa-ci.example.com
+          NEXT_PUBLIC_AAS_SUPABASE_URL: https://aas-pwa-ci.supabase.co
+          NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+          NEXT_PUBLIC_AAS_TERMS_URL: https://legal.example.com/terms
+          NEXT_PUBLIC_AAS_PRIVACY_URL: https://legal.example.com/privacy
+          NEXT_PUBLIC_AAS_AI_TERMS_URL: https://legal.example.com/ai-terms
+        run: npm run production:preflight
+
       - name: Typecheck
         run: npm run typecheck
 
