@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import pathlib
 import sys
 import tkinter as tk
@@ -10,6 +11,25 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from ai_article_studio.ui.guided_wizard_v0432 import activate_live_article_wizard  # noqa: E402
 from ai_article_studio.core.article_publish_text import build_article_text_variants  # noqa: E402
+
+
+class MemoryArticleDB:
+    """Minimal in-memory ArticleDB fixture for the real Tk publish-copy flow."""
+
+    def __init__(self):
+        self.rows = {}
+
+    def load(self, article_id):
+        value = self.rows.get(str(article_id))
+        return deepcopy(value) if value is not None else None
+
+    def save(self, payload):
+        value = deepcopy(dict(payload or {}))
+        article_id = str(value.get("article_id") or "").strip()
+        if not article_id:
+            raise AssertionError("article_id is required by the test fixture")
+        self.rows[article_id] = value
+        return deepcopy(value)
 
 
 class Bridge:
@@ -71,6 +91,7 @@ class RuntimeApp(tk.Tk):
         self.withdraw()
         self.vars = {}
         self.web_ai_bridge = Bridge()
+        self.db = MemoryArticleDB()
 
     def _primary_button(self, parent, text, command):
         return tk.Button(parent, text=text, command=command, bg="#7C3AED", fg="#FFFFFF")
@@ -156,6 +177,12 @@ def main() -> None:
         find_button(wizard["root"], "画像差し込み用")
         find_button(wizard["root"], "元記事")
         assert app.web_ai_bridge.snapshot["current_step"] == "05"
+        saved = app.db.load("v0432-runtime")
+        assert saved is not None
+        assert saved["article_id"] == "v0432-runtime"
+        assert saved["title"] == "テスト記事タイトル候補その一"
+        assert saved["status"] == "完成"
+        assert "[挿絵1｜" not in saved["content"]["web_publish"]
         assert all(str(item.winfo_class()) != "Toplevel" for item in app.winfo_children())
     finally:
         app.destroy()
