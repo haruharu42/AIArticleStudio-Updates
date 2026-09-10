@@ -27,12 +27,15 @@ test("article output uses only the owned publish body and creates a safe Markdow
 test("paid article pricing stays compatible with Windows validation", async () => {
   const api = await read("lib/phase11-create.ts");
   const page = await read("components/phase11-create-page.tsx");
+  const migration = await read("../supabase/migrations/20260910142500_articles_paid_price_consistency.sql");
 
   assert.match(api, /draft\.price <= 0/);
   assert.match(api, /有料記事は1以上の整数価格を設定してください/);
   assert.match(page, /const setArticleType = \(value: ArticleType\)/);
   assert.match(page, /value === "free"\s*\? null/);
   assert.match(page, /type="number" min=\{1\} value=\{draft\.price \?\? 1\}/);
+  assert.match(migration, /articles_paid_price_positive_check/);
+  assert.match(migration, /price is not null and price > 0/);
 });
 
 test("SNS launch planning covers account setup, content pillars, monetization and improvement without invented results", async () => {
