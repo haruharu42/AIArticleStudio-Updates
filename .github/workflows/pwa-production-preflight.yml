@@ -9,6 +9,7 @@ on:
       - "scripts/Prepare-AAS-PWA-Production.ps1"
       - "scripts/Test-AAS-Cloudflare-Connection.ps1"
       - "scripts/Test-AAS-Cloudflare-Worker-Name.ps1"
+      - "scripts/Publish-AAS-PWA-Preview-Version.ps1"
       - "docs/pwa-production-rollout.md"
       - ".github/workflows/pwa-production-preflight.yml"
   workflow_dispatch:
@@ -159,7 +160,8 @@ jobs:
           foreach ($relativePath in @(
             '.\scripts\Prepare-AAS-PWA-Production.ps1',
             '.\scripts\Test-AAS-Cloudflare-Connection.ps1',
-            '.\scripts\Test-AAS-Cloudflare-Worker-Name.ps1'
+            '.\scripts\Test-AAS-Cloudflare-Worker-Name.ps1',
+            '.\scripts\Publish-AAS-PWA-Preview-Version.ps1'
           )) {
             $tokens = $null
             $errors = $null
@@ -212,6 +214,28 @@ jobs:
             throw 'Worker-name checker contains a forbidden secret marker'
           }
           Write-Host 'Cloudflare Worker-name checker safety: PASS'
+
+      - name: Validate preview-version publisher safety
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Get-Content -LiteralPath '.\scripts\Publish-AAS-PWA-Preview-Version.ps1' -Raw -Encoding UTF8
+          if ($source -notmatch 'ConfirmPreviewUpload') {
+            throw 'Preview publisher must require an explicit confirmation switch'
+          }
+          if ($source -notmatch 'versions\s+upload') {
+            throw 'Preview publisher must use wrangler versions upload'
+          }
+          if ($source -notmatch 'preview-alias') {
+            throw 'Preview publisher must create an explicit preview alias'
+          }
+          if ($source -match '(?i)&\s+\$Wrangler\s+deploy(?!\s+--dry-run)') {
+            throw 'Preview publisher must not perform a production deployment'
+          }
+          if ($source -match '(?i)sb_secret_|service[_-]?role') {
+            throw 'Preview publisher contains a forbidden secret marker'
+          }
+          Write-Host 'Cloudflare preview-version publisher safety: PASS'
 
       - name: Run production helper against first-party legal routes
         shell: powershell
