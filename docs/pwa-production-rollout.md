@@ -8,11 +8,11 @@
 
 現行PWAは `@cloudflare/vite-plugin`、`wrangler`、`workerd` 前提のWorkerエントリを既に持つため、第一候補は Cloudflare Workers とする。
 
-Worker entry は `env.ASSETS` と `env.IMAGES` を直接参照する。Cloudflareの本番構成では `ASSETS` static-assets binding と `IMAGES` Images bindingを明示し、production buildが生成するWrangler設定をCIで検証する。
+Worker entry は `env.ASSETS` と `env.IMAGES` を直接参照する。Cloudflare構成では `ASSETS` static-assets binding と `IMAGES` Images bindingを明示し、production buildが生成するWrangler設定をCIで検証する。
 
-ただし、Cloudflareアカウント、Worker名、`workers.dev` / カスタムドメイン、DNS/TLSの確定までは公開を実行しない。
+preview準備中は `workers_dev: false`、`preview_urls: true` を固定する。これにより通常のproduction `workers.dev` routeは作らず、Cloudflareのversioned/aliased Preview URLだけを明示的に使う。production routingはpreview E2E完了後の別ゲートで判断する。
 
-## 本番公開前の必須値
+## 本番公開前の公開設定
 
 ブラウザー公開可能な値のみ設定する。
 
@@ -22,7 +22,9 @@ Worker entry は `env.ASSETS` と `env.IMAGES` を直接参照する。Cloudflar
 - `NEXT_PUBLIC_AAS_PRIVACY_URL`
 - `NEXT_PUBLIC_AAS_AI_TERMS_URL`
 
-Cloudflare Worker名は `AAS_CLOUDFLARE_WORKER_NAME` で指定できる。未指定時はpreview用の既定名を使い、意図せず既存本番Workerを上書きしない。
+法的文書リンクは、同一PWA内の `/terms`、`/privacy`、`/ai-terms` を既定値とする。必要であればHTTPSの外部URLに差し替えられる。
+
+Cloudflare Worker名は `AAS_CLOUDFLARE_WORKER_NAME` で指定できる。preview候補は `ai-article-studio-pwa-preview`。既存Workerがある場合は上書きせず停止して判断する。
 
 禁止:
 
@@ -31,6 +33,12 @@ Cloudflare Worker名は `AAS_CLOUDFLARE_WORKER_NAME` で指定できる。未指
 - ユーザーJWT / refresh token
 - Windows DPAPI session
 - OpenAI等の秘密APIキー
+
+## 法的文書の状態
+
+`/terms`、`/privacy`、`/ai-terms` はpreview検証用のドラフトとして実装する。一般販売・正式公開前に、少なくとも運営者情報、問い合わせ窓口、販売条件、解約・返金条件、必要な特定商取引法表示を確定し、ドラフト表示を外す。
+
+previewでのE2Eは可能だが、ドラフト状態のまま一般販売や正式公開を開始しない。
 
 ## Gate PWA-PROD-0: source baseline
 
@@ -54,53 +62,48 @@ Cloudflare Worker名は `AAS_CLOUDFLARE_WORKER_NAME` で指定できる。未指
 - manifest / 192 / 512 icon / service worker存在
 - service workerが `/auth/callback`、`/api/`、OAuth code/tokenをキャッシュ対象から除外
 - Supabase公開キーが secret/service-role ではない
-- 利用規約・プライバシー・AI利用規約URLがHTTPS
+- 法的文書リンクが既知のfirst-party routeまたはHTTPS外部URL
 - レポートに秘密値を出力しない
 - `PWA Production Preflight` CIで生成Wrangler configを検出
 - `ASSETS` / `IMAGES` bindingを検出
+- `workers_dev: false` / `preview_urls: true` を検出
 - generated config内にsecret/service-role markerがない
 - `wrangler deploy --dry-run` PASS
-- Windows PowerShell 5.1でpreflight helper本体をpublic-only fixtureに対して実行してPASS
+- Windows PowerShell 5.1でpreflight helper本体を実行してPASS
 
 `wrangler deploy --dry-run` はbundle/設定検証のみで、Cloudflareへ公開しない。
 
-## Gate PWA-PROD-2: hosting setup
+## Gate PWA-PROD-2: Cloudflare preview setup
 
 Cloudflare Workersを採用する場合:
 
-1. CloudflareアカウントとWorker名を確定。
-2. Cloudflareへログインし、対象アカウントを確認。
-3. Build時の公開環境変数5件をCloudflare側へ設定。
-4. `workers.dev` のpreview Workerへ初回deploy。
-5. まだ一般公開URLを販売ページへ掲載しない。
+1. Cloudflare OAuthログインを確認する。
+2. preview Worker名が未使用であることをread-onlyで確認する。
+3. 実Supabase公開設定でproduction build + Wrangler dry-runを実機確認する。
+4. `workers_dev: false` / `preview_urls: true` を維持する。
+5. 明示承認後に `wrangler versions upload --preview-alias aas-preview` でpreview versionだけをuploadする。
+6. 通常のproduction deploymentは行わない。
+7. Preview URLを販売ページへ掲載しない。
 
-実際の `wrangler deploy` は明示承認後にのみ実行する。
+専用スクリプト `scripts/Publish-AAS-PWA-Preview-Version.ps1` は `-ConfirmPreviewUpload` がない限りCloudflareへ何もuploadしない。実行時も `wrangler deploy` ではなく `wrangler versions upload` を使用し、production trafficへ昇格させない。
 
-### Cloudflare接続確認だけを行う安全なコマンド
+Preview URLは外部から到達可能な公開URLになるため、秘密情報を埋め込まず、必要に応じてCloudflare Access等で保護する。
 
-次のコマンドは認証状態と対象アカウントを確認するだけで、Workerの作成・更新・デプロイは行わない。
+## Gate PWA-PROD-3: Preview URL / Supabase Auth
 
-```powershell
-Set-Location .\pwa
-npx wrangler whoami
-```
+Preview URL確定後にSupabase Auth設定を確認する。
 
-ログインしていない場合は `npx wrangler login` を実行し、ブラウザーでCloudflare認証を完了してから `npx wrangler whoami` を再実行する。ログイン操作だけではAAS Workerのdeployは行わない。
-
-## Gate PWA-PROD-3: production URL / Supabase Auth
-
-本番またはpreview URL確定後にSupabase Auth設定を確認する。
-
-- Site URLを最終本番PWA URLへ設定するのは本番URL確定時。
 - preview中はOAuth redirect allow-listへ `<preview-origin>/auth/callback` を追加。
-- 本番URL確定後は `<production-origin>/auth/callback` も追加。
+- Email confirmation / password recoveryのredirectもpreview originで確認する。
 - Google OAuthを使用する場合、Google側Authorized redirect URIも整合させる。
+- Site URLを最終本番PWA URLへ設定するのはproduction URL確定時。
 - localhost / LANテストURLを不用意に削除しない。削除は別途判断する。
 
 ## Gate PWA-PROD-4: preview E2E
 
-外部到達可能なpreview URLで最低限以下を確認する。
+外部到達可能なPreview URLで最低限以下を確認する。
 
+- `/terms`, `/privacy`, `/ai-terms` 表示
 - 未ログイン画面
 - Email/Password login
 - Google OAuth / PKCE
@@ -116,12 +119,14 @@ npx wrangler whoami
 
 テストデータは完了後にexact-IDで清掃する。
 
-## Gate PWA-PROD-5: release decision
+## Gate PWA-PROD-5: production release decision
 
-以下が揃って初めて本番公開可とする。
+以下が揃って初めて正式公開可とする。
 
 - preview E2E PASS
 - Supabase Auth redirect PASS
+- 法的文書の正式版確定・ドラフト表示削除
+- 販売条件・特定商取引法表示の確定
 - 本番URL HTTPS PASS
 - manifest/install PASS
 - secrets scan PASS
@@ -129,7 +134,7 @@ npx wrangler whoami
 - cleanup PASS
 - rollback手順確認
 
-その後にのみ、production deploy / custom domain / 販売導線公開へ進む。
+その後にのみ、production deployment / custom domain / 販売導線公開へ進む。
 
 ## ロールバック方針
 
