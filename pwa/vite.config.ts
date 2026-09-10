@@ -18,6 +18,10 @@ const workerBindingConfig = {
   main: "./worker/index.ts",
   compatibility_date: CLOUDFLARE_COMPATIBILITY_DATE,
   compatibility_flags: ["nodejs_compat"],
+  // Preview versions should be testable without creating a production
+  // workers.dev route. Production routing is a separate release decision.
+  workers_dev: false,
+  preview_urls: true,
   // The Worker entry uses both bindings directly. Keep them explicit so the
   // generated Wrangler deployment config matches local Miniflare behavior.
   assets: {
