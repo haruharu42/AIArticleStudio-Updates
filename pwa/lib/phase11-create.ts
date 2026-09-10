@@ -142,9 +142,9 @@ export function validateCreationDraft(
     draft.articleType === "paid" &&
     (draft.price === null ||
       !Number.isSafeInteger(draft.price) ||
-      draft.price < 0)
+      draft.price <= 0)
   ) {
-    throw new Error("有料記事は0以上の整数価格を設定してください。");
+    throw new Error("有料記事は1以上の整数価格を設定してください。");
   }
   if (draft.articleType === "free") draft.price = null;
   if (!draft.inlineEnabled) draft.inlineCount = 0;
