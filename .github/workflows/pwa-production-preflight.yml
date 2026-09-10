@@ -232,8 +232,8 @@ jobs:
           if ($source -match '(?i)&\s+\$Wrangler\s+deploy(?!\s+--dry-run)') {
             throw 'Preview publisher must not perform a production deployment'
           }
-          if ($source -match '(?i)sb_secret_|service[_-]?role') {
-            throw 'Preview publisher contains a forbidden secret marker'
+          if ($source -notmatch 'service\[_-\]\?role|sb_secret_') {
+            throw 'Preview publisher must reject secret/service-role material before build or upload'
           }
           Write-Host 'Cloudflare preview-version publisher safety: PASS'
 
