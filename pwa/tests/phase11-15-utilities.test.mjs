@@ -24,6 +24,17 @@ test("article output uses only the owned publish body and creates a safe Markdow
   assert.doesNotMatch(`${api}\n${page}`, /service[_-]?role|sb_secret_/i);
 });
 
+test("paid article pricing stays compatible with Windows validation", async () => {
+  const api = await read("lib/phase11-create.ts");
+  const page = await read("components/phase11-create-page.tsx");
+
+  assert.match(api, /draft\.price <= 0/);
+  assert.match(api, /有料記事は1以上の整数価格を設定してください/);
+  assert.match(page, /const setArticleType = \(value: ArticleType\)/);
+  assert.match(page, /value === "free"\s*\? null/);
+  assert.match(page, /type="number" min=\{1\} value=\{draft\.price \?\? 1\}/);
+});
+
 test("SNS launch planning covers account setup, content pillars, monetization and improvement without invented results", async () => {
   const api = await read("lib/phase15-sns-plan.ts");
   const page = await read("components/phase15-sns-plan-page.tsx");
@@ -39,7 +50,23 @@ test("SNS launch planning covers account setup, content pillars, monetization an
   assert.match(api, /成果を保証せず/);
   assert.match(page, /SNSアカウント立ち上げ設計/);
   assert.match(page, /設計プロンプトをコピー/);
+  assert.match(route, /Phase15MemberGate/);
   assert.match(route, /Phase15SnsPlanPage/);
+});
+
+test("Phase 15 member tools require the same PWA access gate as the rest of the product", async () => {
+  const gate = await read("components/phase15-member-gate.tsx");
+  const sideJobRoute = await read("app/sidejob/page.tsx");
+  const snsPlanRoute = await read("app/sns-plan/page.tsx");
+  const tools = await read("components/phase-tools-page.tsx");
+
+  assert.match(gate, /loadAccessState\(getSupabaseClient\(\)\)/);
+  assert.match(gate, /state\.kind === "ready"/);
+  assert.match(gate, /state\.kind === "entitlement_denied"/);
+  assert.match(sideJobRoute, /Phase15MemberGate/);
+  assert.match(snsPlanRoute, /Phase15MemberGate/);
+  assert.doesNotMatch(tools, /const publicTools/);
+  assert.match(tools, /const cards = ready \? memberTools : \[\]/);
 });
 
 test("tools hub exposes output and SNS planning alongside the existing Phase 9-17 surfaces", async () => {
