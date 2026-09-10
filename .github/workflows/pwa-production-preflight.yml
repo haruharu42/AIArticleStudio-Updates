@@ -32,7 +32,6 @@ jobs:
       NEXT_PUBLIC_AAS_PRIVACY_URL: https://example.com/privacy
       NEXT_PUBLIC_AAS_AI_TERMS_URL: https://example.com/ai-terms
       AAS_CLOUDFLARE_WORKER_NAME: ai-article-studio-pwa-ci
-      CLOUDFLARE_INCLUDE_PROCESS_ENV: "true"
       WRANGLER_WRITE_LOGS: "false"
 
     steps:
