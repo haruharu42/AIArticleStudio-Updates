@@ -76,6 +76,17 @@ Cloudflare Workersを採用する場合:
 
 実際の `wrangler deploy` は明示承認後にのみ実行する。
 
+### Cloudflare接続確認だけを行う安全なコマンド
+
+次のコマンドは認証状態と対象アカウントを確認するだけで、Workerの作成・更新・デプロイは行わない。
+
+```powershell
+Set-Location .\pwa
+npx wrangler whoami
+```
+
+ログインしていない場合は `npx wrangler login` を実行し、ブラウザーでCloudflare認証を完了してから `npx wrangler whoami` を再実行する。ログイン操作だけではAAS Workerのdeployは行わない。
+
 ## Gate PWA-PROD-3: production URL / Supabase Auth
 
 本番またはpreview URL確定後にSupabase Auth設定を確認する。
