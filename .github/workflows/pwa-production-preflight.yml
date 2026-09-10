@@ -99,7 +99,7 @@ jobs:
           echo "config=$config" >> "$GITHUB_OUTPUT"
           echo "Generated Wrangler config found."
 
-      - name: Verify required Cloudflare bindings
+      - name: Verify required Cloudflare bindings and preview routing
         shell: bash
         run: |
           set -euo pipefail
@@ -109,6 +109,8 @@ jobs:
           const config = JSON.parse(fs.readFileSync(path, 'utf8'));
           if (!config.name) throw new Error('Worker name missing');
           if (!config.compatibility_date) throw new Error('compatibility_date missing');
+          if (config.workers_dev !== false) throw new Error('workers_dev must remain disabled during preview preparation');
+          if (config.preview_urls !== true) throw new Error('preview_urls must be explicitly enabled');
           if (config.assets?.binding !== 'ASSETS') throw new Error('ASSETS binding missing');
           const imagesBinding = Array.isArray(config.images)
             ? config.images.some((item) => item?.binding === 'IMAGES')
@@ -118,7 +120,7 @@ jobs:
           if (/sb_secret_|service[_-]?role/i.test(serialized)) {
             throw new Error('Secret/service-role marker found in generated Worker config');
           }
-          console.log('Cloudflare deployment contract: PASS');
+          console.log('Cloudflare preview deployment contract: PASS');
           NODE
         env:
           CONFIG_PATH: ${{ steps.wrangler-config.outputs.config }}
