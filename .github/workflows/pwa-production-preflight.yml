@@ -8,6 +8,7 @@ on:
       - "pwa/**"
       - "scripts/Prepare-AAS-PWA-Production.ps1"
       - "scripts/Test-AAS-Cloudflare-Connection.ps1"
+      - "scripts/Test-AAS-Cloudflare-Worker-Name.ps1"
       - "docs/pwa-production-rollout.md"
       - ".github/workflows/pwa-production-preflight.yml"
   workflow_dispatch:
@@ -152,7 +153,8 @@ jobs:
           $ErrorActionPreference = 'Stop'
           foreach ($relativePath in @(
             '.\scripts\Prepare-AAS-PWA-Production.ps1',
-            '.\scripts\Test-AAS-Cloudflare-Connection.ps1'
+            '.\scripts\Test-AAS-Cloudflare-Connection.ps1',
+            '.\scripts\Test-AAS-Cloudflare-Worker-Name.ps1'
           )) {
             $tokens = $null
             $errors = $null
@@ -186,6 +188,25 @@ jobs:
             throw 'Connection checker contains a forbidden secret marker'
           }
           Write-Host 'Cloudflare connection checker safety: PASS'
+
+      - name: Validate Cloudflare Worker-name checker safety
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Get-Content -LiteralPath '.\scripts\Test-AAS-Cloudflare-Worker-Name.ps1' -Raw -Encoding UTF8
+          if ($source -notmatch 'versions\s+list') {
+            throw 'Worker-name checker must use a read-only versions list command'
+          }
+          if ($source -match '(?i)&\s+\$Wrangler\s+deploy\b') {
+            throw 'Worker-name checker must never invoke wrangler deploy'
+          }
+          if ($source -notmatch 'ErrorActionPreference\s*=\s*"Continue"') {
+            throw 'Worker-name checker must safely capture native stderr under Windows PowerShell 5.1'
+          }
+          if ($source -match '(?i)sb_secret_|service[_-]?role') {
+            throw 'Worker-name checker contains a forbidden secret marker'
+          }
+          Write-Host 'Cloudflare Worker-name checker safety: PASS'
 
       - name: Run production helper against public-only fixture
         shell: powershell
