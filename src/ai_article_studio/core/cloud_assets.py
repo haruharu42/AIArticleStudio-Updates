@@ -47,13 +47,74 @@ class CloudArticleAssetService:
         article_id = self._uuid(cloud_article_id, "cloud_article_id")
         query = parse.urlencode({
             "article_id": f"eq.{article_id}",
+            "user_id": f"eq.{actor.profile.id}",
             "select": "*",
             "order": "sort_order.asc,created_at.asc,id.asc",
+            "limit": "1001",
         })
         value = self._request(actor, "GET", f"{self.config.supabase_url}/rest/v1/article_assets?{query}")
+        if not isinstance(value, list) or len(value) >= 1000:
+            # Supabase may cap a response at 1000 rows. Never merge a possibly
+            # truncated list as authoritative remote deletions.
+            raise self._invalid_response("article_assets incomplete list")
+        rows = [self._mapping(item, "article_assets list") for item in value]
+        for row in rows:
+            asset_id = self._uuid(row.get("id"), "cloud_asset_id")
+            extension = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}.get(str(row.get("mime_type") or ""))
+            expected_path = f"{actor.profile.id}/{article_id}/{asset_id}.{extension}"
+            if row.get("user_id") != actor.profile.id or row.get("article_id") != article_id or not extension or row.get("storage_bucket") != ARTICLE_ASSET_BUCKET or row.get("storage_path") != expected_path:
+                raise self._invalid_response("article_assets ownership/path")
+        return rows
+
+    def update_metadata(self, actor: AuthenticatedUser, cloud_article_id: str, asset: Mapping[str, Any]) -> dict[str, Any]:
+        self._require_entitlement(actor)
+        article_id = self._uuid(cloud_article_id, "cloud_article_id")
+        asset_id = self._uuid(asset.get("cloud_asset_id"), "cloud_asset_id")
+        stamp = str(asset.get("cloud_updated_at") or "")
+        if not stamp:
+            raise CloudArticleError("画像を再取得してから編集してください。", category="revision_conflict", code="40001")
+        value = self._rpc(actor, "update_article_assets_metadata", {
+            "p_article_id": article_id,
+            "p_changes": [{"id": asset_id, "expected_updated_at": stamp,
+                           "sort_order": int(asset.get("sort_order") or 0),
+                           "insertion_marker": asset.get("insertion_marker") or None,
+                           "alt_text": str(asset.get("alt_text") or "")}],
+        })
         if not isinstance(value, list):
-            raise self._invalid_response("article_assets list")
-        return [self._mapping(item, "article_assets list") for item in value]
+            raise self._invalid_response("update_article_assets_metadata")
+        result = next((dict(row) for row in value if isinstance(row, Mapping) and row.get("id") == asset_id), None)
+        if result is None or result.get("article_id") != article_id or result.get("user_id") != actor.profile.id or result.get("status") != "ready":
+            raise self._invalid_response("update_article_assets_metadata")
+        return result
+
+    def article_revision(self, actor: AuthenticatedUser, cloud_article_id: str) -> int:
+        self._require_entitlement(actor)
+        article_id = self._uuid(cloud_article_id, "cloud_article_id")
+        query = parse.urlencode({"id": f"eq.{article_id}", "select": "id,user_id,revision", "limit": "1"})
+        rows = self._request(actor, "GET", f"{self.config.supabase_url}/rest/v1/articles?{query}")
+        if not isinstance(rows, list) or len(rows) != 1:
+            raise CloudArticleError("クラウド記事が見つかりません。", category="not_found", code="P0002")
+        row = self._mapping(rows[0], "article revision")
+        revision = row.get("revision")
+        if row.get("id") != article_id or row.get("user_id") != actor.profile.id or isinstance(revision, bool) or not isinstance(revision, int) or revision < 1:
+            raise self._invalid_response("article revision ownership")
+        return revision
+
+    def begin_delete_versioned(self, actor: AuthenticatedUser, asset: Mapping[str, Any], *, expected_revision: int | None = None) -> dict[str, Any]:
+        self._require_entitlement(actor)
+        article_id = self._uuid(asset.get("article_id"), "cloud_article_id")
+        asset_id = self._uuid(asset.get("id"), "cloud_asset_id")
+        value = self._rpc(actor, "transition_article_asset_checked", {
+            "p_article_id": article_id, "p_asset_id": asset_id,
+            "p_expected_updated_at": asset.get("updated_at"),
+            "p_expected_article_revision": self.article_revision(actor, article_id) if expected_revision is None else expected_revision,
+            "p_action": "begin_delete",
+        })
+        result = self._mapping(value, "checked image delete")
+        row = self._mapping(result.get("asset"), "checked image delete")
+        if row.get("id") != asset_id or row.get("article_id") != article_id or row.get("user_id") != actor.profile.id or row.get("status") != "delete_pending" or row.get("storage_path") != asset.get("storage_path"):
+            raise self._invalid_response("checked image delete")
+        return row
 
     def prepare(self, actor: AuthenticatedUser, cloud_article_id: str, asset: Mapping[str, Any]) -> dict[str, Any]:
         self._require_entitlement(actor)
@@ -340,6 +401,11 @@ class CloudAssetSyncCoordinator:
                 deleted += 1
 
         for asset in self.image_store.list_managed_assets(local_id, include_deleted=True):
+            if (asset.get("metadata_dirty") and asset.get("desired_state") == "active"
+                    and asset.get("cloud_status") == "ready"):
+                self._push_metadata(actor, local_id, cloud_id, asset)
+
+        for asset in self.image_store.list_managed_assets(local_id, include_deleted=True):
             if asset.get("desired_state") != "active" or asset.get("cloud_status") == "ready":
                 continue
             if self._upload_one(actor, local_id, cloud_id, asset):
@@ -349,7 +415,7 @@ class CloudAssetSyncCoordinator:
         refreshed = self._merge_remote(local_id, remote)
         pending = sum(
             1 for item in self.image_store.list_managed_assets(local_id, include_deleted=True)
-            if item.get("cloud_status") != "ready" or item.get("desired_state") == "delete"
+            if item.get("cloud_status") != "ready" or item.get("desired_state") == "delete" or item.get("metadata_dirty")
         )
         return CloudAssetSyncResult(local_id, cloud_id, uploaded, deleted, refreshed, pending)
 
@@ -359,12 +425,16 @@ class CloudAssetSyncCoordinator:
         refreshed = self._merge_remote(local_article_id, remote)
         return CloudAssetSyncResult(str(local_article_id), str(cloud_article_id), refreshed=refreshed)
 
-    def delete_all_for_article(self, local_article_id: str, cloud_article_id: str) -> int:
+    def assert_article_revision(self, cloud_article_id: str, expected_revision: int) -> None:
+        if self.cloud.article_revision(self._current_actor(), cloud_article_id) != expected_revision:
+            raise CloudArticleError("別の端末で記事が更新されています。記事を再取得して確認してください。", category="revision_conflict", code="40001", status=409)
+
+    def delete_all_for_article(self, local_article_id: str, cloud_article_id: str, *, expected_revision: int | None = None) -> int:
         actor = self._current_actor()
         deleted = 0
         remote = self.cloud.list_assets(actor, str(UUID(str(cloud_article_id))))
         for item in remote:
-            self._delete_remote(actor, item)
+            self._delete_remote(actor, item, expected_revision=expected_revision)
             deleted += 1
         for local in self.image_store.list_managed_assets(local_article_id, include_deleted=True):
             local_asset_id = str(local.get("local_asset_id") or "")
@@ -421,13 +491,20 @@ class CloudAssetSyncCoordinator:
             prepared = self.cloud.prepare(actor, cloud_id, current)
             prepared_id = str(prepared.get("asset_id") or "")
             try:
-                current = self.image_store.update_managed_asset(local_id, local_asset_id, {
-                    "cloud_asset_id": prepared_id,
-                    "storage_bucket": str(prepared.get("storage_bucket") or ARTICLE_ASSET_BUCKET),
-                    "storage_path": str(prepared.get("storage_path") or ""),
-                    "cloud_status": "pending_upload",
-                    "last_sync_error": None,
-                })
+                with self.image_store._lock:
+                    sent_version = current.get("metadata_edit_version")
+                    newest = next((item for item in self.image_store.list_managed_assets(local_id, include_deleted=True)
+                                   if item.get("local_asset_id") == local_asset_id), None)
+                    if newest is None:
+                        raise KeyError(local_asset_id)
+                    current = self.image_store.update_managed_asset(local_id, local_asset_id, {
+                        "cloud_asset_id": prepared_id,
+                        "storage_bucket": str(prepared.get("storage_bucket") or ARTICLE_ASSET_BUCKET),
+                        "storage_path": str(prepared.get("storage_path") or ""),
+                        "cloud_status": "pending_upload",
+                        "metadata_dirty": newest.get("metadata_edit_version") != sent_version,
+                        "last_sync_error": None,
+                    })
             except KeyError:
                 self.cloud.cancel_pending(actor, prepared_id)
                 return False
@@ -471,6 +548,8 @@ class CloudAssetSyncCoordinator:
             self.image_store.remove_managed_asset(local_id, local_asset_id)
             return
         remote_asset = dict(remote)
+        if asset.get("cloud_updated_at") and remote.get("status") == "ready":
+            remote_asset["updated_at"] = asset["cloud_updated_at"]
         remote_asset["checksum_sha256"] = asset.get("checksum_sha256")
         try:
             self._delete_remote(actor, remote_asset)
@@ -479,7 +558,7 @@ class CloudAssetSyncCoordinator:
             raise
         self.image_store.remove_managed_asset(local_id, local_asset_id)
 
-    def _delete_remote(self, actor: AuthenticatedUser, asset: Mapping[str, Any]) -> None:
+    def _delete_remote(self, actor: AuthenticatedUser, asset: Mapping[str, Any], *, expected_revision: int | None = None) -> None:
         status = str(asset.get("status") or asset.get("cloud_status") or "ready")
         cloud_asset_id = str(asset.get("id") or asset.get("cloud_asset_id") or "")
         bucket = str(asset.get("storage_bucket") or ARTICLE_ASSET_BUCKET)
@@ -496,10 +575,14 @@ class CloudAssetSyncCoordinator:
                 row = self.cloud.finalize(actor, cloud_asset_id, str(asset.get("checksum_sha256") or ""))
                 bucket = str(row.get("storage_bucket") or bucket)
                 storage_path = str(row.get("storage_path") or storage_path)
+                asset = row
                 status = "ready"
-        if status == "ready" or (status == "delete_pending" and not asset.get("id")):
+        if status == "ready" or (status == "delete_pending" and (expected_revision is not None or not asset.get("id"))):
             try:
-                row = self.cloud.begin_delete(actor, cloud_asset_id)
+                if expected_revision is None:
+                    row = self.cloud.begin_delete_versioned(actor, asset)
+                else:
+                    row = self.cloud.begin_delete_versioned(actor, asset, expected_revision=expected_revision)
             except CloudArticleError as exc:
                 # A previous attempt may have committed begin_delete before a
                 # network/storage failure. Only that exact state error is safe
@@ -512,13 +595,56 @@ class CloudAssetSyncCoordinator:
         self.cloud.delete_object(actor, bucket, storage_path)
         self.cloud.finalize_delete(actor, cloud_asset_id)
 
+    def _push_metadata(self, actor: AuthenticatedUser, local_id: str, cloud_id: str, asset: Mapping[str, Any]) -> None:
+        local_asset_id = str(asset.get("local_asset_id") or "")
+        try:
+            result = self.cloud.update_metadata(actor, cloud_id, asset)
+        except CloudArticleError as exc:
+            self.image_store.update_managed_asset(local_id, local_asset_id, {"last_sync_error": f"{exc.category}:{exc.code}"})
+            raise
+        # A user may type again while the request is in flight. Advance the
+        # server baseline but retain that newer local draft for the next sync.
+        with self.image_store._lock:
+            current = next((item for item in self.image_store.list_managed_assets(local_id, include_deleted=True)
+                            if item.get("local_asset_id") == local_asset_id), None)
+            if current is None:
+                return
+            changes = {"cloud_updated_at": result.get("updated_at"), "last_sync_error": None, "cloud_status": "ready"}
+            if current.get("metadata_edit_version") == asset.get("metadata_edit_version"):
+                changes.update(self._metadata_fields(result))
+                changes.update(metadata_dirty=False, remote_metadata_snapshot=None)
+            self.image_store.update_managed_asset(local_id, local_asset_id, changes)
+
+    @staticmethod
+    def _metadata_fields(row: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            "asset_type": str(row.get("asset_type") or "inline"),
+            "original_filename": str(row.get("original_filename") or "cloud-image"),
+            "mime_type": str(row.get("mime_type") or ""),
+            "size_bytes": int(row.get("size_bytes") or 0),
+            "checksum_sha256": row.get("checksum_sha256"),
+            "width": row.get("width"), "height": row.get("height"),
+            "sort_order": int(row.get("sort_order") or 0),
+            "insertion_marker": row.get("insertion_marker"),
+            "alt_text": str(row.get("alt_text") or ""),
+            "cloud_updated_at": row.get("updated_at"),
+        }
+
     def _merge_remote(self, local_id: str, remote: list[dict[str, Any]]) -> int:
+        with self.image_store._lock:
+            return self._merge_remote_locked(local_id, remote)
+
+    def _merge_remote_locked(self, local_id: str, remote: list[dict[str, Any]]) -> int:
         local_assets = self.image_store.list_managed_assets(local_id, include_deleted=True)
         by_cloud = {str(item.get("cloud_asset_id") or ""): item for item in local_assets if item.get("cloud_asset_id")}
         remote_ids = {str(row.get("id") or "") for row in remote}
         changed = 0
         for cloud_id, local in list(by_cloud.items()):
             if cloud_id and cloud_id not in remote_ids:
+                if local.get("metadata_dirty"):
+                    self.image_store.update_managed_asset(local_id, str(local.get("local_asset_id") or ""), {
+                        "last_sync_error": "remote_image_missing:metadata_retained"})
+                    continue
                 self.image_store.remove_managed_asset(local_id, str(local.get("local_asset_id") or ""))
                 changed += 1
         for row in remote:
@@ -532,6 +658,12 @@ class CloudAssetSyncCoordinator:
                 "last_sync_error": None,
             }
             if existing:
+                if existing.get("metadata_dirty"):
+                    if existing.get("cloud_updated_at") != row.get("updated_at"):
+                        changes["last_sync_error"] = "revision_conflict:metadata_retained"
+                        changes["remote_metadata_snapshot"] = self._metadata_fields(row)
+                else:
+                    changes.update(self._metadata_fields(row))
                 self.image_store.update_managed_asset(local_id, str(existing.get("local_asset_id")), changes)
                 changed += 1
                 continue
@@ -561,6 +693,7 @@ class CloudAssetSyncCoordinator:
                 "insertion_marker": row.get("insertion_marker"),
                 "alt_text": str(row.get("alt_text") or ""),
                 **changes,
+                "cloud_updated_at": row.get("updated_at"),
                 "desired_state": "delete" if has_local_replacement else "active",
                 "created_at": str(row.get("created_at") or ""),
                 "updated_at": str(row.get("updated_at") or ""),
@@ -572,6 +705,7 @@ class CloudAssetSyncCoordinator:
 
     def _ready(self, local_id: str, local_asset_id: str, row: Mapping[str, Any]) -> None:
         self.image_store.update_managed_asset(local_id, local_asset_id, {
+            "cloud_updated_at": row.get("updated_at"),
             "cloud_status": "ready",
             "storage_bucket": str(row.get("storage_bucket") or ARTICLE_ASSET_BUCKET),
             "storage_path": str(row.get("storage_path") or ""),

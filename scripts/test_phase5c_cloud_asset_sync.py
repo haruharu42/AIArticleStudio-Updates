@@ -60,6 +60,9 @@ class FakeAssetCloud:
     def list_assets(self, _actor, cloud_article_id):
         return [dict(row) for row in self.rows.values() if row["article_id"] == cloud_article_id]
 
+    def begin_delete_versioned(self, _actor, asset):
+        return self.begin_delete(_actor, asset["id"])
+
     def begin_delete(self, _actor, asset_id):
         self.events.append("begin_delete")
         self.rows[asset_id]["status"] = "delete_pending"

@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vinext build",
     "start": "vinext start",
-    "test": "npm run build && node --test --test-concurrency=1 tests/rendered-html.test.mjs tests/phase6-foundation.test.mjs tests/phase6-access-runtime.test.mjs tests/phase7-foundation.test.mjs tests/phase7-database-contract.test.mjs tests/phase7-article-library-runtime.test.mjs",
+    "test": "npm run build && node --test --test-concurrency=1 tests/rendered-html.test.mjs tests/phase6-foundation.test.mjs tests/phase6-access-runtime.test.mjs tests/phase7-foundation.test.mjs tests/phase7-database-contract.test.mjs tests/phase7-article-library-runtime.test.mjs tests/phase8-images-runtime.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit"
   },
@@ -37,5 +37,8 @@
     "vite": "8.2.2",
     "wrangler": "4.129.0"
   },
-  "type": "module"
+  "type": "module",
+  "overrides": {
+    "sharp": "0.35.4"
+  }
 }

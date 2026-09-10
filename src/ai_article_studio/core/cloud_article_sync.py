@@ -231,12 +231,13 @@ class CloudArticleSyncCoordinator:
         try:
             revision = self._revision(mapping.get("cloud_revision"))
             if self.asset_coordinator is not None:
-                self.asset_coordinator.delete_all_for_article(local_id, cloud_id)
+                self.asset_coordinator.assert_article_revision(cloud_id, revision)
+                self.asset_coordinator.delete_all_for_article(local_id, cloud_id, expected_revision=revision)
             self.cloud.delete(self._current_actor(), cloud_id, revision)
         except CloudArticleError as exc:
             self.database.update_sync_status(
                 local_id,
-                "error",
+                str(mapping.get("sync_status") or "synced") if exc.category == "revision_conflict" else "error",
                 error=self._safe_error(exc),
             )
             raise

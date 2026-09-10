@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Phase8Images } from "@/components/phase8-images";
+import type { ReactNode } from "react";
 import type { FormEvent } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -149,12 +151,14 @@ function ArticleDetailView({
   onBack,
   onEdit,
   onDelete,
+  images,
 }: {
   detail: ArticleDetail;
   busy: boolean;
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => Promise<void>;
+  images: ReactNode;
 }) {
   return (
     <>
@@ -185,6 +189,8 @@ function ArticleDetailView({
           <div><dt>タグ</dt><dd>{detail.tags.length ? detail.tags.join(" / ") : "—"}</dd></div>
           <div><dt>作成日時</dt><dd>{formatDate(detail.createdAt)}</dd></div>
         </dl>
+
+        {images}
 
         <BodySection title="完成本文" value={detail.body} />
         <BodySection title="掲載用本文" value={detail.workspace.publishBody} />
@@ -336,10 +342,19 @@ function EditorTextArea({
 export function Phase7Library({
   client,
   ownerId,
+  onUnsavedChange,
+  onBusyChange,
 }: {
   client: SupabaseClient;
   ownerId: string;
+  onUnsavedChange?: (dirty: boolean) => void;
+  onBusyChange?: (busy: boolean) => void;
 }) {
+  const [imageBusy, setImageBusy] = useState(false);
+  const [imageUnsaved, setImageUnsaved] = useState(false);
+  useEffect(() => { onUnsavedChange?.(imageUnsaved); return () => onUnsavedChange?.(false); }, [imageUnsaved,onUnsavedChange]);
+  useEffect(() => { onBusyChange?.(imageBusy); return () => onBusyChange?.(false); }, [imageBusy,onBusyChange]);
+  const leaveImages = () => !imageBusy && (!imageUnsaved || window.confirm("未保存の画像情報・選択した画像を破棄して移動しますか？"));
   const [view, setView] = useState<LibraryView>("list");
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
@@ -424,7 +439,7 @@ export function Phase7Library({
   };
 
   const remove = async () => {
-    if (!detail || busy) return;
+    if (!detail || busy || imageBusy || !leaveImages()) return;
     const confirmed = window.confirm(
       `「${detail.title || "無題の記事"}」を削除しますか？\n\nクラウド記事と紐づくStorage画像が削除されます。この操作は元に戻せません。`,
     );
@@ -446,6 +461,7 @@ export function Phase7Library({
   };
 
   const back = () => {
+    if (!leaveImages()) return;
     setView("list");
     setDetail(null);
     setError("");
@@ -455,9 +471,9 @@ export function Phase7Library({
     <section className="library-page" aria-labelledby="library-title">
       <header className="library-head">
         <div>
-          <p className="eyebrow">COMMON ARTICLE LIBRARY · PHASE 7</p>
+          <p className="eyebrow">COMMON ARTICLE LIBRARY</p>
           <h1 id="library-title">記事ライブラリ</h1>
-          <p>Windows版と同期した自分の記事を、閲覧・編集・削除できます。</p>
+          <p>Windows版と同期した自分の記事と画像を、閲覧・編集できます。</p>
         </div>
         <span className="access-badge">● RLSでユーザー分離</span>
       </header>
@@ -488,7 +504,8 @@ export function Phase7Library({
       )}
 
       {view === "detail" && detail && (
-        <ArticleDetailView detail={detail} busy={busy} onBack={back} onEdit={() => setView("edit")} onDelete={remove} />
+        <ArticleDetailView detail={detail} busy={busy || imageBusy} onBack={back} onEdit={() => { if (leaveImages()) setView("edit"); }} onDelete={remove}
+          images={<Phase8Images key={detail.id} client={client} ownerId={ownerId} articleId={detail.id} revision={detail.revision} onBusyChange={setImageBusy} onUnsavedChange={setImageUnsaved} />} />
       )}
 
       {view === "edit" && detail && (

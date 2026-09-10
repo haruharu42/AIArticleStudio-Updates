@@ -320,7 +320,7 @@ function parseDetail(
   };
 }
 
-function parseAsset(
+export function parseAsset(
   value: unknown,
   articleId: string,
   ownerId: string,
@@ -428,7 +428,7 @@ function isStoredPendingObject(error: unknown): boolean {
   );
 }
 
-function fromApiError(error: unknown, fallback: string): ArticleLibraryError {
+export function fromApiError(error: unknown, fallback: string): ArticleLibraryError {
   if (error instanceof ArticleLibraryError) return error;
   const { code, message, details, status } = errorParts(error);
   const normalized = `${message} ${details}`.toLowerCase();
@@ -470,7 +470,7 @@ function fromApiError(error: unknown, fallback: string): ArticleLibraryError {
   });
 }
 
-async function requireArticleAccess(
+export async function requireArticleAccess(
   client: SupabaseClient,
   ownerId: string,
 ): Promise<void> {

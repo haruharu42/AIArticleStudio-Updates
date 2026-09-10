@@ -234,7 +234,7 @@ class ArticleImageStore:
             "checksum_sha256": digest.hexdigest(),
             "sort_order": int(sort_order),
             "insertion_marker": marker,
-            "alt_text": str(alt_text or "")[:500],
+            "alt_text": str(alt_text or "")[:2000],
             "cloud_asset_id": None,
             "storage_bucket": None,
             "storage_path": None,
@@ -273,6 +273,34 @@ class ArticleImageStore:
             destination.unlink(missing_ok=True)
             raise
         return dict(record)
+
+    def edit_metadata(self, article_id: Any, local_asset_id: str, *, sort_order: int,
+                      insertion_marker: str | None, alt_text: str) -> dict[str, Any]:
+        """Keep an offline metadata draft and its last observed cloud version."""
+        with self._lock:
+            payload = self.load_payload(article_id)
+            assets = self._asset_list(payload)
+            target = self._find(assets, local_asset_id)
+            if target.get("desired_state") != "active" or target.get("cloud_status") not in {"ready", "local_only"}:
+                raise ValueError("先に画像の転送・削除を完了してください。")
+            if target.get("cloud_asset_id") and not target.get("cloud_updated_at"):
+                raise ValueError("先に「クラウド同期を再試行」で画像情報を再取得してください。")
+            if isinstance(sort_order, bool) or not isinstance(sort_order, int) or not 0 <= sort_order <= 2147483647:
+                raise ValueError("表示順は0以上の整数で指定してください。")
+            marker = str(insertion_marker or "").strip() or None
+            if (target.get("asset_type") == "cover" and marker is not None) or (target.get("asset_type") == "inline" and (not marker or len(marker) > 500)):
+                raise ValueError("挿絵の挿入マーカーを1〜500文字で指定してください。")
+            if len(alt_text) > 2000:
+                raise ValueError("代替テキストは2000文字以内です。")
+            if marker and any(a.get("desired_state") == "active" and a.get("local_asset_id") != local_asset_id and a.get("insertion_marker") == marker for a in assets):
+                raise ValueError("同じ挿入マーカーの画像があります。")
+            target.update(sort_order=sort_order, insertion_marker=marker, alt_text=str(alt_text),
+                          metadata_dirty=bool(target.get("cloud_asset_id")),
+                          metadata_edit_version=int(target.get("metadata_edit_version") or 0)+1,
+                          last_sync_error=None, updated_at=_utc_now_iso())
+            payload[MANAGED_ASSETS_KEY] = assets
+            self.save_payload(article_id, payload)
+            return dict(target)
 
     def update_managed_asset(
         self,

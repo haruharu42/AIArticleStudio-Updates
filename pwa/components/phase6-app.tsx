@@ -410,6 +410,11 @@ function Dashboard({
 }) {
   const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
   const [section, setSection] = useState<"home" | "library">("home");
+  const [imageUnsaved,setImageUnsaved] = useState(false);
+  const [imageBusy,setImageBusy] = useState(false);
+  const mayLeave = () => !imageBusy && (!imageUnsaved || window.confirm("未保存の画像情報・選択した画像を破棄して移動しますか？"));
+  const navigate = (next: "home" | "library") => { if (next === section || mayLeave()) setSection(next); };
+  const logout = async () => { if (mayLeave()) await onLogout(); };
 
   useEffect(() => {
     const capture = (event: Event) => {
@@ -432,28 +437,28 @@ function Dashboard({
       <aside className="side-nav">
         <Brand compact />
         <nav aria-label="メインナビゲーション">
-          <button className={section === "home" ? "active" : ""} type="button" onClick={() => setSection("home")}><span>⌂</span>ホーム</button>
-          <button className={section === "library" ? "active" : ""} type="button" onClick={() => setSection("library")}><span>▤</span>記事ライブラリ<small>利用可能</small></button>
-          <button type="button" disabled><span>✦</span>記事を作る<small>Phase 8</small></button>
-          <button type="button" disabled><span>◫</span>画像<small>Phase 9</small></button>
+          <button className={section === "home" ? "active" : ""} type="button" onClick={() => navigate("home")}><span>⌂</span>ホーム</button>
+          <button className={section === "library" ? "active" : ""} type="button" onClick={() => navigate("library")}><span>▤</span>記事ライブラリ<small>利用可能</small></button>
+          <button type="button" disabled><span>✦</span>記事を作る<small>準備中</small></button>
+          <button type="button" onClick={() => navigate("library")}><span>◫</span>記事の画像<small>記事から選択</small></button>
         </nav>
         <div className="account-block">
           <strong>{profile.display_name || "ユーザー"}</strong>
           <span>{profile.aas_user_id}</span>
-          <button type="button" onClick={() => void onLogout()}>ログアウト</button>
+          <button type="button" onClick={() => void logout()}>ログアウト</button>
         </div>
       </aside>
 
       <main className={section === "home" ? "dashboard" : "dashboard library-dashboard"}>
         {section === "library" ? (
-          <Phase7Library client={client} ownerId={profile.id} />
+          <Phase7Library client={client} ownerId={profile.id} onUnsavedChange={setImageUnsaved} onBusyChange={setImageBusy} />
         ) : (
           <>
         <header className="dashboard-head">
           <div>
             <p className="eyebrow">PWA HOME</p>
             <h1>おかえりなさい</h1>
-            <p>認証・利用権確認と共通記事ライブラリが利用できます。</p>
+            <p>記事と画像を、いつもの端末と共有できます。</p>
           </div>
           <span className="access-badge">● PWA利用可能</span>
         </header>
@@ -463,16 +468,16 @@ function Dashboard({
             <span className="hero-icon">✦</span>
             <p className="eyebrow">ARTICLE LIBRARY READY</p>
             <h2>Windows版の記事をPWAでも確認できます</h2>
-            <p>一覧では本文を取得せず、記事を開いた時だけ自分の本文とWorkspaceを安全に読み込みます。</p>
+            <p>記事の閲覧・編集から、アイキャッチや挿絵の追加まで。記事を開いて、続きから作業できます。</p>
           </div>
           <div className="hero-actions">
-            <button type="button" className="primary-action" onClick={() => setSection("library")}>記事ライブラリを開く</button>
+            <button type="button" className="primary-action" onClick={() => navigate("library")}>記事ライブラリを開く</button>
             <button type="button" className="secondary-action" onClick={() => void onRetry()}>アクセスを再確認</button>
             {installPrompt && <button type="button" className="primary-action" onClick={() => void install()}>アプリとして追加</button>}
           </div>
         </section>
 
-        <section className="status-grid" aria-label="Phase 7接続状態">
+        <section className="status-grid" aria-label="接続状態">
           <StatusTile label="認証" value="接続済み" detail="Supabase Auth / PKCE" />
           <StatusTile label="プロフィール" value="利用中" detail={`${profile.role} / ${profile.status}`} />
           <StatusTile label="PWA利用権" value="確認済み" detail={PWA_PRODUCT_CODE} />
@@ -480,13 +485,13 @@ function Dashboard({
 
         <section className="coming-section">
           <div className="section-title">
-            <div><p className="eyebrow">NEXT PHASES</p><h2>これから使える機能</h2></div>
-            <span>段階的に公開</span>
+            <div><p className="eyebrow">YOUR WORKSPACE</p><h2>記事制作のワークスペース</h2></div>
+            <span>順次機能を追加</span>
           </div>
           <div className="feature-grid">
             <FeatureCard number="07" title="共通記事ライブラリ" description="クラウド記事の一覧・閲覧・編集・削除" ready />
-            <FeatureCard number="08" title="PWA記事作成" description="モバイルから記事の作成と再編集" />
-            <FeatureCard number="09" title="PWA画像" description="private Storageの画像選択と同期" />
+            <FeatureCard number="08" title="画像管理と同期" description="アイキャッチ・挿絵の追加と差し替え" ready />
+            <FeatureCard number="11" title="記事制作フロー" description="モバイルから記事の新規作成" />
           </div>
         </section>
           </>
@@ -494,10 +499,10 @@ function Dashboard({
       </main>
 
       <nav className="bottom-nav" aria-label="モバイルナビゲーション">
-        <button className={section === "home" ? "active" : ""} type="button" onClick={() => setSection("home")}><span>⌂</span>ホーム</button>
-        <button className={section === "library" ? "active" : ""} type="button" onClick={() => setSection("library")}><span>▤</span>記事</button>
+        <button className={section === "home" ? "active" : ""} type="button" onClick={() => navigate("home")}><span>⌂</span>ホーム</button>
+        <button className={section === "library" ? "active" : ""} type="button" onClick={() => navigate("library")}><span>▤</span>記事</button>
         <button type="button" disabled><span className="create-dot">✦</span>作成</button>
-        <button type="button" disabled><span>◫</span>画像</button>
+        <button type="button" onClick={() => navigate("library")}><span>◫</span>画像</button>
       </nav>
     </div>
   );
