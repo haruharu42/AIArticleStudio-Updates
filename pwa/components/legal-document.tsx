@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 export function LegalDocument({
@@ -30,9 +31,9 @@ export function LegalDocument({
           lineHeight: 1.85,
         }}
       >
-        <a href="/" style={{ color: "#2457d6", textDecoration: "none" }}>
+        <Link href="/" style={{ color: "#2457d6", textDecoration: "none" }}>
           ← AI記事スタジオへ戻る
-        </a>
+        </Link>
         <p
           style={{
             display: "inline-block",
@@ -58,9 +59,9 @@ export function LegalDocument({
         <div>{children}</div>
         <hr style={{ border: 0, borderTop: "1px solid #e5eaf2", margin: "32px 0 20px" }} />
         <nav aria-label="法的文書" style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-          <a href="/terms">利用規約</a>
-          <a href="/privacy">プライバシーポリシー</a>
-          <a href="/ai-terms">AI利用条件</a>
+          <Link href="/terms">利用規約</Link>
+          <Link href="/privacy">プライバシーポリシー</Link>
+          <Link href="/ai-terms">AI利用条件</Link>
         </nav>
       </article>
     </main>
