@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
   other: {
-    "codex-preview": "phase8-local",
-    "aas-phase": "8",
+    "aas-release-stage": "production",
+    "aas-phase": "17",
   },
   icons: {
     icon: "/favicon.svg",
