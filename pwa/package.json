@@ -12,7 +12,9 @@
     "start": "vinext start",
     "test": "npm run build && node --test --test-concurrency=1 tests/rendered-html.test.mjs tests/phase6-foundation.test.mjs tests/phase6-access-runtime.test.mjs tests/phase7-foundation.test.mjs tests/phase7-database-contract.test.mjs tests/phase7-article-library-runtime.test.mjs tests/phase8-images-runtime.test.mjs tests/phase9-11-batch.test.mjs tests/phase12-17-batch.test.mjs tests/phase11-15-utilities.test.mjs tests/phase9-invite-security.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "production:preflight": "node scripts/production-preflight.mjs",
+    "deploy:cloudflare": "npm run production:preflight && npx --yes @vinext/cloudflare@1.0.0-beta.9 deploy"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.112.3",
