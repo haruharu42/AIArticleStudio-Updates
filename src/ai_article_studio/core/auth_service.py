@@ -56,7 +56,7 @@ class AuthConfig:
         config_path = root / "config" / "auth.json"
         if config_path.is_file():
             try:
-                loaded = json.loads(config_path.read_text(encoding="utf-8"))
+                loaded = json.loads(config_path.read_text(encoding="utf-8-sig"))
             except (OSError, ValueError) as exc:
                 raise AuthConfigurationError(
                     "認証設定ファイルを読み込めません。",
