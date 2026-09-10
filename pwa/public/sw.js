@@ -1,4 +1,4 @@
-const CACHE_NAME = "aas-pwa-phase8-v1";
+const CACHE_NAME = "aas-pwa-phase17-prod-v1";
 const APP_SHELL = [
   "/",
   "/offline.html",
@@ -31,6 +31,7 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname.startsWith("/auth/callback") ||
     url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/healthz") ||
     url.searchParams.has("code") ||
     url.searchParams.has("access_token") ||
     url.searchParams.has("refresh_token")
