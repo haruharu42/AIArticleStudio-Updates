@@ -99,7 +99,7 @@ export function Phase11CreatePage() {
     return () => { active = false; };
   }, []);
 
-  const localTitles = useMemo(() => suggestLocalTitles(draft), [draft.theme, draft.publicationTarget, draft.articleType, draft.ageGroup, draft.genre]);
+  const localTitles = useMemo(() => suggestLocalTitles(draft), [draft]);
   const titlePrompt = useMemo(() => buildTitlePrompt({ ...draft, tags: tagsText.split(/[,、\n]/).map((tag) => tag.trim()).filter(Boolean) }), [draft, tagsText]);
   const articlePrompt = useMemo(() => buildArticlePrompt({ ...draft, tags: tagsText.split(/[,、\n]/).map((tag) => tag.trim()).filter(Boolean) }), [draft, tagsText]);
 
