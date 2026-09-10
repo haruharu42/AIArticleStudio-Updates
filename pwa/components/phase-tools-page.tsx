@@ -14,21 +14,6 @@ type ToolCard = {
   description: string;
 };
 
-const publicTools: ToolCard[] = [
-  {
-    href: "/sidejob",
-    phase: "Phase 15",
-    title: "AI副業プランナー",
-    description: "作業時間・得意分野・予算から、副業候補と30日プラン用プロンプトを作成。",
-  },
-  {
-    href: "/sns-plan",
-    phase: "Phase 15",
-    title: "SNSアカウント設計",
-    description: "ジャンル選定からプロフィール、投稿の柱、収益導線、改善まで一括設計。",
-  },
-];
-
 const memberTools: ToolCard[] = [
   {
     href: "/create",
@@ -47,6 +32,18 @@ const memberTools: ToolCard[] = [
     phase: "Phase 14",
     title: "SNS投稿を作る",
     description: "記事ライブラリからX・Instagram・Threads向け投稿プロンプトへ変換。",
+  },
+  {
+    href: "/sidejob",
+    phase: "Phase 15",
+    title: "AI副業プランナー",
+    description: "作業時間・得意分野・予算から、副業候補と30日プラン用プロンプトを作成。",
+  },
+  {
+    href: "/sns-plan",
+    phase: "Phase 15",
+    title: "SNSアカウント設計",
+    description: "ジャンル選定からプロフィール、投稿の柱、収益導線、改善まで一括設計。",
   },
   {
     href: "/export",
@@ -89,7 +86,7 @@ export function PhaseToolsPage() {
   const ready = state.kind === "ready";
   const admin = state.kind === "ready" && state.profile.role === "admin";
   const invite = state.kind === "pending" || state.kind === "entitlement_denied";
-  const cards = ready ? [...memberTools, ...publicTools] : publicTools;
+  const cards = ready ? memberTools : [];
 
   return (
     <main className="creator-page">
@@ -103,9 +100,9 @@ export function PhaseToolsPage() {
       </header>
 
       {state.kind === "loading" && <div className="route-notice">利用可能な機能を確認しています…</div>}
-      {state.kind === "unavailable" && <div className="route-notice error">アカウント状態を確認できませんでした。副業・SNS設計ツールは引き続き利用できます。</div>}
-      {state.kind === "signed_out" && <div className="route-notice">ログインすると記事・画像・SNS投稿・出力・公開・分析機能が表示されます。</div>}
-      {(state.kind === "suspended" || state.kind === "disabled") && <div className="route-notice error">現在のアカウント状態ではクラウド機能を利用できません。</div>}
+      {state.kind === "unavailable" && <div className="route-notice error">アカウントとPWA利用権を確認できませんでした。</div>}
+      {state.kind === "signed_out" && <div className="route-notice">ログインすると利用可能なPWA機能が表示されます。</div>}
+      {(state.kind === "suspended" || state.kind === "disabled") && <div className="route-notice error">現在のアカウント状態ではPWA機能を利用できません。</div>}
       {invite && <div className="route-notice">PWA機能を使うには利用権が必要です。<a className="route-inline-link" href="/invite">招待コードを登録</a></div>}
 
       <section className="tool-grid">
