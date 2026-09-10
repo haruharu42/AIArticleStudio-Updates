@@ -8,6 +8,8 @@
 
 現行PWAは `@cloudflare/vite-plugin`、`wrangler`、`workerd` 前提のWorkerエントリを既に持つため、第一候補は Cloudflare Workers とする。
 
+Worker entry は `env.ASSETS` と `env.IMAGES` を直接参照する。Cloudflareの本番構成では `ASSETS` static-assets binding と `IMAGES` Images bindingを明示し、production buildが生成するWrangler設定をCIで検証する。
+
 ただし、Cloudflareアカウント、Worker名、`workers.dev` / カスタムドメイン、DNS/TLSの確定までは公開を実行しない。
 
 ## 本番公開前の必須値
@@ -19,6 +21,8 @@
 - `NEXT_PUBLIC_AAS_TERMS_URL`
 - `NEXT_PUBLIC_AAS_PRIVACY_URL`
 - `NEXT_PUBLIC_AAS_AI_TERMS_URL`
+
+Cloudflare Worker名は `AAS_CLOUDFLARE_WORKER_NAME` で指定できる。未指定時はpreview用の既定名を使い、意図せず既存本番Workerを上書きしない。
 
 禁止:
 
@@ -52,25 +56,32 @@
 - Supabase公開キーが secret/service-role ではない
 - 利用規約・プライバシー・AI利用規約URLがHTTPS
 - レポートに秘密値を出力しない
+- `PWA Production Preflight` CIで生成Wrangler configを検出
+- `ASSETS` / `IMAGES` bindingを検出
+- generated config内にsecret/service-role markerがない
+- `wrangler deploy --dry-run` PASS
+
+`wrangler deploy --dry-run` はbundle/設定検証のみで、Cloudflareへ公開しない。
 
 ## Gate PWA-PROD-2: hosting setup
 
 Cloudflare Workersを採用する場合:
 
 1. CloudflareアカウントとWorker名を確定。
-2. `wrangler setup` またはCloudflare Dashboard接続でデプロイ設定を生成・確認。
+2. Cloudflareへログインし、対象アカウントを確認。
 3. Build時の公開環境変数5件をCloudflare側へ設定。
-4. preview deploymentで確認。
+4. `workers.dev` のpreview Workerへ初回deploy。
 5. まだ一般公開URLを販売ページへ掲載しない。
 
-`wrangler deploy` は明示承認後にのみ実行する。
+実際の `wrangler deploy` は明示承認後にのみ実行する。
 
 ## Gate PWA-PROD-3: production URL / Supabase Auth
 
-本番URL確定後にSupabase Auth設定を確認する。
+本番またはpreview URL確定後にSupabase Auth設定を確認する。
 
-- Site URLを本番PWA URLへ設定。
-- OAuth redirect allow-listへ `<production-origin>/auth/callback` を追加。
+- Site URLを最終本番PWA URLへ設定するのは本番URL確定時。
+- preview中はOAuth redirect allow-listへ `<preview-origin>/auth/callback` を追加。
+- 本番URL確定後は `<production-origin>/auth/callback` も追加。
 - Google OAuthを使用する場合、Google側Authorized redirect URIも整合させる。
 - localhost / LANテストURLを不用意に削除しない。削除は別途判断する。
 
