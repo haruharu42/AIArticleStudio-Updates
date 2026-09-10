@@ -21,6 +21,12 @@ const publicTools: ToolCard[] = [
     title: "AI副業プランナー",
     description: "作業時間・得意分野・予算から、副業候補と30日プラン用プロンプトを作成。",
   },
+  {
+    href: "/sns-plan",
+    phase: "Phase 15",
+    title: "SNSアカウント設計",
+    description: "ジャンル選定からプロフィール、投稿の柱、収益導線、改善まで一括設計。",
+  },
 ];
 
 const memberTools: ToolCard[] = [
@@ -41,6 +47,12 @@ const memberTools: ToolCard[] = [
     phase: "Phase 14",
     title: "SNS投稿を作る",
     description: "記事ライブラリからX・Instagram・Threads向け投稿プロンプトへ変換。",
+  },
+  {
+    href: "/export",
+    phase: "Phase 11 出力",
+    title: "記事を出力",
+    description: "掲載用本文をコピーし、Markdownファイルとして端末へ保存。",
   },
   {
     href: "/publish",
@@ -85,14 +97,14 @@ export function PhaseToolsPage() {
         <div>
           <p className="eyebrow">AI ARTICLE STUDIO</p>
           <h1>機能一覧</h1>
-          <p>Phase 8の共通基盤の上に、記事制作・画像・SNS・公開・分析を追加しています。</p>
+          <p>Phase 8の共通基盤の上に、記事制作・画像・SNS・出力・公開・分析を追加しています。</p>
         </div>
         <a className="route-back" href="/">← ホーム</a>
       </header>
 
       {state.kind === "loading" && <div className="route-notice">利用可能な機能を確認しています…</div>}
-      {state.kind === "unavailable" && <div className="route-notice error">アカウント状態を確認できませんでした。副業プランナーは引き続き利用できます。</div>}
-      {state.kind === "signed_out" && <div className="route-notice">ログインすると記事・画像・SNS・公開・分析機能が表示されます。</div>}
+      {state.kind === "unavailable" && <div className="route-notice error">アカウント状態を確認できませんでした。副業・SNS設計ツールは引き続き利用できます。</div>}
+      {state.kind === "signed_out" && <div className="route-notice">ログインすると記事・画像・SNS投稿・出力・公開・分析機能が表示されます。</div>}
       {(state.kind === "suspended" || state.kind === "disabled") && <div className="route-notice error">現在のアカウント状態ではクラウド機能を利用できません。</div>}
       {invite && <div className="route-notice">PWA機能を使うには利用権が必要です。<a className="route-inline-link" href="/invite">招待コードを登録</a></div>}
 
