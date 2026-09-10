@@ -1,4 +1,4 @@
-const CACHE_NAME = "aas-pwa-phase8-v1";
+const CACHE_NAME = "aas-pwa-phase17-prod-v1";
 const APP_SHELL = [
   "/",
   "/offline.html",
