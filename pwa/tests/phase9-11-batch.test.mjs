@@ -111,7 +111,7 @@ test("Phase 11 article creator saves an atomic article/workspace using current q
   assert.match(route, /Phase11CreatePage/);
 });
 
-test("root keeps the stable Phase 8 shell and adds progressive entry points", async () => {
+test("root keeps the stable shell and adds progressive Phase 9-17 entry points", async () => {
   const rootPage = await read("app/page.tsx");
   const quick = await read("components/phase9-11-quick-nav.tsx");
   const layout = await read("app/layout.tsx");
@@ -124,7 +124,9 @@ test("root keeps the stable Phase 8 shell and adds progressive entry points", as
   assert.match(quick, /href="\/invite"/);
   assert.match(quick, /href="\/admin"/);
   assert.match(layout, /phase9-11\.css/);
-  assert.match(layout, /"aas-phase": "8"/);
+  assert.match(layout, /"aas-phase": "17"/);
+  assert.match(layout, /"aas-release-stage": "production-preview"/);
+  assert.doesNotMatch(layout, /phase8-local/);
   assert.match(css, /\.phase-quick-nav/);
 });
 
