@@ -1,6 +1,7 @@
 param(
     [string]$RepoRoot = (Get-Location).Path,
     [string]$InstallRoot = (Join-Path $env:LOCALAPPDATA "AIArticleStudio"),
+    [string]$ExpectedGitRef = "origin/main",
     [string]$TermsUrl = $env:NEXT_PUBLIC_AAS_TERMS_URL,
     [string]$PrivacyUrl = $env:NEXT_PUBLIC_AAS_PRIVACY_URL,
     [string]$AiTermsUrl = $env:NEXT_PUBLIC_AAS_AI_TERMS_URL
@@ -8,6 +9,24 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+function Get-JsonPropertyValue {
+    param(
+        [Parameter(Mandatory = $true)] [object]$Object,
+        [Parameter(Mandatory = $true)] [string[]]$Names
+    )
+
+    foreach ($name in $Names) {
+        $property = $Object.PSObject.Properties[$name]
+        if ($null -ne $property) {
+            $value = [string]$property.Value
+            if (-not [string]::IsNullOrWhiteSpace($value)) {
+                return $value
+            }
+        }
+    }
+    return $null
+}
 
 function Assert-HttpsUrl([string]$Name, [string]$Value) {
     if ([string]::IsNullOrWhiteSpace($Value)) {
@@ -42,7 +61,7 @@ Write-Host " AAS PWA Production Preflight"
 Write-Host "==================================================" -ForegroundColor Cyan
 
 if (-not (Test-Path -LiteralPath (Join-Path $RepoRoot ".git"))) {
-    throw "RepoRoot is not a Git repository"
+    throw "RepoRoot is not a Git repository or worktree"
 }
 if (-not (Test-Path -LiteralPath $PwaRoot -PathType Container)) {
     throw "pwa directory not found"
@@ -55,17 +74,18 @@ Set-Location $RepoRoot
 $status = @(git status --porcelain)
 if ($status.Count -ne 0) {
     $status
-    throw "Stable repository is not clean"
+    throw "Repository worktree is not clean"
 }
 
 git fetch origin --prune
 if ($LASTEXITCODE -ne 0) { throw "git fetch failed" }
 $localHead = (git rev-parse HEAD).Trim()
-$mainHead = (git rev-parse origin/main).Trim()
-Write-Host "Local HEAD  = $localHead"
-Write-Host "origin/main = $mainHead"
-if ($localHead -ne $mainHead) {
-    throw "Local repository is not at origin/main"
+$expectedHead = (git rev-parse $ExpectedGitRef).Trim()
+Write-Host "Local HEAD   = $localHead"
+Write-Host "Expected ref = $ExpectedGitRef"
+Write-Host "Expected HEAD= $expectedHead"
+if ($localHead -ne $expectedHead) {
+    throw "Local repository does not match $ExpectedGitRef"
 }
 Write-Host "PASS source baseline" -ForegroundColor Green
 
@@ -76,26 +96,41 @@ if ($nodeVersion -lt [version]"22.13.0") {
 }
 Write-Host "PASS Node.js $nodeVersionRaw" -ForegroundColor Green
 
-$auth = Get-Content -LiteralPath $AuthConfig -Raw -Encoding UTF8 | ConvertFrom-Json
-$urlCandidates = @(
-    $auth.supabase_url,
-    $auth.url,
-    $auth.SUPABASE_URL
-) | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
-$keyCandidates = @(
-    $auth.supabase_publishable_key,
-    $auth.publishable_key,
-    $auth.anon_key,
-    $auth.SUPABASE_ANON_KEY
-) | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+$jsonText = Get-Content -LiteralPath $AuthConfig -Raw -Encoding UTF8
+if ($jsonText -match '(?i)service[_-]?role|sb_secret_') {
+    throw "Forbidden secret material detected in auth.json"
+}
+$auth = $jsonText | ConvertFrom-Json
 
-if ($urlCandidates.Count -lt 1) { throw "Public Supabase URL was not found in installed auth.json" }
-if ($keyCandidates.Count -lt 1) { throw "Publishable/anon Supabase key was not found in installed auth.json" }
+$supabaseUrl = Get-JsonPropertyValue $auth @("supabase_url", "url", "SUPABASE_URL")
+$publishableKey = Get-JsonPropertyValue $auth @(
+    "supabase_publishable_key",
+    "publishable_key",
+    "supabase_anon_key",
+    "anon_key",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_ANON_KEY"
+)
 
-$supabaseUrl = [string]$urlCandidates[0]
-$publishableKey = [string]$keyCandidates[0]
+if ([string]::IsNullOrWhiteSpace($supabaseUrl)) {
+    throw "Public Supabase URL was not found in installed auth.json"
+}
+if ([string]::IsNullOrWhiteSpace($publishableKey)) {
+    throw "Publishable/anon Supabase key was not found in installed auth.json"
+}
 if ($publishableKey -match '^(?i)sb_secret_' -or $publishableKey -match '(?i)service[_-]?role') {
     throw "Refusing to use a secret/service-role key"
+}
+Assert-HttpsUrl "Supabase public URL" $supabaseUrl
+
+if ([string]::IsNullOrWhiteSpace($TermsUrl)) {
+    $TermsUrl = Get-JsonPropertyValue $auth @("terms_url", "TERMS_URL")
+}
+if ([string]::IsNullOrWhiteSpace($PrivacyUrl)) {
+    $PrivacyUrl = Get-JsonPropertyValue $auth @("privacy_url", "PRIVACY_URL")
+}
+if ([string]::IsNullOrWhiteSpace($AiTermsUrl)) {
+    $AiTermsUrl = Get-JsonPropertyValue $auth @("ai_terms_url", "AI_TERMS_URL")
 }
 
 Assert-HttpsUrl "NEXT_PUBLIC_AAS_TERMS_URL" $TermsUrl
@@ -118,6 +153,9 @@ foreach ($guard in @('/auth/callback','/api/','access_token','refresh_token')) {
         throw "Service worker auth/cache guard missing: $guard"
     }
 }
+if (-not $sw.Contains('aas-pwa-phase17-prod-v1')) {
+    throw "Production service-worker cache generation is not current"
+}
 Write-Host "PASS PWA manifest/icons/service-worker guards" -ForegroundColor Green
 
 $oldEnv = @{
@@ -129,7 +167,7 @@ $oldEnv = @{
 }
 
 try {
-    $env:NEXT_PUBLIC_AAS_SUPABASE_URL = $supabaseUrl
+    $env:NEXT_PUBLIC_AAS_SUPABASE_URL = $supabaseUrl.TrimEnd('/')
     $env:NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY = $publishableKey
     $env:NEXT_PUBLIC_AAS_TERMS_URL = $TermsUrl
     $env:NEXT_PUBLIC_AAS_PRIVACY_URL = $PrivacyUrl
@@ -140,7 +178,7 @@ try {
     Invoke-NpmStep "typecheck" @("run", "typecheck")
     Invoke-NpmStep "lint" @("run", "lint")
     Invoke-NpmStep "test/build regression" @("test")
-    Invoke-NpmStep "npm audit" @("audit")
+    Invoke-NpmStep "npm audit" @("audit", "--audit-level=high")
 }
 finally {
     foreach ($name in $oldEnv.Keys) {
@@ -151,7 +189,8 @@ finally {
 $report = [ordered]@{
     generated_at = [DateTimeOffset]::UtcNow.ToString("o")
     repo_head = $localHead
-    origin_main = $mainHead
+    expected_git_ref = $ExpectedGitRef
+    expected_head = $expectedHead
     node_version = $nodeVersionRaw
     supabase_public_config_present = $true
     secret_key_rejected = $true
@@ -160,6 +199,7 @@ $report = [ordered]@{
     ai_terms_https = $true
     pwa_assets_present = $true
     service_worker_auth_guards_present = $true
+    service_worker_cache_generation = "phase17-prod-v1"
     npm_ci = "pass"
     typecheck = "pass"
     lint = "pass"
