@@ -107,6 +107,19 @@ export function Phase11CreatePage() {
     setDraft((current) => ({ ...current, [key]: value }));
   };
 
+  const setArticleType = (value: ArticleType) => {
+    setDraft((current) => ({
+      ...current,
+      articleType: value,
+      price:
+        value === "free"
+          ? null
+          : current.price !== null && current.price > 0
+            ? current.price
+            : 1,
+    }));
+  };
+
   const next = () => { setMessage(""); setStep((current) => Math.min(steps.length - 1, current + 1)); };
   const back = () => { setMessage(""); setStep((current) => Math.max(0, current - 1)); };
 
@@ -174,13 +187,13 @@ export function Phase11CreatePage() {
           <div className="wizard-pane"><p className="eyebrow">STEP 3</p><h2>本文条件</h2>
             <div className="creator-form-grid">
               <label className="route-field"><span>掲載先</span><select value={draft.publicationTarget} onChange={(e) => patch("publicationTarget", e.target.value as PublicationTarget)}><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></select></label>
-              <label className="route-field"><span>無料 / 有料</span><select value={draft.articleType} onChange={(e) => patch("articleType", e.target.value as ArticleType)}><option value="free">無料</option><option value="paid">有料</option></select></label>
+              <label className="route-field"><span>無料 / 有料</span><select value={draft.articleType} onChange={(e) => setArticleType(e.target.value as ArticleType)}><option value="free">無料</option><option value="paid">有料</option></select></label>
               <label className="route-field"><span>ジャンル</span><input value={draft.genre} onChange={(e) => patch("genre", e.target.value)} /></label>
               <label className="route-field"><span>サブジャンル</span><input value={draft.subgenre} onChange={(e) => patch("subgenre", e.target.value)} /></label>
               <label className="route-field"><span>対象年齢</span><input value={draft.ageGroup} onChange={(e) => patch("ageGroup", e.target.value)} placeholder="30代 / 60代 / AIおまかせ" /></label>
               <label className="route-field"><span>対象性別</span><input value={draft.gender} onChange={(e) => patch("gender", e.target.value)} placeholder="女性 / 男性 / AIおまかせ" /></label>
               <label className="route-field"><span>文字数目安</span><input type="number" min={500} max={50000} step={500} value={draft.targetLength} onChange={(e) => patch("targetLength", Number(e.target.value) || 500)} /></label>
-              {draft.articleType === "paid" && <label className="route-field"><span>価格（円）</span><input type="number" min={0} value={draft.price ?? 0} onChange={(e) => patch("price", Number(e.target.value) || 0)} /></label>}
+              {draft.articleType === "paid" && <label className="route-field"><span>価格（円）</span><input type="number" min={1} value={draft.price ?? 1} onChange={(e) => patch("price", Math.max(1, Number(e.target.value) || 1))} /></label>}
               <label className="choice-card compact"><input type="checkbox" checked={draft.affiliateEnabled} onChange={(e) => patch("affiliateEnabled", e.target.checked)} /><span><strong>アフィリエイト ON</strong></span></label>
               <label className="choice-card compact"><input type="checkbox" checked={draft.magazineEnabled} onChange={(e) => patch("magazineEnabled", e.target.checked)} /><span><strong>マガジン ON</strong></span></label>
               <label className="route-field full"><span>タグ（カンマ・改行区切り）</span><input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="AI副業, 初心者, ChatGPT" /></label>
