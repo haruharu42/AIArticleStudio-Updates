@@ -23,6 +23,14 @@ const eslintConfig = defineConfig([
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  {
+    files: ["components/phase*.tsx"],
+    rules: {
+      // The PWA is built and served through Vinext and intentionally uses
+      // document navigation between standalone workflow routes.
+      "@next/next/no-html-link-for-pages": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
