@@ -30,9 +30,9 @@ jobs:
     env:
       NEXT_PUBLIC_AAS_SUPABASE_URL: https://ci-placeholder.supabase.co
       NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_public_only
-      NEXT_PUBLIC_AAS_TERMS_URL: https://example.com/terms
-      NEXT_PUBLIC_AAS_PRIVACY_URL: https://example.com/privacy
-      NEXT_PUBLIC_AAS_AI_TERMS_URL: https://example.com/ai-terms
+      NEXT_PUBLIC_AAS_TERMS_URL: /terms
+      NEXT_PUBLIC_AAS_PRIVACY_URL: /privacy
+      NEXT_PUBLIC_AAS_AI_TERMS_URL: /ai-terms
       AAS_CLOUDFLARE_WORKER_NAME: ai-article-studio-pwa-ci
       WRANGLER_WRITE_LOGS: "false"
 
@@ -70,6 +70,9 @@ jobs:
           test -f public/icon-192.png
           test -f public/icon-512.png
           test -f public/sw.js
+          test -f app/terms/page.tsx
+          test -f app/privacy/page.tsx
+          test -f app/ai-terms/page.tsx
           grep -Fq '/auth/callback' public/sw.js
           grep -Fq '/api/' public/sw.js
           grep -Fq 'access_token' public/sw.js
@@ -208,7 +211,7 @@ jobs:
           }
           Write-Host 'Cloudflare Worker-name checker safety: PASS'
 
-      - name: Run production helper against public-only fixture
+      - name: Run production helper against first-party legal routes
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -219,9 +222,6 @@ jobs:
           [ordered]@{
             supabase_url = 'https://ci-placeholder.supabase.co'
             anon_key = 'sb_publishable_ci_public_only'
-            terms_url = 'https://example.com/terms'
-            privacy_url = 'https://example.com/privacy'
-            ai_terms_url = 'https://example.com/ai-terms'
           } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $configRoot 'auth.json') -Encoding UTF8
 
           & '.\scripts\Prepare-AAS-PWA-Production.ps1' `
