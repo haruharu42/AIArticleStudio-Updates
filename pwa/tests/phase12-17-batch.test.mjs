@@ -11,7 +11,7 @@ test("Phase 12 specializes article prompts without weakening editorial safety", 
   const profiles = await read("lib/phase12-prompt-profiles.ts");
   const creator = await read("lib/phase11-create.ts");
 
-  assert.match(profiles, /AI\\s\*副業/);
+  assert.match(profiles, /AI\s*副業/);
   assert.match(profiles, /美容/);
   assert.match(profiles, /ガジェット/);
   assert.match(profiles, /生活/);
@@ -101,7 +101,7 @@ test("Phase 17 reports only internal article metrics until external analytics ar
   assert.match(route, /Phase17AnalyticsPage/);
 });
 
-test("tools hub and quick navigation expose the new functional routes without replacing the Phase 8 root shell", async () => {
+test("tools hub and quick navigation expose the new functional routes on the stable root shell", async () => {
   const tools = await read("components/phase-tools-page.tsx");
   const toolsRoute = await read("app/tools/page.tsx");
   const quick = await read("components/phase9-11-quick-nav.tsx");
@@ -118,7 +118,9 @@ test("tools hub and quick navigation expose the new functional routes without re
   assert.match(quick, /href="\/tools"/);
   assert.match(rootPage, /Phase7App/);
   assert.match(layout, /phase12-17\.css/);
-  assert.match(layout, /"aas-phase": "8"/);
+  assert.match(layout, /"aas-phase": "17"/);
+  assert.match(layout, /"aas-release-stage": "production-preview"/);
+  assert.doesNotMatch(layout, /phase8-local/);
   assert.match(css, /\.tool-grid/);
   assert.match(css, /\.analytics-grid/);
   assert.match(css, /\.image-prompt-list/);
