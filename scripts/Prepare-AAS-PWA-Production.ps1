@@ -30,7 +30,7 @@ function Get-JsonPropertyValue {
 
 function Assert-HttpsUrl([string]$Name, [string]$Value) {
     if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "$Name is required for production preflight"
+        throw "$Name is required"
     }
     $uri = $null
     if (-not [System.Uri]::TryCreate($Value, [System.UriKind]::Absolute, [ref]$uri)) {
@@ -39,6 +39,30 @@ function Assert-HttpsUrl([string]$Name, [string]$Value) {
     if ($uri.Scheme -ne "https") {
         throw "$Name must use HTTPS"
     }
+}
+
+function Assert-PublicLegalLink([string]$Name, [string]$Value, [string]$PwaRoot) {
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        throw "$Name is required for production preflight"
+    }
+
+    if ($Value.StartsWith("/")) {
+        $routes = @{
+            "/terms" = "app\terms\page.tsx"
+            "/privacy" = "app\privacy\page.tsx"
+            "/ai-terms" = "app\ai-terms\page.tsx"
+        }
+        if (-not $routes.ContainsKey($Value)) {
+            throw "$Name uses an unsupported first-party legal route"
+        }
+        $routeFile = Join-Path $PwaRoot $routes[$Value]
+        if (-not (Test-Path -LiteralPath $routeFile -PathType Leaf)) {
+            throw "$Name points to a missing first-party legal route"
+        }
+        return
+    }
+
+    Assert-HttpsUrl $Name $Value
 }
 
 function Invoke-NpmStep([string]$Label, [string[]]$Arguments) {
@@ -132,10 +156,13 @@ if ([string]::IsNullOrWhiteSpace($PrivacyUrl)) {
 if ([string]::IsNullOrWhiteSpace($AiTermsUrl)) {
     $AiTermsUrl = Get-JsonPropertyValue $auth @("ai_terms_url", "AI_TERMS_URL")
 }
+if ([string]::IsNullOrWhiteSpace($TermsUrl)) { $TermsUrl = "/terms" }
+if ([string]::IsNullOrWhiteSpace($PrivacyUrl)) { $PrivacyUrl = "/privacy" }
+if ([string]::IsNullOrWhiteSpace($AiTermsUrl)) { $AiTermsUrl = "/ai-terms" }
 
-Assert-HttpsUrl "NEXT_PUBLIC_AAS_TERMS_URL" $TermsUrl
-Assert-HttpsUrl "NEXT_PUBLIC_AAS_PRIVACY_URL" $PrivacyUrl
-Assert-HttpsUrl "NEXT_PUBLIC_AAS_AI_TERMS_URL" $AiTermsUrl
+Assert-PublicLegalLink "NEXT_PUBLIC_AAS_TERMS_URL" $TermsUrl $PwaRoot
+Assert-PublicLegalLink "NEXT_PUBLIC_AAS_PRIVACY_URL" $PrivacyUrl $PwaRoot
+Assert-PublicLegalLink "NEXT_PUBLIC_AAS_AI_TERMS_URL" $AiTermsUrl $PwaRoot
 
 $swPath = Join-Path $PwaRoot "public\sw.js"
 $manifestPath = Join-Path $PwaRoot "public\manifest.webmanifest"
@@ -194,9 +221,10 @@ $report = [ordered]@{
     node_version = $nodeVersionRaw
     supabase_public_config_present = $true
     secret_key_rejected = $true
-    terms_https = $true
-    privacy_https = $true
-    ai_terms_https = $true
+    legal_links_valid = $true
+    terms_link = $TermsUrl
+    privacy_link = $PrivacyUrl
+    ai_terms_link = $AiTermsUrl
     pwa_assets_present = $true
     service_worker_auth_guards_present = $true
     service_worker_cache_generation = "phase17-prod-v1"
