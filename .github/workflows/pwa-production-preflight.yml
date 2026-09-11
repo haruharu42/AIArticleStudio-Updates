@@ -10,6 +10,7 @@ on:
       - "scripts/Test-AAS-Cloudflare-Connection.ps1"
       - "scripts/Test-AAS-Cloudflare-Worker-Name.ps1"
       - "scripts/Publish-AAS-PWA-Preview-Version.ps1"
+      - "scripts/Bootstrap-AAS-PWA-Preview-Worker.ps1"
       - "docs/pwa-production-rollout.md"
       - ".github/workflows/pwa-production-preflight.yml"
   workflow_dispatch:
@@ -117,6 +118,9 @@ jobs:
             ? config.images.some((item) => item?.binding === 'IMAGES')
             : config.images?.binding === 'IMAGES';
           if (!imagesBinding) throw new Error('IMAGES binding missing');
+          if (config.route || (Array.isArray(config.routes) && config.routes.length > 0)) {
+            throw new Error('production routes must be absent during preview preparation');
+          }
           const serialized = JSON.stringify(config);
           if (/sb_secret_|service[_-]?role/i.test(serialized)) {
             throw new Error('Secret/service-role marker found in generated Worker config');
@@ -161,7 +165,8 @@ jobs:
             '.\scripts\Prepare-AAS-PWA-Production.ps1',
             '.\scripts\Test-AAS-Cloudflare-Connection.ps1',
             '.\scripts\Test-AAS-Cloudflare-Worker-Name.ps1',
-            '.\scripts\Publish-AAS-PWA-Preview-Version.ps1'
+            '.\scripts\Publish-AAS-PWA-Preview-Version.ps1',
+            '.\scripts\Bootstrap-AAS-PWA-Preview-Worker.ps1'
           )) {
             $tokens = $null
             $errors = $null
@@ -236,6 +241,37 @@ jobs:
             throw 'Preview publisher must reject secret/service-role material before build or upload'
           }
           Write-Host 'Cloudflare preview-version publisher safety: PASS'
+
+      - name: Validate first-worker bootstrap safety
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Get-Content -LiteralPath '.\scripts\Bootstrap-AAS-PWA-Preview-Worker.ps1' -Raw -Encoding UTF8
+          if ($source -notmatch 'ConfirmBootstrapDeploy') {
+            throw 'Bootstrap helper must require an explicit confirmation switch'
+          }
+          if ($source -notmatch 'versions.+list') {
+            throw 'Bootstrap helper must verify that the Worker does not already exist'
+          }
+          if ($source -notmatch 'workers_dev must be false') {
+            throw 'Bootstrap helper must enforce workers_dev=false'
+          }
+          if ($source -notmatch 'preview_urls must be true') {
+            throw 'Bootstrap helper must enforce preview_urls=true'
+          }
+          if ($source -notmatch 'Production routes must be absent') {
+            throw 'Bootstrap helper must reject production routes'
+          }
+          if ($source -notmatch 'deploy.+--dry-run') {
+            throw 'Bootstrap helper must run a dry-run before the first write'
+          }
+          if ($source -notmatch 'Invoke-WranglerCapture\s+\$Wrangler\s+@\("deploy"') {
+            throw 'Bootstrap helper must use the guarded Wrangler capture for the first deployment'
+          }
+          if ($source -notmatch 'service\[_-\]\?role|sb_secret_') {
+            throw 'Bootstrap helper must reject secret/service-role material'
+          }
+          Write-Host 'Cloudflare first-worker bootstrap safety: PASS'
 
       - name: Run production helper against first-party legal routes
         shell: powershell
