@@ -228,7 +228,7 @@ jobs:
           if ($source -notmatch 'ConfirmPreviewUpload') {
             throw 'Preview publisher must require an explicit confirmation switch'
           }
-          if ($source -notmatch 'versions\s+upload') {
+          if ($source -notmatch '(?s)"versions"\s*,\s*"upload"') {
             throw 'Preview publisher must use wrangler versions upload'
           }
           if ($source -notmatch 'preview-alias') {
@@ -250,7 +250,7 @@ jobs:
           if ($source -notmatch 'ConfirmBootstrapDeploy') {
             throw 'Bootstrap helper must require an explicit confirmation switch'
           }
-          if ($source -notmatch 'versions.+list') {
+          if ($source -notmatch '(?s)"versions"\s*,\s*"list"') {
             throw 'Bootstrap helper must verify that the Worker does not already exist'
           }
           if ($source -notmatch 'workers_dev must be false') {
