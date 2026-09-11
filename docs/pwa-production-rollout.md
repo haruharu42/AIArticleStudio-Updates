@@ -83,13 +83,15 @@ Cloudflare Workersを採用する場合:
 2. preview Worker名が未使用であることをread-onlyで確認する。
 3. 実Supabase公開設定でproduction build + Wrangler dry-runを実機確認する。
 4. `workers_dev: false` / `preview_urls: true` を維持する。
-5. 明示承認後に `wrangler versions upload --preview-alias aas-preview` でpreview versionだけをuploadする。
-6. 通常のproduction deploymentは行わない。
-7. Preview URLを販売ページへ掲載しない。
+5. 新規Workerでは最初の `versions upload` が許可されないため、初回のみ `Bootstrap-AAS-PWA-Preview-Worker.ps1 -ConfirmBootstrapDeploy` でWorker deployment objectを作成する。
+6. bootstrap helperはWorker未存在、production routesなし、`workers_dev=false`、`preview_urls=true`、secret/service_roleなし、dry-run PASSをすべて確認してから初回deployを実行する。
+7. bootstrap後の更新は `wrangler versions upload --preview-alias aas-preview` でpreview versionだけをuploadする。
+8. 通常のproduction workers.dev route、custom production route、custom domainはこのGateでは有効化しない。
+9. Preview URLを販売ページへ掲載しない。
 
-2026-09-11 JST時点で、Cloudflare OAuth認証はPASSし、`ai-article-studio-pwa-preview` はread-only確認で未使用と判定済み。Workerはまだ作成・更新・upload・deployしていない。
+2026-09-11 JST時点で、Cloudflare OAuth認証はPASSし、`ai-article-studio-pwa-preview` はread-only確認で未使用と判定済み。初回の `wrangler versions upload` はCloudflareのfirst-worker制約で停止したため、追加writeを行わずbootstrap承認待ちとした。その後、ユーザーからfirst-worker bootstrap deployの明示承認を受領済み。
 
-専用スクリプト `scripts/Publish-AAS-PWA-Preview-Version.ps1` は `-ConfirmPreviewUpload` がない限りCloudflareへ何もuploadしない。実行時も `wrangler deploy` ではなく `wrangler versions upload` を使用し、production trafficへ昇格させない。
+専用スクリプト `scripts/Bootstrap-AAS-PWA-Preview-Worker.ps1` は `-ConfirmBootstrapDeploy` がない限りCloudflareへ何も作成しない。通常の `scripts/Publish-AAS-PWA-Preview-Version.ps1` はWorker未作成時にbootstrap requiredとして停止する。
 
 Preview URLは外部から到達可能な公開URLになるため、秘密情報を埋め込まず、必要に応じてCloudflare Access等で保護する。
 
