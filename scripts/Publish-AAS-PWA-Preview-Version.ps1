@@ -37,6 +37,28 @@ function Invoke-NpmStep([string]$Label, [string[]]$Arguments) {
     Write-Host "PASS $Label" -ForegroundColor Green
 }
 
+function Invoke-WranglerCapture {
+    param(
+        [Parameter(Mandatory = $true)] [string]$Wrangler,
+        [Parameter(Mandatory = $true)] [string[]]$Arguments
+    )
+
+    $oldPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $output = @(& $Wrangler @Arguments 2>&1)
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $oldPreference
+    }
+
+    return [pscustomobject]@{
+        ExitCode = $exitCode
+        Text = (($output | ForEach-Object { [string]$_ }) -join "`n")
+    }
+}
+
 if (-not $ConfirmPreviewUpload) {
     Write-Host "REFUSED: -ConfirmPreviewUpload is required." -ForegroundColor Yellow
     Write-Host "No Cloudflare version was uploaded."
@@ -160,17 +182,40 @@ try {
             throw "Pinned Wrangler executable not found"
         }
 
-        $oldPreference = $ErrorActionPreference
-        try {
-            $ErrorActionPreference = "Continue"
-            $whoami = @(& $Wrangler whoami --json 2>&1)
-            $whoamiExit = $LASTEXITCODE
-        }
-        finally {
-            $ErrorActionPreference = $oldPreference
-        }
-        if ($whoamiExit -ne 0) { throw "Cloudflare authentication is not active" }
+        $whoami = Invoke-WranglerCapture $Wrangler @("whoami", "--json")
+        if ($whoami.ExitCode -ne 0) { throw "Cloudflare authentication is not active" }
         Write-Host "PASS Cloudflare authentication" -ForegroundColor Green
+
+        $existing = Invoke-WranglerCapture $Wrangler @("versions", "list", "--name", $WorkerName, "--json")
+        if ($existing.ExitCode -ne 0) {
+            $notFoundPatterns = @(
+                '(?i)\b404\b',
+                '(?i)not found',
+                '(?i)does not exist',
+                '(?i)could not find',
+                "(?i)couldn't find",
+                '(?i)no worker',
+                '(?i)worker.+missing',
+                '(?i)script.+missing',
+                '(?i)code[^0-9]*10090'
+            )
+            $isMissing = $false
+            foreach ($pattern in $notFoundPatterns) {
+                if ($existing.Text -match $pattern) {
+                    $isMissing = $true
+                    break
+                }
+            }
+            if ($isMissing) {
+                Write-Host ""
+                Write-Host "BOOTSTRAP REQUIRED" -ForegroundColor Yellow
+                Write-Host "Cloudflare requires the first Worker upload to use wrangler deploy."
+                Write-Host "Run Bootstrap-AAS-PWA-Preview-Worker.ps1 with separate explicit approval first."
+                Write-Host "No Cloudflare version was uploaded by this command."
+                exit 5
+            }
+            throw "Worker existence could not be classified safely"
+        }
 
         $DryRunDir = Join-Path $WorkPwa ".aas-preview-dry-run"
         & $Wrangler deploy --dry-run --config $WranglerConfig.FullName --outdir $DryRunDir
@@ -182,28 +227,18 @@ try {
         Write-Host "Worker = $WorkerName"
         Write-Host "Alias  = $PreviewAlias"
 
-        $oldPreference = $ErrorActionPreference
-        try {
-            $ErrorActionPreference = "Continue"
-            $uploadOutput = @(
-                & $Wrangler versions upload `
-                    --config $WranglerConfig.FullName `
-                    --preview-alias $PreviewAlias `
-                    --message "AAS PWA preview $expectedHead" `
-                    2>&1
-            )
-            $uploadExit = $LASTEXITCODE
-        }
-        finally {
-            $ErrorActionPreference = $oldPreference
-        }
-        if ($uploadExit -ne 0) {
+        $upload = Invoke-WranglerCapture $Wrangler @(
+            "versions", "upload",
+            "--config", $WranglerConfig.FullName,
+            "--preview-alias", $PreviewAlias,
+            "--message", "AAS PWA preview $expectedHead"
+        )
+        if ($upload.ExitCode -ne 0) {
             throw "Cloudflare preview version upload failed"
         }
         $uploaded = $true
 
-        $uploadText = (($uploadOutput | ForEach-Object { [string]$_ }) -join "`n")
-        $urlMatch = [regex]::Match($uploadText, 'https://[a-z0-9.-]+\.workers\.dev(?:/[^\s]*)?', 'IgnoreCase')
+        $urlMatch = [regex]::Match($upload.Text, 'https://[a-z0-9.-]+\.workers\.dev(?:/[^\s]*)?', 'IgnoreCase')
         if ($urlMatch.Success) {
             $previewUrl = $urlMatch.Value
         }
