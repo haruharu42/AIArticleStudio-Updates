@@ -9,23 +9,15 @@
   box-shadow: 0 12px 34px rgb(23 69 135 / 6%);
 }
 
-.beginner-openai-section .beginner-section-heading {
-  margin: 0 0 6px;
-}
-
+.beginner-openai-section .beginner-section-heading { margin: 0 0 6px; }
 .beginner-openai-help,
-.beginner-openai-note {
-  color: #7185a2;
-  font-size: 10px;
-  line-height: 1.7;
-}
-
+.beginner-openai-note { color: #7185a2; font-size: 10px; line-height: 1.7; }
 .beginner-openai-help { margin: 0 0 14px; }
 .beginner-openai-note { display: block; margin-top: 10px; }
 
 .beginner-openai-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -106,7 +98,7 @@
 
 .openai-tools-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -126,27 +118,15 @@
 .openai-tools-grid b { color: #b8cced; font-size: 10px; }
 .openai-tools-note { margin: 12px 0 0; }
 
+@media (max-width: 900px) {
+  .openai-tools-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (max-width: 720px) {
   .beginner-openai-grid,
-  .openai-tools-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .openai-tools-heading {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .image-prompt-card > header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .image-prompt-actions {
-    width: 100%;
-  }
-
-  .image-prompt-actions > * {
-    flex: 1 1 auto;
-  }
+  .openai-tools-grid { grid-template-columns: 1fr; }
+  .openai-tools-heading { align-items: flex-start; flex-direction: column; }
+  .image-prompt-card > header { align-items: flex-start; flex-direction: column; }
+  .image-prompt-actions { width: 100%; }
+  .image-prompt-actions > * { flex: 1 1 auto; }
 }
