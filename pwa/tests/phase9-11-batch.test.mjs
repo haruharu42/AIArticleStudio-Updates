@@ -74,9 +74,10 @@ test("Phase 10 admin surface uses existing account and entitlement RPCs plus inv
   assert.doesNotMatch(`${api}\n${page}`, /sb_secret_|service[_-]?role/i);
 });
 
-test("Phase 11 article creator saves an atomic article/workspace using current quota and ownership APIs", async () => {
+test("Phase 11 article creator saves an atomic article/workspace and restores guided dropdowns", async () => {
   const api = await read("lib/phase11-create.ts");
   const page = await read("components/phase11-create-page.tsx");
+  const options = await read("lib/phase18-content-options.ts");
   const route = await read("app/create/page.tsx");
 
   assert.match(api, /"create_article_with_workspace"/);
@@ -106,28 +107,45 @@ test("Phase 11 article creator saves an atomic article/workspace using current q
   ]) {
     assert.match(page, new RegExp(label));
   }
+  assert.match(page, /GENRE_OPTIONS\.map/);
+  assert.match(page, /subgenreOptions\.map/);
+  assert.match(page, /AGE_GROUP_OPTIONS\.map/);
+  assert.match(page, /GENDER_OPTIONS\.map/);
+  assert.match(page, /TARGET_LENGTH_OPTIONS\.map/);
+  assert.match(options, /AI副業/);
+  assert.match(options, /生活・暮らし/);
+  assert.match(options, /美容/);
+  assert.match(options, /ガジェット/);
+  assert.match(options, /SNS運用/);
   assert.match(page, /prompt_export/);
   assert.match(page, /createArticleFromWizard/);
+  assert.match(page, /beginner-creator-page/);
   assert.match(route, /Phase11CreatePage/);
 });
 
-test("root keeps the stable shell and adds progressive Phase 9-17 entry points", async () => {
+test("root uses the beginner-first shell without the floating quick navigation", async () => {
   const rootPage = await read("app/page.tsx");
-  const quick = await read("components/phase9-11-quick-nav.tsx");
+  const shell = await read("components/phase18-beginner-home.tsx");
   const layout = await read("app/layout.tsx");
-  const css = await read("app/phase9-11.css");
+  const css = await read("app/phase18-beginner.css");
 
-  assert.match(rootPage, /Phase7App/);
-  assert.match(rootPage, /Phase9To11QuickNav/);
-  assert.match(quick, /loadAccessState/);
-  assert.match(quick, /href="\/create"/);
-  assert.match(quick, /href="\/invite"/);
-  assert.match(quick, /href="\/admin"/);
-  assert.match(layout, /phase9-11\.css/);
+  assert.match(rootPage, /Phase18BeginnerHome/);
+  assert.doesNotMatch(rootPage, /Phase9To11QuickNav/);
+  assert.match(shell, /Phase7App/);
+  assert.match(shell, /Phase7Library/);
+  assert.match(shell, /記事を作る/);
+  assert.match(shell, /記事ライブラリ/);
+  assert.match(shell, /画像を作る/);
+  assert.match(shell, /SNS投稿を作る/);
+  assert.match(shell, /記事作成<\/button>/);
+  assert.match(shell, /ライブラリ<\/button>/);
+  assert.match(shell, /機能<\/button>/);
+  assert.doesNotMatch(shell, />画像<\/button>/);
+  assert.match(layout, /phase18-beginner\.css/);
   assert.match(layout, /"aas-phase": "17"/);
   assert.match(layout, /"aas-release-stage": "production-preview"/);
-  assert.doesNotMatch(layout, /phase8-local/);
-  assert.match(css, /\.phase-quick-nav/);
+  assert.match(css, /\.beginner-bottom-nav/);
+  assert.match(css, /\.beginner-action-grid/);
 });
 
 test("package runs the Phase 9-11 contract test without changing dependency versions", async () => {
