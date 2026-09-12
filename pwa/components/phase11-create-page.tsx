@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { OPENAI_LINKS } from "@/lib/openai-links";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   buildArticlePrompt,
@@ -50,15 +51,7 @@ const initialDraft: ArticleCreationDraft = {
   saveStatus: "writing",
 };
 
-const steps = [
-  "生成方法",
-  "画像計画",
-  "本文条件",
-  "タイトル",
-  "本文生成",
-  "プレビュー",
-  "保存",
-];
+const steps = ["生成方法", "画像計画", "本文条件", "タイトル", "本文生成", "プレビュー", "保存"];
 
 function copyText(value: string, setMessage: (value: string) => void) {
   if (!navigator.clipboard) {
@@ -128,12 +121,7 @@ export function Phase11CreatePage() {
     setDraft((current) => ({
       ...current,
       articleType: value,
-      price:
-        value === "free"
-          ? null
-          : current.price !== null && current.price > 0
-            ? current.price
-            : 1,
+      price: value === "free" ? null : current.price !== null && current.price > 0 ? current.price : 1,
     }));
   };
 
@@ -229,13 +217,27 @@ export function Phase11CreatePage() {
             <p className="panel-muted">候補をタップするだけで選択できます。必要なら自分で書き換えることもできます。</p>
             <div className="title-candidates">{localTitles.map((title) => <button type="button" key={title} onClick={() => patch("title", title)} className={draft.title === title ? "active" : ""}>{title}</button>)}</div>
             <label className="route-field"><span>選択タイトル</span><input value={draft.title} onChange={(e) => patch("title", e.target.value)} /></label>
-            {draft.generationMode === "prompt_export" && <><label className="route-field"><span>ChatGPT用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label><button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button></>}
+            {draft.generationMode === "prompt_export" && <>
+              <label className="route-field"><span>ChatGPT用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
+              <div className="openai-prompt-actions">
+                <button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button>
+                <a className="openai-launch-action" href={OPENAI_LINKS.chatgpt} target="_blank" rel="noreferrer">ChatGPTを開く ↗</a>
+              </div>
+              <p className="beginner-help">「コピー」→「ChatGPTを開く」の順に進み、ChatGPTへ貼り付けてください。</p>
+            </>}
           </div>
         )}
 
         {step === 4 && (
           <div className="wizard-pane"><p className="eyebrow">STEP 5</p><h2>本文を準備します</h2>
-            {draft.generationMode === "prompt_export" && <><label className="route-field"><span>ChatGPT用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label><button className="secondary-action" type="button" onClick={() => copyText(articlePrompt, setMessage)}>完成記事プロンプトをコピー</button></>}
+            {draft.generationMode === "prompt_export" && <>
+              <label className="route-field"><span>ChatGPT用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
+              <div className="openai-prompt-actions">
+                <button className="secondary-action" type="button" onClick={() => copyText(articlePrompt, setMessage)}>完成記事プロンプトをコピー</button>
+                <a className="openai-launch-action" href={OPENAI_LINKS.chatgpt} target="_blank" rel="noreferrer">ChatGPTを開く ↗</a>
+              </div>
+              <p className="beginner-help">生成された完成記事をコピーして、下の本文欄へ貼り付けます。</p>
+            </>}
             <label className="route-field"><span>{draft.generationMode === "prompt_export" ? "生成した本文をここへ貼り付け" : "本文"}</span><textarea className="body-area" value={draft.body} onChange={(e) => patch("body", e.target.value)} placeholder="# 見出し\n本文…" /></label>
           </div>
         )}
