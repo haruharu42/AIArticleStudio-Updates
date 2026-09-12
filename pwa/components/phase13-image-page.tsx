@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { OPENAI_LINKS } from "@/lib/openai-links";
 import {
   getCloudArticleDetail,
   listCloudArticles,
@@ -23,30 +24,13 @@ type Gate =
 type PublicationTarget = "note" | "tips" | "brain" | "blog";
 
 function objectValue(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
-function stringValue(value: unknown): string {
-  return typeof value === "string" ? value : "";
-}
-
-function boolValue(value: unknown, fallback: boolean): boolean {
-  return typeof value === "boolean" ? value : fallback;
-}
-
-function integerValue(value: unknown, fallback: number): number {
-  return typeof value === "number" && Number.isSafeInteger(value)
-    ? value
-    : fallback;
-}
-
-function publicationTarget(value: string): PublicationTarget {
-  return value === "note" || value === "tips" || value === "brain" || value === "blog"
-    ? value
-    : "note";
-}
+function stringValue(value: unknown): string { return typeof value === "string" ? value : ""; }
+function boolValue(value: unknown, fallback: boolean): boolean { return typeof value === "boolean" ? value : fallback; }
+function integerValue(value: unknown, fallback: number): number { return typeof value === "number" && Number.isSafeInteger(value) ? value : fallback; }
+function publicationTarget(value: string): PublicationTarget { return value === "note" || value === "tips" || value === "brain" || value === "blog" ? value : "note"; }
 
 export function Phase13ImagePromptPage() {
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
@@ -68,34 +52,19 @@ export function Phase13ImagePromptPage() {
         const client = getSupabaseClient();
         const { data: { user }, error } = await client.auth.getUser();
         if (!active) return;
-        if (error || !user) {
-          setGate({ kind: "signed_out" });
-          return;
-        }
+        if (error || !user) { setGate({ kind: "signed_out" }); return; }
         const { data: profile, error: profileError } = await client
           .from("profiles")
           .select("id,aas_user_id,status")
           .eq("id", user.id)
           .single();
-        if (
-          profileError ||
-          !profile ||
-          profile.id !== user.id ||
-          profile.status !== "active"
-        ) {
-          throw new Error("activeプロフィールを確認できません。");
-        }
+        if (profileError || !profile || profile.id !== user.id || profile.status !== "active") throw new Error("activeプロフィールを確認できません。");
         const next = await listCloudArticles(client, user.id, 200);
         if (!active) return;
         setArticles(next);
         setGate({ kind: "ready", ownerId: user.id, aasId: profile.aas_user_id });
       } catch (error) {
-        if (active) {
-          setGate({
-            kind: "error",
-            message: error instanceof Error ? error.message : "初期化に失敗しました。",
-          });
-        }
+        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "初期化に失敗しました。" });
       }
     };
     void boot();
@@ -104,16 +73,11 @@ export function Phase13ImagePromptPage() {
 
   const choose = async (articleId: string) => {
     if (gate.kind !== "ready") return;
-    setDetail(null);
-    setMessage("");
+    setDetail(null); setMessage("");
     if (!articleId) return;
     setBusy(true);
     try {
-      const next = await getCloudArticleDetail(
-        getSupabaseClient(),
-        gate.ownerId,
-        articleId,
-      );
+      const next = await getCloudArticleDetail(getSupabaseClient(), gate.ownerId, articleId);
       const request = next.workspace.requestJson;
       const plan = next.workspace.imagePlanJson;
       const cover = objectValue(plan.cover);
@@ -151,7 +115,7 @@ export function Phase13ImagePromptPage() {
   const copy = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      setMessage("画像生成プロンプトをコピーしました。");
+      setMessage("画像生成プロンプトをコピーしました。次にChatGPT Imagesを開いて貼り付けてください。");
     } catch {
       setMessage("自動コピーできません。テキスト欄からコピーしてください。");
     }
@@ -185,9 +149,7 @@ export function Phase13ImagePromptPage() {
           <span>元記事</span>
           <select defaultValue="" onChange={(event) => void choose(event.target.value)} disabled={busy}>
             <option value="">記事を選択</option>
-            {articles.map((article) => (
-              <option key={article.id} value={article.id}>{article.title}</option>
-            ))}
+            {articles.map((article) => <option key={article.id} value={article.id}>{article.title}</option>)}
           </select>
         </label>
 
@@ -214,7 +176,10 @@ export function Phase13ImagePromptPage() {
                 <article className="image-prompt-card" key={`${item.kind}-${item.order}`}>
                   <header>
                     <div><span>{item.kind === "cover" ? "アイキャッチ" : `挿絵 ${item.order}`}</span>{item.insertionMarker && <small>{`<!-- ${item.insertionMarker} -->`}</small>}</div>
-                    <button className="secondary-action" type="button" onClick={() => void copy(item.prompt)}>コピー</button>
+                    <div className="image-prompt-actions">
+                      <button className="secondary-action" type="button" onClick={() => void copy(item.prompt)}>コピー</button>
+                      <a className="openai-launch-action" href={OPENAI_LINKS.images} target="_blank" rel="noreferrer">ChatGPT Imagesを開く ↗</a>
+                    </div>
                   </header>
                   <textarea className="prompt-area" readOnly value={item.prompt} />
                 </article>
@@ -227,7 +192,7 @@ export function Phase13ImagePromptPage() {
 
         {articles.length === 0 && <p className="panel-muted">記事がありません。先に記事を作成してください。</p>}
         {message && <div className="route-notice">{message}</div>}
-        <p className="panel-muted">この画面は安全な画像生成プロンプトを作成します。実画像の生成APIや保存処理は、秘密鍵をブラウザーへ置かない実行層を接続した後に追加します。</p>
+        <p className="panel-muted">この画面は画像生成プロンプトを作成します。プロンプトをコピーして公式のChatGPT Imagesで生成し、完成画像は記事ライブラリの画像管理から保存できます。</p>
       </section>
     </main>
   );
