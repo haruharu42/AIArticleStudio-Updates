@@ -25,14 +25,16 @@ test("pins patched framework versions, current release metadata, and PWA cache g
   assert.doesNotMatch(worker, /aas-pwa-phase8-v1/);
 });
 
-test("keeps article creation deferred and opens image management through owned articles", async () => {
+test("keeps article creation deferred, owned image assets in articles, and routes image planning to /images", async () => {
   const app = await read("components/phase6-app.tsx");
   const library = await read("components/phase7-library.tsx");
 
   assert.match(app, /Phase7Library/);
   assert.match(app, /navigate\("library"\)/);
   assert.match(app, /記事を作る<small>準備中<\/small>/);
-  assert.match(app, /記事の画像<small>記事から選択<\/small>/);
+  assert.match(app, /const navigateRoute = \(path: string\) => \{ if \(mayLeave\(\)\) window\.location\.assign\(path\); \};/);
+  assert.match(app, /記事の画像<small>画像計画<\/small>/);
+  assert.equal((app.match(/navigateRoute\("\/images"\)/g) || []).length, 2);
   assert.match(library, /listCloudArticles/);
   assert.match(library, /getCloudArticleDetail/);
   assert.match(library, /updateCloudArticle/);
