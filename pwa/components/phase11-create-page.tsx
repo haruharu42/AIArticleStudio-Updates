@@ -53,6 +53,50 @@ const initialDraft: ArticleCreationDraft = {
 
 const steps = ["生成方法", "画像計画", "本文条件", "タイトル", "本文生成", "プレビュー", "保存"];
 
+function initialDraftFromLocation(): ArticleCreationDraft {
+  const next = { ...initialDraft };
+  if (typeof window === "undefined") return next;
+
+  const params = new URLSearchParams(window.location.search);
+  const publicationTarget = params.get("publicationTarget");
+  if (publicationTarget === "note" || publicationTarget === "tips" || publicationTarget === "brain" || publicationTarget === "blog") {
+    next.publicationTarget = publicationTarget;
+  }
+
+  const articleType = params.get("articleType");
+  if (articleType === "free" || articleType === "paid") {
+    next.articleType = articleType;
+    next.price = articleType === "paid" ? 1 : null;
+  }
+
+  const genre = params.get("genre");
+  if (genre && GENRE_OPTIONS.some((option) => option === genre)) next.genre = genre;
+
+  const subgenre = params.get("subgenre");
+  const allowedSubgenres = subgenreOptionsFor(next.genre);
+  if (subgenre && allowedSubgenres.includes(subgenre)) next.subgenre = subgenre;
+  else if (!allowedSubgenres.includes(next.subgenre)) next.subgenre = allowedSubgenres[0] ?? "AIおまかせ";
+
+  const ageGroup = params.get("ageGroup");
+  if (ageGroup && AGE_GROUP_OPTIONS.some((option) => option === ageGroup)) next.ageGroup = ageGroup;
+
+  const gender = params.get("gender");
+  if (gender && GENDER_OPTIONS.some((option) => option === gender)) next.gender = gender;
+
+  const targetLength = Number(params.get("targetLength"));
+  if (TARGET_LENGTH_OPTIONS.some((option) => option.value === targetLength)) next.targetLength = targetLength;
+
+  const inlineCount = Number(params.get("inlineCount"));
+  if (Number.isSafeInteger(inlineCount) && inlineCount >= 1 && inlineCount <= 5) {
+    next.inlineEnabled = true;
+    next.inlineCount = inlineCount;
+  } else if (params.get("inlineCount") === "0") {
+    next.inlineEnabled = false;
+  }
+
+  return next;
+}
+
 function copyText(value: string, setMessage: (value: string) => void) {
   if (!navigator.clipboard) {
     setMessage("このブラウザーでは自動コピーできません。テキストを選択してコピーしてください。");
@@ -67,11 +111,17 @@ function copyText(value: string, setMessage: (value: string) => void) {
 export function Phase11CreatePage() {
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<ArticleCreationDraft>(initialDraft);
+  const [draft, setDraft] = useState<ArticleCreationDraft>(() => initialDraftFromLocation());
   const [tagsText, setTagsText] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [createdId, setCreatedId] = useState("");
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("from") === "home-quick-setup") {
+      setMessage("ホームで選んだ基本設定を引き継ぎました。順番に確認しながら進めてください。");
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -252,7 +302,7 @@ export function Phase11CreatePage() {
 
         {step === 6 && (
           <div className="wizard-pane"><p className="eyebrow">STEP 7</p><h2>記事ライブラリへ保存</h2>
-            <p className="panel-muted">記事・編集条件・画像計画を1つのWorkspaceとして保存します。Windows版から同じ記事を続けて編集できます。</p>
+            <p className="panel-muted">記事・編集条件・画像計画を1つのWorkspaceとして保存します。保存後はPWAの記事ライブラリからいつでも続けて編集できます。</p>
             <label className="route-field"><span>保存状態</span><select value={draft.saveStatus} onChange={(e) => patch("saveStatus", e.target.value as SaveStatus)}><option value="draft">下書き</option><option value="writing">執筆中</option><option value="ready">完成</option></select></label>
             <dl className="route-meta"><div><dt>タイトル</dt><dd>{draft.title || "未入力"}</dd></div><div><dt>掲載先</dt><dd>{draft.publicationTarget}</dd></div><div><dt>ジャンル</dt><dd>{draft.genre} / {draft.subgenre}</dd></div><div><dt>本文</dt><dd>{draft.body.length.toLocaleString()}文字</dd></div><div><dt>画像</dt><dd>cover {draft.coverEnabled ? "ON" : "OFF"} / inline {draft.inlineEnabled ? draft.inlineCount : 0}</dd></div></dl>
             {!createdId && <button className="primary-action" type="button" disabled={busy || !draft.title.trim()} onClick={() => void save()}>{busy ? "保存中…" : "記事ライブラリへ保存"}</button>}
