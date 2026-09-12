@@ -101,13 +101,14 @@ test("Phase 17 reports only internal article metrics until external analytics ar
   assert.match(route, /Phase17AnalyticsPage/);
 });
 
-test("tools hub and quick navigation expose the new functional routes on the stable root shell", async () => {
+test("tools hub and beginner-first root expose all functional routes without image-only navigation", async () => {
   const tools = await read("components/phase-tools-page.tsx");
   const toolsRoute = await read("app/tools/page.tsx");
-  const quick = await read("components/phase9-11-quick-nav.tsx");
+  const shell = await read("components/phase18-beginner-home.tsx");
   const rootPage = await read("app/page.tsx");
   const layout = await read("app/layout.tsx");
   const css = await read("app/phase12-17.css");
+  const beginnerCss = await read("app/phase18-beginner.css");
 
   for (const href of ["/create", "/images", "/sns", "/sidejob", "/publish", "/analytics"]) {
     assert.match(tools, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
@@ -115,15 +116,25 @@ test("tools hub and quick navigation expose the new functional routes on the sta
   assert.match(tools, /try \{/);
   assert.match(tools, /getSupabaseClient\(\)/);
   assert.match(toolsRoute, /PhaseToolsPage/);
-  assert.match(quick, /href="\/tools"/);
-  assert.match(rootPage, /Phase7App/);
+  assert.match(rootPage, /Phase18BeginnerHome/);
+  assert.match(shell, /Phase7App/);
+  assert.match(shell, /href="\/tools"/);
+  assert.match(shell, /href="\/images"/);
+  assert.match(shell, /href="\/sns"/);
+  assert.match(shell, /記事作成<\/button>/);
+  assert.match(shell, /ライブラリ<\/button>/);
+  assert.match(shell, /機能<\/button>/);
+  assert.doesNotMatch(shell, />画像<\/button>/);
   assert.match(layout, /phase12-17\.css/);
+  assert.match(layout, /phase18-beginner\.css/);
   assert.match(layout, /"aas-phase": "17"/);
   assert.match(layout, /"aas-release-stage": "production-preview"/);
   assert.doesNotMatch(layout, /phase8-local/);
   assert.match(css, /\.tool-grid/);
   assert.match(css, /\.analytics-grid/);
   assert.match(css, /\.image-prompt-list/);
+  assert.match(beginnerCss, /\.beginner-bottom-nav/);
+  assert.match(beginnerCss, /\.beginner-action-grid/);
 });
 
 test("package includes the Phase 12-17 contract test and keeps dependency pins unchanged", async () => {
