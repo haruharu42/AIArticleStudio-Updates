@@ -1,14 +1,15 @@
-name: PWA Deploy Preview
+name: "🚀 Previewへデプロイ"
+run-name: "🚀 Preview • ${{ inputs.expected_sha }}"
 
 on:
   workflow_dispatch:
     inputs:
       expected_sha:
-        description: "Exact 40-character commit SHA to publish"
+        description: "Previewへ出す40文字のコミットSHA"
         required: true
         type: string
       confirmation:
-        description: "Type DEPLOY_PREVIEW to confirm preview-only upload"
+        description: "Preview限定デプロイを確認するには DEPLOY_PREVIEW と入力"
         required: true
         type: string
 
