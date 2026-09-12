@@ -546,7 +546,10 @@ export async function getCloudArticleDetail(
 }
 
 function validateArticlePatch(patch: ArticlePatch): ArticlePatch {
-  if (patch.title.length > 500) throw validationError("タイトルは500文字以内です。");
+  const title = patch.title.trim();
+  if (!title || title.length > 500) {
+    throw validationError("タイトルは1〜500文字で入力してください。");
+  }
   if (!PUBLICATION_TARGET_PATTERN.test(patch.publication_target)) {
     throw validationError("掲載先は英小文字から始まる英数字・_・-で入力してください。");
   }
@@ -579,6 +582,7 @@ function validateArticlePatch(patch: ArticlePatch): ArticlePatch {
   }
   return {
     ...patch,
+    title,
     genre: patch.genre?.trim() || null,
     subgenre: patch.subgenre?.trim() || null,
     tags: [...new Set(patch.tags.map((tag) => tag.trim()))],
