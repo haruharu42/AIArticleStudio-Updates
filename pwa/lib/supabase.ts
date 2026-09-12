@@ -64,7 +64,7 @@ export function getSupabaseClient(): SupabaseClient {
 }
 
 export const publicLinks = {
-  terms: (process.env.NEXT_PUBLIC_AAS_TERMS_URL ?? "").trim(),
-  privacy: (process.env.NEXT_PUBLIC_AAS_PRIVACY_URL ?? "").trim(),
-  aiTerms: (process.env.NEXT_PUBLIC_AAS_AI_TERMS_URL ?? "").trim(),
+  terms: (process.env.NEXT_PUBLIC_AAS_TERMS_URL ?? "/terms").trim(),
+  privacy: (process.env.NEXT_PUBLIC_AAS_PRIVACY_URL ?? "/privacy").trim(),
+  aiTerms: (process.env.NEXT_PUBLIC_AAS_AI_TERMS_URL ?? "/ai-terms").trim(),
 };

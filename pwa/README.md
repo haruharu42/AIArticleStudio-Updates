@@ -1,6 +1,6 @@
-# AI記事スタジオ PWA — Phase 9–17 implementation batch
+# AI記事スタジオ PWA — Phase 9–17
 
-Phase 8を安定基準として残したまま、PWAを「閲覧/編集中心」から「利用開始・管理・記事制作・SNS/公開管理・内部分析」まで拡張する開発ブランチです。
+Phase 8を安定基準として残したまま、PWAを「閲覧/編集中心」から「利用開始・管理・記事制作・SNS/公開管理・内部分析」まで拡張した実装です。Phase 9–17 は PR #41 で `main` へ統合済みです。
 
 - Phase 9: PWA招待コードの登録画面と、購入・招待をPWA利用権へ変換するDB/RPC契約。
 - Phase 10: active管理者向け共通管理画面。ユーザー承認/停止/再開、Windows/PWA利用権の付与/取消、販売チャネル・期限、PWA招待コードを管理。
@@ -14,9 +14,9 @@ Phase 8を安定基準として残したまま、PWAを「閲覧/編集中心」
 
 既存のPhase 6 Auth/PKCE、Phase 7記事ライブラリ、Phase 8画像管理は置換せず維持します。記事作成は既存の`create_article_with_workspace`を使用し、記事・編集条件・画像計画を同じ所有者のWorkspaceへまとめて保存します。
 
-## 開発中の入口
+## 入口
 
-- `/` — 既存PWAホーム/記事ライブラリ/画像管理。
+- `/` — PWAホーム/記事ライブラリ/画像管理。
 - `/invite` — PWA招待コード登録。
 - `/admin` — active admin専用の共通ユーザー・利用権・招待管理。
 - `/create` — 記事作成ウィザード。
@@ -51,7 +51,7 @@ Phase 11以降の現段階では、直接AI APIを呼ばず「ChatGPTプロン�
 
 招待テーブル/履歴テーブルはpublic/anon/authenticatedから直接アクセス不可で、操作は認証済みRPCへ限定します。管理RPCは既存`private.is_active_admin()`を要求します。招待利用はpending/activeの一般ユーザーだけが行え、`AAS-PWA-BETA`だけを付与します。
 
-本番E2Eでは、管理者による招待作成 → 一般ユーザーによるPWA利用権登録 → 別招待による既存有効利用権の上書き拒否を確認しました。試験データはロールバック/清掃済みで、E2E招待・利用履歴・一時PWA利用権は残していません。
+本番E2Eでは、管理者による招待作成 → 一般ユーザーによるPWA利用権登録 → 別招待による既存有効利用権の上書き拒否を確認しました。試験データは清掃済みで、E2E招待・利用履歴・一時PWA利用権は残していません。
 
 ## 開発と確認
 
@@ -65,15 +65,13 @@ npm test
 npm audit
 ```
 
-GitHub Actionsの`PWA Phase 9-17 CI`で、型検査・lint・build・Phase 6–17回帰・dependency auditを検証します。
+GitHub Actionsの`PWA Phase 9-17 CI`で、型検査・lint・build・Phase 6–17回帰・dependency auditを検証します。本番公開準備では追加の`PWA Production Preflight`で、Cloudflareの生成Wrangler設定、`ASSETS` / `IMAGES` binding、secret marker不在、`wrangler deploy --dry-run`も検証します。
 
-ローカルBrowser E2E用に次を追加しています。
+ローカルBrowser E2E用:
 
 ```powershell
 & .\scripts\Start-AAS-Phase9-17-BrowserE2E.ps1
 ```
-
-これは安定版worktreeを変更せず、Downloads配下へ開発ブランチのisolated worktreeを作成し、インストール済み`config/auth.json`からブラウザー公開可能なSupabase URL/公開キーだけを環境変数へ読み込みます。キー値は表示せず、`127.0.0.1:5173`だけで起動し、主要ルートのHTTP 200 smoke test後にブラウザーを開きます。
 
 終了後:
 
@@ -83,14 +81,26 @@ GitHub Actionsの`PWA Phase 9-17 CI`で、型検査・lint・build・Phase 6–1
 
 ## 公開設定
 
+ブラウザー公開可能な値のみ使用します。
+
 - `NEXT_PUBLIC_AAS_SUPABASE_URL`
 - `NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY`
-- 既存の利用規約・プライバシー・AI利用規約URL
+- `NEXT_PUBLIC_AAS_TERMS_URL`
+- `NEXT_PUBLIC_AAS_PRIVACY_URL`
+- `NEXT_PUBLIC_AAS_AI_TERMS_URL`
 
-秘密鍵・service role・ユーザーJWT・DPAPIセッションを設定やバンドルへ埋め込みません。
+Cloudflare Worker名は公開準備時に `AAS_CLOUDFLARE_WORKER_NAME` で上書きできます。未指定時は安全なpreview名を使用します。
+
+秘密鍵・service role・`sb_secret_*`・ユーザーJWT・DPAPIセッションを設定やバンドルへ埋め込みません。
+
+## Cloudflare Workers公開準備
+
+Cloudflare Worker entry は `worker/index.ts`、Vite/Workers設定は `vite.config.ts` のprogrammatic configで管理します。Worker entryが直接参照する `ASSETS` と `IMAGES` bindingを明示し、production buildが生成するWrangler configを`wrangler deploy --dry-run`で事前検証します。
+
+実際の本番deploy、custom domain接続、Supabase Authの本番redirect更新は、`docs/pwa-production-rollout.md` の Gate PWA-PROD-0〜5に従って別途実施します。
 
 ## 本番公開との境界
 
-本番SupabaseのPhase 9/10 DB差分は適用済みですが、PR #41はまだDraftで`main`へ未マージです。PWA本番デプロイ、Windows release/updater/latest.json変更、外部決済Webhook、サーバー側AI秘密鍵実行、SNS/記事プラットフォームへの自動投稿も未実施です。
+Phase 9–17 は `main` 統合済みですが、PWAの本番デプロイはまだ実施していません。Windows release/updater/latest.json変更、外部決済Webhook、サーバー側AI秘密鍵実行、SNS/記事プラットフォームへの自動投稿も未実施です。
 
-詳細な実装境界は`docs/phase9-11-implementation-batch.md`を参照してください。
+詳細な実装境界は`docs/phase9-11-implementation-batch.md`、`docs/phase12-17-implementation-batch.md`、公開手順は`docs/pwa-production-rollout.md`を参照してください。

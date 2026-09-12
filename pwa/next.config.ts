@@ -22,15 +22,15 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_AAS_TERMS_URL:
       process.env.NEXT_PUBLIC_AAS_TERMS_URL ??
       process.env.AAS_TERMS_URL ??
-      "",
+      "/terms",
     NEXT_PUBLIC_AAS_PRIVACY_URL:
       process.env.NEXT_PUBLIC_AAS_PRIVACY_URL ??
       process.env.AAS_PRIVACY_URL ??
-      "",
+      "/privacy",
     NEXT_PUBLIC_AAS_AI_TERMS_URL:
       process.env.NEXT_PUBLIC_AAS_AI_TERMS_URL ??
       process.env.AAS_AI_TERMS_URL ??
-      "",
+      "/ai-terms",
   },
   poweredByHeader: false,
 };

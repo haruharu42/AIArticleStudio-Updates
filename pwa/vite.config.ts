@@ -5,15 +5,31 @@ import { sites } from "./build/sites-vite-plugin.ts";
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
+const DEFAULT_WORKER_NAME = "ai-article-studio-pwa-preview";
+const CLOUDFLARE_COMPATIBILITY_DATE = "2026-09-11";
 
 const { d1, r2 } = hostingConfig;
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === "seatbelt";
 
-const localBindingConfig = {
+const workerBindingConfig = {
+  name: process.env.AAS_CLOUDFLARE_WORKER_NAME ?? DEFAULT_WORKER_NAME,
   main: "./worker/index.ts",
+  compatibility_date: CLOUDFLARE_COMPATIBILITY_DATE,
   compatibility_flags: ["nodejs_compat"],
+  // Preview versions should be testable without creating a production
+  // workers.dev route. Production routing is a separate release decision.
+  workers_dev: false,
+  preview_urls: true,
+  // The Worker entry uses both bindings directly. Keep them explicit so the
+  // generated Wrangler deployment config matches local Miniflare behavior.
+  assets: {
+    binding: "ASSETS",
+  },
+  images: {
+    binding: "IMAGES",
+  },
   d1_databases: d1
     ? [
         {
@@ -57,7 +73,7 @@ export default defineConfig(async () => {
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         inspectorPort: false,
-        config: localBindingConfig,
+        config: workerBindingConfig,
       }),
     ],
   };

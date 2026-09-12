@@ -5,13 +5,14 @@ import "./phase12-17.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
-  description: "AI記事スタジオのPWA版。記事と画像をWindows版と共有し、閲覧・編集できます。",
+  description:
+    "AI記事スタジオのPWA版。Windows版と記事・画像を共有し、記事作成、SNS設計、公開管理、内部分析を利用できます。",
   applicationName: "AI記事スタジオ",
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
   other: {
-    "codex-preview": "phase8-local",
-    "aas-phase": "8",
+    "aas-phase": "17",
+    "aas-release-stage": "production-preview",
   },
   icons: {
     icon: "/favicon.svg",
