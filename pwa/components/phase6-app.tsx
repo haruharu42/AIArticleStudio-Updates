@@ -414,6 +414,7 @@ function Dashboard({
   const [imageBusy,setImageBusy] = useState(false);
   const mayLeave = () => !imageBusy && (!imageUnsaved || window.confirm("未保存の画像情報・選択した画像を破棄して移動しますか？"));
   const navigate = (next: "home" | "library") => { if (next === section || mayLeave()) setSection(next); };
+  const navigateRoute = (path: string) => { if (mayLeave()) window.location.assign(path); };
   const logout = async () => { if (mayLeave()) await onLogout(); };
 
   useEffect(() => {
@@ -440,7 +441,7 @@ function Dashboard({
           <button className={section === "home" ? "active" : ""} type="button" onClick={() => navigate("home")}><span>⌂</span>ホーム</button>
           <button className={section === "library" ? "active" : ""} type="button" onClick={() => navigate("library")}><span>▤</span>記事ライブラリ<small>利用可能</small></button>
           <button type="button" disabled><span>✦</span>記事を作る<small>準備中</small></button>
-          <button type="button" onClick={() => navigate("library")}><span>◫</span>記事の画像<small>記事から選択</small></button>
+          <button type="button" onClick={() => navigateRoute("/images")}><span>◫</span>記事の画像<small>画像計画</small></button>
         </nav>
         <div className="account-block">
           <strong>{profile.display_name || "ユーザー"}</strong>
@@ -502,7 +503,7 @@ function Dashboard({
         <button className={section === "home" ? "active" : ""} type="button" onClick={() => navigate("home")}><span>⌂</span>ホーム</button>
         <button className={section === "library" ? "active" : ""} type="button" onClick={() => navigate("library")}><span>▤</span>記事</button>
         <button type="button" disabled><span className="create-dot">✦</span>作成</button>
-        <button type="button" onClick={() => navigate("library")}><span>◫</span>画像</button>
+        <button type="button" onClick={() => navigateRoute("/images")}><span>◫</span>画像</button>
       </nav>
     </div>
   );
