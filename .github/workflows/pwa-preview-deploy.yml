@@ -64,6 +64,7 @@ jobs:
 
       - name: Validate required Actions secrets
         shell: bash
+        working-directory: .
         run: |
           set -euo pipefail
           for name in \
