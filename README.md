@@ -17,3 +17,14 @@ AI記事スタジオの更新ファイル・バージョン管理用リポジト
 - Tracking issue: #49
 
 現在のPWA UX改善はPR #48を優先トラックとして進める。
+
+## Preview deployment
+
+PWAの実機確認は、GitHub Actionsの **[🚀 Previewへデプロイ](https://github.com/haruharu42/AIArticleStudio-Updates/actions/workflows/pwa-preview-deploy.yml)** から手動実行する。
+
+1. `Run workflow` を開き、確認対象のPRブランチを選ぶ。
+2. `expected_sha` に確認対象HEADの40文字コミットSHAを入力する。
+3. `confirmation` に `DEPLOY_PREVIEW` と入力する。
+4. 実行後、Actions summaryに出るPreview URLでiPhone / Android実機確認を行う。
+
+この操作はPreview専用。workflowはtypecheck / lint / build / regression / dependency audit / Wrangler dry-runを再実行し、`ai-article-studio-pwa-preview` へのPreview version uploadだけを許可する。Productionのworkers.dev routing、custom route、custom domainは変更しない。
