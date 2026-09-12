@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { Phase7App } from "@/components/phase6-app";
@@ -96,7 +96,7 @@ function QuickSelect({
   label: string;
   value: string | number;
   onChange: (value: string) => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <label className="beginner-quick-field">
@@ -112,8 +112,7 @@ export function Phase18BeginnerHome() {
   const [section, setSection] = useState<Section>("home");
   const [imageUnsaved, setImageUnsaved] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
-  const [recentArticles, setRecentArticles] = useState<ArticleSummary[]>([]);
-  const [recentLoading, setRecentLoading] = useState(false);
+  const [recentArticles, setRecentArticles] = useState<ArticleSummary[] | null>(null);
   const [quickSetup, setQuickSetup] = useState<QuickSetup>(QUICK_SETUP_INITIAL);
 
   const refresh = useCallback(async (nextClient?: SupabaseClient) => {
@@ -153,11 +152,10 @@ export function Phase18BeginnerHome() {
   useEffect(() => {
     if (state.kind !== "ready" || !client) return;
     let active = true;
-    setRecentLoading(true);
     void listCloudArticles(client, state.profile.id, 3).then(
       (articles) => { if (active) setRecentArticles(articles); },
       () => { if (active) setRecentArticles([]); },
-    ).finally(() => { if (active) setRecentLoading(false); });
+    );
     return () => { active = false; };
   }, [client, state]);
 
@@ -297,7 +295,7 @@ export function Phase18BeginnerHome() {
           <aside className="beginner-desktop-right" aria-label="ホーム補助情報">
             <section className="beginner-right-card">
               <div className="beginner-right-title"><strong>最近の記事</strong><button type="button" onClick={() => openSection("library")}>すべて見る ›</button></div>
-              {recentLoading ? <p className="beginner-right-muted">読み込み中…</p> : recentArticles.length ? <div className="beginner-recent-list">{recentArticles.map((article) => <button key={article.id} type="button" onClick={() => openSection("library")}><strong>{article.title || "無題の記事"}</strong><small>{article.publicationTarget} · {STATUS_LABELS[article.status]}</small></button>)}</div> : <div className="beginner-right-empty"><span aria-hidden="true">▤</span><strong>まだ記事がありません</strong><small>最初の記事を作るとここに表示されます。</small><a href="/create">記事を作る</a></div>}
+              {recentArticles === null ? <p className="beginner-right-muted">読み込み中…</p> : recentArticles.length ? <div className="beginner-recent-list">{recentArticles.map((article) => <button key={article.id} type="button" onClick={() => openSection("library")}><strong>{article.title || "無題の記事"}</strong><small>{article.publicationTarget} · {STATUS_LABELS[article.status]}</small></button>)}</div> : <div className="beginner-right-empty"><span aria-hidden="true">▤</span><strong>まだ記事がありません</strong><small>最初の記事を作るとここに表示されます。</small><a href="/create">記事を作る</a></div>}
             </section>
             <section className="beginner-right-card beginner-checklist">
               <div className="beginner-right-title"><strong>はじめての方へ</strong></div>
