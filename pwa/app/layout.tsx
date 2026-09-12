@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./phase9-11.css";
 import "./phase12-17.css";
+import "./phase18-beginner.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
   other: {
-    "aas-phase": "17",
+    "aas-phase": "18-preview",
     "aas-release-stage": "production-preview",
   },
   icons: {
@@ -25,7 +26,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#081225",
+  themeColor: "#f6f9ff",
 };
 
 export default function RootLayout({
