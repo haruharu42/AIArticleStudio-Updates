@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
   other: {
-    "aas-phase": "18-preview",
+    "aas-phase": "17",
     "aas-release-stage": "production-preview",
   },
   icons: {
