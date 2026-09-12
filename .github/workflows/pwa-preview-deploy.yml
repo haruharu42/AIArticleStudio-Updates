@@ -1,0 +1,265 @@
+name: PWA Deploy Preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Exact 40-character commit SHA to publish"
+        required: true
+        type: string
+      confirmation:
+        description: "Type DEPLOY_PREVIEW to confirm preview-only upload"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pwa-preview-deploy
+  cancel-in-progress: false
+
+jobs:
+  preview-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: pwa
+    env:
+      NEXT_PUBLIC_AAS_SUPABASE_URL: ${{ secrets.AAS_PREVIEW_SUPABASE_URL }}
+      NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.AAS_PREVIEW_SUPABASE_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_AAS_TERMS_URL: /terms
+      NEXT_PUBLIC_AAS_PRIVACY_URL: /privacy
+      NEXT_PUBLIC_AAS_AI_TERMS_URL: /ai-terms
+      AAS_CLOUDFLARE_WORKER_NAME: ai-article-studio-pwa-preview
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      WRANGLER_WRITE_LOGS: "false"
+
+    steps:
+      - name: Validate manual confirmation and pinned SHA
+        shell: bash
+        working-directory: .
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRMATION" != "DEPLOY_PREVIEW" ]; then
+            echo 'Preview upload requires confirmation text DEPLOY_PREVIEW.' >&2
+            exit 1
+          fi
+          if ! printf '%s' "$EXPECTED_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo 'expected_sha must be an exact lowercase 40-character Git commit SHA.' >&2
+            exit 1
+          fi
+          if [ "$GITHUB_SHA" != "$EXPECTED_SHA" ]; then
+            echo "Selected workflow ref does not point at expected_sha." >&2
+            echo "Selected ref SHA: $GITHUB_SHA" >&2
+            echo "Expected SHA:     $EXPECTED_SHA" >&2
+            exit 1
+          fi
+          echo "Pinned preview SHA validated: $EXPECTED_SHA"
+
+      - name: Validate required Actions secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in \
+            NEXT_PUBLIC_AAS_SUPABASE_URL \
+            NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY \
+            CLOUDFLARE_API_TOKEN \
+            CLOUDFLARE_ACCOUNT_ID
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "Required GitHub Actions secret is unavailable: $name" >&2
+              exit 1
+            fi
+          done
+          if ! printf '%s' "$NEXT_PUBLIC_AAS_SUPABASE_URL" | grep -Eq '^https://[^[:space:]]+$'; then
+            echo 'Preview Supabase URL must be HTTPS.' >&2
+            exit 1
+          fi
+          if printf '%s' "$NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY" | grep -Eqi 'sb_secret_|service[_-]?role'; then
+            echo 'Forbidden Supabase secret/service-role material detected.' >&2
+            exit 1
+          fi
+          echo 'Required preview credentials/configuration are present; values were not printed.'
+
+      - name: Checkout exact selected commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+
+      - name: Verify checked-out commit
+        shell: bash
+        working-directory: .
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          if [ "$actual" != "$EXPECTED_SHA" ]; then
+            echo 'Checked-out commit does not match expected_sha.' >&2
+            exit 1
+          fi
+          if [ -n "$(git status --porcelain)" ]; then
+            echo 'Checkout is unexpectedly dirty.' >&2
+            exit 1
+          fi
+          echo "Exact checkout confirmed: $actual"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+          cache-dependency-path: pwa/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build and regression tests
+        run: npm test
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high
+
+      - name: Validate PWA assets and auth cache exclusions
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f public/manifest.webmanifest
+          test -f public/icon-192.png
+          test -f public/icon-512.png
+          test -f public/sw.js
+          test -f app/terms/page.tsx
+          test -f app/privacy/page.tsx
+          test -f app/ai-terms/page.tsx
+          grep -Fq '/auth/callback' public/sw.js
+          grep -Fq '/api/' public/sw.js
+          grep -Fq 'access_token' public/sw.js
+          grep -Fq 'refresh_token' public/sw.js
+
+      - name: Locate generated Wrangler deployment config
+        id: wrangler-config
+        shell: bash
+        run: |
+          set -euo pipefail
+          config="$(find . \
+            -path './node_modules' -prune -o \
+            -path './.wrangler' -prune -o \
+            -name wrangler.json -type f -print | head -n 1)"
+          if [ -z "$config" ]; then
+            echo 'Generated wrangler.json was not found after build/regression tests.' >&2
+            exit 1
+          fi
+          echo "config=$config" >> "$GITHUB_OUTPUT"
+          echo 'Generated Wrangler config found.'
+
+      - name: Verify preview-only Cloudflare contract
+        shell: bash
+        env:
+          CONFIG_PATH: ${{ steps.wrangler-config.outputs.config }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const config = JSON.parse(fs.readFileSync(process.env.CONFIG_PATH, 'utf8'));
+          if (config.name !== 'ai-article-studio-pwa-preview') {
+            throw new Error(`Unexpected Worker name: ${config.name ?? '<missing>'}`);
+          }
+          if (!config.compatibility_date) throw new Error('compatibility_date missing');
+          if (config.workers_dev !== false) throw new Error('workers_dev must remain false');
+          if (config.preview_urls !== true) throw new Error('preview_urls must remain true');
+          if (config.assets?.binding !== 'ASSETS') throw new Error('ASSETS binding missing');
+          const imagesBinding = Array.isArray(config.images)
+            ? config.images.some((item) => item?.binding === 'IMAGES')
+            : config.images?.binding === 'IMAGES';
+          if (!imagesBinding) throw new Error('IMAGES binding missing');
+          if (config.route || (Array.isArray(config.routes) && config.routes.length > 0)) {
+            throw new Error('Production routes must remain absent for Preview deploy');
+          }
+          const serialized = JSON.stringify(config);
+          if (/sb_secret_|service[_-]?role/i.test(serialized)) {
+            throw new Error('Forbidden secret/service-role marker found in generated Worker config');
+          }
+          console.log('Preview-only Cloudflare contract: PASS');
+          NODE
+
+      - name: Verify Cloudflare authentication and existing preview Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler whoami --json >/dev/null
+          if ! npx wrangler versions list \
+            --name "$AAS_CLOUDFLARE_WORKER_NAME" \
+            --json >/dev/null 2>&1; then
+            echo 'Preview Worker is not available. Run the separately guarded bootstrap flow; this workflow will not create it.' >&2
+            exit 1
+          fi
+          echo 'Cloudflare authentication and existing preview Worker: PASS'
+
+      - name: Wrangler deployment dry-run
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .preview-dry-run
+          npx wrangler deploy \
+            --dry-run \
+            --config "${{ steps.wrangler-config.outputs.config }}" \
+            --outdir .preview-dry-run
+          test -d .preview-dry-run
+          echo 'Wrangler deployment dry-run: PASS'
+
+      - name: Upload preview version only
+        id: upload
+        shell: bash
+        env:
+          CONFIG_PATH: ${{ steps.wrangler-config.outputs.config }}
+        run: |
+          set -euo pipefail
+          output_file="$RUNNER_TEMP/aas-preview-upload.txt"
+          npx wrangler versions upload \
+            --config "$CONFIG_PATH" \
+            --preview-alias aas-preview \
+            --message "AAS PWA preview $GITHUB_SHA" \
+            2>&1 | tee "$output_file"
+
+          preview_url="$(grep -Eo 'https://[^[:space:]]+\.workers\.dev[^[:space:]]*' "$output_file" | tail -n 1 || true)"
+          preview_url="${preview_url%\)}"
+          preview_url="${preview_url%\]}"
+          if [ -z "$preview_url" ]; then
+            echo 'Wrangler upload succeeded but Preview URL could not be parsed.' >&2
+            exit 1
+          fi
+          echo "preview_url=$preview_url" >> "$GITHUB_OUTPUT"
+          echo "Preview URL: $preview_url"
+
+      - name: Write preview deployment summary
+        if: ${{ success() }}
+        shell: bash
+        working-directory: .
+        env:
+          PREVIEW_URL: ${{ steps.upload.outputs.preview_url }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          set -euo pipefail
+          {
+            echo '## AI Article Studio PWA Preview'
+            echo
+            echo "- SHA: \`$EXPECTED_SHA\`"
+            echo '- Worker: `ai-article-studio-pwa-preview`'
+            echo '- Alias: `aas-preview`'
+            echo "- Preview URL: $PREVIEW_URL"
+            echo '- Production workers.dev route: unchanged / disabled by generated config'
+            echo '- Custom production route/domain: not modified'
+          } >> "$GITHUB_STEP_SUMMARY"
