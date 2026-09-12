@@ -3,6 +3,7 @@ import "./globals.css";
 import "./phase9-11.css";
 import "./phase12-17.css";
 import "./phase18-beginner.css";
+import "./openai-links.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
