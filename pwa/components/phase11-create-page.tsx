@@ -97,6 +97,13 @@ function initialDraftFromLocation(): ArticleCreationDraft {
   return next;
 }
 
+function initialMessageFromLocation(): string {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get("from") === "home-quick-setup"
+    ? "ホームで選んだ基本設定を引き継ぎました。順番に確認しながら進めてください。"
+    : "";
+}
+
 function copyText(value: string, setMessage: (value: string) => void) {
   if (!navigator.clipboard) {
     setMessage("このブラウザーでは自動コピーできません。テキストを選択してコピーしてください。");
@@ -113,15 +120,9 @@ export function Phase11CreatePage() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ArticleCreationDraft>(() => initialDraftFromLocation());
   const [tagsText, setTagsText] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => initialMessageFromLocation());
   const [busy, setBusy] = useState(false);
   const [createdId, setCreatedId] = useState("");
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("from") === "home-quick-setup") {
-      setMessage("ホームで選んだ基本設定を引き継ぎました。順番に確認しながら進めてください。");
-    }
-  }, []);
 
   useEffect(() => {
     let active = true;
