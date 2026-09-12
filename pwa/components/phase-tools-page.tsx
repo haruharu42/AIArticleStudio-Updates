@@ -8,12 +8,7 @@ import { getSupabaseClient } from "@/lib/supabase";
 
 type State = AccessState | { kind: "loading" } | { kind: "unavailable" };
 
-type ToolCard = {
-  href: string;
-  phase: string;
-  title: string;
-  description: string;
-};
+type ToolCard = { href: string; phase: string; title: string; description: string };
 
 const memberTools: ToolCard[] = [
   { href: "/create", phase: "Phase 11–13", title: "記事を作る", description: "7ステップの記事制作、ジャンル専用プロンプト、画像計画をWorkspaceへ保存。" },
@@ -28,7 +23,6 @@ const memberTools: ToolCard[] = [
 
 export function PhaseToolsPage() {
   const [state, setState] = useState<State>({ kind: "loading" });
-
   useEffect(() => {
     let active = true;
     const boot = async () => {
@@ -52,11 +46,7 @@ export function PhaseToolsPage() {
   return (
     <main className="creator-page">
       <header className="creator-head">
-        <div>
-          <p className="eyebrow">AI ARTICLE STUDIO</p>
-          <h1>機能一覧</h1>
-          <p>記事制作・画像・SNS・出力・公開・分析と、外部のOpenAIツールをまとめています。</p>
-        </div>
+        <div><p className="eyebrow">AI ARTICLE STUDIO</p><h1>機能一覧</h1><p>記事制作・画像・SNS・出力・公開・分析と、外部のOpenAIツールをまとめています。</p></div>
         <a className="route-back" href="/">← ホーム</a>
       </header>
 
@@ -67,23 +57,17 @@ export function PhaseToolsPage() {
       {invite && <div className="route-notice">PWA機能を使うには利用権が必要です。<a className="route-inline-link" href="/invite">招待コードを登録</a></div>}
 
       <section className="tool-grid">
-        {cards.map((tool) => (
-          <a key={tool.href} className="tool-card" href={tool.href}>
-            <span>{tool.phase}</span><h2>{tool.title}</h2><p>{tool.description}</p><strong>開く →</strong>
-          </a>
-        ))}
+        {cards.map((tool) => <a key={tool.href} className="tool-card" href={tool.href}><span>{tool.phase}</span><h2>{tool.title}</h2><p>{tool.description}</p><strong>開く →</strong></a>)}
         {invite && <a className="tool-card" href="/invite"><span>Phase 9</span><h2>PWA招待</h2><p>購入・招待コードをAAS-PWA-BETA利用権へ登録。</p><strong>開く →</strong></a>}
         {admin && <a className="tool-card" href="/admin"><span>Phase 10</span><h2>管理ダッシュボード</h2><p>ユーザー承認、Windows/PWA利用権、PWA招待コードを共通管理。</p><strong>開く →</strong></a>}
       </section>
 
       {ready && (
         <section className="openai-tools-section" aria-labelledby="openai-tools-title">
-          <div className="openai-tools-heading">
-            <div><p className="eyebrow">OPENAI</p><h2 id="openai-tools-title">OpenAIツール</h2></div>
-            <small>外部の公式サービスを新しい画面で開きます</small>
-          </div>
+          <div className="openai-tools-heading"><div><p className="eyebrow">OPENAI</p><h2 id="openai-tools-title">OpenAIツール</h2></div><small>外部の公式サービスを新しい画面で開きます</small></div>
           <div className="openai-tools-grid">
             <a href={OPENAI_LINKS.chatgpt} target="_blank" rel="noreferrer"><span>ChatGPT</span><strong>記事・タイトル・相談</strong><b>開く ↗</b></a>
+            <a href={OPENAI_LINKS.work} target="_blank" rel="noreferrer"><span>ChatGPT Work</span><strong>まとまった作業・成果物作成</strong><b>開く ↗</b></a>
             <a href={OPENAI_LINKS.images} target="_blank" rel="noreferrer"><span>ChatGPT Images</span><strong>画像生成・画像編集</strong><b>開く ↗</b></a>
             <a href={OPENAI_LINKS.codex} target="_blank" rel="noreferrer"><span>Codex</span><strong>コード作成・開発作業</strong><b>開く ↗</b></a>
           </div>
