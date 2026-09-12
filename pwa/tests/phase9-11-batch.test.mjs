@@ -92,32 +92,43 @@ test("Phase 11 article creator saves an atomic article/workspace and restores gu
   assert.match(page, /GENDER_OPTIONS/);
   assert.match(page, /TARGET_LENGTH_OPTIONS/);
   assert.match(page, /OPENAI_LINKS\.chatgpt/);
+  assert.match(page, /initialDraftFromLocation/);
+  assert.match(page, /home-quick-setup/);
   assert.match(options, /AI副業/);
   assert.match(options, /生活・暮らし/);
   assert.match(route, /Phase11CreatePage/);
 });
 
-test("root uses the beginner-first shell without the floating quick navigation", async () => {
+test("root uses the approved beginner dashboard across mobile and desktop", async () => {
   const rootPage = await read("app/page.tsx");
   const beginnerHome = await read("components/phase18-beginner-home.tsx");
   const layout = await read("app/layout.tsx");
   const css = await read("app/phase18-beginner.css");
+  const dashboardCss = await read("app/phase19-dashboard.css");
 
   assert.match(rootPage, /Phase18BeginnerHome/);
   assert.doesNotMatch(rootPage, /Phase9To11QuickNav/);
   assert.match(beginnerHome, /Phase7App/);
-  assert.match(beginnerHome, /記事を作る/);
+  assert.match(beginnerHome, /記事作成/);
   assert.match(beginnerHome, /記事ライブラリ/);
-  assert.match(beginnerHome, /画像を作る/);
-  assert.match(beginnerHome, /SNS投稿を作る/);
-  assert.match(beginnerHome, /OPENAI_LINKS\.chatgpt/);
+  assert.match(beginnerHome, /画像作成/);
+  assert.match(beginnerHome, /SNS投稿/);
+  assert.match(beginnerHome, /AI_APP_LINKS/);
+  assert.match(beginnerHome, /quickCreateHref/);
+  assert.match(beginnerHome, /listCloudArticles/);
+  assert.match(beginnerHome, />SNS<\/button>/);
+  assert.doesNotMatch(beginnerHome, />画像<\/button>/);
   assert.match(layout, /phase18-beginner\.css/);
+  assert.match(layout, /phase19-dashboard\.css/);
   assert.match(layout, /openai-links\.css/);
   assert.match(layout, /"aas-phase": "17"/);
   assert.match(layout, /"aas-release-stage": "production-preview"/);
   assert.doesNotMatch(layout, /phase8-local/);
   assert.match(css, /\.beginner-shell/);
   assert.match(css, /\.beginner-bottom-nav/);
+  assert.match(dashboardCss, /\.beginner-dashboard-frame/);
+  assert.match(dashboardCss, /grid-template-columns: 210px minmax\(0, 1fr\) 300px/);
+  assert.match(dashboardCss, /repeat\(5, minmax\(0, 1fr\)\)/);
 });
 
 test("package runs the Phase 9-11 contract test without changing dependency versions", async () => {
