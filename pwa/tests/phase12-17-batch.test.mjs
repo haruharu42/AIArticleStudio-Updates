@@ -101,7 +101,7 @@ test("Phase 17 reports only internal article metrics until external analytics ar
   assert.match(route, /Phase17AnalyticsPage/);
 });
 
-test("tools hub and beginner-first root expose all functional routes without image-only navigation", async () => {
+test("tools hub and beginner-first root expose all functional routes with SNS in mobile navigation", async () => {
   const tools = await read("components/phase-tools-page.tsx");
   const toolsRoute = await read("app/tools/page.tsx");
   const shell = await read("components/phase18-beginner-home.tsx");
@@ -109,6 +109,7 @@ test("tools hub and beginner-first root expose all functional routes without ima
   const layout = await read("app/layout.tsx");
   const css = await read("app/phase12-17.css");
   const beginnerCss = await read("app/phase18-beginner.css");
+  const dashboardCss = await read("app/phase19-dashboard.css");
 
   for (const href of ["/create", "/images", "/sns", "/sidejob", "/publish", "/analytics"]) {
     assert.match(tools, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
@@ -121,12 +122,14 @@ test("tools hub and beginner-first root expose all functional routes without ima
   assert.match(shell, /href="\/tools"/);
   assert.match(shell, /href="\/images"/);
   assert.match(shell, /href="\/sns"/);
-  assert.match(shell, /記事作成<\/button>/);
-  assert.match(shell, /ライブラリ<\/button>/);
-  assert.match(shell, /機能<\/button>/);
+  assert.match(shell, />作成<\/button>/);
+  assert.match(shell, />ライブラリ<\/button>/);
+  assert.match(shell, />SNS<\/button>/);
+  assert.match(shell, />設定<\/button>/);
   assert.doesNotMatch(shell, />画像<\/button>/);
   assert.match(layout, /phase12-17\.css/);
   assert.match(layout, /phase18-beginner\.css/);
+  assert.match(layout, /phase19-dashboard\.css/);
   assert.match(layout, /"aas-phase": "17"/);
   assert.match(layout, /"aas-release-stage": "production-preview"/);
   assert.doesNotMatch(layout, /phase8-local/);
@@ -135,6 +138,8 @@ test("tools hub and beginner-first root expose all functional routes without ima
   assert.match(css, /\.image-prompt-list/);
   assert.match(beginnerCss, /\.beginner-bottom-nav/);
   assert.match(beginnerCss, /\.beginner-action-grid/);
+  assert.match(dashboardCss, /\.beginner-mobile-nav/);
+  assert.match(dashboardCss, /\.beginner-desktop-sidebar/);
 });
 
 test("package includes the Phase 12-17 contract test and keeps dependency pins unchanged", async () => {
