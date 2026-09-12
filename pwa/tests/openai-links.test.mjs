@@ -11,6 +11,7 @@ test("OpenAI launch links stay on verified official ChatGPT destinations", async
   const links = await read("lib/openai-links.ts");
 
   assert.match(links, /https:\/\/chatgpt\.com\//);
+  assert.match(links, /https:\/\/chatgpt\.com\/work\//);
   assert.match(links, /https:\/\/chatgpt\.com\/images\//);
   assert.match(links, /https:\/\/chatgpt\.com\/codex\//);
   assert.doesNotMatch(links, /sora/i);
@@ -24,10 +25,12 @@ test("beginner home and prompt workflows expose OpenAI launches without changing
   const tools = await read("components/phase-tools-page.tsx");
 
   assert.match(home, /OPENAI_LINKS\.chatgpt/);
+  assert.match(home, /OPENAI_LINKS\.work/);
   assert.match(home, /OPENAI_LINKS\.images/);
   assert.match(home, /OPENAI_LINKS\.codex/);
   assert.match(creator, /ChatGPTを開く/);
   assert.match(images, /ChatGPT Imagesを開く/);
+  assert.match(tools, /ChatGPT Work/);
   assert.match(tools, /OpenAIツール/);
   assert.match(creator, /createArticleFromWizard/);
   assert.match(images, /buildImagePromptPlan/);
