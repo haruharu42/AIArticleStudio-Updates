@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { Phase7App } from "@/components/phase6-app";
 import { Phase7Library } from "@/components/phase7-library";
+import { OPENAI_LINKS } from "@/lib/openai-links";
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { getSupabaseClient } from "@/lib/supabase";
 
@@ -158,6 +159,25 @@ export function Phase18BeginnerHome() {
               <ActionCard icon="▧" title="画像を作る" description="アイキャッチ・挿絵を準備" href="/images" accent="green" />
               <ActionCard icon="↗" title="SNS投稿を作る" description="X・Instagram・Threads向け" href="/sns" accent="pink" />
             </div>
+          </section>
+
+          <section className="beginner-openai-section" aria-labelledby="beginner-openai-title">
+            <div className="beginner-section-heading compact">
+              <div><p>OPENAI</p><h2 id="beginner-openai-title">OpenAIツールを開く</h2></div>
+            </div>
+            <p className="beginner-openai-help">プロンプトをコピーしたあと、そのまま公式のOpenAIツールへ移動できます。</p>
+            <div className="beginner-openai-grid">
+              <a href={OPENAI_LINKS.chatgpt} target="_blank" rel="noreferrer">
+                <span aria-hidden="true">✦</span><strong>ChatGPT</strong><small>記事・タイトル・相談に</small><b>↗</b>
+              </a>
+              <a href={OPENAI_LINKS.images} target="_blank" rel="noreferrer">
+                <span aria-hidden="true">▧</span><strong>ChatGPT Images</strong><small>画像生成・画像編集に</small><b>↗</b>
+              </a>
+              <a href={OPENAI_LINKS.codex} target="_blank" rel="noreferrer">
+                <span aria-hidden="true">⌘</span><strong>Codex</strong><small>コード作成・開発作業に</small><b>↗</b>
+              </a>
+            </div>
+            <small className="beginner-openai-note">端末の設定によってChatGPTアプリまたはWeb版で開きます。</small>
           </section>
 
           <section className="beginner-secondary-section" aria-labelledby="beginner-more-title">
