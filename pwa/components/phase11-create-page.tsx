@@ -52,6 +52,11 @@ const initialDraft: ArticleCreationDraft = {
 };
 
 const steps = ["生成方法", "画像計画", "本文条件", "タイトル", "本文生成", "プレビュー", "保存"];
+const aiLaunchOptions = [
+  { key: "chatgpt", label: "ChatGPT" },
+  { key: "claude", label: "Claude" },
+  { key: "gemini", label: "Gemini" },
+] as const;
 
 function initialDraftFromLocation(): ArticleCreationDraft {
   const next = { ...initialDraft };
@@ -229,7 +234,7 @@ export function Phase11CreatePage() {
         {step === 0 && (
           <div className="wizard-pane">
             <p className="eyebrow">STEP 1</p><h2>どの方法で記事を作りますか？</h2>
-            <label className="choice-card"><input type="radio" checked={draft.generationMode === "prompt_export"} onChange={() => patch("generationMode", "prompt_export")} /><span><strong>ChatGPTを使って作る</strong><small>タイトル・本文用のプロンプトを作成します。生成結果を貼り付けて保存できます。</small></span></label>
+            <label className="choice-card"><input type="radio" checked={draft.generationMode === "prompt_export"} onChange={() => patch("generationMode", "prompt_export")} /><span><strong>AIを使って作る</strong><small>ChatGPT・Claude・Geminiで使えるタイトル・本文プロンプトを作成します。生成結果を貼り付けて保存できます。</small></span></label>
             <label className="choice-card"><input type="radio" checked={draft.generationMode === "manual"} onChange={() => patch("generationMode", "manual")} /><span><strong>自分で本文を書く</strong><small>タイトルと本文を直接入力して共通記事ライブラリへ保存します。</small></span></label>
             <label className="route-field"><span>記事テーマ</span><textarea value={draft.theme} onChange={(e) => patch("theme", e.target.value)} placeholder="例: 30代初心者向けのAI副業の始め方" /></label>
             <p className="beginner-help">迷った場合は「誰向けに・何を解決する記事か」を1文で入力してください。</p>
@@ -269,12 +274,12 @@ export function Phase11CreatePage() {
             <div className="title-candidates">{localTitles.map((title) => <button type="button" key={title} onClick={() => patch("title", title)} className={draft.title === title ? "active" : ""}>{title}</button>)}</div>
             <label className="route-field"><span>選択タイトル</span><input value={draft.title} onChange={(e) => patch("title", e.target.value)} /></label>
             {draft.generationMode === "prompt_export" && <>
-              <label className="route-field"><span>ChatGPT用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
+              <label className="route-field"><span>AI用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
               <div className="openai-prompt-actions">
                 <button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button>
-                <button className="openai-launch-action" type="button" onClick={() => launchAiApp("chatgpt")}>ChatGPTを開く ↗</button>
+                {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => launchAiApp(app.key)}>{app.label}を開く ↗</button>)}
               </div>
-              <p className="beginner-help">「コピー」→「ChatGPTを開く」の順に進み、ChatGPTへ貼り付けてください。</p>
+              <p className="beginner-help">「コピー」→使いたいAIを選ぶ→プロンプトを貼り付け、の順に進んでください。</p>
             </>}
           </div>
         )}
@@ -282,12 +287,12 @@ export function Phase11CreatePage() {
         {step === 4 && (
           <div className="wizard-pane"><p className="eyebrow">STEP 5</p><h2>本文を準備します</h2>
             {draft.generationMode === "prompt_export" && <>
-              <label className="route-field"><span>ChatGPT用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
+              <label className="route-field"><span>AI用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
               <div className="openai-prompt-actions">
                 <button className="secondary-action" type="button" onClick={() => copyText(articlePrompt, setMessage)}>完成記事プロンプトをコピー</button>
-                <button className="openai-launch-action" type="button" onClick={() => launchAiApp("chatgpt")}>ChatGPTを開く ↗</button>
+                {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => launchAiApp(app.key)}>{app.label}を開く ↗</button>)}
               </div>
-              <p className="beginner-help">生成された完成記事をコピーして、下の本文欄へ貼り付けます。</p>
+              <p className="beginner-help">使いたいAIで記事を生成し、完成記事をコピーして下の本文欄へ貼り付けます。</p>
             </>}
             <label className="route-field"><span>{draft.generationMode === "prompt_export" ? "生成した本文をここへ貼り付け" : "本文"}</span><textarea className="body-area" value={draft.body} onChange={(e) => patch("body", e.target.value)} placeholder="# 見出し\n本文…" /></label>
           </div>
