@@ -72,7 +72,7 @@ test("admin-only promotion tools are hidden behind active admin state", async ()
 
 test("admin promotion prompts protect confirmed product facts and cover article plus social sales", async () => {
   const api = await read("lib/admin-promotion.ts");
-  for (const label of ["確認済み製品情報", "販売・宣伝", "Instagram", "Threads", "TikTok", "YouTube Shorts", "14日分の投稿カレンダー"]) {
+  for (const label of ["確認済み製品情報", "紹介・販売", "Instagram", "Threads", "TikTok", "YouTube Shorts", "14日分の投稿カレンダー"]) {
     assert.match(api, new RegExp(label));
   }
   assert.match(api, /価格、実績、利用者数、売上、レビュー、キャンペーン/);
