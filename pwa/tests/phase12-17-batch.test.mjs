@@ -70,7 +70,7 @@ test("Phase 15 ranks side jobs as an internal fit aid and exports a non-guarante
   assert.match(api, /YouTube \/ TikTok \/ 配信クリエイター/);
   assert.match(api, /収益額・成功率・フォロワー数などを保証しない/);
   assert.match(api, /\.sort\(\(a, b\) => b\.score - a\.score/);
-  assert.match(page, /適合スコアはアプリ内の比較用/);
+  assert.match(page, /適合スコアはAAS内の比較用/);
   assert.match(route, /Phase15SideJobPage/);
 });
 
