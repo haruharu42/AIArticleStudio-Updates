@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
@@ -9,6 +11,7 @@ import { getSupabaseClient } from "@/lib/supabase";
 type SettingsState = AccessState | { kind: "loading" } | { kind: "unavailable" };
 
 export function PwaSettingsPage() {
+  const router = useRouter();
   const [state, setState] = useState<SettingsState>({ kind: "loading" });
   const [alwaysShowNav, setAlwaysShowNav] = useState(true);
 
@@ -55,7 +58,8 @@ export function PwaSettingsPage() {
       const client = getSupabaseClient();
       await client.auth.signOut({ scope: "local" });
     } finally {
-      window.location.assign("/");
+      router.push("/");
+      router.refresh();
     }
   };
 
@@ -64,7 +68,7 @@ export function PwaSettingsPage() {
   return (
     <div className="beginner-shell persistent-settings-shell">
       <header className="beginner-topbar">
-        <a className="beginner-brand" href="/" aria-label="AI Article Studio ホーム"><span aria-hidden="true">✦</span><strong>AI ARTICLE <em>STUDIO</em></strong></a>
+        <Link className="beginner-brand" href="/" aria-label="AI Article Studio ホーム"><span aria-hidden="true">✦</span><strong>AI ARTICLE <em>STUDIO</em></strong></Link>
         {profile && <div className="beginner-account"><span>{profile.display_name || "ユーザー"}</span><small>{profile.aas_user_id}</small></div>}
       </header>
 
@@ -97,14 +101,14 @@ export function PwaSettingsPage() {
           )}
 
           <div className="beginner-settings-links">
-            <a href="/tools">機能一覧 <span>›</span></a>
-            <a href="/terms">利用規約 <span>›</span></a>
-            <a href="/privacy">プライバシーポリシー <span>›</span></a>
-            <a href="/ai-terms">AI利用条件 <span>›</span></a>
+            <Link href="/tools">機能一覧 <span>›</span></Link>
+            <Link href="/terms">利用規約 <span>›</span></Link>
+            <Link href="/privacy">プライバシーポリシー <span>›</span></Link>
+            <Link href="/ai-terms">AI利用条件 <span>›</span></Link>
           </div>
 
           <div className="beginner-settings-actions">
-            <a className="persistent-settings-home" href="/">ホームへ戻る</a>
+            <Link className="persistent-settings-home" href="/">ホームへ戻る</Link>
             {profile && <button className="danger" type="button" onClick={() => void logout()}>ログアウト</button>}
           </div>
         </section>
