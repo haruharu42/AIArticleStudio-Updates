@@ -12,9 +12,13 @@ const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 test("article creation asks for AI and plan before the generation wizard", async () => {
   const route = await read("app/create/page.tsx");
   const setup = await read("components/create-ai-setup.tsx");
+  const personalization = await read("lib/user-personalization.ts");
   assert.match(route, /CreateAiSetup/);
-  for (const label of ["最初に使用するAIを選びます", "ChatGPT", "Claude", "Gemini", "無料版", "有料版", "この設定で記事作成へ"]) {
+  for (const label of ["最初に使用するAIを選びます", "無料版", "有料版", "この設定で記事作成へ"]) {
     assert.match(setup, new RegExp(label));
+  }
+  for (const label of ["ChatGPT", "Claude", "Gemini"]) {
+    assert.match(personalization, new RegExp(label));
   }
   assert.match(setup, /saveWritingProfile/);
   assert.match(setup, /setRuntimeWritingProfile/);
@@ -46,6 +50,7 @@ test("prompt builder applies provider plan and optional user preferences", async
 
 test("server profile stores small aggregate signals with strict self-only RLS", async () => {
   const migration = await readRepo("supabase/migrations/20260913111500_user_writing_profiles.sql");
+  const invoker = await readRepo("supabase/migrations/20260913123500_user_writing_profiles_rpc_invoker.sql");
   assert.match(migration, /create table if not exists public\.user_writing_profiles/);
   assert.match(migration, /enable row level security/);
   assert.match(migration, /force row level security/);
@@ -55,7 +60,8 @@ test("server profile stores small aggregate signals with strict self-only RLS", 
   assert.match(migration, /platform_counts/);
   assert.match(migration, /genre_counts/);
   assert.match(migration, /Raw article bodies, AI answers, and full prompt history are not stored here/);
-  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+  assert.match(invoker, /security invoker/);
+  assert.doesNotMatch(`${migration}\n${invoker}`, /service[_-]?role|sb_secret_/i);
 });
 
 test("personalization UI has dedicated responsive styling", async () => {
