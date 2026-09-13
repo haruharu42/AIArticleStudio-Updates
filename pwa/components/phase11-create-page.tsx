@@ -15,6 +15,11 @@ import {
   type SaveStatus,
 } from "@/lib/phase11-create";
 import {
+  clearArticleWizardProgress,
+  loadArticleWizardProgress,
+  saveArticleWizardProgress,
+} from "@/lib/phase11-wizard-progress";
+import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
   GENRE_OPTIONS,
@@ -128,6 +133,7 @@ export function Phase11CreatePage() {
   const [message, setMessage] = useState(() => initialMessageFromLocation());
   const [busy, setBusy] = useState(false);
   const [createdId, setCreatedId] = useState("");
+  const [restoredOwnerId, setRestoredOwnerId] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -154,6 +160,23 @@ export function Phase11CreatePage() {
     void boot();
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (gate.kind !== "ready" || restoredOwnerId === gate.ownerId) return;
+    const saved = loadArticleWizardProgress(gate.ownerId);
+    if (saved) {
+      setStep(saved.step);
+      setDraft(saved.draft);
+      setTagsText(saved.tagsText);
+      setMessage("前回の作業内容を復元しました。");
+    }
+    setRestoredOwnerId(gate.ownerId);
+  }, [gate, restoredOwnerId]);
+
+  useEffect(() => {
+    if (gate.kind !== "ready" || restoredOwnerId !== gate.ownerId || createdId) return;
+    saveArticleWizardProgress(gate.ownerId, { step, draft, tagsText });
+  }, [gate, restoredOwnerId, step, draft, tagsText, createdId]);
 
   const localTitles = useMemo(() => suggestLocalTitles(draft), [draft]);
   const titlePrompt = useMemo(() => buildTitlePrompt({ ...draft, tags: tagsText.split(/[,、\n]/).map((tag) => tag.trim()).filter(Boolean) }), [draft, tagsText]);
@@ -193,6 +216,7 @@ export function Phase11CreatePage() {
         gate.ownerId,
         { ...draft, tags: tagsText.split(/[,、\n]/).map((tag) => tag.trim()).filter(Boolean) },
       );
+      clearArticleWizardProgress(gate.ownerId);
       setCreatedId(result.id);
       setMessage(`「${result.title}」をクラウド記事ライブラリへ保存しました。`);
     } catch (error) {
