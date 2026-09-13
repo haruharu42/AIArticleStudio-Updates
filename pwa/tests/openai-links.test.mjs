@@ -34,9 +34,11 @@ test("AI app launcher keeps Android one-tap and gives iOS an explicit app/Web ch
   assert.match(links, /showIosLaunchChoice/);
   assert.match(links, /アプリを開く/);
   assert.match(links, /Web版を開く/);
+  assert.match(links, /anchor\.href = app\.webUrl/);
   assert.match(links, /anchor\.href = app\.iosScheme/);
   assert.match(links, /anchor\.target = "_blank"/);
-  assert.match(links, /window\.open\(app\.webUrl, "_blank"/);
+  assert.match(links, /anchor\.rel = "noopener noreferrer"/);
+  assert.doesNotMatch(links, /window\.open\(app\.webUrl/);
   assert.doesNotMatch(links, /document\.createElement\("iframe"\)/);
   assert.doesNotMatch(links, /visibilitychange/);
   assert.doesNotMatch(links, /window\.confirm/);
