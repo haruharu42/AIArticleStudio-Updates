@@ -6,6 +6,7 @@ import "./phase18-beginner.css";
 import "./phase19-dashboard.css";
 import "./phase20-device-e2e.css";
 import "./openai-links.css";
+import "./phase21-transition-icons.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
