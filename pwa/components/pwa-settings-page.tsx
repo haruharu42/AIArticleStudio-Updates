@@ -36,6 +36,7 @@ export function PwaSettingsPage() {
   const [writingLoading, setWritingLoading] = useState(false);
   const [writingMessage, setWritingMessage] = useState("");
   const profile = state.kind === "ready" ? state.profile : null;
+  const profileId = profile?.id ?? null;
 
   useEffect(() => {
     let active = true;
@@ -70,20 +71,21 @@ export function PwaSettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (!profile) {
-      setWritingProfile(null);
-      return;
-    }
+    if (!profileId) return;
     let active = true;
-    setWritingLoading(true);
-    setWritingMessage("");
-    void loadWritingProfile(getSupabaseClient(), profile.id).then(
+    queueMicrotask(() => {
+      if (active) {
+        setWritingLoading(true);
+        setWritingMessage("");
+      }
+    });
+    void loadWritingProfile(getSupabaseClient(), profileId).then(
       (next) => {
         if (active) setWritingProfile(next);
       },
       (error) => {
         if (active) {
-          setWritingProfile(createDefaultWritingProfile(profile.id));
+          setWritingProfile(createDefaultWritingProfile(profileId));
           setWritingMessage(error instanceof Error ? error.message : "あなた向け最適化の設定を取得できませんでした。");
         }
       },
@@ -93,7 +95,7 @@ export function PwaSettingsPage() {
     return () => {
       active = false;
     };
-  }, [profile?.id]);
+  }, [profileId]);
 
   const toggleAlwaysShowNav = () => {
     const next = !alwaysShowNav;
