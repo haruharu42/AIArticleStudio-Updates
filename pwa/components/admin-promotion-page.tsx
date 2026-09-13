@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
@@ -70,14 +71,16 @@ export function AdminPromotionPage() {
   }, []);
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(ADMIN_PRODUCT_FACTS_STORAGE_KEY);
-      if (saved) setFacts({ ...DEFAULT_ADMIN_PRODUCT_FACTS, ...JSON.parse(saved) });
-      const requested = new URLSearchParams(window.location.search).get("mode");
-      if (requested && MODES.some((item) => item.key === requested)) setMode(requested as Mode);
-    } catch {
-      // Keep safe defaults when local data is unavailable or malformed.
-    }
+    queueMicrotask(() => {
+      try {
+        const saved = window.localStorage.getItem(ADMIN_PRODUCT_FACTS_STORAGE_KEY);
+        if (saved) setFacts({ ...DEFAULT_ADMIN_PRODUCT_FACTS, ...JSON.parse(saved) });
+        const requested = new URLSearchParams(window.location.search).get("mode");
+        if (requested && MODES.some((item) => item.key === requested)) setMode(requested as Mode);
+      } catch {
+        // Keep safe defaults when local data is unavailable or malformed.
+      }
+    });
   }, []);
 
   const isAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
@@ -111,7 +114,7 @@ export function AdminPromotionPage() {
         {state.kind === "loading" && <p className="route-notice">管理者権限を確認しています…</p>}
         {state.kind === "signed_out" && <p className="route-notice">先にログインしてください。</p>}
         {state.kind !== "loading" && state.kind !== "signed_out" && <p className="route-notice error">この機能はactive管理者のみ利用できます。</p>}
-        <a className="route-back" href="/">← ホームへ戻る</a>
+        <Link className="route-back" href="/">← ホームへ戻る</Link>
       </section></main>
     );
   }
@@ -120,7 +123,7 @@ export function AdminPromotionPage() {
     <main className="admin-promo-page">
       <header className="admin-promo-head">
         <div><p className="eyebrow">ADMIN MARKETING</p><h1>販売・プロモーションセンター</h1><p>AI Article Studioの紹介記事、SNS投稿、販売キャンペーンを管理者専用で作成します。</p></div>
-        <div><a href="/admin">管理ダッシュボード</a><a href="/">ホーム</a></div>
+        <div><Link href="/admin">管理ダッシュボード</Link><Link href="/">ホーム</Link></div>
       </header>
 
       <div className="admin-promo-safety"><strong>確認済み情報を基準に作成</strong><span>未入力の価格・実績・レビュー・キャンペーンをAIに作らせない設計です。製品情報は現在この端末だけに保存されます。</span></div>
