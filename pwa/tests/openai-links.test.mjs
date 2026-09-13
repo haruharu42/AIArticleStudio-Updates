@@ -36,7 +36,7 @@ test("AI app launcher uses official web and store destinations with platform fal
   assert.doesNotMatch(links, /api[_-]?key|sb_secret_|service[_-]?role/i);
 });
 
-test("beginner home exposes ChatGPT Claude Gemini while prompt workflows keep existing persistence", async () => {
+test("beginner home and article wizard use the shared AI app launcher", async () => {
   const home = await read("components/phase18-beginner-home.tsx");
   const creator = await read("components/phase11-create-page.tsx");
   const images = await read("components/phase13-image-page.tsx");
@@ -49,6 +49,9 @@ test("beginner home exposes ChatGPT Claude Gemini while prompt workflows keep ex
   assert.match(home, /App Store/);
   assert.match(home, /Google Play/);
   assert.match(creator, /ChatGPTを開く/);
+  assert.match(creator, /import \{ launchAiApp \} from "@\/lib\/ai-app-links"/);
+  assert.equal((creator.match(/launchAiApp\("chatgpt"\)/g) ?? []).length, 2);
+  assert.doesNotMatch(creator, /href=\{OPENAI_LINKS\.chatgpt\}/);
   assert.match(images, /ChatGPT Imagesを開く/);
   assert.match(tools, /ChatGPT Work/);
   assert.match(tools, /OpenAIツール/);
