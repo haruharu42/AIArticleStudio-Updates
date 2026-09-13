@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { OPENAI_LINKS } from "@/lib/openai-links";
+import { launchAiApp } from "@/lib/ai-app-links";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   buildArticlePrompt,
@@ -272,7 +272,7 @@ export function Phase11CreatePage() {
               <label className="route-field"><span>ChatGPT用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
               <div className="openai-prompt-actions">
                 <button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button>
-                <a className="openai-launch-action" href={OPENAI_LINKS.chatgpt} target="_blank" rel="noreferrer">ChatGPTを開く ↗</a>
+                <button className="openai-launch-action" type="button" onClick={() => launchAiApp("chatgpt")}>ChatGPTを開く ↗</button>
               </div>
               <p className="beginner-help">「コピー」→「ChatGPTを開く」の順に進み、ChatGPTへ貼り付けてください。</p>
             </>}
@@ -285,7 +285,7 @@ export function Phase11CreatePage() {
               <label className="route-field"><span>ChatGPT用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
               <div className="openai-prompt-actions">
                 <button className="secondary-action" type="button" onClick={() => copyText(articlePrompt, setMessage)}>完成記事プロンプトをコピー</button>
-                <a className="openai-launch-action" href={OPENAI_LINKS.chatgpt} target="_blank" rel="noreferrer">ChatGPTを開く ↗</a>
+                <button className="openai-launch-action" type="button" onClick={() => launchAiApp("chatgpt")}>ChatGPTを開く ↗</button>
               </div>
               <p className="beginner-help">生成された完成記事をコピーして、下の本文欄へ貼り付けます。</p>
             </>}
