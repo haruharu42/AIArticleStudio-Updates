@@ -64,6 +64,7 @@ test("Phase 10 admin surface uses existing account and entitlement RPCs plus inv
 test("Phase 11 article creator saves an atomic article/workspace and restores guided dropdowns", async () => {
   const api = await read("lib/phase11-create.ts");
   const page = await read("components/phase11-create-page.tsx");
+  const progress = await read("lib/phase11-wizard-progress.ts");
   const route = await read("app/create/page.tsx");
   const options = await read("lib/phase18-content-options.ts");
 
@@ -99,6 +100,16 @@ test("Phase 11 article creator saves an atomic article/workspace and restores gu
   assert.doesNotMatch(page, /OPENAI_LINKS\.chatgpt/);
   assert.match(page, /initialDraftFromLocation/);
   assert.match(page, /home-quick-setup/);
+  assert.match(page, /loadArticleWizardProgress/);
+  assert.match(page, /saveArticleWizardProgress/);
+  assert.match(page, /clearArticleWizardProgress/);
+  assert.match(page, /setStep\(saved\.step\)/);
+  assert.match(page, /前回の作業内容を復元しました/);
+  assert.match(progress, /aas:pwa:article-wizard-progress:v1:/);
+  assert.match(progress, /window\.localStorage/);
+  assert.match(progress, /STORAGE_VERSION = 1/);
+  assert.match(progress, /updatedAt/);
+  assert.doesNotMatch(progress, /service[_-]?role|sb_secret_/i);
   assert.match(options, /AI副業/);
   assert.match(options, /生活・暮らし/);
   assert.match(route, /Phase11CreatePage/);
