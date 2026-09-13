@@ -18,7 +18,7 @@ test("OpenAI launch links stay on verified official ChatGPT destinations", async
   assert.doesNotMatch(links, /openai\.com\/api|platform\.openai\.com/);
 });
 
-test("AI app launcher uses official web and store destinations with platform fallbacks", async () => {
+test("AI app launcher uses official destinations and avoids delayed iPhone iframe fallback", async () => {
   const links = await read("lib/ai-app-links.ts");
 
   assert.match(links, /https:\/\/chatgpt\.com\//);
@@ -31,11 +31,14 @@ test("AI app launcher uses official web and store destinations with platform fal
   assert.match(links, /com\.anthropic\.claude/);
   assert.match(links, /com\.google\.android\.apps\.bard/);
   assert.match(links, /browser_fallback_url/);
-  assert.match(links, /visibilitychange/);
   assert.match(links, /launchAiApp/);
-  assert.match(links, /document\.createElement\("iframe"\)/);
-  assert.match(links, /frame\.src = app\.iosScheme/);
-  assert.match(links, /window\.confirm/);
+  assert.match(links, /function launchIosApp/);
+  assert.match(links, /window\.location\.assign\(app\.webUrl\)/);
+  assert.match(links, /Universal Link/);
+  assert.doesNotMatch(links, /document\.createElement\("iframe"\)/);
+  assert.doesNotMatch(links, /visibilitychange/);
+  assert.doesNotMatch(links, /window\.confirm/);
+  assert.doesNotMatch(links, /setTimeout\([^)]*1600|1600\)/);
   assert.doesNotMatch(links, /window\.location\.assign\(app\.iosScheme\)/);
   assert.doesNotMatch(links, /api[_-]?key|sb_secret_|service[_-]?role/i);
 });
