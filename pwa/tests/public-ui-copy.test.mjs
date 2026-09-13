@@ -9,6 +9,8 @@ const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 const publicFeatureFiles = [
   "components/phase-tools-page.tsx",
+  "components/phase9-invite-page.tsx",
+  "components/phase10-admin-page.tsx",
   "components/phase13-image-page.tsx",
   "components/phase14-sns-page.tsx",
   "components/phase15-sidejob-page.tsx",
