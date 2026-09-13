@@ -43,9 +43,9 @@ export function Phase15SnsPlanPage() {
     <main className="creator-page">
       <header className="creator-head">
         <div>
-          <p className="eyebrow">SNS BUSINESS DESIGN · PHASE 15</p>
+          <p className="eyebrow">SNS ACCOUNT DESIGN</p>
           <h1>SNSアカウント立ち上げ設計</h1>
-          <p>副業テーマからプロフィール、投稿の柱、収益導線、30日後の改善まで一度に設計。</p>
+          <p>副業テーマからプロフィール、投稿の柱、収益導線、改善方針までまとめて設計します。</p>
         </div>
         <a className="route-back" href="/tools">← 機能一覧</a>
       </header>
@@ -80,12 +80,12 @@ export function Phase15SnsPlanPage() {
         </div>
 
         <label className="route-field">
-          <span>ChatGPT用 SNS立ち上げ設計プロンプト</span>
+          <span>AI用SNS立ち上げ設計プロンプト</span>
           <textarea className="prompt-area large" readOnly value={prompt} />
         </label>
         <button className="primary-action" type="button" onClick={() => void copy()}>設計プロンプトをコピー</button>
         {message && <div className="route-notice">{message}</div>}
-        <p className="panel-muted">アルゴリズムや収益額を決め打ちせず、実績を創作しない形で、アカウント設計→投稿→収益導線→改善の順に設計します。</p>
+        <p className="panel-muted">アルゴリズムや収益額を決め打ちせず、実績を創作しない形で、アカウント設計→投稿→収益導線→改善の順に整理します。</p>
       </section>
     </main>
   );
