@@ -46,9 +46,9 @@ export function Phase15SideJobPage() {
     <main className="creator-page">
       <header className="creator-head">
         <div>
-          <p className="eyebrow">AI SIDE JOB · PHASE 15</p>
+          <p className="eyebrow">AI SIDE JOB</p>
           <h1>AI副業プランナー</h1>
-          <p>作業時間・得意分野・顔出し・予算から、試しやすい候補を整理します。</p>
+          <p>使える時間・得意分野・顔出し・予算から、取り組みやすいAI副業候補を整理します。</p>
         </div>
         <a className="route-back" href="/tools">← 機能一覧</a>
       </header>
@@ -107,12 +107,12 @@ export function Phase15SideJobPage() {
         </div>
 
         <label className="route-field">
-          <span>ChatGPT用30日プラン生成プロンプト</span>
+          <span>AI用30日プラン生成プロンプト</span>
           <textarea className="prompt-area large" readOnly value={prompt} />
         </label>
         <button className="primary-action" type="button" onClick={() => void copy()}>プラン生成プロンプトをコピー</button>
         {message && <div className="route-notice">{message}</div>}
-        <p className="panel-muted">適合スコアはアプリ内の比較用で、収益・成功確率・市場順位を示すものではありません。</p>
+        <p className="panel-muted">適合スコアはAAS内の比較用です。収益・成功確率・市場順位を保証するものではありません。</p>
       </section>
     </main>
   );
