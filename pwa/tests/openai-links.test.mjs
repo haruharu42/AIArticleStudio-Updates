@@ -58,9 +58,13 @@ test("beginner home and article wizard use the shared AI app launcher", async ()
   assert.match(home, /iPhone \/ iPadでは「アプリを開く」と「Web版を開く」を選べます/);
   assert.match(home, /Google Play/);
   assert.doesNotMatch(home, /iPhone は App Store/);
-  assert.match(creator, /ChatGPTを開く/);
-  assert.match(creator, /import \{ launchAiApp \} from "@\/lib\/ai-app-links"/);
-  assert.equal((creator.match(/launchAiApp\("chatgpt"\)/g) ?? []).length, 2);
+  assert.match(creator, /AIを使って作る/);
+  assert.match(creator, /key: "chatgpt", label: "ChatGPT"/);
+  assert.match(creator, /key: "claude", label: "Claude"/);
+  assert.match(creator, /key: "gemini", label: "Gemini"/);
+  assert.match(creator, /launchAiApp\(app\.key\)/);
+  assert.match(creator, /AI用タイトルプロンプト/);
+  assert.match(creator, /AI用完成記事プロンプト/);
   assert.doesNotMatch(creator, /href=\{OPENAI_LINKS\.chatgpt\}/);
   assert.match(images, /ChatGPT Imagesを開く/);
   assert.match(tools, /ChatGPT Work/);
