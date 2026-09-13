@@ -24,7 +24,9 @@ import {
   GENDER_OPTIONS,
   GENRE_OPTIONS,
   TARGET_LENGTH_OPTIONS,
+  genreSelectionValue,
   subgenreOptionsFor,
+  subgenreSelectionValue,
 } from "@/lib/phase18-content-options";
 
 type Gate =
@@ -80,12 +82,14 @@ function initialDraftFromLocation(): ArticleCreationDraft {
   }
 
   const genre = params.get("genre");
-  if (genre && GENRE_OPTIONS.some((option) => option === genre)) next.genre = genre;
+  if (genre) next.genre = genre.slice(0, 120);
 
   const subgenre = params.get("subgenre");
-  const allowedSubgenres = subgenreOptionsFor(next.genre);
-  if (subgenre && allowedSubgenres.includes(subgenre)) next.subgenre = subgenre;
-  else if (!allowedSubgenres.includes(next.subgenre)) next.subgenre = allowedSubgenres[0] ?? "AIおまかせ";
+  if (subgenre) next.subgenre = subgenre.slice(0, 120);
+  else {
+    const allowedSubgenres = subgenreOptionsFor(next.genre);
+    if (!allowedSubgenres.includes(next.subgenre)) next.subgenre = allowedSubgenres[0] ?? "AIおまかせ";
+  }
 
   const ageGroup = params.get("ageGroup");
   if (ageGroup && AGE_GROUP_OPTIONS.some((option) => option === ageGroup)) next.ageGroup = ageGroup;
@@ -179,18 +183,32 @@ export function Phase11CreatePage() {
   const titlePrompt = useMemo(() => buildTitlePrompt({ ...draft, tags: tagsText.split(/[,、\n]/).map((tag) => tag.trim()).filter(Boolean) }), [draft, tagsText]);
   const articlePrompt = useMemo(() => buildArticlePrompt({ ...draft, tags: tagsText.split(/[,、\n]/).map((tag) => tag.trim()).filter(Boolean) }), [draft, tagsText]);
   const subgenreOptions = useMemo(() => subgenreOptionsFor(draft.genre), [draft.genre]);
+  const genreSelectValue = genreSelectionValue(draft.genre);
+  const subgenreSelectValue = subgenreSelectionValue(draft.genre, draft.subgenre);
 
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
   };
 
   const setGenre = (genre: string) => {
+    if (genre === "その他") {
+      setDraft((current) => ({ ...current, genre: "その他", subgenre: "AIおまかせ" }));
+      return;
+    }
     const nextSubgenres = subgenreOptionsFor(genre);
     setDraft((current) => ({
       ...current,
       genre,
       subgenre: nextSubgenres.includes(current.subgenre) ? current.subgenre : nextSubgenres[0] ?? "AIおまかせ",
     }));
+  };
+
+  const setCustomGenre = (value: string) => {
+    setDraft((current) => ({ ...current, genre: value.slice(0, 120), subgenre: "AIおまかせ" }));
+  };
+
+  const setSubgenre = (value: string) => {
+    patch("subgenre", value === "その他" ? "その他" : value);
   };
 
   const setArticleType = (value: ArticleType) => {
@@ -201,7 +219,18 @@ export function Phase11CreatePage() {
     }));
   };
 
-  const next = () => { setMessage(""); setStep((current) => Math.min(steps.length - 1, current + 1)); };
+  const next = () => {
+    setMessage("");
+    if (step === 2 && (!draft.genre.trim() || draft.genre === "その他")) {
+      setMessage("「その他」を選んだ場合はジャンル名を入力してください。");
+      return;
+    }
+    if (step === 2 && (!draft.subgenre.trim() || draft.subgenre === "その他")) {
+      setMessage("「その他」を選んだ場合はサブジャンル名を入力してください。");
+      return;
+    }
+    setStep((current) => Math.min(steps.length - 1, current + 1));
+  };
   const back = () => { setMessage(""); setStep((current) => Math.max(0, current - 1)); };
 
   const save = async () => {
@@ -272,12 +301,12 @@ export function Phase11CreatePage() {
 
         {step === 2 && (
           <div className="wizard-pane"><p className="eyebrow">STEP 3</p><h2>記事の基本条件を選んでください</h2>
-            <p className="beginner-help">初心者でも迷わないよう、主要項目はプルダウンから選べるようにしています。</p>
+            <p className="beginner-help">年齢・ジャンル・サブジャンルなどの選択条件をAAS Knowledge Compilerが組み合わせ、タイトル・本文・画像・SNS向けの指示へ反映します。</p>
             <div className="creator-form-grid">
               <label className="route-field"><span>掲載先</span><select value={draft.publicationTarget} onChange={(e) => patch("publicationTarget", e.target.value as PublicationTarget)}><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></select></label>
               <label className="route-field"><span>記事タイプ</span><select value={draft.articleType} onChange={(e) => setArticleType(e.target.value as ArticleType)}><option value="free">無料記事</option><option value="paid">有料記事</option></select></label>
-              <label className="route-field"><span>ジャンル</span><select value={draft.genre} onChange={(e) => setGenre(e.target.value)}>{GENRE_OPTIONS.map((genre) => <option key={genre} value={genre}>{genre}</option>)}</select></label>
-              <label className="route-field"><span>サブジャンル</span><select value={draft.subgenre} onChange={(e) => patch("subgenre", e.target.value)}>{subgenreOptions.map((subgenre) => <option key={subgenre} value={subgenre}>{subgenre}</option>)}</select></label>
+              <label className="route-field"><span>ジャンル</span><select value={genreSelectValue} onChange={(e) => setGenre(e.target.value)}>{GENRE_OPTIONS.map((genre) => <option key={genre} value={genre}>{genre}</option>)}</select>{genreSelectValue === "その他" && <input className="taxonomy-custom-input" value={draft.genre === "その他" ? "" : draft.genre} onChange={(e) => setCustomGenre(e.target.value)} placeholder="例: 観葉植物、ペット防災、AI英会話" maxLength={120} />}</label>
+              <label className="route-field"><span>サブジャンル</span><select value={subgenreSelectValue} onChange={(e) => setSubgenre(e.target.value)}>{subgenreOptions.map((subgenre) => <option key={subgenre} value={subgenre}>{subgenre}</option>)}</select>{subgenreSelectValue === "その他" && <input className="taxonomy-custom-input" value={draft.subgenre === "その他" ? "" : draft.subgenre} onChange={(e) => patch("subgenre", e.target.value.slice(0, 120))} placeholder="サブジャンルを具体的に入力" maxLength={120} />}</label>
               <label className="route-field"><span>対象年齢</span><select value={draft.ageGroup} onChange={(e) => patch("ageGroup", e.target.value)}>{AGE_GROUP_OPTIONS.map((age) => <option key={age} value={age}>{age}</option>)}</select></label>
               <label className="route-field"><span>対象性別</span><select value={draft.gender} onChange={(e) => patch("gender", e.target.value)}>{GENDER_OPTIONS.map((gender) => <option key={gender} value={gender}>{gender}</option>)}</select></label>
               <label className="route-field"><span>文字数の目安</span><select value={draft.targetLength} onChange={(e) => patch("targetLength", Number(e.target.value))}>{TARGET_LENGTH_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
@@ -286,6 +315,7 @@ export function Phase11CreatePage() {
               <label className="choice-card compact"><input type="checkbox" checked={draft.magazineEnabled} onChange={(e) => patch("magazineEnabled", e.target.checked)} /><span><strong>マガジンに入れる</strong><small>note等でシリーズ管理する場合にON</small></span></label>
               <label className="route-field full"><span>タグ（任意）</span><input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="AI副業, 初心者, ChatGPT" /></label>
             </div>
+            {(genreSelectValue === "その他" || subgenreSelectValue === "その他") && <p className="knowledge-learning-note">自由入力したジャンル・サブジャンルは、記事本文とは分離して候補名と利用回数だけを集計します。管理者は個人を特定せず集計候補を確認し、必要なものだけ正式ナレッジへ承認できます。</p>}
           </div>
         )}
 
