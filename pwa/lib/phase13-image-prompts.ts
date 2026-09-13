@@ -1,3 +1,5 @@
+import { compileKnowledgeContext } from "@/lib/knowledge-engine";
+
 export type ImagePromptPlanInput = {
   title: string;
   theme: string;
@@ -36,7 +38,15 @@ const avoid = [
 ].join("。") + "。";
 
 function common(input: ImagePromptPlanInput): string {
-  return `記事タイトル: ${input.title || "未定"}\n掲載先: ${input.publicationTarget}\nジャンル: ${input.genre || "未指定"}\nサブジャンル: ${input.subgenre || "AIおまかせ"}\n対象読者: ${input.ageGroup || "AIおまかせ"} / ${input.gender || "AIおまかせ"}\n記事テーマ: ${input.theme || "タイトルから推定"}\n画風: ${style}。\n禁止・回避: ${avoid}`;
+  const knowledge = compileKnowledgeContext({
+    task: "image",
+    publicationTarget: input.publicationTarget,
+    genre: input.genre,
+    subgenre: input.subgenre,
+    ageGroup: input.ageGroup,
+    audience: input.gender && input.gender !== "AIおまかせ" ? `対象性別: ${input.gender}` : "",
+  }).promptBlock;
+  return `記事タイトル: ${input.title || "未定"}\n掲載先: ${input.publicationTarget}\nジャンル: ${input.genre || "未指定"}\nサブジャンル: ${input.subgenre || "AIおまかせ"}\n対象読者: ${input.ageGroup || "AIおまかせ"} / ${input.gender || "AIおまかせ"}\n記事テーマ: ${input.theme || "タイトルから推定"}\n画風: ${style}。\n禁止・回避: ${avoid}\n\n${knowledge}`;
 }
 
 export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptItem[] {
