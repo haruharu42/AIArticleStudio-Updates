@@ -1,0 +1,178 @@
+/* Phase 20: real-device E2E polish for the beginner-first PWA. */
+
+/* Keep the article library on the approved white/light-blue surface even though
+   the legacy Phase 7 library styles were originally authored for the dark UI. */
+.beginner-dashboard-shell,
+.beginner-dashboard-frame,
+.beginner-library-main,
+.beginner-library-main .library-page {
+  background: #f7faff;
+  color: #10213f;
+}
+
+.beginner-library-main .library-page {
+  min-height: calc(100dvh - 170px);
+  border-radius: 20px;
+}
+
+.beginner-library-main .library-head,
+.beginner-library-main .library-toolbar,
+.beginner-library-main .article-list,
+.beginner-library-main .article-row,
+.beginner-library-main .article-detail,
+.beginner-library-main .editor-card,
+.beginner-library-main .library-empty {
+  border-color: #dfe8f4;
+  background: #fff;
+  color: #10213f;
+}
+
+.beginner-library-main .library-head {
+  border: 1px solid #dfe8f4;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgb(23 69 135 / 5%);
+}
+
+.beginner-library-main .library-toolbar {
+  box-shadow: 0 10px 30px rgb(23 69 135 / 5%);
+}
+
+.beginner-library-main .article-list {
+  box-shadow: 0 10px 30px rgb(23 69 135 / 5%);
+}
+
+.beginner-library-main .article-row + .article-row {
+  border-color: #e4ebf5;
+}
+
+.beginner-library-main .article-row:hover {
+  background: #f5f9ff;
+}
+
+.beginner-library-main .library-loading,
+.beginner-library-main .article-date {
+  color: #7185a2;
+}
+
+.beginner-library-main .article-main small,
+.beginner-library-main .article-date small {
+  color: #788ca7;
+}
+
+.beginner-library-main .article-status {
+  background: #eef3fa;
+  color: #526984;
+}
+
+.beginner-library-main .article-status.status-ready,
+.beginner-library-main .article-status.status-published {
+  background: #eaf9f3;
+  color: #187a5d;
+}
+
+.beginner-library-main .article-status.status-writing,
+.beginner-library-main .article-status.status-waiting_publish {
+  background: #f0ebff;
+  color: #6749be;
+}
+
+.beginner-library-main .row-arrow {
+  color: #8295af;
+}
+
+.beginner-library-main .library-search input,
+.beginner-library-main .editor-field input,
+.beginner-library-main .editor-field select,
+.beginner-library-main .editor-field textarea {
+  border-color: #cfdaea;
+  background: #f8fbff;
+  color: #172b49;
+}
+
+.beginner-library-main .back-action {
+  color: #31506f;
+}
+
+.beginner-library-main .secondary-action {
+  background: #223b63;
+  color: #fff;
+}
+
+.beginner-library-main .article-detail > header {
+  background: linear-gradient(135deg, #f4f8ff, #edf5ff);
+  color: #10213f;
+}
+
+.beginner-library-main .detail-badges span {
+  border-color: #d2e0f1;
+  color: #476584;
+}
+
+.beginner-library-main .detail-meta,
+.beginner-library-main .body-section + .body-section {
+  border-color: #e2eaf4;
+}
+
+.beginner-library-main .detail-meta dd {
+  color: #203552;
+}
+
+.beginner-library-main .body-section pre {
+  border-color: #dfe8f4;
+  background: #f8fbff;
+  color: #243a59;
+}
+
+/* On iPhone, show all seven wizard steps at once instead of requiring a
+   horizontal swipe that makes STEP 6/7 look as if they do not exist. */
+@media (max-width: 650px) {
+  .beginner-creator-page .wizard-steps {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .beginner-creator-page .wizard-steps li {
+    min-height: 62px;
+    gap: 4px;
+    padding: 7px 1px;
+    font-size: 7px;
+    line-height: 1.25;
+  }
+
+  .beginner-creator-page .wizard-steps li span {
+    width: 21px;
+    height: 21px;
+    font-size: 8px;
+  }
+
+  .beginner-library-main .library-head {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .beginner-library-main .library-head .access-badge {
+    width: fit-content;
+  }
+
+  .beginner-library-main .library-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .beginner-library-main .library-search {
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .beginner-creator-page .wizard-steps {
+    gap: 3px;
+  }
+
+  .beginner-creator-page .wizard-steps li {
+    font-size: 6.5px;
+  }
+}
