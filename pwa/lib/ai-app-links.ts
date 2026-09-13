@@ -61,50 +61,22 @@ function buildAndroidIntent(app: AiAppLink): string {
 }
 
 function launchIosApp(app: AiAppLink): void {
-  let finished = false;
-  let timer = 0;
-  const frame = document.createElement("iframe");
-  frame.setAttribute("aria-hidden", "true");
-  frame.tabIndex = -1;
-  frame.style.display = "none";
-
-  const cleanup = () => {
-    if (finished) return;
-    finished = true;
-    window.clearTimeout(timer);
-    document.removeEventListener("visibilitychange", onVisibilityChange);
-    window.removeEventListener("pagehide", cleanup);
-    frame.remove();
-  };
-
-  const onVisibilityChange = () => {
-    if (document.visibilityState === "hidden") cleanup();
-  };
-
-  document.addEventListener("visibilitychange", onVisibilityChange);
-  window.addEventListener("pagehide", cleanup, { once: true });
-
-  frame.src = app.iosScheme;
-  document.body.appendChild(frame);
-
-  timer = window.setTimeout(() => {
-    if (finished) return;
-    cleanup();
-    const openStore = window.confirm(
-      `${app.name}アプリが開かなかった場合は、App Storeの公式ページを開きますか？`,
-    );
-    if (openStore) window.location.assign(app.iosStoreUrl);
-  }, 1600);
+  // iOS blocks or delays custom-scheme navigation when it is attempted from a
+  // hidden iframe. Use the provider's HTTPS destination directly from the
+  // user's tap instead. iOS can hand a Universal Link to an installed app; if
+  // there is no associated app, Safari opens the official web destination
+  // immediately. This avoids the artificial timeout and incorrect App Store
+  // fallback that were observed on real iPhone hardware.
+  window.location.assign(app.webUrl);
 }
 
 /**
  * Open an AI app from the PWA without embedding API credentials.
  *
- * Android uses an intent URL with a Google Play fallback. iOS attempts the
- * provider app scheme inside an isolated frame so cancelling the system prompt
- * does not navigate the AAS page itself. If the app does not open, the user can
- * choose whether to visit the official App Store listing. Desktop browsers open
- * the provider's web app.
+ * Android uses an intent URL with a Google Play fallback. iOS uses the
+ * provider's official HTTPS destination so Universal Link handling can open an
+ * installed app without a timer; otherwise Safari opens the web app. Desktop
+ * browsers open the provider's web app in a new tab.
  */
 export function launchAiApp(key: AiAppKey): void {
   if (typeof window === "undefined") return;
