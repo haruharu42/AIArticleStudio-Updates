@@ -56,7 +56,7 @@ export function Phase17AnalyticsPage() {
   if (gate.kind !== "ready") {
     return (
       <main className="standalone-page"><section className="standalone-card">
-        <p className="eyebrow">ANALYTICS · PHASE 17</p><h1>コンテンツ分析</h1>
+        <p className="eyebrow">CONTENT ANALYTICS</p><h1>コンテンツ分析</h1>
         {gate.kind === "loading" && <p className="route-notice">記事集計を作成しています…</p>}
         {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
         {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
@@ -69,7 +69,7 @@ export function Phase17AnalyticsPage() {
   return (
     <main className="creator-page">
       <header className="creator-head">
-        <div><p className="eyebrow">ANALYTICS · PHASE 17</p><h1>コンテンツ分析</h1><p>{gate.aasId} / 現在保存されている記事の内部集計</p></div>
+        <div><p className="eyebrow">CONTENT ANALYTICS</p><h1>コンテンツ分析</h1><p>{gate.aasId} / AASに保存されている記事の状態を分かりやすく集計します</p></div>
         <a className="route-back" href="/tools">← 機能一覧</a>
       </header>
       <section className="analytics-grid">
@@ -87,7 +87,7 @@ export function Phase17AnalyticsPage() {
         <div className="analytics-list">{a.recent.map((article) => <div key={article.id}><span>{article.title}</span><strong>{statusLabel[article.status] ?? article.status}</strong></div>)}</div>
         {a.recent.length === 0 && <p className="panel-muted">記事がまだありません。</p>}
       </section>
-      <p className="analytics-note">この画面はAAS内部の記事件数・状態だけを集計しています。閲覧数・売上・SNS反応など外部サービスの実績値は、データ連携するまで表示しません。</p>
+      <p className="analytics-note">ここではAAS内の記事件数・掲載先・状態を集計しています。閲覧数・売上・SNS反応など外部サービスの実績値は、連携されるまで表示しません。</p>
     </main>
   );
 }

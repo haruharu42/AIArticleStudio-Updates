@@ -219,7 +219,7 @@ export function Phase10AdminPage() {
     return (
       <main className="standalone-page">
         <section className="standalone-card">
-          <p className="eyebrow">ADMIN · PHASE 10</p>
+          <p className="eyebrow">ADMINISTRATION</p>
           <h1>管理ダッシュボード</h1>
           {gate.kind === "loading" && (
             <p className="route-notice">管理者権限を確認しています…</p>
@@ -243,7 +243,7 @@ export function Phase10AdminPage() {
     <main className="admin-page">
       <header className="admin-head">
         <div>
-          <p className="eyebrow">ADMIN · PHASE 10</p>
+          <p className="eyebrow">ADMINISTRATION</p>
           <h1>共通管理ダッシュボード</h1>
           <p>{gate.aasId} / Windows・PWA利用権を共通管理</p>
         </div>

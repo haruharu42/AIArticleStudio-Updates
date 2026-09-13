@@ -1,11 +1,5 @@
-import { Phase7App } from "@/components/phase6-app";
-import { Phase9To11QuickNav } from "@/components/phase9-11-quick-nav";
+import { Phase18BeginnerHome } from "@/components/phase18-beginner-home";
 
 export default function Home() {
-  return (
-    <>
-      <Phase7App />
-      <Phase9To11QuickNav />
-    </>
-  );
+  return <Phase18BeginnerHome />;
 }

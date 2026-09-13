@@ -70,7 +70,7 @@ test("Phase 15 ranks side jobs as an internal fit aid and exports a non-guarante
   assert.match(api, /YouTube \/ TikTok \/ 配信クリエイター/);
   assert.match(api, /収益額・成功率・フォロワー数などを保証しない/);
   assert.match(api, /\.sort\(\(a, b\) => b\.score - a\.score/);
-  assert.match(page, /適合スコアはアプリ内の比較用/);
+  assert.match(page, /適合スコアはAAS内の比較用/);
   assert.match(route, /Phase15SideJobPage/);
 });
 
@@ -101,13 +101,15 @@ test("Phase 17 reports only internal article metrics until external analytics ar
   assert.match(route, /Phase17AnalyticsPage/);
 });
 
-test("tools hub and quick navigation expose the new functional routes on the stable root shell", async () => {
+test("tools hub and beginner-first root expose all functional routes with SNS in mobile navigation", async () => {
   const tools = await read("components/phase-tools-page.tsx");
   const toolsRoute = await read("app/tools/page.tsx");
-  const quick = await read("components/phase9-11-quick-nav.tsx");
+  const shell = await read("components/phase18-beginner-home.tsx");
   const rootPage = await read("app/page.tsx");
   const layout = await read("app/layout.tsx");
   const css = await read("app/phase12-17.css");
+  const beginnerCss = await read("app/phase18-beginner.css");
+  const dashboardCss = await read("app/phase19-dashboard.css");
 
   for (const href of ["/create", "/images", "/sns", "/sidejob", "/publish", "/analytics"]) {
     assert.match(tools, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
@@ -115,15 +117,29 @@ test("tools hub and quick navigation expose the new functional routes on the sta
   assert.match(tools, /try \{/);
   assert.match(tools, /getSupabaseClient\(\)/);
   assert.match(toolsRoute, /PhaseToolsPage/);
-  assert.match(quick, /href="\/tools"/);
-  assert.match(rootPage, /Phase7App/);
+  assert.match(rootPage, /Phase18BeginnerHome/);
+  assert.match(shell, /Phase7App/);
+  assert.match(shell, /href="\/tools"/);
+  assert.match(shell, /href="\/images"/);
+  assert.match(shell, /href="\/sns"/);
+  assert.match(shell, />作成<\/button>/);
+  assert.match(shell, />ライブラリ<\/button>/);
+  assert.match(shell, />SNS<\/button>/);
+  assert.match(shell, />設定<\/button>/);
+  assert.doesNotMatch(shell, />画像<\/button>/);
   assert.match(layout, /phase12-17\.css/);
+  assert.match(layout, /phase18-beginner\.css/);
+  assert.match(layout, /phase19-dashboard\.css/);
   assert.match(layout, /"aas-phase": "17"/);
   assert.match(layout, /"aas-release-stage": "production-preview"/);
   assert.doesNotMatch(layout, /phase8-local/);
   assert.match(css, /\.tool-grid/);
   assert.match(css, /\.analytics-grid/);
   assert.match(css, /\.image-prompt-list/);
+  assert.match(beginnerCss, /\.beginner-bottom-nav/);
+  assert.match(beginnerCss, /\.beginner-action-grid/);
+  assert.match(dashboardCss, /\.beginner-mobile-nav/);
+  assert.match(dashboardCss, /\.beginner-desktop-sidebar/);
 });
 
 test("package includes the Phase 12-17 contract test and keeps dependency pins unchanged", async () => {
