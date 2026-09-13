@@ -12,6 +12,7 @@ import "./phase21-transition-icons.css";
 import "./phase22-persistent-nav.css";
 import "./phase23-admin-dashboard.css";
 import "./phase24-admin-promotion.css";
+import "./phase25-user-personalization.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
