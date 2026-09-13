@@ -107,6 +107,7 @@ test("root uses the approved beginner dashboard across mobile and desktop", asyn
   const layout = await read("app/layout.tsx");
   const css = await read("app/phase18-beginner.css");
   const dashboardCss = await read("app/phase19-dashboard.css");
+  const deviceCss = await read("app/phase20-device-e2e.css");
 
   assert.match(rootPage, /Phase18BeginnerHome/);
   assert.doesNotMatch(rootPage, /Phase9To11QuickNav/);
@@ -122,6 +123,7 @@ test("root uses the approved beginner dashboard across mobile and desktop", asyn
   assert.doesNotMatch(beginnerHome, />画像<\/button>/);
   assert.match(layout, /phase18-beginner\.css/);
   assert.match(layout, /phase19-dashboard\.css/);
+  assert.match(layout, /phase20-device-e2e\.css/);
   assert.match(layout, /openai-links\.css/);
   assert.match(layout, /"aas-phase": "17"/);
   assert.match(layout, /"aas-release-stage": "production-preview"/);
@@ -131,6 +133,10 @@ test("root uses the approved beginner dashboard across mobile and desktop", asyn
   assert.match(dashboardCss, /\.beginner-dashboard-frame/);
   assert.match(dashboardCss, /grid-template-columns: 210px minmax\(0, 1fr\) 300px/);
   assert.match(dashboardCss, /repeat\(5, minmax\(0, 1fr\)\)/);
+  assert.match(deviceCss, /\.beginner-library-main \.library-page/);
+  assert.match(deviceCss, /background: #f7faff/);
+  assert.match(deviceCss, /\.beginner-creator-page \.wizard-steps/);
+  assert.match(deviceCss, /repeat\(7, minmax\(0, 1fr\)\)/);
 });
 
 test("package runs the Phase 9-11 contract test without changing dependency versions", async () => {
