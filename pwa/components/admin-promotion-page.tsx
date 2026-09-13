@@ -207,17 +207,14 @@ function SelectField({ label, value, onChange, options, placeholder = "選択し
 
 function SelectWithCustomField({ label, value, onChange, options, placeholder = "選択してください", customPlaceholder = "自由入力してください" }: { label: string; value: string; onChange: (value: string) => void; options: readonly string[]; placeholder?: string; customPlaceholder?: string }) {
   const isPreset = options.includes(value);
-  const [customMode, setCustomMode] = useState(Boolean(value) && !isPreset);
-
-  useEffect(() => {
-    if (value && !options.includes(value)) setCustomMode(true);
-  }, [options, value]);
+  const [customMode, setCustomMode] = useState(false);
+  const showCustom = customMode || (Boolean(value) && !isPreset);
 
   return (
     <label className="admin-promo-field">
       <span>{label}</span>
       <select
-        value={customMode ? "__custom__" : isPreset ? value : ""}
+        value={showCustom ? "__custom__" : isPreset ? value : ""}
         onChange={(event) => {
           const next = event.target.value;
           if (next === "__custom__") {
@@ -233,7 +230,7 @@ function SelectWithCustomField({ label, value, onChange, options, placeholder = 
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
         <option value="__custom__">その他・自由入力</option>
       </select>
-      {customMode && <input value={isPreset ? "" : value} onChange={(event) => onChange(event.target.value)} placeholder={customPlaceholder} />}
+      {showCustom && <input value={isPreset ? "" : value} onChange={(event) => onChange(event.target.value)} placeholder={customPlaceholder} />}
     </label>
   );
 }
