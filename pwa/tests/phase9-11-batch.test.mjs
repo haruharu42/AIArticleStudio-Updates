@@ -91,7 +91,9 @@ test("Phase 11 article creator saves an atomic article/workspace and restores gu
   assert.match(page, /AGE_GROUP_OPTIONS/);
   assert.match(page, /GENDER_OPTIONS/);
   assert.match(page, /TARGET_LENGTH_OPTIONS/);
-  assert.match(page, /OPENAI_LINKS\.chatgpt/);
+  assert.match(page, /launchAiApp/);
+  assert.match(page, /launchAiApp\("chatgpt"\)/);
+  assert.doesNotMatch(page, /OPENAI_LINKS\.chatgpt/);
   assert.match(page, /initialDraftFromLocation/);
   assert.match(page, /home-quick-setup/);
   assert.match(options, /AI副業/);
