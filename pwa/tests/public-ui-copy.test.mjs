@@ -11,6 +11,7 @@ const publicFeatureFiles = [
   "components/phase-tools-page.tsx",
   "components/phase9-invite-page.tsx",
   "components/phase10-admin-page.tsx",
+  "components/admin-promotion-page.tsx",
   "components/phase13-image-page.tsx",
   "components/phase14-sns-page.tsx",
   "components/phase15-sidejob-page.tsx",
@@ -52,4 +53,48 @@ test("admin dashboard keeps two-column summary cards on narrow mobile screens", 
   assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.admin-summary-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/);
   assert.match(css, /\.admin-workspace/);
   assert.match(css, /\.admin-invite-layout/);
+});
+
+test("admin-only promotion tools are hidden behind active admin state", async () => {
+  const tools = await read("components/phase-tools-page.tsx");
+  const promotion = await read("components/admin-promotion-page.tsx");
+  const route = await read("app/admin/promotion/page.tsx");
+  for (const label of ["管理者専用", "販売・宣伝記事作成", "SNSプロモーション", "キャンペーン設計", "製品情報管理"]) {
+    assert.match(tools, new RegExp(label));
+  }
+  assert.match(tools, /state\.profile\.role === "admin"/);
+  assert.match(tools, /state\.profile\.status === "active"/);
+  assert.match(promotion, /active管理者のみ利用できます/);
+  assert.match(promotion, /販売・プロモーションセンター/);
+  assert.match(route, /AdminPromotionPage/);
+  assert.doesNotMatch(`${tools}\n${promotion}`, /sb_secret_|service[_-]?role/i);
+});
+
+test("admin promotion prompts protect confirmed product facts and cover article plus social sales", async () => {
+  const api = await read("lib/admin-promotion.ts");
+  for (const label of ["確認済み製品情報", "販売・宣伝", "Instagram", "Threads", "TikTok", "YouTube Shorts", "14日分の投稿カレンダー"]) {
+    assert.match(api, new RegExp(label));
+  }
+  assert.match(api, /価格、実績、利用者数、売上、レビュー、キャンペーン/);
+  assert.match(api, /成果保証や過度な煽り/);
+  assert.match(api, /架空の購入者レビュー/);
+  assert.doesNotMatch(api, /service[_-]?role|sb_secret_/i);
+});
+
+test("active admins receive a top-of-home dashboard shortcut and an admin nav item", async () => {
+  const topbar = await read("components/admin-home-topbar.tsx");
+  const nav = await read("components/persistent-mobile-nav.tsx");
+  const css = await read("app/phase24-admin-promotion.css");
+  const layout = await read("app/layout.tsx");
+  assert.match(topbar, /pathname !== "\/"/);
+  assert.match(topbar, /data\.role === "admin"/);
+  assert.match(topbar, /管理ダッシュボード/);
+  assert.match(topbar, /販売・SNSプロモーション/);
+  assert.match(nav, /data\.role === "admin"/);
+  assert.match(nav, />管理<\/button>/);
+  assert.match(nav, /go\("\/admin"\)/);
+  assert.match(css, /\.persistent-mobile-nav\.admin-enabled/);
+  assert.match(css, /repeat\(6,/);
+  assert.match(layout, /AdminHomeTopbar/);
+  assert.match(layout, /phase24-admin-promotion\.css/);
 });
