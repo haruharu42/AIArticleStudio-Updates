@@ -124,7 +124,7 @@ export function Phase13ImagePromptPage() {
   if (gate.kind !== "ready") {
     return (
       <main className="standalone-page"><section className="standalone-card">
-        <p className="eyebrow">IMAGE PLAN · PHASE 13</p><h1>画像生成計画</h1>
+        <p className="eyebrow">IMAGE CREATION</p><h1>画像生成計画</h1>
         {gate.kind === "loading" && <p className="route-notice">記事ライブラリを確認しています…</p>}
         {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
         {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
@@ -137,9 +137,9 @@ export function Phase13ImagePromptPage() {
     <main className="creator-page">
       <header className="creator-head">
         <div>
-          <p className="eyebrow">IMAGE PLAN · PHASE 13</p>
+          <p className="eyebrow">IMAGE CREATION</p>
           <h1>記事から画像生成プロンプトを作る</h1>
-          <p>{gate.aasId} / アイキャッチと挿絵を同じ世界観で設計</p>
+          <p>{gate.aasId} / アイキャッチと挿絵を同じ世界観で設計できます</p>
         </div>
         <a className="route-back" href="/tools">← 機能一覧</a>
       </header>
@@ -192,7 +192,7 @@ export function Phase13ImagePromptPage() {
 
         {articles.length === 0 && <p className="panel-muted">記事がありません。先に記事を作成してください。</p>}
         {message && <div className="route-notice">{message}</div>}
-        <p className="panel-muted">この画面は画像生成プロンプトを作成します。プロンプトをコピーして公式のChatGPT Imagesで生成し、完成画像は記事ライブラリの画像管理から保存できます。</p>
+        <p className="panel-muted">記事の条件をもとに画像生成用プロンプトを作成します。プロンプトをコピーしてChatGPT Imagesで生成し、完成画像は記事ライブラリの画像管理から保存できます。</p>
       </section>
     </main>
   );
