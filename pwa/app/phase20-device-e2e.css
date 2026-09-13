@@ -124,6 +124,75 @@
   color: #243a59;
 }
 
+/* iOS does not expose reliable installed-app detection to Safari/PWAs. Keep
+   the choice explicit so users are never sent to the App Store by a guess. */
+.ai-ios-launch-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: end center;
+  background: rgb(12 28 54 / 42%);
+  padding: 18px 14px calc(18px + env(safe-area-inset-bottom));
+  backdrop-filter: blur(4px);
+}
+
+.ai-ios-launch-dialog {
+  width: min(100%, 430px);
+  display: grid;
+  gap: 12px;
+  border: 1px solid #dfe8f5;
+  border-radius: 22px;
+  background: #fff;
+  color: #10213f;
+  padding: 20px;
+  box-shadow: 0 24px 70px rgb(16 33 63 / 24%);
+}
+
+.ai-ios-launch-dialog > strong {
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.ai-ios-launch-dialog > p {
+  margin: 0;
+  color: #6f83a0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.ai-ios-launch-actions {
+  display: grid;
+  gap: 9px;
+}
+
+.ai-ios-launch-actions button,
+.ai-ios-launch-cancel {
+  min-height: 48px;
+  border-radius: 13px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.ai-ios-launch-primary {
+  border: 0;
+  background: linear-gradient(135deg, #1b80ff, #166bea);
+  color: #fff;
+}
+
+.ai-ios-launch-secondary {
+  border: 1px solid #b9d6fb;
+  background: #f4f9ff;
+  color: #176bd9;
+}
+
+.ai-ios-launch-cancel {
+  border: 0;
+  background: transparent;
+  color: #687d99;
+}
+
 /* On iPhone, show all seven wizard steps at once instead of requiring a
    horizontal swipe that makes STEP 6/7 look as if they do not exist. */
 @media (max-width: 650px) {
