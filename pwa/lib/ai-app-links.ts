@@ -60,12 +60,51 @@ function buildAndroidIntent(app: AiAppLink): string {
   return `intent://${path}#Intent;scheme=https;package=${app.androidPackage};S.browser_fallback_url=${encodeURIComponent(app.androidStoreUrl)};end`;
 }
 
+function launchIosApp(app: AiAppLink): void {
+  let finished = false;
+  let timer = 0;
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.tabIndex = -1;
+  frame.style.display = "none";
+
+  const cleanup = () => {
+    if (finished) return;
+    finished = true;
+    window.clearTimeout(timer);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    window.removeEventListener("pagehide", cleanup);
+    frame.remove();
+  };
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === "hidden") cleanup();
+  };
+
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("pagehide", cleanup, { once: true });
+
+  frame.src = app.iosScheme;
+  document.body.appendChild(frame);
+
+  timer = window.setTimeout(() => {
+    if (finished) return;
+    cleanup();
+    const openStore = window.confirm(
+      `${app.name}アプリが開かなかった場合は、App Storeの公式ページを開きますか？`,
+    );
+    if (openStore) window.location.assign(app.iosStoreUrl);
+  }, 1600);
+}
+
 /**
  * Open an AI app from the PWA without embedding API credentials.
  *
  * Android uses an intent URL with a Google Play fallback. iOS attempts the
- * provider app scheme, then falls back to the official App Store listing when
- * the page remains visible. Desktop browsers open the provider's web app.
+ * provider app scheme inside an isolated frame so cancelling the system prompt
+ * does not navigate the AAS page itself. If the app does not open, the user can
+ * choose whether to visit the official App Store listing. Desktop browsers open
+ * the provider's web app.
  */
 export function launchAiApp(key: AiAppKey): void {
   if (typeof window === "undefined") return;
@@ -77,29 +116,7 @@ export function launchAiApp(key: AiAppKey): void {
   }
 
   if (isIos()) {
-    let finished = false;
-    let timer = 0;
-    const cancelFallback = () => {
-      if (finished) return;
-      finished = true;
-      window.clearTimeout(timer);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("pagehide", cancelFallback);
-    };
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") cancelFallback();
-    };
-
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("pagehide", cancelFallback, { once: true });
-    timer = window.setTimeout(() => {
-      if (finished) return;
-      finished = true;
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("pagehide", cancelFallback);
-      window.location.assign(app.iosStoreUrl);
-    }, 1400);
-    window.location.assign(app.iosScheme);
+    launchIosApp(app);
     return;
   }
 
