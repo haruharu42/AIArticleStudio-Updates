@@ -397,9 +397,7 @@ export function Phase10AdminPage() {
     return invites.filter((invite) => {
       if (inviteFilter === "all") return true;
       if (inviteFilter === "usable") return isUsableInvite(invite);
-      if (inviteFilter === "expired") {
-        return invite.status === "active" && Boolean(invite.expiresAt && new Date(invite.expiresAt).getTime() <= Date.now());
-      }
+      if (inviteFilter === "expired") return invite.status === "active" && !isUsableInvite(invite);
       return invite.status === inviteFilter;
     });
   }, [invites, inviteFilter]);
