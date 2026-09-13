@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { AdminHomeTopbar } from "@/components/admin-home-topbar";
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
 import "./globals.css";
 import "./phase9-11.css";
@@ -10,6 +11,7 @@ import "./openai-links.css";
 import "./phase21-transition-icons.css";
 import "./phase22-persistent-nav.css";
 import "./phase23-admin-dashboard.css";
+import "./phase24-admin-promotion.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
@@ -44,6 +46,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body>
+        <AdminHomeTopbar />
         {children}
         <PersistentMobileNav />
       </body>
