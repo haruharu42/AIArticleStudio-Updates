@@ -33,6 +33,10 @@ test("AI app launcher uses official web and store destinations with platform fal
   assert.match(links, /browser_fallback_url/);
   assert.match(links, /visibilitychange/);
   assert.match(links, /launchAiApp/);
+  assert.match(links, /document\.createElement\("iframe"\)/);
+  assert.match(links, /frame\.src = app\.iosScheme/);
+  assert.match(links, /window\.confirm/);
+  assert.doesNotMatch(links, /window\.location\.assign\(app\.iosScheme\)/);
   assert.doesNotMatch(links, /api[_-]?key|sb_secret_|service[_-]?role/i);
 });
 
