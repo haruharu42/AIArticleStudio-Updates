@@ -118,14 +118,14 @@ export function CreateAiSetup() {
 
   if (confirmed) {
     return (
-      <>
+      <div className={`ai-selected-provider ai-selected-${profile.preferredAi}`}>
         <div className="ai-active-banner" role="status">
           <span><strong>{AI_PROVIDER_LABELS[profile.preferredAi]}</strong> / {AI_PLAN_LABELS[profile.preferredPlan]}</span>
           <span>{profile.personalizationEnabled ? "あなた向け最適化 ON" : "個人最適化 OFF"}</span>
           <button type="button" onClick={() => setConfirmed(false)}>AI設定を変更</button>
         </div>
         <Phase11CreatePage />
-      </>
+      </div>
     );
   }
 
