@@ -4,6 +4,7 @@ import "./phase9-11.css";
 import "./phase12-17.css";
 import "./phase18-beginner.css";
 import "./phase19-dashboard.css";
+import "./phase20-device-e2e.css";
 import "./openai-links.css";
 
 export const metadata: Metadata = {
