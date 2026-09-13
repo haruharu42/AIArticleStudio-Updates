@@ -18,23 +18,25 @@ test("OpenAI launch links stay on verified official ChatGPT destinations", async
   assert.doesNotMatch(links, /openai\.com\/api|platform\.openai\.com/);
 });
 
-test("AI app launcher uses official destinations and avoids delayed iPhone iframe fallback", async () => {
+test("AI app launcher keeps Android one-tap and gives iOS an explicit app/Web choice", async () => {
   const links = await read("lib/ai-app-links.ts");
 
   assert.match(links, /https:\/\/chatgpt\.com\//);
   assert.match(links, /https:\/\/claude\.ai\//);
   assert.match(links, /https:\/\/gemini\.google\.com\//);
-  assert.match(links, /apps\.apple\.com\/jp\/app\/chatgpt\/id6448311069/);
-  assert.match(links, /apps\.apple\.com\/jp\/app\/claude-by-anthropic\/id6473753684/);
-  assert.match(links, /apps\.apple\.com\/jp\/app\/google-gemini\/id6477489729/);
+  assert.match(links, /chatgpt:\/\//);
+  assert.match(links, /claude:\/\//);
+  assert.match(links, /googleapp:\/\/robin/);
   assert.match(links, /com\.openai\.chatgpt/);
   assert.match(links, /com\.anthropic\.claude/);
   assert.match(links, /com\.google\.android\.apps\.bard/);
   assert.match(links, /browser_fallback_url/);
-  assert.match(links, /launchAiApp/);
-  assert.match(links, /function launchIosApp/);
-  assert.match(links, /window\.location\.assign\(app\.webUrl\)/);
-  assert.match(links, /Universal Link/);
+  assert.match(links, /showIosLaunchChoice/);
+  assert.match(links, /アプリを開く/);
+  assert.match(links, /Web版を開く/);
+  assert.match(links, /anchor\.href = app\.iosScheme/);
+  assert.match(links, /anchor\.target = "_blank"/);
+  assert.match(links, /window\.open\(app\.webUrl, "_blank"/);
   assert.doesNotMatch(links, /document\.createElement\("iframe"\)/);
   assert.doesNotMatch(links, /visibilitychange/);
   assert.doesNotMatch(links, /window\.confirm/);
@@ -53,8 +55,9 @@ test("beginner home and article wizard use the shared AI app launcher", async ()
   assert.match(home, /AiLaunchCard appKey="claude"/);
   assert.match(home, /AiLaunchCard appKey="gemini"/);
   assert.match(home, /launchAiApp/);
-  assert.match(home, /App Store/);
+  assert.match(home, /iPhone \/ iPadでは「アプリを開く」と「Web版を開く」を選べます/);
   assert.match(home, /Google Play/);
+  assert.doesNotMatch(home, /iPhone は App Store/);
   assert.match(creator, /ChatGPTを開く/);
   assert.match(creator, /import \{ launchAiApp \} from "@\/lib\/ai-app-links"/);
   assert.equal((creator.match(/launchAiApp\("chatgpt"\)/g) ?? []).length, 2);
