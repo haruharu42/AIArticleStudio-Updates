@@ -214,6 +214,7 @@ export async function createArticleFromWizard(
     workspace_json: {
       wizard_version: 11,
       prompt_profile_version: 12,
+      image_prompt_version: 13,
       user_personalization_version: 1,
       personalization_enabled: writingProfile?.personalizationEnabled ?? false,
       selected_title: draft.title,
