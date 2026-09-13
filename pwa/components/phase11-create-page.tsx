@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { launchAiApp } from "@/lib/ai-app-links";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -133,7 +133,7 @@ export function Phase11CreatePage() {
   const [message, setMessage] = useState(() => initialMessageFromLocation());
   const [busy, setBusy] = useState(false);
   const [createdId, setCreatedId] = useState("");
-  const [restoredOwnerId, setRestoredOwnerId] = useState("");
+  const progressOwnerIdRef = useRef("");
 
   useEffect(() => {
     let active = true;
@@ -152,6 +152,15 @@ export function Phase11CreatePage() {
         if (profile.status !== "active") { setGate({ kind: "denied", message: "記事作成にはactiveアカウントが必要です。" }); return; }
         const { data: access, error: accessError } = await client.rpc("can_access_product", { p_product_code: "AAS-PWA-BETA" });
         if (accessError || access !== true) { setGate({ kind: "denied", message: "PWA利用権が必要です。" }); return; }
+
+        const saved = loadArticleWizardProgress(user.id);
+        if (saved) {
+          setStep(saved.step);
+          setDraft(saved.draft);
+          setTagsText(saved.tagsText);
+          setMessage("前回の作業内容を復元しました。");
+        }
+        progressOwnerIdRef.current = user.id;
         setGate({ kind: "ready", ownerId: user.id, aasId: profile.aas_user_id });
       } catch (error) {
         if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "初期化に失敗しました。" });
@@ -162,21 +171,9 @@ export function Phase11CreatePage() {
   }, []);
 
   useEffect(() => {
-    if (gate.kind !== "ready" || restoredOwnerId === gate.ownerId) return;
-    const saved = loadArticleWizardProgress(gate.ownerId);
-    if (saved) {
-      setStep(saved.step);
-      setDraft(saved.draft);
-      setTagsText(saved.tagsText);
-      setMessage("前回の作業内容を復元しました。");
-    }
-    setRestoredOwnerId(gate.ownerId);
-  }, [gate, restoredOwnerId]);
-
-  useEffect(() => {
-    if (gate.kind !== "ready" || restoredOwnerId !== gate.ownerId || createdId) return;
+    if (gate.kind !== "ready" || progressOwnerIdRef.current !== gate.ownerId || createdId) return;
     saveArticleWizardProgress(gate.ownerId, { step, draft, tagsText });
-  }, [gate, restoredOwnerId, step, draft, tagsText, createdId]);
+  }, [gate, step, draft, tagsText, createdId]);
 
   const localTitles = useMemo(() => suggestLocalTitles(draft), [draft]);
   const titlePrompt = useMemo(() => buildTitlePrompt({ ...draft, tags: tagsText.split(/[,、\n]/).map((tag) => tag.trim()).filter(Boolean) }), [draft, tagsText]);
