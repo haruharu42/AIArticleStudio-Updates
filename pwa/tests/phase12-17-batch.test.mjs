@@ -7,20 +7,20 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
-test("Phase 12 specializes article prompts without weakening editorial safety", async () => {
+test("Phase 12 specializes article prompts through the shared knowledge compiler without weakening editorial safety", async () => {
   const profiles = await read("lib/phase12-prompt-profiles.ts");
+  const knowledge = await read("lib/knowledge-engine.ts");
   const creator = await read("lib/phase11-create.ts");
 
-  assert.match(profiles, /AI\\s\*副業/);
-  assert.match(profiles, /美容/);
-  assert.match(profiles, /ガジェット/);
-  assert.match(profiles, /生活/);
-  assert.match(profiles, /SNS/);
-  assert.match(profiles, /note:/);
-  assert.match(profiles, /tips:/);
-  assert.match(profiles, /brain:/);
-  assert.match(profiles, /収益額や成果を保証しない/);
-  assert.match(profiles, /有料部分/);
+  assert.match(profiles, /compileKnowledgeContext/);
+  assert.match(profiles, /KnowledgeTask/);
+  assert.match(profiles, /性別だけから価値観・職業・生活状況を決めつけない/);
+  for (const label of ["AI副業", "美容", "ガジェット", "生活・暮らし", "SNS運用", "note", "Tips", "Brain"]) {
+    assert.match(knowledge, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(knowledge, /収益額・成功率・案件獲得を保証しない/);
+  assert.match(knowledge, /有料コンテンツでは/);
+  assert.match(knowledge, /未確認の価格、統計、ランキング、レビュー、最新仕様、成果を事実として補完しない/);
   assert.match(creator, /getPromptSpecialization/);
   assert.match(creator, /prompt_profile_version: 12/);
 });
