@@ -25,13 +25,16 @@ test("shared knowledge compiler combines audience genre publication and task rul
 
 test("knowledge context is shared by article title image social promotion sidejob and SNS launch prompts", async () => {
   const creator = await read("lib/phase11-create.ts");
+  const profileWrapper = await read("lib/phase12-prompt-profiles.ts");
   const images = await read("lib/phase13-image-prompts.ts");
   const social = await read("lib/phase14-sns.ts");
   const promotion = await read("lib/admin-promotion.ts");
   const sidejob = await read("lib/phase15-sidejob.ts");
   const snsPlan = await read("lib/phase15-sns-plan.ts");
 
-  for (const source of [creator, images, social, promotion, sidejob, snsPlan]) {
+  assert.match(creator, /getPromptSpecialization/);
+  assert.match(profileWrapper, /compileKnowledgeContext/);
+  for (const source of [images, social, promotion, sidejob, snsPlan]) {
     assert.match(source, /compileKnowledgeContext/);
   }
   assert.match(sidejob, /genre: "AI副業"/);
@@ -44,12 +47,17 @@ test("knowledge context is shared by article title image social promotion sidejo
 
 test("custom genre and subgenre inputs record only compact knowledge candidate signals", async () => {
   const creatorPage = await read("components/phase11-create-page.tsx");
+  const creator = await read("lib/phase11-create.ts");
   const catalog = await read("lib/knowledge-catalog.ts");
   const migration = await readRepo("supabase/migrations/20260913145500_knowledge_engine.sql");
 
-  assert.match(creatorPage, /customGenre/);
-  assert.match(creatorPage, /customSubgenre/);
-  assert.match(creatorPage, /recordKnowledgeCandidate/);
+  assert.match(creatorPage, /setCustomGenre/);
+  assert.match(creatorPage, /genreSelectionValue/);
+  assert.match(creatorPage, /subgenreSelectionValue/);
+  assert.match(creatorPage, /taxonomy-custom-input/);
+  assert.match(creator, /recordKnowledgeCandidate/);
+  assert.match(creator, /isCustomGenre/);
+  assert.match(creator, /isCustomSubgenre/);
   assert.match(catalog, /slice\(0, 120\)/);
   assert.match(catalog, /record_knowledge_candidate/);
   assert.match(migration, /knowledge_candidate_signals/);
