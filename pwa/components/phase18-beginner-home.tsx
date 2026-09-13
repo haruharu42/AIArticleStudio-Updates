@@ -252,7 +252,7 @@ export function Phase18BeginnerHome() {
             <section className="beginner-ai-section" aria-labelledby="beginner-ai-title">
               <div className="beginner-card-title"><div><span aria-hidden="true">🔗</span><div><h2 id="beginner-ai-title">AIアプリを開く</h2><p>普段使っているAIへすぐ移動できます。</p></div></div></div>
               <div className="beginner-ai-grid"><AiLaunchCard appKey="chatgpt" /><AiLaunchCard appKey="claude" /><AiLaunchCard appKey="gemini" /></div>
-              <p className="beginner-ai-note">スマホではアプリを優先して開き、開けない場合は iPhone は App Store、Android は Google Play の公式ページへ移動します。PCではWeb版を開きます。</p>
+              <p className="beginner-ai-note">iPhone / iPadでは「アプリを開く」と「Web版を開く」を選べます。Androidはアプリを優先し、開けない場合はGoogle Playの公式ページへ移動します。PCではWeb版を開きます。</p>
             </section>
 
             <section id="beginner-guide" className="beginner-three-steps">
