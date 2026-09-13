@@ -72,7 +72,7 @@ export function Phase9InvitePage() {
   return (
     <main className="standalone-page">
       <section className="standalone-card">
-        <p className="eyebrow">PWA INVITATION · PHASE 9</p>
+        <p className="eyebrow">PWA INVITATION</p>
         <h1>PWA招待コード</h1>
         <p className="standalone-lead">購入・招待で受け取ったコードを、このAASアカウントへ登録します。Windows利用権とは別に管理されます。</p>
 
