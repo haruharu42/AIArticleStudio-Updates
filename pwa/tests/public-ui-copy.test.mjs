@@ -33,3 +33,10 @@ test("feature hub uses user-facing categories instead of phase badges", async ()
   }
   assert.doesNotMatch(tools, /phase:\s*["']/i);
 });
+
+test("feature hub keeps four desktop, three tablet and two mobile columns", async () => {
+  const css = await read("app/phase12-17.css");
+  assert.match(css, /\.tool-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /@media \(max-width:\s*1000px\)[\s\S]*?\.tool-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /@media \(max-width:\s*720px\)[\s\S]*?\.tool-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+});
