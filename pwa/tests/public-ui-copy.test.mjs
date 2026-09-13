@@ -33,3 +33,23 @@ test("feature hub uses user-facing categories instead of phase badges", async ()
   }
   assert.doesNotMatch(tools, /phase:\s*["']/i);
 });
+
+test("admin dashboard exposes readable operations summary and management sections", async () => {
+  const admin = await read("components/phase10-admin-page.tsx");
+  for (const label of ["運用サマリー", "要対応", "利用権・販売状況", "ユーザー管理", "アカウント詳細", "PWA招待コード"]) {
+    assert.match(admin, new RegExp(label));
+  }
+  assert.match(admin, /PWA利用者/);
+  assert.match(admin, /Windows利用者/);
+  assert.match(admin, /AAS ID・表示名/);
+  assert.match(admin, /コードをコピー/);
+});
+
+test("admin dashboard keeps two-column summary cards on narrow mobile screens", async () => {
+  const css = await read("app/phase23-admin-dashboard.css");
+  const layout = await read("app/layout.tsx");
+  assert.match(layout, /phase23-admin-dashboard\.css/);
+  assert.match(css, /@media \(max-width: 650px\)[\s\S]*?\.admin-summary-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/);
+  assert.match(css, /\.admin-workspace/);
+  assert.match(css, /\.admin-invite-layout/);
+});
