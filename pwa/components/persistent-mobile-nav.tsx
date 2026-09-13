@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import {
   MOBILE_NAV_PREFERENCE_EVENT,
@@ -19,6 +19,7 @@ function matchesPrefix(pathname: string, prefix: string): boolean {
 
 export function PersistentMobileNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [signedIn, setSignedIn] = useState(false);
   const [alwaysShow, setAlwaysShow] = useState(true);
 
@@ -76,7 +77,7 @@ export function PersistentMobileNav() {
 
   if (!visible) return null;
 
-  const go = (href: string) => window.location.assign(href);
+  const go = (href: string) => router.push(href);
   const needsSpacer = pathname !== "/" && pathname !== "/settings";
 
   return (
