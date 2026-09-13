@@ -9,6 +9,7 @@ import "./phase20-device-e2e.css";
 import "./openai-links.css";
 import "./phase21-transition-icons.css";
 import "./phase22-persistent-nav.css";
+import "./phase23-admin-dashboard.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
