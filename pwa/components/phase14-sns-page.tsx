@@ -115,7 +115,7 @@ export function Phase14SnsPage() {
   if (gate.kind !== "ready") {
     return (
       <main className="standalone-page"><section className="standalone-card">
-        <p className="eyebrow">SNS · PHASE 14</p><h1>SNS投稿作成</h1>
+        <p className="eyebrow">SNS CONTENT</p><h1>SNS投稿作成</h1>
         {gate.kind === "loading" && <p className="route-notice">記事ライブラリを確認しています…</p>}
         {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
         {gate.kind === "denied" && <p className="route-notice error">{gate.message}</p>}
@@ -128,7 +128,7 @@ export function Phase14SnsPage() {
   return (
     <main className="creator-page">
       <header className="creator-head">
-        <div><p className="eyebrow">SNS · PHASE 14</p><h1>記事からSNS投稿を作る</h1><p>{gate.aasId} / X・Instagram・Threads向けプロンプト</p></div>
+        <div><p className="eyebrow">SNS CONTENT</p><h1>記事からSNS投稿を作る</h1><p>{gate.aasId} / X・Instagram・Threads向けの投稿プロンプトを作成できます</p></div>
         <a className="route-back" href="/tools">← 機能一覧</a>
       </header>
       <section className="creator-card">
@@ -143,7 +143,7 @@ export function Phase14SnsPage() {
         {detail && (
           <>
             <div className="route-notice"><strong>選択中:</strong> {detail.title}</div>
-            <label className="route-field"><span>ChatGPT用SNS投稿プロンプト</span><textarea className="prompt-area large" readOnly value={prompt} /></label>
+            <label className="route-field"><span>AI用SNS投稿プロンプト</span><textarea className="prompt-area large" readOnly value={prompt} /></label>
             <button className="primary-action" type="button" onClick={() => void copy()}>プロンプトをコピー</button>
           </>
         )}
