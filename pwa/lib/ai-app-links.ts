@@ -61,7 +61,17 @@ function buildAndroidIntent(app: AiAppLink): string {
 }
 
 function openWebApp(app: AiAppLink): void {
-  window.open(app.webUrl, "_blank", "noopener,noreferrer");
+  // Use a real target=_blank anchor instead of window.open so mobile Safari/PWA
+  // keeps the AAS page available while the provider Web app opens separately.
+  const anchor = document.createElement("a");
+  anchor.href = app.webUrl;
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  anchor.setAttribute("aria-hidden", "true");
+  anchor.style.display = "none";
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
 }
 
 function openIosScheme(app: AiAppLink): void {
@@ -147,7 +157,7 @@ function showIosLaunchChoice(app: AiAppLink): void {
  * Android keeps the one-tap package intent with an official Google Play
  * fallback. iPhone/iPad cannot reliably expose installed-app state to a PWA,
  * so AAS presents an explicit app/Web choice with no timer and no automatic
- * App Store redirect. Desktop browsers open the provider Web app directly.
+ * App Store redirect. Desktop browsers open the provider Web app separately.
  */
 export function launchAiApp(key: AiAppKey): void {
   if (typeof window === "undefined") return;
