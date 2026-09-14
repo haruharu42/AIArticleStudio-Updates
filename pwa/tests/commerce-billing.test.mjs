@@ -77,6 +77,20 @@ test("billing Worker fails closed and validates raw Stripe webhook signatures", 
   assert.doesNotMatch(worker, /console\.(log|info|debug)\([^)]*(secret|service|signature|authorization)/i);
 });
 
+test("checkout auth separates the public Auth API key from elevated service access", async () => {
+  const worker = await read("worker/billing.ts");
+  const vars = await read(".dev.vars.example");
+
+  assert.match(worker, /AAS_SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(worker, /function authApiKey/);
+  assert.match(worker, /apikey: apiKey/);
+  assert.match(worker, /authorization: `Bearer \$\{match\[1\]\}`/);
+  assert.match(worker, /auth_user_rejected/);
+  assert.match(worker, /profile_lookup_failed/);
+  assert.match(worker, /!serviceKey\.startsWith\("sb_secret_"\)/);
+  assert.match(vars, /AAS_SUPABASE_PUBLISHABLE_KEY=sb_publishable_REPLACE_ME/);
+});
+
 test("individual seller on-request mode keeps private identity out of public config", async () => {
   const worker = await read("worker/billing.ts");
   const client = await read("lib/commerce.ts");
