@@ -1,8 +1,8 @@
 import type { ArticleDetail } from "@/lib/phase7-articles";
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
-import { socialPlatformLabel, type SupportedSocialPlatform } from "@/lib/social-links";
+import { socialPlatformLabel } from "@/lib/social-links";
 
-export type SocialPlatform = SupportedSocialPlatform;
+export type SocialPlatform = "x" | "instagram" | "threads" | "tiktok" | "facebook" | "linkedin" | "pinterest" | "youtube";
 export type SocialGoal =
   | "article_traffic"
   | "engagement"
