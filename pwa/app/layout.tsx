@@ -22,6 +22,7 @@ import "./phase28-free-trial.css";
 import "./phase29-admin-compact-entitlements.css";
 import "./phase30-security-operations.css";
 import "./phase31-help-nav.css";
+import "./phase31-nav-flex.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
