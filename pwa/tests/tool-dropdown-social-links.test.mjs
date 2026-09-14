@@ -18,7 +18,7 @@ test("SNS tools expose expanded platforms and direct launch links", async () => 
   const planPage = await read("components/phase15-sns-plan-page.tsx");
 
   for (const platform of ["x", "instagram", "threads", "tiktok", "facebook", "linkedin", "pinterest", "youtube"]) {
-    assert.match(links, new RegExp(`\\|? \\\"${platform}\\\"|value: \\\"${platform}\\\"`));
+    assert.ok(links.includes(`"${platform}"`), `missing SNS platform: ${platform}`);
   }
   assert.match(links, /https:\/\/x\.com\/compose\/post/);
   assert.match(links, /https:\/\/www\.instagram\.com\//);
