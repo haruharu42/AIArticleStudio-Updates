@@ -1,5 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
+import { ensureMyFreeTrial } from "@/lib/free-trial";
+
 export const PWA_PRODUCT_CODE = "AAS-PWA-BETA";
 
 export type ProfileStatus =
@@ -103,6 +105,10 @@ export async function loadAccessState(
   }
   if (profile.status === "disabled") {
     return { kind: "disabled", user, profile };
+  }
+
+  if (profile.role === "user") {
+    await ensureMyFreeTrial(client);
   }
 
   const { data: canAccess, error: entitlementError } = await client.rpc(
