@@ -7,12 +7,14 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
-test("all six configurable free-trial feature codes are wired to current user actions", async () => {
+test("all six configurable free-trial feature codes are wired to explicit current user actions", async () => {
   const freeTrial = await read("lib/free-trial.ts");
   const createRoute = await read("app/create/page.tsx");
   const imageRoute = await read("app/images/page.tsx");
   const snsRoute = await read("app/sns/page.tsx");
   const creator = await read("components/phase11-create-page.tsx");
+  const images = await read("components/phase13-image-page.tsx");
+  const sns = await read("components/phase14-sns-page.tsx");
   const articleTools = await read("components/article-ai-tools.tsx");
 
   for (const feature of [
@@ -26,24 +28,53 @@ test("all six configurable free-trial feature codes are wired to current user ac
     assert.match(freeTrial, new RegExp(`"${feature}"`));
   }
 
-  assert.match(createRoute, /feature="article_generate"/);
-  assert.match(imageRoute, /feature="image_generate"/);
-  assert.match(snsRoute, /feature="sns_generate"/);
+  assert.doesNotMatch(createRoute, /FreeTrialFeatureGate/);
+  assert.doesNotMatch(imageRoute, /FreeTrialFeatureGate/);
+  assert.doesNotMatch(snsRoute, /FreeTrialFeatureGate/);
   assert.match(creator, /consumeFreeTrialUsage\(getSupabaseClient\(\), "title_generate"\)/);
+  assert.match(creator, /consumeFreeTrialUsage\(getSupabaseClient\(\), "article_generate"\)/);
+  assert.match(images, /consumeFreeTrialUsage\(getSupabaseClient\(\), "image_generate"\)/);
+  assert.match(sns, /consumeFreeTrialUsage\(getSupabaseClient\(\), "sns_generate"\)/);
   assert.match(articleTools, /kind === "rewrite" \? "article_rewrite" : "ai_assist"/);
 });
 
-test("title quota is consumed only by explicit candidate generation and not by copy or AI launch", async () => {
+test("title and article quotas are consumed only by explicit prompt generation", async () => {
   const creator = await read("components/phase11-create-page.tsx");
 
   assert.match(creator, /タイトル候補を生成/);
+  assert.match(creator, /完成記事プロンプトを作成/);
   assert.match(creator, /titlePromptAuthorized === titlePrompt/);
-  assert.match(creator, /if \(!result\.allowed\)/);
+  assert.match(creator, /articlePromptAuthorized === articlePrompt/);
   assert.match(creator, /titleQuotaInFlightRef\.current/);
-  assert.equal((creator.match(/consumeFreeTrialUsage\(/g) || []).length, 1);
+  assert.match(creator, /articleQuotaInFlightRef\.current/);
+  assert.equal((creator.match(/consumeFreeTrialUsage\(/g) || []).length, 2);
   assert.match(creator, /copyText\(titlePrompt, setMessage\)/);
-  assert.match(creator, /launchAiApp\(app\.key\)/);
-  assert.match(creator, /コピーやAIアプリ起動では追加消費しません/);
+  assert.match(creator, /copyText\(articlePrompt, setMessage\)/);
+  assert.match(creator, /生成後のコピーやAIアプリ起動では追加消費しません/);
+});
+
+test("image quota is consumed only when image prompts are explicitly created", async () => {
+  const images = await read("components/phase13-image-page.tsx");
+
+  assert.match(images, /画像生成プロンプトを作成/);
+  assert.match(images, /generateInFlightRef\.current/);
+  assert.match(images, /consumeFreeTrialUsage\(getSupabaseClient\(\), "image_generate"\)/);
+  assert.equal((images.match(/consumeFreeTrialUsage\(/g) || []).length, 1);
+  assert.match(images, /setGeneratedPrompts\(buildImagePromptPlan/);
+  assert.match(images, /generatedFingerprint === promptFingerprint/);
+  assert.match(images, /生成後のコピーやChatGPT Images起動では追加消費しません/);
+});
+
+test("SNS quota is consumed only when the SNS prompt is explicitly created", async () => {
+  const sns = await read("components/phase14-sns-page.tsx");
+
+  assert.match(sns, /SNS投稿プロンプトを作成/);
+  assert.match(sns, /generateInFlightRef\.current/);
+  assert.match(sns, /consumeFreeTrialUsage\(getSupabaseClient\(\), "sns_generate"\)/);
+  assert.equal((sns.match(/consumeFreeTrialUsage\(/g) || []).length, 1);
+  assert.match(sns, /setGeneratedPrompt\(prompt\)/);
+  assert.match(sns, /generatedFingerprint === promptFingerprint/);
+  assert.match(sns, /生成後のコピーでは追加消費しません/);
 });
 
 test("rewrite and AI assist prompts consume once before reveal and guard fast double clicks", async () => {
