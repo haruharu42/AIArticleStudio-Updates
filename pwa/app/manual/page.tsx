@@ -51,9 +51,10 @@ const MANUAL_SECTIONS = [
     title: "5. SNS投稿へ展開する",
     lead: "記事内容をもとに、SNS向けの投稿案へ変換できます。",
     points: [
-      "X、Instagram、Threads向けの投稿プロンプトを作成できます。",
+      "X、Instagram、Threads、TikTok、Facebook、LinkedIn、Pinterest、YouTube向けの投稿プロンプトを作成できます。",
       "記事の要点を短くまとめ、媒体ごとの構成へ変換します。",
       "SNSアカウント設計では、プロフィール・投稿テーマ・収益導線・改善案まで整理できます。",
+      "SNS投稿作成・SNS設計画面から、選択中のSNSを直接開けます。スマホでは対応アプリが利用可能な場合はアプリ起動が優先され、PCではWeb版を開きます。",
       "外部SNSへの自動投稿ではなく、内容を確認してからユーザー自身で投稿する運用を基本とします。",
     ],
   },
