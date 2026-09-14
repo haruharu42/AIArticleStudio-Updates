@@ -10,6 +10,8 @@ import {
   type PublicCommerceConfig,
 } from "@/lib/commerce";
 
+const DISCLOSURE_ON_REQUEST = "請求があった場合には遅滞なく開示します。";
+
 function display(value: string): string {
   return value || "正式販売前に確定・表示します";
 }
@@ -33,6 +35,12 @@ export function CommercialTransactionsPage() {
     };
   }, []);
 
+  const seller = config?.seller;
+  const onRequest = seller?.type === "individual" && seller.disclosureMode === "on_request";
+  const sellerName = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.name ?? "");
+  const sellerAddress = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.address ?? "");
+  const sellerPhone = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.phone ?? "");
+
   return (
     <main className="legal-commerce-page">
       <article>
@@ -43,12 +51,19 @@ export function CommercialTransactionsPage() {
         {config?.mode !== "live" && <p className="legal-commerce-warning">現在は正式なLIVE販売状態ではありません。</p>}
         {message && <p className="commerce-message" role="status">{message}</p>}
 
+        {onRequest && (
+          <section className="legal-commerce-notes seller-disclosure-note">
+            <h2>個人販売者の情報開示について</h2>
+            <p>販売者の氏名・所在地・電話番号は公開ページへ常時掲載せず、請求があった場合に遅滞なく開示する方式です。開示をご希望の場合は、下記のお問い合わせ窓口からご請求ください。正式な販売者情報は公開APIへ返さず、販売側で開示できる状態を保持します。</p>
+          </section>
+        )}
+
         <dl className="legal-commerce-table">
-          <div><dt>販売事業者</dt><dd>{display(config?.seller.name ?? "")}</dd></div>
-          <div><dt>所在地</dt><dd>{display(config?.seller.address ?? "")}</dd></div>
-          <div><dt>電話番号</dt><dd>{display(config?.seller.phone ?? "")}</dd></div>
-          <div><dt>メールアドレス</dt><dd>{display(config?.seller.email ?? "")}</dd></div>
-          <div><dt>問い合わせ窓口</dt><dd>{config?.seller.supportUrl ? <a href={config.seller.supportUrl}>問い合わせページ</a> : "正式販売前に確定・表示します"}</dd></div>
+          <div><dt>販売事業者</dt><dd>{sellerName}</dd></div>
+          <div><dt>所在地</dt><dd>{sellerAddress}</dd></div>
+          <div><dt>電話番号</dt><dd>{sellerPhone}</dd></div>
+          <div><dt>メールアドレス</dt><dd>{display(seller?.email ?? "")}</dd></div>
+          <div><dt>問い合わせ・開示請求窓口</dt><dd>{seller?.supportUrl ? <a href={seller.supportUrl}>問い合わせページ</a> : "正式販売前に確定・表示します"}</dd></div>
           <div><dt>販売価格</dt><dd>下記の各プランに表示します。決済画面にも最終請求額を表示します。</dd></div>
           <div><dt>商品代金以外の必要料金</dt><dd>インターネット接続料金・通信料金等は利用者の負担です。その他の費用が生じる場合は購入前に表示します。</dd></div>
           <div><dt>支払方法</dt><dd>Stripe Checkoutで提供される支払方法。実際に利用可能な方法は決済画面に表示します。</dd></div>
