@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { consumeFreeTrialUsage, trialUsageMessage } from "@/lib/free-trial";
 import {
   getCloudArticleDetail,
   listCloudArticles,
@@ -28,8 +29,12 @@ export function Phase14SnsPage() {
   const [tone, setTone] = useState("親しみやすく具体的");
   const [maxCharacters, setMaxCharacters] = useState("140");
   const [hashtags, setHashtags] = useState(true);
+  const [generatedPrompt, setGeneratedPrompt] = useState("");
+  const [generatedFingerprint, setGeneratedFingerprint] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [generateBusy, setGenerateBusy] = useState(false);
+  const generateInFlightRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -75,6 +80,8 @@ export function Phase14SnsPage() {
     if (gate.kind !== "ready") return;
     setArticleId(id);
     setDetail(null);
+    setGeneratedPrompt("");
+    setGeneratedFingerprint("");
     setMessage("");
     if (!id) return;
     setBusy(true);
@@ -87,25 +94,58 @@ export function Phase14SnsPage() {
     }
   };
 
-  const prompt = useMemo(() => {
-    if (!detail) return "";
-    const parsedMax = maxCharacters.trim() ? Number(maxCharacters) : null;
-    return buildSocialPrompt(detail, {
-      platform,
-      goal,
-      tone,
-      maxCharacters:
-        parsedMax !== null && Number.isFinite(parsedMax) && parsedMax > 0
-          ? Math.trunc(parsedMax)
-          : null,
-      hashtags,
-    });
-  }, [detail, goal, hashtags, maxCharacters, platform, tone]);
+  const promptFingerprint = useMemo(() => detail ? JSON.stringify({
+    id: detail.id,
+    revision: detail.revision,
+    platform,
+    goal,
+    tone,
+    maxCharacters,
+    hashtags,
+  }) : "", [detail, goal, hashtags, maxCharacters, platform, tone]);
+  const promptReady = Boolean(generatedPrompt) && generatedFingerprint === promptFingerprint;
+
+  const generatePrompt = async () => {
+    if (!detail || generateInFlightRef.current) return;
+    generateInFlightRef.current = true;
+    setGenerateBusy(true);
+    setMessage("");
+    try {
+      const result = await consumeFreeTrialUsage(getSupabaseClient(), "sns_generate");
+      if (!result.allowed) {
+        setGeneratedPrompt("");
+        setGeneratedFingerprint("");
+        setMessage(trialUsageMessage(result));
+        return;
+      }
+      const parsedMax = maxCharacters.trim() ? Number(maxCharacters) : null;
+      const prompt = buildSocialPrompt(detail, {
+        platform,
+        goal,
+        tone,
+        maxCharacters:
+          parsedMax !== null && Number.isFinite(parsedMax) && parsedMax > 0
+            ? Math.trunc(parsedMax)
+            : null,
+        hashtags,
+      });
+      setGeneratedPrompt(prompt);
+      setGeneratedFingerprint(promptFingerprint);
+      setMessage(result.bypassLimits ? "SNS投稿プロンプトを作成しました。" : `SNS投稿プロンプトを1回作成しました。${trialUsageMessage(result)}`);
+    } catch (error) {
+      setGeneratedPrompt("");
+      setGeneratedFingerprint("");
+      setMessage(error instanceof Error ? error.message : "SNS投稿作成の利用回数を確認できませんでした。");
+    } finally {
+      generateInFlightRef.current = false;
+      setGenerateBusy(false);
+    }
+  };
 
   const copy = async () => {
-    if (!prompt) return;
+    if (!promptReady) return;
     try {
-      await navigator.clipboard.writeText(prompt);
+      await navigator.clipboard.writeText(generatedPrompt);
       setMessage("SNS投稿生成プロンプトをコピーしました。");
     } catch {
       setMessage("自動コピーできません。テキスト欄からコピーしてください。");
@@ -133,7 +173,7 @@ export function Phase14SnsPage() {
       </header>
       <section className="creator-card">
         <div className="creator-form-grid">
-          <label className="route-field full"><span>元記事</span><select value={articleId} onChange={(event) => void loadArticle(event.target.value)} disabled={busy}><option value="">記事を選択</option>{articles.map((article) => <option key={article.id} value={article.id}>{article.title}</option>)}</select></label>
+          <label className="route-field full"><span>元記事</span><select value={articleId} onChange={(event) => void loadArticle(event.target.value)} disabled={busy || generateBusy}><option value="">記事を選択</option>{articles.map((article) => <option key={article.id} value={article.id}>{article.title}</option>)}</select></label>
           <label className="route-field"><span>SNS</span><select value={platform} onChange={(event) => setPlatform(event.target.value as SocialPlatform)}><option value="x">X</option><option value="instagram">Instagram</option><option value="threads">Threads</option></select></label>
           <label className="route-field"><span>目的</span><select value={goal} onChange={(event) => setGoal(event.target.value as SocialGoal)}><option value="article_traffic">記事への導線</option><option value="engagement">交流・反応</option><option value="product_interest">有料コンテンツへの関心</option></select></label>
           <label className="route-field"><span>トーン</span><input value={tone} onChange={(event) => setTone(event.target.value)} /></label>
@@ -143,8 +183,13 @@ export function Phase14SnsPage() {
         {detail && (
           <>
             <div className="route-notice"><strong>選択中:</strong> {detail.title}</div>
-            <label className="route-field"><span>AI用SNS投稿プロンプト</span><textarea className="prompt-area large" readOnly value={prompt} /></label>
-            <button className="primary-action" type="button" onClick={() => void copy()}>プロンプトをコピー</button>
+            <p className="panel-muted">記事選択やSNS条件の変更だけでは回数を消費しません。「SNS投稿プロンプトを作成」を押した時だけSNS生成1回として記録されます。</p>
+            <button className="primary-action" type="button" disabled={generateBusy} onClick={() => void generatePrompt()}>{generateBusy ? "利用回数を確認中…" : promptReady ? "SNS投稿プロンプトを作り直す" : "SNS投稿プロンプトを作成"}</button>
+            {promptReady && <>
+              <label className="route-field"><span>AI用SNS投稿プロンプト</span><textarea className="prompt-area large" readOnly value={generatedPrompt} /></label>
+              <button className="secondary-action" type="button" onClick={() => void copy()}>プロンプトをコピー</button>
+              <p className="beginner-help">生成後のコピーでは追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
+            </>}
           </>
         )}
         {!detail && articles.length === 0 && <p className="panel-muted">記事ライブラリに記事がありません。先に記事を作成してください。</p>}
