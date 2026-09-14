@@ -56,12 +56,30 @@ export type OpsFinding = {
   createdAt: string;
 };
 
+export type OpsCapacityMetric = {
+  usedBytes: number;
+  limitBytes: number | null;
+  remainingBytes: number | null;
+  percent: number | null;
+};
+
+export type OpsCapacity = {
+  planLabel: string;
+  warningPercent: number;
+  dangerPercent: number;
+  criticalPercent: number;
+  database: OpsCapacityMetric;
+  storage: OpsCapacityMetric & { objectCount: number };
+  checkedAt: string;
+};
+
 export type OpsSnapshot = {
   counts: { open: number; critical: number; error: number; warning: number };
   events: OpsEvent[];
   health: OpsHealth[];
   runs: OpsAuditRun[];
   findings: OpsFinding[];
+  capacity: OpsCapacity;
 };
 
 type Row = Record<string, unknown>;
@@ -69,6 +87,7 @@ const object = (value: unknown): Row => value && typeof value === "object" && !A
 const text = (row: Row, key: string) => typeof row[key] === "string" ? row[key] as string : "";
 const maybeText = (row: Row, key: string) => typeof row[key] === "string" ? row[key] as string : null;
 const num = (row: Row, key: string) => typeof row[key] === "number" && Number.isFinite(row[key]) ? row[key] as number : 0;
+const maybeNum = (row: Row, key: string) => typeof row[key] === "number" && Number.isFinite(row[key]) ? row[key] as number : null;
 const list = (row: Row, key: string): unknown[] => Array.isArray(row[key]) ? row[key] as unknown[] : [];
 
 function severity(value: string): OpsSeverity {
@@ -79,6 +98,30 @@ function eventStatus(value: string): OpsEventStatus {
 }
 function healthStatus(value: string): OpsHealthStatus {
   return value === "healthy" || value === "warning" || value === "error" ? value : "unknown";
+}
+
+function capacityMetric(row: Row): OpsCapacityMetric {
+  return {
+    usedBytes: num(row, "used_bytes"),
+    limitBytes: maybeNum(row, "limit_bytes"),
+    remainingBytes: maybeNum(row, "remaining_bytes"),
+    percent: maybeNum(row, "percent"),
+  };
+}
+
+function parseCapacity(value: unknown): OpsCapacity {
+  const row = object(value);
+  const database = object(row.database);
+  const storage = object(row.storage);
+  return {
+    planLabel: text(row, "plan_label") || "未設定",
+    warningPercent: num(row, "warning_percent") || 70,
+    dangerPercent: num(row, "danger_percent") || 85,
+    criticalPercent: num(row, "critical_percent") || 95,
+    database: capacityMetric(database),
+    storage: { ...capacityMetric(storage), objectCount: num(storage, "object_count") },
+    checkedAt: text(row, "checked_at"),
+  };
 }
 
 export async function loadOpsSnapshot(client: SupabaseClient): Promise<OpsSnapshot> {
@@ -108,22 +151,52 @@ export async function loadOpsSnapshot(client: SupabaseClient): Promise<OpsSnapsh
       const row = object(value);
       return { component: text(row, "component"), status: healthStatus(text(row, "status")), message: text(row, "message"), checkedAt: text(row, "checked_at"), latencyMs: row.latency_ms === null ? null : num(row, "latency_ms") };
     }).filter((item) => item.component),
-    runs: list(root, "runs").map((value) => {
+    runs: list(root, "runs").map((value): OpsAuditRun => {
       const row = object(value);
-      const status = text(row, "status");
-      return { id: text(row, "id"), source: text(row, "source"), status: status === "passed" || status === "warning" || status === "failed" ? status : "running", criticalCount: num(row, "critical_count"), errorCount: num(row, "error_count"), warningCount: num(row, "warning_count"), infoCount: num(row, "info_count"), startedAt: text(row, "started_at"), completedAt: maybeText(row, "completed_at") };
+      const valueStatus = text(row, "status");
+      const status: OpsAuditRun["status"] = valueStatus === "passed" || valueStatus === "warning" || valueStatus === "failed" ? valueStatus : "running";
+      return { id: text(row, "id"), source: text(row, "source"), status, criticalCount: num(row, "critical_count"), errorCount: num(row, "error_count"), warningCount: num(row, "warning_count"), infoCount: num(row, "info_count"), startedAt: text(row, "started_at"), completedAt: maybeText(row, "completed_at") };
     }).filter((item) => item.id),
     findings: list(root, "findings").map((value) => {
       const row = object(value);
       return { id: text(row, "id"), runId: text(row, "run_id"), checkCode: text(row, "check_code"), severity: severity(text(row, "severity")), category: text(row, "category"), title: text(row, "title"), detail: text(row, "detail"), objectName: maybeText(row, "object_name"), remediation: maybeText(row, "remediation"), createdAt: text(row, "created_at") };
     }).filter((item) => item.id),
+    capacity: parseCapacity(root.capacity),
   };
 }
 
 export async function runOpsSecurityAudit(client: SupabaseClient): Promise<string> {
-  const { data, error } = await client.rpc("admin_ops_run_security_audit");
-  if (error || typeof data !== "string") throw new Error("セキュリティ監査を実行できませんでした。");
-  return data;
+  const [auditResult, capacityResult] = await Promise.all([
+    client.rpc("admin_ops_run_security_audit"),
+    client.rpc("admin_ops_refresh_capacity"),
+  ]);
+  if (auditResult.error || typeof auditResult.data !== "string") throw new Error("セキュリティ監査を実行できませんでした。");
+  if (capacityResult.error) throw new Error("容量監視を更新できませんでした。");
+  return auditResult.data;
+}
+
+export async function refreshOpsCapacity(client: SupabaseClient): Promise<void> {
+  const { error } = await client.rpc("admin_ops_refresh_capacity");
+  if (error) throw new Error("Supabase容量を更新できませんでした。");
+}
+
+export async function updateOpsCapacitySettings(client: SupabaseClient, input: {
+  planLabel: string;
+  databaseLimitBytes: number | null;
+  storageLimitBytes: number | null;
+  warningPercent: number;
+  dangerPercent: number;
+  criticalPercent: number;
+}): Promise<void> {
+  const { error } = await client.rpc("admin_ops_update_capacity_settings", {
+    p_plan_label: input.planLabel.trim() || "未設定",
+    p_database_limit_bytes: input.databaseLimitBytes,
+    p_storage_limit_bytes: input.storageLimitBytes,
+    p_warning_percent: input.warningPercent,
+    p_danger_percent: input.dangerPercent,
+    p_critical_percent: input.criticalPercent,
+  });
+  if (error) throw new Error("Supabase容量設定を保存できませんでした。");
 }
 
 export async function setOpsEventStatus(client: SupabaseClient, eventId: string, status: OpsEventStatus, resolutionNote?: string): Promise<void> {
