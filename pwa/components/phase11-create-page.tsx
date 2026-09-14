@@ -138,10 +138,13 @@ export function Phase11CreatePage() {
   const [message, setMessage] = useState(() => initialMessageFromLocation());
   const [busy, setBusy] = useState(false);
   const [titleBusy, setTitleBusy] = useState(false);
+  const [articleBusy, setArticleBusy] = useState(false);
   const [titlePromptAuthorized, setTitlePromptAuthorized] = useState("");
+  const [articlePromptAuthorized, setArticlePromptAuthorized] = useState("");
   const [createdId, setCreatedId] = useState("");
   const progressOwnerIdRef = useRef("");
   const titleQuotaInFlightRef = useRef(false);
+  const articleQuotaInFlightRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -190,6 +193,7 @@ export function Phase11CreatePage() {
   const genreSelectValue = genreSelectionValue(draft.genre);
   const subgenreSelectValue = subgenreSelectionValue(draft.genre, draft.subgenre);
   const titleCandidatesReady = titlePromptAuthorized === titlePrompt;
+  const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -248,6 +252,33 @@ export function Phase11CreatePage() {
     } finally {
       titleQuotaInFlightRef.current = false;
       setTitleBusy(false);
+    }
+  };
+
+  const generateArticlePrompt = async () => {
+    if (articleQuotaInFlightRef.current) return;
+    articleQuotaInFlightRef.current = true;
+    setArticleBusy(true);
+    setMessage("");
+    try {
+      const result = await consumeFreeTrialUsage(getSupabaseClient(), "article_generate");
+      if (!result.allowed) {
+        setArticlePromptAuthorized("");
+        setMessage(trialUsageMessage(result));
+        return;
+      }
+      setArticlePromptAuthorized(articlePrompt);
+      setMessage(
+        result.bypassLimits
+          ? "完成記事プロンプトを作成しました。"
+          : `完成記事プロンプトを1回作成しました。${trialUsageMessage(result)}`,
+      );
+    } catch (error) {
+      setArticlePromptAuthorized("");
+      setMessage(error instanceof Error ? error.message : "記事生成の利用回数を確認できませんでした。");
+    } finally {
+      articleQuotaInFlightRef.current = false;
+      setArticleBusy(false);
     }
   };
 
@@ -371,12 +402,16 @@ export function Phase11CreatePage() {
         {step === 4 && (
           <div className="wizard-pane"><p className="eyebrow">STEP 5</p><h2>本文を準備します</h2>
             {draft.generationMode === "prompt_export" && <>
-              <label className="route-field"><span>AI用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
-              <div className="openai-prompt-actions">
-                <button className="secondary-action" type="button" onClick={() => copyText(articlePrompt, setMessage)}>完成記事プロンプトをコピー</button>
-                {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => launchAiApp(app.key)}>{app.label}を開く ↗</button>)}
-              </div>
-              <p className="beginner-help">使いたいAIで記事を生成し、完成記事をコピーして下の本文欄へ貼り付けます。</p>
+              <p className="panel-muted">この画面を開くだけでは回数を消費しません。「完成記事プロンプトを作成」を押した時だけ記事生成1回として記録されます。</p>
+              <button className="secondary-action" type="button" disabled={articleBusy} onClick={() => void generateArticlePrompt()}>{articleBusy ? "利用回数を確認中…" : articlePromptReady ? "完成記事プロンプトを作り直す" : "完成記事プロンプトを作成"}</button>
+              {articlePromptReady && <>
+                <label className="route-field"><span>AI用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
+                <div className="openai-prompt-actions">
+                  <button className="secondary-action" type="button" onClick={() => copyText(articlePrompt, setMessage)}>完成記事プロンプトをコピー</button>
+                  {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => launchAiApp(app.key)}>{app.label}を開く ↗</button>)}
+                </div>
+                <p className="beginner-help">生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
+              </>}
             </>}
             <label className="route-field"><span>{draft.generationMode === "prompt_export" ? "生成した本文をここへ貼り付け" : "本文"}</span><textarea className="body-area" value={draft.body} onChange={(e) => patch("body", e.target.value)} placeholder="# 見出し\n本文…" /></label>
           </div>
@@ -403,8 +438,8 @@ export function Phase11CreatePage() {
         {message && <div className="route-notice">{message}</div>}
 
         <footer className="wizard-actions">
-          <button className="secondary-action" type="button" disabled={step === 0 || busy || titleBusy} onClick={back}>戻る</button>
-          {step < steps.length - 1 && <button className="primary-action" type="button" disabled={busy || titleBusy} onClick={next}>次へ →</button>}
+          <button className="secondary-action" type="button" disabled={step === 0 || busy || titleBusy || articleBusy} onClick={back}>戻る</button>
+          {step < steps.length - 1 && <button className="primary-action" type="button" disabled={busy || titleBusy || articleBusy} onClick={next}>次へ →</button>}
           {createdId && <a className="primary-action" href="/">ホームへ戻る</a>}
         </footer>
       </section>
