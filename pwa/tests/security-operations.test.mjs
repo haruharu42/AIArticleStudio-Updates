@@ -37,6 +37,22 @@ test("operations audit covers RLS, anonymous RPC, billing, Storage and scheduler
   assert.match(scheduler, /private\.ops_run_database_audit\('scheduled'\)/);
 });
 
+test("capacity monitoring measures database and Storage without exposing its settings table", async () => {
+  const sql = await readRepo("supabase/migrations/20260914054500_ops_capacity_monitoring.sql");
+  assert.match(sql, /create table public\.ops_capacity_settings/);
+  assert.match(sql, /enable row level security/);
+  assert.match(sql, /force row level security/);
+  assert.match(sql, /revoke all on table public\.ops_capacity_settings from public, anon, authenticated/);
+  assert.match(sql, /pg_database_size/);
+  assert.match(sql, /from storage\.objects/);
+  assert.match(sql, /admin_ops_update_capacity_settings/);
+  assert.match(sql, /admin_ops_refresh_capacity/);
+  assert.match(sql, /aas-ops-capacity-hourly/);
+  assert.match(sql, /5 \* \* \* \*/);
+  assert.match(sql, /SUPABASE_DATABASE_CAPACITY/);
+  assert.match(sql, /SUPABASE_STORAGE_CAPACITY/);
+});
+
 test("error logging redacts secrets and never stores stack or request bodies", async () => {
   const client = await read("lib/ops.ts");
   const workerOps = await read("worker/ops.ts");
@@ -66,8 +82,12 @@ test("operations health endpoint and admin UI are wired without exposing secrets
   assert.match(page, /Security & Operations|SECURITY & OPERATIONS/);
   assert.match(page, /今すぐ監査/);
   assert.match(page, /エラー・セキュリティログ/);
+  assert.match(page, /Supabase使用容量/);
+  assert.match(page, /容量設定を保存/);
   assert.match(adminClient, /admin_ops_get_snapshot/);
   assert.match(adminClient, /admin_ops_set_event_status/);
+  assert.match(adminClient, /admin_ops_update_capacity_settings/);
+  assert.match(adminClient, /admin_ops_refresh_capacity/);
   assert.match(layout, /AppErrorReporter/);
   assert.match(layout, /phase30-security-operations\.css/);
   assert.match(topbar, /\/admin\/operations/);
