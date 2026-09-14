@@ -183,6 +183,20 @@ export async function fetchCommerceConfig(): Promise<PublicCommerceConfig> {
   return parsePublicConfig(await response.json());
 }
 
+function validatedStripeRedirect(value: unknown, expectedHost: "checkout.stripe.com" | "billing.stripe.com"): string {
+  if (typeof value !== "string") throw new Error("決済先URLを確認できませんでした。");
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error("決済先URLを確認できませんでした。");
+  }
+  if (parsed.protocol !== "https:" || parsed.hostname !== expectedHost || parsed.username || parsed.password) {
+    throw new Error("決済先URLを確認できませんでした。");
+  }
+  return parsed.toString();
+}
+
 async function authenticatedBillingRequest(
   path: "/api/billing/checkout" | "/api/billing/portal",
   payload?: Record<string, unknown>,
@@ -201,10 +215,10 @@ async function authenticatedBillingRequest(
     throw new Error(await parseApiError(response, "決済サービスへ接続できませんでした。"));
   }
   const result = (await response.json()) as { url?: unknown };
-  if (typeof result.url !== "string" || !/^https:\/\//i.test(result.url)) {
-    throw new Error("決済先URLを確認できませんでした。");
-  }
-  return result.url;
+  return validatedStripeRedirect(
+    result.url,
+    path === "/api/billing/checkout" ? "checkout.stripe.com" : "billing.stripe.com",
+  );
 }
 
 export function beginCheckout(planCode: CommercePlanCode): Promise<string> {
