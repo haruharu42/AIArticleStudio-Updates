@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { launchAiApp } from "@/lib/ai-app-links";
+import { consumeFreeTrialUsage, trialUsageMessage } from "@/lib/free-trial";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   buildArticlePrompt,
@@ -136,8 +137,11 @@ export function Phase11CreatePage() {
   const [tagsText, setTagsText] = useState("");
   const [message, setMessage] = useState(() => initialMessageFromLocation());
   const [busy, setBusy] = useState(false);
+  const [titleBusy, setTitleBusy] = useState(false);
+  const [titlePromptAuthorized, setTitlePromptAuthorized] = useState("");
   const [createdId, setCreatedId] = useState("");
   const progressOwnerIdRef = useRef("");
+  const titleQuotaInFlightRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -185,6 +189,7 @@ export function Phase11CreatePage() {
   const subgenreOptions = useMemo(() => subgenreOptionsFor(draft.genre), [draft.genre]);
   const genreSelectValue = genreSelectionValue(draft.genre);
   const subgenreSelectValue = subgenreSelectionValue(draft.genre, draft.subgenre);
+  const titleCandidatesReady = titlePromptAuthorized === titlePrompt;
 
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -217,6 +222,33 @@ export function Phase11CreatePage() {
       articleType: value,
       price: value === "free" ? null : current.price !== null && current.price > 0 ? current.price : 1,
     }));
+  };
+
+  const generateTitleCandidates = async () => {
+    if (titleQuotaInFlightRef.current) return;
+    titleQuotaInFlightRef.current = true;
+    setTitleBusy(true);
+    setMessage("");
+    try {
+      const result = await consumeFreeTrialUsage(getSupabaseClient(), "title_generate");
+      if (!result.allowed) {
+        setTitlePromptAuthorized("");
+        setMessage(trialUsageMessage(result));
+        return;
+      }
+      setTitlePromptAuthorized(titlePrompt);
+      setMessage(
+        result.bypassLimits
+          ? "タイトル候補を生成しました。"
+          : `タイトル候補を1回生成しました。${trialUsageMessage(result)}`,
+      );
+    } catch (error) {
+      setTitlePromptAuthorized("");
+      setMessage(error instanceof Error ? error.message : "タイトル候補の利用回数を確認できませんでした。");
+    } finally {
+      titleQuotaInFlightRef.current = false;
+      setTitleBusy(false);
+    }
   };
 
   const next = () => {
@@ -321,16 +353,17 @@ export function Phase11CreatePage() {
 
         {step === 3 && (
           <div className="wizard-pane"><p className="eyebrow">STEP 4</p><h2>タイトルを選んでください</h2>
-            <p className="panel-muted">候補をタップするだけで選択できます。必要なら自分で書き換えることもできます。</p>
-            <div className="title-candidates">{localTitles.map((title) => <button type="button" key={title} onClick={() => patch("title", title)} className={draft.title === title ? "active" : ""}>{title}</button>)}</div>
-            <label className="route-field"><span>選択タイトル</span><input value={draft.title} onChange={(e) => patch("title", e.target.value)} /></label>
-            {draft.generationMode === "prompt_export" && <>
+            <p className="panel-muted">自分でタイトルを入力する場合は回数を消費しません。「タイトル候補を生成」を押した時だけ無料トライアルのタイトル生成1回として記録されます。</p>
+            <button className="secondary-action" type="button" disabled={titleBusy} onClick={() => void generateTitleCandidates()}>{titleBusy ? "利用回数を確認中…" : titleCandidatesReady ? "タイトル候補を作り直す" : "タイトル候補を生成"}</button>
+            {titleCandidatesReady && <div className="title-candidates">{localTitles.map((title) => <button type="button" key={title} onClick={() => patch("title", title)} className={draft.title === title ? "active" : ""}>{title}</button>)}</div>}
+            <label className="route-field"><span>選択タイトル</span><input value={draft.title} onChange={(e) => patch("title", e.target.value)} placeholder="候補を使わず直接入力もできます" /></label>
+            {draft.generationMode === "prompt_export" && titleCandidatesReady && <>
               <label className="route-field"><span>AI用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
               <div className="openai-prompt-actions">
                 <button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button>
                 {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => launchAiApp(app.key)}>{app.label}を開く ↗</button>)}
               </div>
-              <p className="beginner-help">「コピー」→使いたいAIを選ぶ→プロンプトを貼り付け、の順に進んでください。</p>
+              <p className="beginner-help">候補生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて候補を作り直した時だけ次の1回として記録されます。</p>
             </>}
           </div>
         )}
@@ -370,8 +403,8 @@ export function Phase11CreatePage() {
         {message && <div className="route-notice">{message}</div>}
 
         <footer className="wizard-actions">
-          <button className="secondary-action" type="button" disabled={step === 0 || busy} onClick={back}>戻る</button>
-          {step < steps.length - 1 && <button className="primary-action" type="button" disabled={busy} onClick={next}>次へ →</button>}
+          <button className="secondary-action" type="button" disabled={step === 0 || busy || titleBusy} onClick={back}>戻る</button>
+          {step < steps.length - 1 && <button className="primary-action" type="button" disabled={busy || titleBusy} onClick={next}>次へ →</button>}
           {createdId && <a className="primary-action" href="/">ホームへ戻る</a>}
         </footer>
       </section>
