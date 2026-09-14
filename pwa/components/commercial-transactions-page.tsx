@@ -16,6 +16,16 @@ function display(value: string): string {
   return value || "正式販売前に確定・表示します";
 }
 
+function safeSupportUrl(value: string | undefined): string {
+  if (!value) return "";
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" ? parsed.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
 export function CommercialTransactionsPage() {
   const [config, setConfig] = useState<PublicCommerceConfig | null>(null);
   const [message, setMessage] = useState("");
@@ -40,6 +50,7 @@ export function CommercialTransactionsPage() {
   const sellerName = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.name ?? "");
   const sellerAddress = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.address ?? "");
   const sellerPhone = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.phone ?? "");
+  const supportUrl = safeSupportUrl(seller?.supportUrl);
 
   return (
     <main className="legal-commerce-page">
@@ -63,7 +74,7 @@ export function CommercialTransactionsPage() {
           <div><dt>所在地</dt><dd>{sellerAddress}</dd></div>
           <div><dt>電話番号</dt><dd>{sellerPhone}</dd></div>
           <div><dt>メールアドレス</dt><dd>{display(seller?.email ?? "")}</dd></div>
-          <div><dt>問い合わせ・開示請求窓口</dt><dd>{seller?.supportUrl ? <a href={seller.supportUrl}>問い合わせページ</a> : "正式販売前に確定・表示します"}</dd></div>
+          <div><dt>問い合わせ・開示請求窓口</dt><dd>{supportUrl ? <a href={supportUrl}>問い合わせページ</a> : "正式販売前に確定・表示します"}</dd></div>
           <div><dt>販売価格</dt><dd>下記の各プランに表示します。決済画面にも最終請求額を表示します。</dd></div>
           <div><dt>商品代金以外の必要料金</dt><dd>インターネット接続料金・通信料金等は利用者の負担です。その他の費用が生じる場合は購入前に表示します。</dd></div>
           <div><dt>支払方法</dt><dd>Stripe Checkoutで提供される支払方法。実際に利用可能な方法は決済画面に表示します。</dd></div>
