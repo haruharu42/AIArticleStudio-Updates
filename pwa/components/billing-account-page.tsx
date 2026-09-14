@@ -80,13 +80,17 @@ export function BillingAccountPage() {
   };
 
   useEffect(() => {
-    void refresh();
+    queueMicrotask(() => {
+      void refresh();
+    });
   }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
-      setMessage("決済手続きを受け付けました。Stripeの決済確認とWebhook処理後に利用権へ反映されます。反映が見えない場合は「最新状態に更新」を押してください。");
+      queueMicrotask(() => {
+        setMessage("決済手続きを受け付けました。Stripeの決済確認とWebhook処理後に利用権へ反映されます。反映が見えない場合は「最新状態に更新」を押してください。");
+      });
     }
   }, []);
 
