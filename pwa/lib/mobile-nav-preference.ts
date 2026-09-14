@@ -21,8 +21,10 @@ export type MobileNavItem = {
   href: string;
 };
 
+const FALLBACK_MOBILE_NAV_ITEM: MobileNavItem = { key: "create", label: "作成", icon: "✎", href: "/create" };
+
 export const MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
-  { key: "create", label: "作成", icon: "✎", href: "/create" },
+  FALLBACK_MOBILE_NAV_ITEM,
   { key: "images", label: "画像", icon: "▧", href: "/images" },
   { key: "tools", label: "機能", icon: "▦", href: "/tools" },
   { key: "sns", label: "SNS", icon: "↗", href: "/sns" },
@@ -81,5 +83,5 @@ export function writeMobileNavItems(value: readonly MobileNavItemKey[]): MobileN
 }
 
 export function mobileNavItemFor(key: MobileNavItemKey): MobileNavItem {
-  return MOBILE_NAV_ITEM_OPTIONS.find((item) => item.key === key) ?? MOBILE_NAV_ITEM_OPTIONS[0];
+  return MOBILE_NAV_ITEM_OPTIONS.find((item) => item.key === key) ?? FALLBACK_MOBILE_NAV_ITEM;
 }
