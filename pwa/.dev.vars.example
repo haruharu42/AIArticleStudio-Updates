@@ -1,0 +1,20 @@
+# Server-side Worker bindings for local TEST-mode billing only.
+# Copy to .dev.vars locally. Never commit real values.
+AAS_COMMERCE_MODE=off
+AAS_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+AAS_SUPABASE_SERVICE_ROLE_KEY=REPLACE_LOCALLY_ONLY
+AAS_STRIPE_SECRET_KEY=sk_test_REPLACE_LOCALLY_ONLY
+AAS_STRIPE_WEBHOOK_SECRET=whsec_REPLACE_LOCALLY_ONLY
+
+# Stripe Price IDs are the pricing source of truth. Do not hard-code prices in the app.
+AAS_STRIPE_PRICE_PWA_7D=price_REPLACE_ME
+AAS_STRIPE_PRICE_PWA_MONTHLY=price_REPLACE_ME
+AAS_STRIPE_PRICE_WINDOWS_MONTHLY=price_REPLACE_ME
+AAS_STRIPE_PRICE_BUNDLE_MONTHLY=price_REPLACE_ME
+
+# Required before AAS_COMMERCE_MODE=live. These values are displayed publicly.
+AAS_SELLER_NAME=
+AAS_SELLER_ADDRESS=
+AAS_SELLER_PHONE=
+AAS_SELLER_EMAIL=
+AAS_SUPPORT_URL=
