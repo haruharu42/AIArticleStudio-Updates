@@ -79,16 +79,22 @@ export function FreeTrialAdminPanel({ selectedUser }: { selectedUser: AdminUser 
 
   useEffect(() => {
     let active = true;
-    void loadSettings().catch((error) => {
-      if (active) setMessage(error instanceof Error ? error.message : "無料トライアル設定を取得できませんでした。");
+    queueMicrotask(() => {
+      if (!active) return;
+      void loadSettings().catch((error) => {
+        if (active) setMessage(error instanceof Error ? error.message : "無料トライアル設定を取得できませんでした。");
+      });
     });
     return () => { active = false; };
   }, [loadSettings]);
 
   useEffect(() => {
     let active = true;
-    void loadUser().catch((error) => {
-      if (active) setMessage(error instanceof Error ? error.message : "ユーザーの無料トライアル状態を取得できませんでした。");
+    queueMicrotask(() => {
+      if (!active) return;
+      void loadUser().catch((error) => {
+        if (active) setMessage(error instanceof Error ? error.message : "ユーザーの無料トライアル状態を取得できませんでした。");
+      });
     });
     return () => { active = false; };
   }, [loadUser]);
