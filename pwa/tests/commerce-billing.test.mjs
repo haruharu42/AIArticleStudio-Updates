@@ -53,6 +53,27 @@ test("billing Worker fails closed and validates raw Stripe webhook signatures", 
   assert.doesNotMatch(worker, /console\.(log|info|debug)\([^)]*(secret|service|signature|authorization)/i);
 });
 
+test("individual seller on-request mode keeps private identity out of public config", async () => {
+  const worker = await read("worker/billing.ts");
+  const client = await read("lib/commerce.ts");
+  const disclosure = await read("components/commercial-transactions-page.tsx");
+  const vars = await read(".dev.vars.example");
+
+  assert.match(worker, /AAS_SELLER_TYPE/);
+  assert.match(worker, /AAS_SELLER_DISCLOSURE_MODE/);
+  assert.match(worker, /function privateSellerConfig/);
+  assert.match(worker, /function publicSellerConfig/);
+  assert.match(worker, /name: discloseDirectly \? seller\.name : ""/);
+  assert.match(worker, /address: discloseDirectly \? seller\.address : ""/);
+  assert.match(worker, /phone: discloseDirectly \? seller\.phone : ""/);
+  assert.match(worker, /seller: publicSellerConfig\(env\)/);
+  assert.match(client, /disclosureMode: SellerDisclosureMode/);
+  assert.match(disclosure, /請求があった場合には遅滞なく開示します/);
+  assert.match(disclosure, /問い合わせ・開示請求窓口/);
+  assert.match(vars, /AAS_SELLER_TYPE=individual/);
+  assert.match(vars, /AAS_SELLER_DISCLOSURE_MODE=on_request/);
+});
+
 test("service-role and Stripe secrets stay outside browser-visible configuration", async () => {
   const envExample = await read(".env.example");
   const client = await read("lib/commerce.ts");
@@ -84,6 +105,19 @@ test("purchase UI states renewal and cancellation terms before Checkout", async 
   assert.match(disclosure, /解約/);
   assert.match(disclosure, /返金・キャンセル/);
   assert.match(client, /Intl\.NumberFormat\("ja-JP"/);
+});
+
+test("unentitled logged-in users are routed to plans and can redeem an existing invite", async () => {
+  const access = await read("lib/phase6-access.ts");
+  const plans = await read("components/commerce-plans-page.tsx");
+  const invite = await read("lib/phase9-invite.ts");
+
+  assert.match(access, /window\.location\.pathname !== "\/"/);
+  assert.match(access, /window\.location\.replace\("\/plans\?from=login"\)/);
+  assert.match(plans, /redeemPwaInvite/);
+  assert.match(plans, /招待コードをお持ちの方/);
+  assert.match(plans, /招待コードを登録/);
+  assert.match(invite, /redeem_pwa_invite/);
 });
 
 test("Worker routes billing before the application handler", async () => {
