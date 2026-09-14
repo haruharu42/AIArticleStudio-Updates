@@ -21,6 +21,13 @@ test("manual and Q&A routes provide full help surfaces", async () => {
   for (const label of ["はじめ方・基本操作", "記事・画像・SNS", "PWA・ナビ・表示", "アカウント・利用権・決済", "トラブル・安全性"]) {
     assert.match(faq, new RegExp(label));
   }
+  for (const platform of ["X", "Instagram", "Threads", "TikTok", "Facebook", "LinkedIn", "Pinterest", "YouTube"]) {
+    assert.ok(manual.includes(platform), `manual missing SNS platform: ${platform}`);
+    assert.ok(faq.includes(platform), `FAQ missing SNS platform: ${platform}`);
+  }
+  assert.match(manual, /スマホでは対応アプリ/);
+  assert.match(manual, /PCではWeb版/);
+  assert.match(faq, /選択したSNSをすぐ開けますか/);
   assert.match(home, /className="secondary" href="\/manual">使い方を見る/);
   assert.match(home, /href="\/faq">Q&A・よくある質問/);
   assert.match(settings, /href="\/manual">使い方マニュアル/);
