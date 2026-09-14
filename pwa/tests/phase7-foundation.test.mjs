@@ -21,7 +21,8 @@ test("pins patched framework versions, current release metadata, and PWA cache g
   assert.match(layout, /"aas-phase": "17"/);
   assert.match(layout, /"aas-release-stage": "production-preview"/);
   assert.doesNotMatch(layout, /phase8-local/);
-  assert.match(worker, /aas-pwa-phase17-prod-v1/);
+  assert.match(worker, /aas-pwa-phase17-prod-v2/);
+  assert.doesNotMatch(worker, /aas-pwa-phase17-prod-v1/);
   assert.doesNotMatch(worker, /aas-pwa-phase8-v1/);
 });
 

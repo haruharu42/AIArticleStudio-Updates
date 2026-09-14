@@ -1,8 +1,10 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { handleBillingRequest, type BillingEnv } from "./billing";
+import { recordSystemEvent, safeOpsHealthResponse } from "./ops";
 
-interface Env {
+interface Env extends BillingEnv {
   ASSETS: {
     fetch(request: Request): Promise<Response>;
   };
@@ -20,28 +22,92 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
-// Image security config. SVG sources with .svg extension auto-skip the
-// optimization endpoint on the client side (served directly, no proxy).
-// To route SVGs through the optimizer (with security headers), set
-// dangerouslyAllowSVG: true in next.config.js and uncomment below:
-// const imageConfig: ImageConfig = { dangerouslyAllowSVG: true };
+function withSecurityHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set("x-content-type-options", "nosniff");
+  headers.set("x-frame-options", "DENY");
+  headers.set("referrer-policy", "strict-origin-when-cross-origin");
+  headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
+  headers.set("content-security-policy", "frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
+  headers.set("strict-transport-security", "max-age=31536000; includeSubDomains");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+function safeServerError(): Response {
+  return new Response(JSON.stringify({ error: "internal_server_error" }), {
+    status: 500,
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" },
+  });
+}
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    const requestId = request.headers.get("cf-ray") ?? undefined;
 
-    if (url.pathname === "/_vinext/image") {
-      const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
-      return handleImageOptimization(request, {
-        fetchAsset: (path) => env.ASSETS.fetch(new Request(new URL(path, request.url))),
-        transformImage: async (body, { width, format, quality }) => {
-          const result = await env.IMAGES.input(body).transform(width > 0 ? { width } : {}).output({ format, quality });
-          return result.response();
-        },
-      }, allowedWidths);
+    if (url.pathname === "/api/ops/health" && request.method === "GET") {
+      return withSecurityHeaders(safeOpsHealthResponse());
     }
 
-    return handler.fetch(request, env, ctx);
+    try {
+      const billingResponse = await handleBillingRequest(request, env);
+      if (billingResponse) {
+        if (billingResponse.status >= 500) {
+          ctx.waitUntil(recordSystemEvent(env, {
+            eventKind: "error",
+            severity: "error",
+            source: "worker-billing",
+            errorCode: "BILLING_REQUEST_FAILED",
+            message: `Billing endpoint returned HTTP ${billingResponse.status}.`,
+            feature: "billing",
+            route: url.pathname,
+            requestId,
+          }));
+        } else if (url.pathname === "/api/billing/stripe-webhook" && billingResponse.status === 400) {
+          ctx.waitUntil(recordSystemEvent(env, {
+            eventKind: "security",
+            severity: "warning",
+            source: "worker-billing",
+            errorCode: "WEBHOOK_REJECTED",
+            message: "Stripe webhook request was rejected before processing.",
+            feature: "stripe-webhook",
+            route: url.pathname,
+            requestId,
+          }));
+        }
+        return withSecurityHeaders(billingResponse);
+      }
+
+      if (url.pathname === "/_vinext/image") {
+        const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
+        const response = await handleImageOptimization(request, {
+          fetchAsset: (path) => env.ASSETS.fetch(new Request(new URL(path, request.url))),
+          transformImage: async (body, { width, format, quality }) => {
+            const result = await env.IMAGES.input(body).transform(width > 0 ? { width } : {}).output({ format, quality });
+            return result.response();
+          },
+        }, allowedWidths);
+        return withSecurityHeaders(response);
+      }
+
+      return withSecurityHeaders(await handler.fetch(request, env, ctx));
+    } catch {
+      ctx.waitUntil(recordSystemEvent(env, {
+        eventKind: "error",
+        severity: "error",
+        source: "worker-runtime",
+        errorCode: "WORKER_UNHANDLED_EXCEPTION",
+        message: "Cloudflare Worker request processing failed unexpectedly.",
+        feature: "worker-runtime",
+        route: url.pathname,
+        requestId,
+      }));
+      return withSecurityHeaders(safeServerError());
+    }
   },
 };
 

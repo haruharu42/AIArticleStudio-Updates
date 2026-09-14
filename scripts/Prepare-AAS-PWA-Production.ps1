@@ -180,7 +180,7 @@ foreach ($guard in @('/auth/callback','/api/','access_token','refresh_token')) {
         throw "Service worker auth/cache guard missing: $guard"
     }
 }
-if (-not $sw.Contains('aas-pwa-phase17-prod-v1')) {
+if (-not $sw.Contains('aas-pwa-phase17-prod-v2')) {
     throw "Production service-worker cache generation is not current"
 }
 Write-Host "PASS PWA manifest/icons/service-worker guards" -ForegroundColor Green
@@ -227,7 +227,7 @@ $report = [ordered]@{
     ai_terms_link = $AiTermsUrl
     pwa_assets_present = $true
     service_worker_auth_guards_present = $true
-    service_worker_cache_generation = "phase17-prod-v1"
+    service_worker_cache_generation = "phase17-prod-v2"
     npm_ci = "pass"
     typecheck = "pass"
     lint = "pass"

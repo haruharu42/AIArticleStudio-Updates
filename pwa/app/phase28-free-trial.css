@@ -1,0 +1,62 @@
+.free-trial-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 16px;
+  border: 1px solid #c9dcf3;
+  border-radius: 18px;
+  background: #fff;
+  padding: 16px 18px;
+  box-shadow: 0 12px 30px rgb(31 88 153 / 7%);
+}
+
+.free-trial-banner > div { display: grid; gap: 3px; }
+.free-trial-banner strong { color: #153e6d; font-size: 15px; }
+.free-trial-banner small { color: #71859c; font-size: 9px; line-height: 1.55; }
+.free-trial-badge { width: fit-content; border-radius: 999px; background: #eaf4ff; color: #2471c9; padding: 5px 8px; font-size: 8px; font-weight: 900; }
+.free-trial-usage { border-left: 1px solid #e1eaf4; padding-left: 14px; }
+.free-trial-usage > span { color: #71859c; font-size: 9px; font-weight: 800; }
+.free-trial-banner > a { border-radius: 11px; background: #176fd9; color: #fff; padding: 10px 12px; font-size: 9px; font-weight: 900; text-decoration: none; white-space: nowrap; }
+
+.free-trial-admin-page { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+.free-trial-admin,
+.trial-user-picker { box-sizing: border-box; }
+.trial-admin-toggle-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin: 14px 0; }
+.trial-admin-settings-grid { margin-top: 12px; }
+.trial-admin-note { margin: 12px 0; border-radius: 12px; background: #f5f9ff; color: #5e7590; padding: 11px 13px; font-size: 9px; line-height: 1.8; }
+.trial-save-button { width: 100%; }
+.trial-user-admin { margin-top: 22px; border-top: 1px solid #e4eaf2; padding-top: 18px; }
+.trial-user-summary,
+.trial-usage-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.trial-user-summary > div,
+.trial-usage-grid > div { display: grid; gap: 4px; border: 1px solid #e0e8f2; border-radius: 12px; background: #fbfdff; padding: 12px; }
+.trial-user-summary span,
+.trial-usage-grid span { color: #7589a0; font-size: 8px; }
+.trial-user-summary strong,
+.trial-usage-grid strong { color: #173f6e; font-size: 12px; }
+.trial-user-controls { margin-top: 12px; }
+.trial-user-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.trial-manual-start { display: grid; grid-template-columns: minmax(180px, 280px) auto; align-items: end; gap: 10px; margin-top: 12px; }
+.trial-manual-start > small { grid-column: 1 / -1; color: #7d8da1; font-size: 8px; }
+.trial-feature-gate { display: grid; gap: 12px; }
+.trial-feature-gate > h1,
+.trial-feature-gate > p { margin-top: 0; }
+.trial-gate-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.trial-gate-actions a { color: #315f94; font-size: 9px; font-weight: 800; text-decoration: none; }
+
+@media (max-width: 760px) {
+  .free-trial-banner { grid-template-columns: 1fr; }
+  .free-trial-usage { border-left: 0; border-top: 1px solid #e1eaf4; padding: 10px 0 0; }
+  .free-trial-banner > a { text-align: center; }
+  .trial-admin-toggle-grid,
+  .trial-user-summary,
+  .trial-usage-grid { grid-template-columns: 1fr 1fr; }
+  .trial-manual-start { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .trial-admin-toggle-grid,
+  .trial-user-summary,
+  .trial-usage-grid { grid-template-columns: 1fr; }
+}

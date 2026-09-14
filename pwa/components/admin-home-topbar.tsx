@@ -51,8 +51,8 @@ export function AdminHomeTopbar() {
 
   return (
     <aside className="admin-home-topbar" aria-label="管理者専用ショートカット">
-      <div><span>ADMIN</span><strong>管理者モード</strong><small>運用状況と販売プロモーションへすぐ移動できます。</small></div>
-      <nav><a href="/admin">管理ダッシュボード</a><a href="/admin/promotion">販売・SNSプロモーション</a></nav>
+      <div><span>ADMIN</span><strong>管理者モード</strong><small>セキュリティ・運用状況・無料トライアル・販売プロモーションへすぐ移動できます。</small></div>
+      <nav><a href="/admin">管理ダッシュボード</a><a href="/admin/operations">セキュリティ・運用</a><a href="/admin/free-trial">無料トライアル管理</a><a href="/admin/promotion">販売・SNSプロモーション</a></nav>
     </aside>
   );
 }

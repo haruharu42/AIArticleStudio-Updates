@@ -1,5 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
+import { ensureMyFreeTrial } from "@/lib/free-trial";
+
 export const PWA_PRODUCT_CODE = "AAS-PWA-BETA";
 
 export type ProfileStatus =
@@ -64,6 +66,20 @@ function parseProfile(value: unknown): AasProfile {
   };
 }
 
+function routeRootToPlansWhenEntitlementIsMissing(): void {
+  if (typeof window === "undefined") return;
+  if (window.location.pathname !== "/") return;
+  window.location.replace("/plans?from=login");
+}
+
+async function canAccessPwa(client: SupabaseClient): Promise<boolean> {
+  const { data, error } = await client.rpc("can_access_product", {
+    p_product_code: PWA_PRODUCT_CODE,
+  });
+  if (error) throw new Error("PWA利用権の確認に失敗しました。");
+  return data === true;
+}
+
 export async function loadAccessState(
   client: SupabaseClient,
 ): Promise<AccessState> {
@@ -99,19 +115,22 @@ export async function loadAccessState(
     return { kind: "disabled", user, profile };
   }
 
-  const { data: canAccess, error: entitlementError } = await client.rpc(
-    "can_access_product",
-    { p_product_code: PWA_PRODUCT_CODE },
-  );
-  if (entitlementError) {
-    throw new Error("PWA利用権の確認に失敗しました。");
+  // Existing paid/invite/admin access must not depend on the optional trial
+  // bootstrap RPC. Check authoritative access first, then create a trial only
+  // for an otherwise-unentitled active general user and verify access again.
+  if (await canAccessPwa(client)) {
+    return { kind: "ready", user, profile };
   }
 
-  if (canAccess !== true) {
-    return { kind: "entitlement_denied", user, profile };
+  if (profile.role === "user") {
+    await ensureMyFreeTrial(client);
+    if (await canAccessPwa(client)) {
+      return { kind: "ready", user, profile };
+    }
   }
 
-  return { kind: "ready", user, profile };
+  routeRootToPlansWhenEntitlementIsMissing();
+  return { kind: "entitlement_denied", user, profile };
 }
 
 export function authMessage(error: unknown): string {

@@ -34,13 +34,15 @@ test("keeps Phase 6 separate from article and image data", async () => {
   assert.doesNotMatch(source, /article-assets/);
 });
 
-test("service worker never caches auth callbacks or remote Supabase traffic", async () => {
+test("service worker never caches auth callbacks, remote Supabase traffic, or personalized root HTML", async () => {
   const worker = await read("public/sw.js");
   assert.match(worker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /\/auth\/callback/);
   assert.match(worker, /url\.searchParams\.has\("code"\)/);
   assert.match(worker, /url\.searchParams\.has\("access_token"\)/);
   assert.match(worker, /url\.searchParams\.has\("refresh_token"\)/);
+  assert.match(worker, /aas-pwa-phase17-prod-v2/);
+  assert.doesNotMatch(worker, /const APP_SHELL = \[\s*["']\/["']/);
   assert.doesNotMatch(worker, /supabase\.co/);
 });
 

@@ -1,6 +1,5 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v1";
+const CACHE_NAME = "aas-pwa-phase17-prod-v2";
 const APP_SHELL = [
-  "/",
   "/offline.html",
   "/manifest.webmanifest",
   "/favicon.svg",

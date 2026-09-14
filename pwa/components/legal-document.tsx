@@ -62,6 +62,7 @@ export function LegalDocument({
           <Link href="/terms">利用規約</Link>
           <Link href="/privacy">プライバシーポリシー</Link>
           <Link href="/ai-terms">AI利用条件</Link>
+          <Link href="/commercial-transactions">特定商取引法に基づく表記</Link>
         </nav>
       </article>
     </main>

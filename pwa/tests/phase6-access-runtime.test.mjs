@@ -23,7 +23,7 @@ const { loadAccessState, PWA_PRODUCT_CODE } = await vite.ssrLoadModule(
 
 const user = { id: "00000000-0000-4000-8000-000000000002", email: "fixture@example.test" };
 
-function fakeClient({ status = "active", role = "user", canAccess = true, owner = user.id } = {}) {
+function fakeClient({ status = "active", role = "user", canAccess = true, owner = user.id, trialStarts = false } = {}) {
   const calls = [];
   const profile = {
     id: owner,
@@ -32,6 +32,7 @@ function fakeClient({ status = "active", role = "user", canAccess = true, owner 
     role,
     status,
   };
+  let entitlementChecks = 0;
 
   return {
     calls,
@@ -60,12 +61,17 @@ function fakeClient({ status = "active", role = "user", canAccess = true, owner 
     },
     async rpc(name, parameters) {
       calls.push(["rpc", name, parameters]);
-      return { data: canAccess, error: null };
+      if (name === "ensure_my_free_trial") return { data: trialStarts, error: null };
+      if (name === "can_access_product") {
+        entitlementChecks += 1;
+        return { data: canAccess || (trialStarts && entitlementChecks > 1), error: null };
+      }
+      return { data: null, error: null };
     },
   };
 }
 
-test("active profile with PWA entitlement is ready", async () => {
+test("active profile with existing PWA access is ready without trial bootstrap", async () => {
   const client = fakeClient();
   const result = await loadAccessState(client);
   assert.equal(result.kind, "ready");
@@ -74,11 +80,22 @@ test("active profile with PWA entitlement is ready", async () => {
     "can_access_product",
     { p_product_code: PWA_PRODUCT_CODE },
   ]);
+  assert.equal(client.calls.some((call) => call[0] === "rpc" && call[1] === "ensure_my_free_trial"), false);
 });
 
-test("active profile without PWA entitlement is denied", async () => {
-  const result = await loadAccessState(fakeClient({ canAccess: false }));
+test("eligible unentitled active user starts a trial and access is rechecked", async () => {
+  const client = fakeClient({ canAccess: false, trialStarts: true });
+  const result = await loadAccessState(client);
+  assert.equal(result.kind, "ready");
+  assert.equal(client.calls.filter((call) => call[0] === "rpc" && call[1] === "can_access_product").length, 2);
+  assert.equal(client.calls.filter((call) => call[0] === "rpc" && call[1] === "ensure_my_free_trial").length, 1);
+});
+
+test("active profile without entitlement or trial is denied", async () => {
+  const client = fakeClient({ canAccess: false, trialStarts: false });
+  const result = await loadAccessState(client);
   assert.equal(result.kind, "entitlement_denied");
+  assert.equal(client.calls.filter((call) => call[0] === "rpc" && call[1] === "can_access_product").length, 2);
 });
 
 test("inactive profiles stop before the entitlement RPC", async () => {
