@@ -30,9 +30,20 @@ export function Phase15SideJobPage() {
   };
 
   const setWeeklyHours = (value: string) => {
-    setWeeklyHoursText(value);
+    if (!value.trim()) {
+      setWeeklyHoursText("");
+      patch("weeklyHours", 1);
+      return;
+    }
     const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed >= 1) patch("weeklyHours", Math.max(1, Math.min(100, Math.trunc(parsed))));
+    if (!Number.isFinite(parsed)) {
+      setWeeklyHoursText("");
+      patch("weeklyHours", 1);
+      return;
+    }
+    const normalized = Math.max(1, Math.min(100, Math.trunc(parsed)));
+    setWeeklyHoursText(String(normalized));
+    patch("weeklyHours", normalized);
   };
 
   const copy = async () => {
@@ -49,7 +60,7 @@ export function Phase15SideJobPage() {
 
       <section className="creator-card">
         <div className="creator-form-grid">
-          <PresetSelect label="週の作業時間" value={weeklyHoursText} onChange={setWeeklyHours} options={WEEKLY_HOURS_OPTIONS} customPlaceholder="1〜100の数字を入力" />
+          <PresetSelect label="週の作業時間" value={weeklyHoursText} onChange={setWeeklyHours} options={WEEKLY_HOURS_OPTIONS} customPlaceholder="1〜100の数字を入力" customInputType="number" customMin={1} customMax={100} />
           <label className="route-field"><span>顔出し</span><select value={input.faceReveal} onChange={(event) => patch("faceReveal", event.target.value as SideJobInput["faceReveal"])}><option value="no">しない</option><option value="either">どちらでも</option><option value="yes">できる</option></select></label>
           <label className="route-field"><span>初期予算</span><select value={input.budget} onChange={(event) => patch("budget", event.target.value as SideJobInput["budget"])}><option value="none">できれば0円</option><option value="low">なるべく抑える</option><option value="medium">必要なら使える</option><option value="high">必要な投資は検討できる</option><option value="flexible">内容に応じて柔軟</option></select></label>
           <label className="route-field"><span>経験</span><select value={input.experience} onChange={(event) => patch("experience", event.target.value as SideJobInput["experience"])}><option value="beginner">未経験・初心者</option><option value="some">少し経験あり</option><option value="experienced">副業・制作経験あり</option></select></label>
@@ -67,7 +78,7 @@ export function Phase15SideJobPage() {
         <label className="route-field"><span>AI用30日プラン生成プロンプト</span><textarea className="prompt-area large" readOnly value={prompt} /></label>
         <button className="primary-action" type="button" onClick={() => void copy()}>プラン生成プロンプトをコピー</button>
         {message && <div className="route-notice">{message}</div>}
-        <p className="panel-muted">作業時間は主な候補から選び、「その他（自由入力）」で独自の時間数も指定できます。得意度は入力ミスを減らすため0〜5のスライダーを維持しています。</p>
+        <p className="panel-muted">作業時間は主な候補から選び、「その他（自由入力）」で1〜100時間の範囲から指定できます。範囲外の値は最も近い上限・下限へ補正されます。得意度は入力ミスを減らすため0〜5のスライダーを維持しています。</p>
         <p className="panel-muted">適合スコアはAAS内の比較用です。収益・成功確率・市場順位を保証するものではありません。</p>
       </section>
     </main>
