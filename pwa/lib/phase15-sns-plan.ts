@@ -1,7 +1,7 @@
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
-import { socialPlatformLabel, type SupportedSocialPlatform } from "@/lib/social-links";
+import { socialPlatformLabel } from "@/lib/social-links";
 
-export type SnsLaunchPlatform = SupportedSocialPlatform;
+export type SnsLaunchPlatform = "x" | "instagram" | "threads" | "tiktok" | "facebook" | "linkedin" | "pinterest" | "youtube";
 export type SnsLaunchGoal =
   | "article_sales"
   | "affiliate"
