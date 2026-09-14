@@ -35,6 +35,23 @@ test("commerce database extends existing entitlement security instead of bypassi
   assert.doesNotMatch(migration, /grant execute on function public\.billing_[^(]+\([^;]+\) to authenticated/i);
 });
 
+test("billing integrity hardening binds pass and subscription events to registered AAS checkout identities", async () => {
+  const hardening = await readRepo("supabase/migrations/20260914050000_billing_integrity_hardening.sql");
+
+  assert.match(hardening, /billing_customers_guard_identity/);
+  assert.match(hardening, /billing customer identity is immutable/);
+  assert.match(hardening, /billing_subscriptions_guard_identity/);
+  assert.match(hardening, /billing subscription identity is immutable/);
+  assert.match(hardening, /recent registered checkout required for new subscription/);
+  assert.match(hardening, /checkout\.provider_session_id = normalized_session_id/);
+  assert.match(hardening, /checkout\.user_id = p_user_id/);
+  assert.match(hardening, /checkout\.plan_code = normalized_plan_code/);
+  assert.match(hardening, /checkout\.provider_customer_id = normalized_customer_id/);
+  assert.match(hardening, /'ignored'/);
+  assert.match(hardening, /grant execute on function public\.billing_apply_pass_event[^;]+to service_role/s);
+  assert.doesNotMatch(hardening, /to authenticated/i);
+});
+
 test("billing Worker fails closed and validates raw Stripe webhook signatures", async () => {
   const worker = await read("worker/billing.ts");
 
@@ -100,11 +117,23 @@ test("purchase UI states renewal and cancellation terms before Checkout", async 
   assert.match(plans, /7日間・自動更新なし/);
   assert.match(plans, /特定商取引法に基づく表記/);
   assert.match(plans, /accepted/);
+  assert.match(plans, /checkoutInFlight/);
+  assert.match(plans, /if \(checkoutInFlight\.current\) return/);
   assert.match(disclosure, /販売価格/);
   assert.match(disclosure, /支払時期/);
   assert.match(disclosure, /解約/);
   assert.match(disclosure, /返金・キャンセル/);
   assert.match(client, /Intl\.NumberFormat\("ja-JP"/);
+});
+
+test("free trial feature access fails closed when status verification is unavailable", async () => {
+  const gate = await read("components/free-trial-feature-gate.tsx");
+
+  assert.match(gate, /const \[loadError, setLoadError\]/);
+  assert.match(gate, /setReady\(false\)/);
+  assert.match(gate, /ACCESS CHECK/);
+  assert.match(gate, /window\.location\.reload\(\)/);
+  assert.doesNotMatch(gate, /\(\) => \{\s*if \(active\) setReady\(true\);\s*\}/s);
 });
 
 test("unentitled logged-in users are routed to plans and can redeem an existing invite", async () => {
