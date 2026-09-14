@@ -12,6 +12,7 @@ import {
   type PublicCommerceConfig,
 } from "@/lib/commerce";
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
+import { redeemPwaInvite } from "@/lib/phase9-invite";
 import { getSupabaseClient } from "@/lib/supabase";
 
 type PageState = AccessState | { kind: "loading" } | { kind: "unavailable" };
@@ -22,6 +23,10 @@ export function CommercePlansPage() {
   const [message, setMessage] = useState("");
   const [busyPlan, setBusyPlan] = useState<CommercePlanCode | null>(null);
   const [accepted, setAccepted] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
+  const [inviteBusy, setInviteBusy] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -50,6 +55,11 @@ export function CommercePlansPage() {
     return null;
   }, [state]);
 
+  const inviteProfile = useMemo(() => {
+    if (state.kind === "entitlement_denied" || state.kind === "pending") return state.profile;
+    return null;
+  }, [state]);
+
   const canPurchase = Boolean(
     activeProfile && activeProfile.role === "user" && activeProfile.status === "active",
   );
@@ -70,19 +80,75 @@ export function CommercePlansPage() {
     }
   };
 
+  const redeemInvite = async () => {
+    setInviteBusy(true);
+    setInviteMessage("");
+    setInviteSuccess(false);
+    try {
+      const result = await redeemPwaInvite(getSupabaseClient(), inviteCode);
+      const nextState = await loadAccessState(getSupabaseClient());
+      setState(nextState);
+      setInviteCode("");
+      setInviteSuccess(true);
+      setInviteMessage(
+        nextState.kind === "ready"
+          ? "招待コードを適用し、PWA利用権を有効化しました。AI記事スタジオを利用できます。"
+          : result.profileStatus === "active"
+            ? "招待コードを適用しました。利用権を再確認してください。"
+            : "招待コードを登録しました。管理者のアカウント承認後に利用できます。",
+      );
+    } catch (error) {
+      setInviteMessage(error instanceof Error ? error.message : "招待コードの利用に失敗しました。");
+    } finally {
+      setInviteBusy(false);
+    }
+  };
+
   return (
     <main className="commerce-page">
       <section className="commerce-hero">
         <Link href="/" className="commerce-back">← AI記事スタジオへ戻る</Link>
         <p className="eyebrow">PLANS</p>
         <h1>利用プラン</h1>
-        <p>短期間だけ試す7日利用パスと、継続利用向けの月額プランを用意する販売基盤です。表示金額は決済サービス側の設定をそのまま参照します。</p>
+        <p>ログイン後、PWA利用権がない一般ユーザーにはこの画面を案内します。料金プランを選ぶか、招待コードをお持ちの場合はコードを登録できます。表示金額は決済サービス側の設定をそのまま参照します。</p>
         {config?.mode === "test" && <strong className="commerce-mode test">TEST MODE / 実課金なし</strong>}
         {config?.mode === "off" && <strong className="commerce-mode off">販売準備中</strong>}
         {config?.mode === "live" && <strong className="commerce-mode live">LIVE</strong>}
       </section>
 
       {message && <p className="commerce-message" role="status">{message}</p>}
+
+      {inviteProfile && inviteProfile.role === "user" && (
+        <section className="commerce-invite" aria-labelledby="commerce-invite-title">
+          <div>
+            <p className="eyebrow">INVITATION</p>
+            <h2 id="commerce-invite-title">招待コードをお持ちの方</h2>
+            <p>購入の代わりに、発行済みのPWA招待コードをこのAASアカウントへ登録できます。コードの期限・利用回数・既存利用権は既存の招待システムで確認されます。</p>
+            <small>AAS ID: {inviteProfile.aas_user_id}</small>
+          </div>
+          <div className="commerce-invite-form">
+            <label>
+              <span>招待コード</span>
+              <input
+                value={inviteCode}
+                onChange={(event) => setInviteCode(event.target.value)}
+                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                autoComplete="off"
+                inputMode="text"
+              />
+            </label>
+            <button type="button" disabled={inviteBusy || !inviteCode.trim()} onClick={() => void redeemInvite()}>
+              {inviteBusy ? "確認中…" : "招待コードを登録"}
+            </button>
+          </div>
+          {inviteMessage && (
+            <p className={inviteSuccess ? "commerce-invite-message success" : "commerce-invite-message error"} role="status">
+              {inviteMessage}
+              {inviteSuccess && state.kind === "ready" && <> <Link href="/">ホームへ進む</Link></>}
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="commerce-grid" aria-label="料金プラン">
         {(config?.plans ?? []).map((plan) => {
