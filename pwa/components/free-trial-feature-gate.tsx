@@ -34,6 +34,7 @@ export function FreeTrialFeatureGate({ feature, children }: { feature: TrialFeat
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -41,16 +42,33 @@ export function FreeTrialFeatureGate({ feature, children }: { feature: TrialFeat
       (next) => {
         if (!active) return;
         setStatus(next);
+        setLoadError("");
         if (next.bypassLimits) setReady(true);
       },
       () => {
-        if (active) setReady(true);
+        if (!active) return;
+        setStatus(null);
+        setReady(false);
+        setLoadError("アカウントと利用回数を確認できませんでした。通信状態を確認して再読み込みしてください。");
       },
     );
     return () => { active = false; };
   }, []);
 
   if (ready) return <>{children}</>;
+
+  if (loadError) {
+    return (
+      <main className="standalone-page"><section className="standalone-card trial-feature-gate">
+        <p className="eyebrow">ACCESS CHECK</p>
+        <h1>{LABELS[feature]}</h1>
+        <p className="route-notice error" role="alert">{loadError}</p>
+        <button className="primary-action" type="button" onClick={() => window.location.reload()}>再読み込み</button>
+        <div className="trial-gate-actions"><a href="/plans">料金プランを見る</a><a href="/">ホームへ戻る</a></div>
+      </section></main>
+    );
+  }
+
   if (!status) {
     return <main className="standalone-page"><section className="standalone-card"><p className="eyebrow">FREE TRIAL</p><h1>{LABELS[feature]}</h1><p className="route-notice">利用回数を確認しています…</p></section></main>;
   }
@@ -99,7 +117,7 @@ export function FreeTrialFeatureGate({ feature, children }: { feature: TrialFeat
         <div><dt>トライアル残り</dt><dd>{status.remainingDays ?? 0} 日</dd></div>
         <div><dt>リセット</dt><dd>{status.resetTimezone} {String(status.resetHour).padStart(2, "0")}:00</dd></div>
       </dl>
-      {message && <p className="route-notice error">{message}</p>}
+      {message && <p className="route-notice error" role="status">{message}</p>}
       <button className="primary-action" type="button" disabled={busy || !canStart} onClick={() => void start()}>{busy ? "確認中…" : `1回使用して${LABELS[feature]}を開始`}</button>
       {!canStart && <p className="route-notice error">本日の利用上限に達しています。リセット後に利用するか、料金プランをご確認ください。</p>}
       <div className="trial-gate-actions"><a href="/plans">料金プランを見る</a><a href="/">ホームへ戻る</a></div>
