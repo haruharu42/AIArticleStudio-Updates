@@ -8,6 +8,8 @@ export interface BillingEnv {
   AAS_STRIPE_PRICE_WINDOWS_MONTHLY?: string;
   AAS_STRIPE_PRICE_BUNDLE_MONTHLY?: string;
   AAS_COMMERCE_MODE?: string;
+  AAS_SELLER_TYPE?: string;
+  AAS_SELLER_DISCLOSURE_MODE?: string;
   AAS_SELLER_NAME?: string;
   AAS_SELLER_ADDRESS?: string;
   AAS_SELLER_PHONE?: string;
@@ -17,6 +19,8 @@ export interface BillingEnv {
 
 type JsonRecord = Record<string, unknown>;
 type CommerceMode = "off" | "test" | "live";
+type SellerType = "individual" | "business";
+type SellerDisclosureMode = "public" | "on_request";
 
 type PlanDefinition = {
   planCode: string;
@@ -104,7 +108,15 @@ function configured(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function sellerConfig(env: BillingEnv) {
+function sellerType(env: BillingEnv): SellerType {
+  return clean(env.AAS_SELLER_TYPE).toLowerCase() === "business" ? "business" : "individual";
+}
+
+function sellerDisclosureMode(env: BillingEnv): SellerDisclosureMode {
+  return clean(env.AAS_SELLER_DISCLOSURE_MODE).toLowerCase() === "public" ? "public" : "on_request";
+}
+
+function privateSellerConfig(env: BillingEnv) {
   return {
     name: clean(env.AAS_SELLER_NAME),
     address: clean(env.AAS_SELLER_ADDRESS),
@@ -114,8 +126,24 @@ function sellerConfig(env: BillingEnv) {
   };
 }
 
+function publicSellerConfig(env: BillingEnv) {
+  const seller = privateSellerConfig(env);
+  const type = sellerType(env);
+  const disclosureMode = sellerDisclosureMode(env);
+  const discloseDirectly = disclosureMode === "public";
+  return {
+    type,
+    disclosureMode,
+    name: discloseDirectly ? seller.name : "",
+    address: discloseDirectly ? seller.address : "",
+    phone: discloseDirectly ? seller.phone : "",
+    email: seller.email,
+    supportUrl: seller.supportUrl,
+  };
+}
+
 function sellerReady(env: BillingEnv): boolean {
-  const seller = sellerConfig(env);
+  const seller = privateSellerConfig(env);
   return Boolean(seller.name && seller.address && seller.phone && seller.email && seller.supportUrl);
 }
 
@@ -323,7 +351,7 @@ async function publicConfig(env: BillingEnv): Promise<Response> {
     mode,
     commerceReady: plans.some((plan) => plan.available),
     legalReady,
-    seller: sellerConfig(env),
+    seller: publicSellerConfig(env),
     plans,
   });
 }
