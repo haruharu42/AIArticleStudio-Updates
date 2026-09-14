@@ -113,6 +113,28 @@
 .legal-commerce-notes p { margin: 0; color: #5d7692; font-size: 9px; line-height: 1.8; }
 .legal-commerce-links { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 24px; font-size: 9px; }
 
+.commerce-public-shortcuts {
+  position: relative;
+  z-index: 2;
+  width: min(100% - 28px, 1120px);
+  margin: -88px auto calc(96px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.commerce-public-shortcuts a {
+  border: 1px solid #d2dfed;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 94%);
+  color: #315f94;
+  padding: 8px 11px;
+  box-shadow: 0 8px 24px rgb(26 69 123 / 7%);
+  font-size: 9px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 @media (max-width: 900px) {
   .commerce-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -128,4 +150,8 @@
   .legal-commerce-table > div { grid-template-columns: 1fr; gap: 4px; }
   .legal-commerce-plans article { grid-template-columns: 1fr; }
   .legal-commerce-plans p { grid-column: auto; }
+  .commerce-public-shortcuts {
+    margin-top: -76px;
+    margin-bottom: calc(94px + env(safe-area-inset-bottom));
+  }
 }
