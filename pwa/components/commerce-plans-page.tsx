@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   COMMERCE_PLAN_COPY,
   beginCheckout,
@@ -27,6 +27,7 @@ export function CommercePlansPage() {
   const [inviteBusy, setInviteBusy] = useState(false);
   const [inviteMessage, setInviteMessage] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState(false);
+  const checkoutInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -65,22 +66,26 @@ export function CommercePlansPage() {
   );
 
   const startCheckout = async (planCode: CommercePlanCode) => {
+    if (checkoutInFlight.current) return;
     if (!accepted) {
       setMessage("料金、利用期間、自動更新・解約条件、利用規約をご確認のうえチェックを入れてください。");
       return;
     }
+    checkoutInFlight.current = true;
     setBusyPlan(planCode);
     setMessage("");
     try {
       const url = await beginCheckout(planCode);
       window.location.assign(url);
     } catch (error) {
+      checkoutInFlight.current = false;
       setMessage(error instanceof Error ? error.message : "決済画面を開始できませんでした。");
       setBusyPlan(null);
     }
   };
 
   const redeemInvite = async () => {
+    if (inviteBusy) return;
     setInviteBusy(true);
     setInviteMessage("");
     setInviteSuccess(false);
@@ -180,7 +185,7 @@ export function CommercePlansPage() {
               </ul>
               <button
                 type="button"
-                disabled={Boolean(unavailableReason) || isBusy}
+                disabled={Boolean(unavailableReason) || isBusy || checkoutInFlight.current}
                 onClick={() => void startCheckout(plan.planCode)}
               >
                 {isBusy ? "決済画面を準備中…" : plan.purchaseType === "one_time" ? "7日利用パスを購入" : "月額プランを申し込む"}
