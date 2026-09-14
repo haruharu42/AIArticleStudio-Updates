@@ -9,6 +9,8 @@ export type CommercePlanCode =
 
 export type CommercePurchaseType = "one_time" | "subscription";
 export type CommercePlatformScope = "pwa" | "windows" | "bundle";
+export type SellerType = "individual" | "business";
+export type SellerDisclosureMode = "public" | "on_request";
 
 export type PublicCommercePrice = {
   currency: string;
@@ -30,6 +32,8 @@ export type PublicCommerceConfig = {
   commerceReady: boolean;
   legalReady: boolean;
   seller: {
+    type: SellerType;
+    disclosureMode: SellerDisclosureMode;
     name: string;
     address: string;
     phone: string;
@@ -140,6 +144,8 @@ function parsePublicConfig(value: unknown): PublicCommerceConfig {
     commerceReady: row.commerceReady === true,
     legalReady: row.legalReady === true,
     seller: {
+      type: sellerRow.type === "business" ? "business" : "individual",
+      disclosureMode: sellerRow.disclosureMode === "public" ? "public" : "on_request",
       name: typeof sellerRow.name === "string" ? sellerRow.name : "",
       address: typeof sellerRow.address === "string" ? sellerRow.address : "",
       phone: typeof sellerRow.phone === "string" ? sellerRow.phone : "",
