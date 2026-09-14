@@ -10,7 +10,7 @@ export default function TermsPage() {
   return (
     <LegalDocument
       title="AI記事スタジオ PWA 利用規約"
-      description="AI記事スタジオ PWAの利用条件を定める公開準備ドラフトです。"
+      description="AI記事スタジオ PWAの利用条件を定める、正式販売前の公開準備ドラフトです。"
     >
       <p>最終更新予定日: 2026年9月14日</p>
 
