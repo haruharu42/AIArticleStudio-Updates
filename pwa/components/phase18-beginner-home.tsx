@@ -256,7 +256,7 @@ export function Phase18BeginnerHome() {
                 <p>AI ARTICLE STUDIO PWA</p>
                 <h1>はじめてでも、<em>迷わず</em>使える。</h1>
                 <span>記事作成・画像・SNS投稿まで、やりたいことを順番に選ぶだけです。</span>
-                <div className="beginner-hero-actions"><a href="/create">✎ 記事を作成する →</a><a className="secondary" href="#beginner-guide">使い方を見る</a></div>
+                <div className="beginner-hero-actions"><a href="/create">✎ 記事を作成する →</a><a className="secondary" href="/manual">使い方を見る</a></div>
               </div>
               <div className="beginner-hero-visual" aria-hidden="true"><span>✦</span><strong>アイデアを<br />カタチに。</strong><small>はじめの一歩を<br />サポートします</small></div>
             </section>
@@ -290,8 +290,9 @@ export function Phase18BeginnerHome() {
             </section>
 
             <section id="beginner-guide" className="beginner-three-steps">
-              <div><span aria-hidden="true">💡</span><strong>はじめての方へ</strong><small>使い方はかんたん3ステップ</small></div>
+              <div><span aria-hidden="true">💡</span><strong>はじめての方へ</strong><small>まずは3ステップ。詳しい手順はマニュアルで確認できます。</small></div>
               <ol><li><b>1</b><span><strong>条件を選ぶ</strong><small>掲載先やジャンルを選択</small></span></li><li><b>2</b><span><strong>AIで作成</strong><small>プロンプトをAIへ渡す</small></span></li><li><b>3</b><span><strong>保存して管理</strong><small>ライブラリでいつでも編集</small></span></li></ol>
+              <div className="beginner-guide-links"><a href="/manual">詳しいマニュアル</a><a href="/faq">Q&A・よくある質問</a></div>
             </section>
 
             <section className="beginner-secondary-section" aria-labelledby="beginner-more-title">
@@ -301,6 +302,8 @@ export function Phase18BeginnerHome() {
                 <a href="/sns-plan"><strong>SNSアカウント設計</strong><small>プロフィールから収益導線まで</small></a>
                 <a href="/publish"><strong>公開管理</strong><small>公開予定・URLを管理</small></a>
                 <a href="/analytics"><strong>コンテンツ分析</strong><small>記事ストックを確認</small></a>
+                <a href="/manual"><strong>使い方マニュアル</strong><small>基本操作から設定まで詳しく確認</small></a>
+                <a href="/faq"><strong>Q&A</strong><small>よくある質問とトラブル確認</small></a>
                 {profile.role === "admin" && <a href="/admin"><strong>管理ダッシュボード</strong><small>ユーザー・利用権を管理</small></a>}
               </div>
             </section>
@@ -319,7 +322,7 @@ export function Phase18BeginnerHome() {
             <section className="beginner-settings-page">
               <p className="eyebrow">SETTINGS</p><h1>設定</h1><p>アカウント・利用権・ヘルプをここから確認できます。</p>
               <div className="beginner-settings-card"><div><strong>{profile.display_name || "ユーザー"}</strong><span>{profile.aas_user_id}</span><small>{profile.role} / {profile.status}</small></div><span className="beginner-access-badge">● PWA利用可能</span></div>
-              <div className="beginner-settings-links"><a href="/tools">機能一覧 <span>›</span></a><a href="/terms">利用規約 <span>›</span></a><a href="/privacy">プライバシーポリシー <span>›</span></a><a href="/ai-terms">AI利用条件 <span>›</span></a></div>
+              <div className="beginner-settings-links"><a href="/manual">使い方マニュアル <span>›</span></a><a href="/faq">Q&A・よくある質問 <span>›</span></a><a href="/settings">ナビ・表示をカスタマイズ <span>›</span></a><a href="/tools">機能一覧 <span>›</span></a><a href="/terms">利用規約 <span>›</span></a><a href="/privacy">プライバシーポリシー <span>›</span></a><a href="/ai-terms">AI利用条件 <span>›</span></a></div>
               <div className="beginner-settings-actions"><button type="button" onClick={() => void refresh(client)}>利用権を再確認</button><button className="danger" type="button" onClick={() => void logout()}>ログアウト</button></div>
             </section>
           </main>
