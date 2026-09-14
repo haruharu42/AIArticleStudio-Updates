@@ -63,5 +63,6 @@ export function planSalesEnabled(settings: SalesSettings | null, planCode: Comme
   if (planCode === "AAS-PWA-7DAY") return settings.pwa7DayEnabled;
   if (planCode === "AAS-PWA-MONTHLY") return settings.pwaMonthlyEnabled;
   if (planCode === "AAS-WIN-MONTHLY") return settings.windowsMonthlyEnabled;
-  return settings.bundleMonthlyEnabled;
+  if (planCode === "AAS-BUNDLE-MONTHLY") return settings.bundleMonthlyEnabled;
+  return false;
 }
