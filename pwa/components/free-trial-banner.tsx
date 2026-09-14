@@ -32,7 +32,7 @@ export function FreeTrialBanner() {
   return (
     <section className="free-trial-banner" aria-label="無料トライアル状態">
       <div>
-        <span className="free-trial-badge">7日無料トライアル</span>
+        <span className="free-trial-badge">無料トライアル</span>
         <strong>残り {status.remainingDays ?? 0} 日</strong>
         <small>終了予定 {formatEnd(status.endsAt)}</small>
       </div>
