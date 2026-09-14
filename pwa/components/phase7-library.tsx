@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArticleAiTools } from "@/components/article-ai-tools";
 import { Phase8Images } from "@/components/phase8-images";
 import type { ReactNode } from "react";
 import type { FormEvent } from "react";
@@ -152,6 +153,7 @@ function ArticleDetailView({
   onEdit,
   onDelete,
   images,
+  aiTools,
 }: {
   detail: ArticleDetail;
   busy: boolean;
@@ -159,6 +161,7 @@ function ArticleDetailView({
   onEdit: () => void;
   onDelete: () => Promise<void>;
   images: ReactNode;
+  aiTools: ReactNode;
 }) {
   return (
     <>
@@ -191,6 +194,7 @@ function ArticleDetailView({
         </dl>
 
         {images}
+        {aiTools}
 
         <BodySection title="完成本文" value={detail.body} />
         <BodySection title="掲載用本文" value={detail.workspace.publishBody} />
@@ -504,8 +508,28 @@ export function Phase7Library({
       )}
 
       {view === "detail" && detail && (
-        <ArticleDetailView detail={detail} busy={busy || imageBusy} onBack={back} onEdit={() => { if (leaveImages()) setView("edit"); }} onDelete={remove}
-          images={<Phase8Images key={detail.id} client={client} ownerId={ownerId} articleId={detail.id} revision={detail.revision} onBusyChange={setImageBusy} onUnsavedChange={setImageUnsaved} />} />
+        <ArticleDetailView
+          detail={detail}
+          busy={busy || imageBusy}
+          onBack={back}
+          onEdit={() => { if (leaveImages()) setView("edit"); }}
+          onDelete={remove}
+          images={<Phase8Images key={detail.id} client={client} ownerId={ownerId} articleId={detail.id} revision={detail.revision} onBusyChange={setImageBusy} onUnsavedChange={setImageUnsaved} />}
+          aiTools={
+            <ArticleAiTools
+              key={`${detail.id}:${detail.revision}`}
+              client={client}
+              input={{
+                title: detail.title,
+                publicationTarget: detail.publicationTarget,
+                articleType: detail.articleType,
+                genre: detail.genre,
+                subgenre: detail.subgenre,
+                body: detail.body,
+              }}
+            />
+          }
+        />
       )}
 
       {view === "edit" && detail && (
