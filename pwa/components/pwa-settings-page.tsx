@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { readMobileNavAlways, writeMobileNavAlways } from "@/lib/mobile-nav-preference";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -158,7 +159,7 @@ export function PwaSettingsPage() {
         <section className="beginner-settings-page persistent-settings-page">
           <p className="eyebrow">SETTINGS</p>
           <h1>設定</h1>
-          <p>表示・AI・あなた向け最適化・アカウントに関する設定を確認できます。</p>
+          <p>表示・ナビ・AI・あなた向け最適化・アカウントに関する設定を確認できます。</p>
 
           <section className="persistent-settings-section" aria-labelledby="navigation-settings-title">
             <div>
@@ -170,6 +171,8 @@ export function PwaSettingsPage() {
               <b>{alwaysShowNav ? "ON" : "OFF"}</b>
             </button>
           </section>
+
+          <MobileNavCustomizer />
 
           {profile && (
             <section className="personalization-settings" aria-labelledby="personalization-settings-title">
@@ -243,6 +246,8 @@ export function PwaSettingsPage() {
           )}
 
           <div className="beginner-settings-links">
+            <Link href="/manual">使い方マニュアル <span>›</span></Link>
+            <Link href="/faq">Q&A・よくある質問 <span>›</span></Link>
             <Link href="/tools">機能一覧 <span>›</span></Link>
             <Link href="/terms">利用規約 <span>›</span></Link>
             <Link href="/privacy">プライバシーポリシー <span>›</span></Link>
