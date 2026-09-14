@@ -119,6 +119,7 @@ test("purchase UI states renewal and cancellation terms before Checkout", async 
   assert.match(plans, /accepted/);
   assert.match(plans, /checkoutInFlight/);
   assert.match(plans, /if \(checkoutInFlight\.current\) return/);
+  assert.match(plans, /inviteInFlight/);
   assert.match(disclosure, /販売価格/);
   assert.match(disclosure, /支払時期/);
   assert.match(disclosure, /解約/);
@@ -149,9 +150,20 @@ test("unentitled logged-in users are routed to plans and can redeem an existing 
   assert.match(invite, /redeem_pwa_invite/);
 });
 
-test("Worker routes billing before the application handler", async () => {
+test("Worker routes billing before the application handler and adds security headers", async () => {
   const entry = await read("worker/index.ts");
   assert.match(entry, /handleBillingRequest/);
-  assert.match(entry, /if \(billingResponse\) return billingResponse/);
-  assert.ok(entry.indexOf("handleBillingRequest") < entry.indexOf("return handler.fetch"));
+  assert.match(entry, /if \(billingResponse\) return withSecurityHeaders\(billingResponse\)/);
+  assert.match(entry, /withSecurityHeaders\(await handler\.fetch\(request, env, ctx\)\)/);
+  assert.ok(entry.indexOf("handleBillingRequest(request") < entry.indexOf("handler.fetch(request"));
+  for (const header of [
+    "x-content-type-options",
+    "x-frame-options",
+    "referrer-policy",
+    "permissions-policy",
+    "content-security-policy",
+    "strict-transport-security",
+  ]) {
+    assert.match(entry, new RegExp(header));
+  }
 });
