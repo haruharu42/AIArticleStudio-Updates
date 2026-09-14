@@ -115,11 +115,16 @@ test("service-role and Stripe secrets stay outside browser-visible configuration
 
   assert.match(client, /client\.auth\.getSession\(\)/);
   assert.match(client, /authorization: `Bearer \$\{token\}`/);
+  assert.match(client, /validatedStripeRedirect/);
+  assert.match(client, /"checkout\.stripe\.com"/);
+  assert.match(client, /"billing\.stripe\.com"/);
+  assert.match(client, /parsed\.username \|\| parsed\.password/);
 });
 
 test("purchase UI states renewal and cancellation terms before Checkout", async () => {
   const plans = await read("components/commerce-plans-page.tsx");
   const disclosure = await read("components/commercial-transactions-page.tsx");
+  const billing = await read("components/billing-account-page.tsx");
   const client = await read("lib/commerce.ts");
 
   assert.match(plans, /1か月ごとの自動更新/);
@@ -129,6 +134,8 @@ test("purchase UI states renewal and cancellation terms before Checkout", async 
   assert.match(plans, /checkoutInFlight/);
   assert.match(plans, /if \(checkoutInFlight\.current\) return/);
   assert.match(plans, /inviteInFlight/);
+  assert.match(billing, /portalInFlight/);
+  assert.match(billing, /if \(portalInFlight\.current\) return/);
   assert.match(disclosure, /販売価格/);
   assert.match(disclosure, /支払時期/);
   assert.match(disclosure, /解約/);
