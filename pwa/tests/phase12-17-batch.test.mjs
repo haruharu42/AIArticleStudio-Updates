@@ -119,6 +119,10 @@ test("tools hub and beginner-first root expose all functional routes with SNS in
   assert.match(toolsRoute, /PhaseToolsPage/);
   assert.match(rootPage, /Phase18BeginnerHome/);
   assert.match(shell, /Phase7App/);
+  assert.match(shell, /if \(state\.kind === "loading"\) return <BeginnerAccessFallback \/>;/);
+  assert.match(shell, /if \(state\.kind === "unavailable"\) return <BeginnerAccessFallback unavailable \/>;/);
+  assert.doesNotMatch(shell, /state\.kind !== "ready" \|\| !client\) return <Phase7App \/>/);
+  assert.ok(shell.indexOf('state.kind === "loading"') < shell.indexOf('state.kind !== "ready"'));
   assert.match(shell, /href="\/tools"/);
   assert.match(shell, /href="\/images"/);
   assert.match(shell, /href="\/sns"/);
