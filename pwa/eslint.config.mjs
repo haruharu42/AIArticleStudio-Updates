@@ -24,7 +24,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["components/phase*.tsx"],
+    files: ["components/phase*.tsx", "components/free-trial*.tsx"],
     rules: {
       // The PWA is built and served through Vinext and intentionally uses
       // document navigation between standalone workflow routes.
