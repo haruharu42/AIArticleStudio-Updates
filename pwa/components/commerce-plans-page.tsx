@@ -28,6 +28,7 @@ export function CommercePlansPage() {
   const [inviteMessage, setInviteMessage] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const checkoutInFlight = useRef(false);
+  const inviteInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -85,7 +86,8 @@ export function CommercePlansPage() {
   };
 
   const redeemInvite = async () => {
-    if (inviteBusy) return;
+    if (inviteInFlight.current) return;
+    inviteInFlight.current = true;
     setInviteBusy(true);
     setInviteMessage("");
     setInviteSuccess(false);
@@ -105,6 +107,7 @@ export function CommercePlansPage() {
     } catch (error) {
       setInviteMessage(error instanceof Error ? error.message : "招待コードの利用に失敗しました。");
     } finally {
+      inviteInFlight.current = false;
       setInviteBusy(false);
     }
   };
@@ -185,7 +188,7 @@ export function CommercePlansPage() {
               </ul>
               <button
                 type="button"
-                disabled={Boolean(unavailableReason) || isBusy || checkoutInFlight.current}
+                disabled={Boolean(unavailableReason) || busyPlan !== null}
                 onClick={() => void startCheckout(plan.planCode)}
               >
                 {isBusy ? "決済画面を準備中…" : plan.purchaseType === "one_time" ? "7日利用パスを購入" : "月額プランを申し込む"}
