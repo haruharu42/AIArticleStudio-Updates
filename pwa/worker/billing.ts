@@ -56,7 +56,6 @@ const PLANS: readonly PlanDefinition[] = [
   },
 ] as const;
 
-const SUBSCRIPTION_ACCESS_STATUSES = new Set(["trialing", "active", "past_due", "incomplete"]);
 const SIGNATURE_TOLERANCE_SECONDS = 300;
 
 function clean(value: unknown): string {
