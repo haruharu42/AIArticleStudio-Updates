@@ -54,8 +54,10 @@ test("Phase 10 admin surface uses existing account and entitlement RPCs plus inv
   assert.match(api, /AAS-WIN-BETA/);
   assert.match(api, /AAS-PWA-BETA/);
   assert.match(page, /data\.role !== "admin" \|\| data\.status !== "active"/);
-  assert.match(page, /Windows付与/);
-  assert.match(page, /PWA付与/);
+  assert.match(page, /Windowsを付与/);
+  assert.match(page, /PWAを付与/);
+  assert.match(page, /Windowsを取消/);
+  assert.match(page, /PWAを取消/);
   assert.match(page, /招待コードを作成/);
   assert.match(route, /Phase10AdminPage/);
   assert.doesNotMatch(`${api}\n${page}`, /sb_secret_|service[_-]?role/i);

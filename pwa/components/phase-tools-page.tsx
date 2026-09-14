@@ -21,6 +21,14 @@ const memberTools: ToolCard[] = [
   { href: "/analytics", category: "分析", title: "コンテンツ分析", description: "記事ストック、掲載先、状態、最近更新した記事をAAS内のデータから集計します。" },
 ];
 
+const adminTools: ToolCard[] = [
+  { href: "/admin", category: "運用", title: "管理ダッシュボード", description: "ユーザー、利用権、招待コード、要対応項目をまとめて確認します。" },
+  { href: "/admin/promotion?mode=article", category: "販売", title: "販売・宣伝記事作成", description: "note・Brain・Tips・ブログ向けにAASの紹介・販売記事を作成します。" },
+  { href: "/admin/promotion?mode=social", category: "SNS販促", title: "SNSプロモーション", description: "X・Instagram・Threads・TikTok・YouTube Shorts向け販促素材を作成します。" },
+  { href: "/admin/promotion?mode=campaign", category: "販促設計", title: "キャンペーン設計", description: "記事とSNSを連動させた販売開始・機能紹介の投稿計画を作成します。" },
+  { href: "/admin/promotion?mode=product", category: "製品情報", title: "製品情報管理", description: "宣伝に使用する確認済みの機能、価格、販売URL、注意事項を管理します。" },
+];
+
 export function PhaseToolsPage() {
   const [state, setState] = useState<State>({ kind: "loading" });
   useEffect(() => {
@@ -39,7 +47,7 @@ export function PhaseToolsPage() {
   }, []);
 
   const ready = state.kind === "ready";
-  const admin = state.kind === "ready" && state.profile.role === "admin";
+  const admin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
   const invite = state.kind === "pending" || state.kind === "entitlement_denied";
   const cards = ready ? memberTools : [];
 
@@ -56,10 +64,18 @@ export function PhaseToolsPage() {
       {(state.kind === "suspended" || state.kind === "disabled") && <div className="route-notice error">現在のアカウント状態ではPWA機能を利用できません。</div>}
       {invite && <div className="route-notice">PWA機能を使うには利用権が必要です。<a className="route-inline-link" href="/invite">招待コードを登録</a></div>}
 
+      {admin && (
+        <section className="admin-only-tools-section" aria-labelledby="admin-only-tools-title">
+          <div className="admin-only-tools-heading"><div><p>ADMIN ONLY</p><h2 id="admin-only-tools-title">管理者専用</h2></div><small>一般ユーザーには表示されません</small></div>
+          <div className="admin-only-tools-grid">
+            {adminTools.map((tool) => <a key={tool.href} className="admin-only-tool-card" href={tool.href}><span>{tool.category}</span><h3>{tool.title}</h3><p>{tool.description}</p><strong>開く →</strong></a>)}
+          </div>
+        </section>
+      )}
+
       <section className="tool-grid">
         {cards.map((tool) => <a key={tool.href} className="tool-card" href={tool.href}><span>{tool.category}</span><h2>{tool.title}</h2><p>{tool.description}</p><strong>開く →</strong></a>)}
         {invite && <a className="tool-card" href="/invite"><span>PWA</span><h2>PWA招待</h2><p>購入・招待コードをPWA利用権へ登録します。</p><strong>開く →</strong></a>}
-        {admin && <a className="tool-card" href="/admin"><span>管理</span><h2>管理ダッシュボード</h2><p>ユーザー承認、Windows/PWA利用権、PWA招待コードを管理します。</p><strong>開く →</strong></a>}
       </section>
 
       {ready && (
