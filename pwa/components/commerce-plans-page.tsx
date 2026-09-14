@@ -150,7 +150,9 @@ export function CommercePlansPage() {
       {salesSettings?.externalSalesEnabled && (
         <section className="commerce-empty">
           <h2>外部販売を受付中です</h2>
-          <p>現在は note・Brain・Tips などの案内先で購入後、案内された利用コードをAASへ登録する運用に対応しています。</p>
+          <p>{salesSettings.accessCodeEnabled
+            ? "現在は note・Brain・Tips などの案内先で購入後、案内された利用コードをAASへ登録する運用に対応しています。"
+            : "現在は note・Brain・Tips などの案内先で外部販売を受付中です。購入後の利用方法は販売ページの案内に従ってください。"}</p>
         </section>
       )}
 
@@ -160,7 +162,7 @@ export function CommercePlansPage() {
             <p className="eyebrow">ACCESS CODE</p>
             <h2 id="commerce-invite-title">利用コードをお持ちの方</h2>
             <p>note・Brain・Tips等で購入後に案内された利用コードを、このAASアカウントへ登録できます。内部では既存の安全な招待コード基盤を利用します。</p>
-            <small>AAS ID: {inviteProfile.aas_user_id}</small>
+            <small>旧表記：招待コードをお持ちの方 / AAS ID: {inviteProfile.aas_user_id}</small>
           </div>
           <div className="commerce-invite-form">
             <label>
