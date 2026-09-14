@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   COMMERCE_PLAN_COPY,
   loadMyBillingState,
@@ -49,6 +49,7 @@ export function BillingAccountPage() {
   const [billing, setBilling] = useState<MyBillingState | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const portalInFlight = useRef(false);
 
   const profile = useMemo(() => {
     if (
@@ -95,12 +96,15 @@ export function BillingAccountPage() {
   }, []);
 
   const openPortal = async () => {
+    if (portalInFlight.current) return;
+    portalInFlight.current = true;
     setBusy(true);
     setMessage("");
     try {
       const url = await openBillingPortal();
       window.location.assign(url);
     } catch (error) {
+      portalInFlight.current = false;
       setMessage(error instanceof Error ? error.message : "契約管理画面を開けませんでした。");
       setBusy(false);
     }
