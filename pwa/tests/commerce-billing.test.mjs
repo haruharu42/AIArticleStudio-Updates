@@ -37,6 +37,7 @@ test("commerce database extends existing entitlement security instead of bypassi
 
 test("billing integrity hardening binds pass and subscription events to registered AAS checkout identities", async () => {
   const hardening = await readRepo("supabase/migrations/20260914050000_billing_integrity_hardening.sql");
+  const checkoutGuard = await readRepo("supabase/migrations/20260914052000_billing_checkout_identity_guard.sql");
 
   assert.match(hardening, /billing_customers_guard_identity/);
   assert.match(hardening, /billing customer identity is immutable/);
@@ -50,6 +51,12 @@ test("billing integrity hardening binds pass and subscription events to register
   assert.match(hardening, /'ignored'/);
   assert.match(hardening, /grant execute on function public\.billing_apply_pass_event[^;]+to service_role/s);
   assert.doesNotMatch(hardening, /to authenticated/i);
+
+  assert.match(checkoutGuard, /billing_checkout_sessions_guard_identity/);
+  assert.match(checkoutGuard, /billing checkout identity is immutable/);
+  assert.match(checkoutGuard, /old\.user_id is distinct from new\.user_id/);
+  assert.match(checkoutGuard, /old\.plan_code is distinct from new\.plan_code/);
+  assert.match(checkoutGuard, /old\.provider_customer_id is distinct from new\.provider_customer_id/);
 });
 
 test("billing Worker fails closed and validates raw Stripe webhook signatures", async () => {
@@ -87,6 +94,8 @@ test("individual seller on-request mode keeps private identity out of public con
   assert.match(client, /disclosureMode: SellerDisclosureMode/);
   assert.match(disclosure, /請求があった場合には遅滞なく開示します/);
   assert.match(disclosure, /問い合わせ・開示請求窓口/);
+  assert.match(disclosure, /function safeSupportUrl/);
+  assert.match(disclosure, /parsed\.protocol === "https:"/);
   assert.match(vars, /AAS_SELLER_TYPE=individual/);
   assert.match(vars, /AAS_SELLER_DISCLOSURE_MODE=on_request/);
 });
