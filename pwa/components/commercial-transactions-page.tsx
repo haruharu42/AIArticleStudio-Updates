@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   COMMERCE_PLAN_COPY,
   fetchCommerceConfig,
@@ -9,6 +9,11 @@ import {
   renewalLabel,
   type PublicCommerceConfig,
 } from "@/lib/commerce";
+import {
+  fetchPublicSalesSettings,
+  planSalesEnabled,
+  type SalesSettings,
+} from "@/lib/sales-settings";
 
 const DISCLOSURE_ON_REQUEST = "請求があった場合には遅滞なく開示します。";
 
@@ -28,13 +33,16 @@ function safeSupportUrl(value: string | undefined): string {
 
 export function CommercialTransactionsPage() {
   const [config, setConfig] = useState<PublicCommerceConfig | null>(null);
+  const [salesSettings, setSalesSettings] = useState<SalesSettings | null>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     let active = true;
-    void fetchCommerceConfig().then(
-      (next) => {
-        if (active) setConfig(next);
+    void Promise.all([fetchCommerceConfig(), fetchPublicSalesSettings()]).then(
+      ([nextConfig, nextSalesSettings]) => {
+        if (!active) return;
+        setConfig(nextConfig);
+        setSalesSettings(nextSalesSettings);
       },
       (error) => {
         if (active) setMessage(error instanceof Error ? error.message : "販売情報を取得できませんでした。");
@@ -51,6 +59,12 @@ export function CommercialTransactionsPage() {
   const sellerAddress = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.address ?? "");
   const sellerPhone = onRequest ? DISCLOSURE_ON_REQUEST : display(seller?.phone ?? "");
   const supportUrl = safeSupportUrl(seller?.supportUrl);
+  const stripeSalesEnabled = salesSettings?.stripeCheckoutEnabled === true;
+  const externalSalesEnabled = salesSettings?.externalSalesEnabled === true;
+  const visibleStripePlans = useMemo(
+    () => (stripeSalesEnabled ? (config?.plans ?? []).filter((plan) => planSalesEnabled(salesSettings, plan.planCode)) : []),
+    [config, salesSettings, stripeSalesEnabled],
+  );
 
   return (
     <main className="legal-commerce-page">
@@ -58,8 +72,13 @@ export function CommercialTransactionsPage() {
         <Link href="/plans">← 利用プランへ戻る</Link>
         <p className="legal-commerce-label">特定商取引法に基づく表記</p>
         <h1>AI記事スタジオ 販売条件</h1>
-        <p className="legal-commerce-lead">一般販売開始前の表示確認ページです。LIVE販売は、必要な販売者情報と決済設定が揃うまでシステム側で無効になります。</p>
-        {config?.mode !== "live" && <p className="legal-commerce-warning">現在は正式なLIVE販売状態ではありません。</p>}
+        <p className="legal-commerce-lead">
+          {externalSalesEnabled && !stripeSalesEnabled
+            ? "現在は note・Brain・Tips 等の外部販売と利用コードによる受付を行っています。AAS内のStripe新規購入は停止しています。"
+            : "一般販売開始前の表示確認ページです。LIVE販売は、必要な販売者情報と決済設定が揃うまでシステム側で無効になります。"}
+        </p>
+        {stripeSalesEnabled && config?.mode !== "live" && <p className="legal-commerce-warning">現在は正式なLIVE販売状態ではありません。</p>}
+        {!stripeSalesEnabled && <p className="legal-commerce-warning">AAS内のStripe新規受付は現在停止中です。</p>}
         {message && <p className="commerce-message" role="status">{message}</p>}
 
         {onRequest && (
@@ -75,20 +94,20 @@ export function CommercialTransactionsPage() {
           <div><dt>電話番号</dt><dd>{sellerPhone}</dd></div>
           <div><dt>メールアドレス</dt><dd>{display(seller?.email ?? "")}</dd></div>
           <div><dt>問い合わせ・開示請求窓口</dt><dd>{supportUrl ? <a href={supportUrl}>問い合わせページ</a> : "正式販売前に確定・表示します"}</dd></div>
-          <div><dt>販売価格</dt><dd>下記の各プランに表示します。決済画面にも最終請求額を表示します。</dd></div>
+          <div><dt>販売価格</dt><dd>{stripeSalesEnabled ? "下記の受付中プランに表示します。決済画面にも最終請求額を表示します。" : "現在の販売価格は、note・Brain・Tips 等の購入先となる外部販売ページに表示します。"}</dd></div>
           <div><dt>商品代金以外の必要料金</dt><dd>インターネット接続料金・通信料金等は利用者の負担です。その他の費用が生じる場合は購入前に表示します。</dd></div>
-          <div><dt>支払方法</dt><dd>Stripe Checkoutで提供される支払方法。実際に利用可能な方法は決済画面に表示します。</dd></div>
-          <div><dt>支払時期</dt><dd>7日利用パスは購入時に決済します。月額プランは申込時に初回決済し、その後は1か月ごとに自動更新・決済する設計です。</dd></div>
-          <div><dt>サービス提供時期</dt><dd>Stripeから決済完了通知を受信し利用権へ反映後、対象機能を利用できます。</dd></div>
-          <div><dt>解約</dt><dd>月額プランは契約管理画面から解約できます。解約予約後は原則として現在の請求期間終了まで利用でき、次回更新を停止します。</dd></div>
-          <div><dt>7日利用パス</dt><dd>自動更新はありません。有効期間終了後に自動的に利用権が終了します。</dd></div>
-          <div><dt>返金・キャンセル</dt><dd>デジタルサービスの性質、法令上の取扱い、重複決済・システム障害等の事情を踏まえた正式条件を一般販売開始前に確定し、購入確定前に表示します。</dd></div>
+          <div><dt>支払方法</dt><dd>{stripeSalesEnabled ? "Stripe Checkoutで提供される支払方法。実際に利用可能な方法は決済画面に表示します。" : "note・Brain・Tips 等の外部販売ページで案内する支払方法を利用します。AAS内ではStripe新規決済を受け付けていません。"}</dd></div>
+          <div><dt>支払時期</dt><dd>{stripeSalesEnabled ? "7日利用パスは購入時に決済します。月額プランは申込時に初回決済し、その後は1か月ごとに自動更新・決済します。" : "購入先となる外部販売ページに表示される条件に従います。"}</dd></div>
+          <div><dt>サービス提供時期</dt><dd>{stripeSalesEnabled ? "Stripeから決済完了通知を受信し利用権へ反映後、対象機能を利用できます。" : "外部販売で購入後、案内された利用コードをAASへ登録し、利用権へ反映された後に対象機能を利用できます。"}</dd></div>
+          <div><dt>解約</dt><dd>{stripeSalesEnabled ? "月額プランは契約管理画面から解約できます。解約予約後は原則として現在の請求期間終了まで利用でき、次回更新を停止します。" : "現在の外部販売商品のキャンセル・解約条件は購入先の販売ページに表示します。AAS内のStripe月額新規受付は停止しています。"}</dd></div>
+          {stripeSalesEnabled && salesSettings?.pwa7DayEnabled && <div><dt>7日利用パス</dt><dd>自動更新はありません。有効期間終了後に自動的に利用権が終了します。</dd></div>}
+          <div><dt>返金・キャンセル</dt><dd>{stripeSalesEnabled ? "デジタルサービスの性質、法令上の取扱い、重複決済・システム障害等の事情を踏まえた正式条件を一般販売開始前に確定し、購入確定前に表示します。" : "現在の外部販売における返金・キャンセル条件は購入先の販売ページで購入確定前に表示します。AAS内のStripe直販を開始する場合は、直販向け条件を別途表示します。"}</dd></div>
           <div><dt>動作環境</dt><dd>PWA版は対応ブラウザ、Windows版は対応Windows環境が必要です。正式販売ページで対応範囲を明示します。</dd></div>
         </dl>
 
         <section className="legal-commerce-plans">
           <h2>プラン別の販売条件</h2>
-          {(config?.plans ?? []).map((plan) => (
+          {visibleStripePlans.map((plan) => (
             <article key={plan.planCode}>
               <h3>{COMMERCE_PLAN_COPY[plan.planCode].name}</h3>
               <strong>{formatCommercePrice(plan.price)}</strong>
@@ -96,12 +115,15 @@ export function CommercialTransactionsPage() {
               <p>{COMMERCE_PLAN_COPY[plan.planCode].description}</p>
             </article>
           ))}
-          {!config?.plans.length && <p>価格はStripeの商品・価格設定完了後にこのページへ自動表示されます。</p>}
+          {!stripeSalesEnabled && <p>現在、AAS内のStripe新規購入は停止中です。外部販売の商品・価格・購入条件は各販売ページで確認してください。</p>}
+          {stripeSalesEnabled && visibleStripePlans.length === 0 && <p>現在、AAS内で受付中のStripeプランはありません。</p>}
         </section>
 
         <section className="legal-commerce-notes">
           <h2>購入確定前の表示</h2>
-          <p>購入時は、プラン名、価格、利用期間、自動更新の有無、解約条件を確認したうえでStripe Checkoutへ進みます。決済確定前にもStripeの最終画面で請求内容を確認してください。</p>
+          <p>{stripeSalesEnabled
+            ? "購入時は、プラン名、価格、利用期間、自動更新の有無、解約条件を確認したうえでStripe Checkoutへ進みます。決済確定前にもStripeの最終画面で請求内容を確認してください。"
+            : "現在は外部販売ページで、商品内容、価格、利用期間、返金・キャンセル条件等を確認してから購入してください。購入後は案内された利用コードをAASへ登録します。"}</p>
         </section>
 
         <nav className="legal-commerce-links">
