@@ -166,12 +166,16 @@ test("unentitled logged-in users are routed to plans and can redeem an existing 
   assert.match(invite, /redeem_pwa_invite/);
 });
 
-test("Worker routes billing before the application handler and adds security headers", async () => {
+test("Worker routes billing before the application handler, records failures, and adds security headers", async () => {
   const entry = await read("worker/index.ts");
-  assert.match(entry, /handleBillingRequest/);
-  assert.match(entry, /if \(billingResponse\) return withSecurityHeaders\(billingResponse\)/);
+  assert.match(entry, /const billingResponse = await handleBillingRequest\(request, env\)/);
+  assert.match(entry, /if \(billingResponse\) \{/);
+  assert.match(entry, /BILLING_REQUEST_FAILED/);
+  assert.match(entry, /WEBHOOK_REJECTED/);
+  assert.match(entry, /return withSecurityHeaders\(billingResponse\)/);
   assert.match(entry, /withSecurityHeaders\(await handler\.fetch\(request, env, ctx\)\)/);
   assert.ok(entry.indexOf("handleBillingRequest(request") < entry.indexOf("handler.fetch(request"));
+  assert.ok(entry.indexOf("return withSecurityHeaders(billingResponse)") < entry.indexOf("handler.fetch(request"));
   for (const header of [
     "x-content-type-options",
     "x-frame-options",
