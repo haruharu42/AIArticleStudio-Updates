@@ -16,6 +16,7 @@ import "./phase24-admin-promotion.css";
 import "./phase25-user-personalization.css";
 import "./phase25-selected-ai.css";
 import "./phase26-knowledge.css";
+import "./phase27-commerce.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
