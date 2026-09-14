@@ -51,9 +51,20 @@ export function Phase15SnsPlanPage() {
   };
 
   const setWeeklyPosts = (value: string) => {
-    setWeeklyPostsText(value);
+    if (!value.trim()) {
+      setWeeklyPostsText("");
+      patch("weeklyPosts", 1);
+      return;
+    }
     const parsed = Number(value);
-    if (Number.isFinite(parsed) && parsed >= 1) patch("weeklyPosts", Math.max(1, Math.min(21, Math.trunc(parsed))));
+    if (!Number.isFinite(parsed)) {
+      setWeeklyPostsText("");
+      patch("weeklyPosts", 1);
+      return;
+    }
+    const normalized = Math.max(1, Math.min(21, Math.trunc(parsed)));
+    setWeeklyPostsText(String(normalized));
+    patch("weeklyPosts", normalized);
   };
 
   const copy = async () => {
@@ -94,7 +105,7 @@ export function Phase15SnsPlanPage() {
           <PresetSelect label="対象読者" value={input.audience} onChange={(value) => patch("audience", value)} options={AUDIENCE_OPTIONS} customPlaceholder="例: 子育て中の30代会社員" />
           <PresetSelect label="活かしたい強み" value={input.strength} onChange={(value) => patch("strength", value)} options={STRENGTH_OPTIONS} customPlaceholder="自分の強みを入力" />
           <label className="route-field"><span>顔出し</span><select value={input.faceReveal} onChange={(event) => patch("faceReveal", event.target.value as SnsLaunchInput["faceReveal"])}><option value="no">しない</option><option value="either">どちらでも</option><option value="yes">できる</option></select></label>
-          <PresetSelect label="週の投稿目安" value={weeklyPostsText} onChange={setWeeklyPosts} options={WEEKLY_POST_OPTIONS} customPlaceholder="1〜21の数字を入力" />
+          <PresetSelect label="週の投稿目安" value={weeklyPostsText} onChange={setWeeklyPosts} options={WEEKLY_POST_OPTIONS} customPlaceholder="1〜21の数字を入力" customInputType="number" customMin={1} customMax={21} />
           <PresetSelect label="文章トーン" value={input.tone} onChange={(value) => patch("tone", value)} options={TONE_OPTIONS} customPlaceholder="希望する文章トーンを入力" />
           <PresetSelect label="販売・誘導したいもの" value={input.offer} onChange={(value) => patch("offer", value)} options={OFFER_OPTIONS} full customPlaceholder="販売・案内したいものを入力" />
         </div>
@@ -111,7 +122,7 @@ export function Phase15SnsPlanPage() {
         </label>
         <button className="primary-action" type="button" onClick={() => void copy()}>設計プロンプトをコピー</button>
         {message && <div className="route-notice">{message}</div>}
-        <p className="panel-muted">「その他（自由入力）」を選ぶと入力欄が表示されます。アルゴリズムや収益額を決め打ちせず、実績を創作しない形で設計します。</p>
+        <p className="panel-muted">「その他（自由入力）」を選ぶと入力欄が表示されます。週の投稿目安は1〜21回の範囲に補正されます。アルゴリズムや収益額を決め打ちせず、実績を創作しない形で設計します。</p>
       </section>
     </main>
   );
