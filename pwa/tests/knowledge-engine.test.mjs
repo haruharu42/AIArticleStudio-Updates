@@ -1,0 +1,102 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+const repoRoot = path.resolve(root, "..");
+const read = (relative) => readFile(path.join(root, relative), "utf8");
+const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
+
+test("shared knowledge compiler combines audience genre publication and task rules without demographic stereotyping", async () => {
+  const engine = await read("lib/knowledge-engine.ts");
+
+  assert.match(engine, /export function compileKnowledgeContext/);
+  assert.match(engine, /【AAS KNOWLEDGE COMPILER】/);
+  assert.match(engine, /安全・事実性 → 今回の明示条件 → 媒体・タスク → 読者 → 個人最適化/);
+  assert.match(engine, /年齢・性別・職業だけから家族構成、収入、能力、IT習熟度などを決めつけない/);
+  assert.match(engine, /自由入力ジャンル/);
+  assert.match(engine, /自由入力サブジャンル/);
+  for (const genre of ["AI副業", "美容", "ガジェット", "健康・フィットネス", "子育て・教育", "旅行", "料理・グルメ", "ペット"]) {
+    assert.match(engine, new RegExp(genre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+});
+
+test("knowledge context is shared by article title image social promotion sidejob and SNS launch prompts", async () => {
+  const creator = await read("lib/phase11-create.ts");
+  const profileWrapper = await read("lib/phase12-prompt-profiles.ts");
+  const images = await read("lib/phase13-image-prompts.ts");
+  const social = await read("lib/phase14-sns.ts");
+  const promotion = await read("lib/admin-promotion.ts");
+  const sidejob = await read("lib/phase15-sidejob.ts");
+  const snsPlan = await read("lib/phase15-sns-plan.ts");
+
+  assert.match(creator, /getPromptSpecialization/);
+  assert.match(profileWrapper, /compileKnowledgeContext/);
+  for (const source of [images, social, promotion, sidejob, snsPlan]) {
+    assert.match(source, /compileKnowledgeContext/);
+  }
+  assert.match(sidejob, /genre: "AI副業"/);
+  assert.match(sidejob, /task: "article"/);
+  assert.match(sidejob, /AASの候補順位は適性の参考/);
+  assert.match(snsPlan, /genre: "SNS運用"/);
+  assert.match(snsPlan, /task: "social"/);
+  assert.match(snsPlan, /テーマから読者の属性を勝手に決めず/);
+});
+
+test("custom genre and subgenre inputs record only compact knowledge candidate signals", async () => {
+  const creatorPage = await read("components/phase11-create-page.tsx");
+  const creator = await read("lib/phase11-create.ts");
+  const catalog = await read("lib/knowledge-catalog.ts");
+  const migration = await readRepo("supabase/migrations/20260913145500_knowledge_engine.sql");
+
+  assert.match(creatorPage, /setCustomGenre/);
+  assert.match(creatorPage, /genreSelectionValue/);
+  assert.match(creatorPage, /subgenreSelectionValue/);
+  assert.match(creatorPage, /taxonomy-custom-input/);
+  assert.match(creator, /recordKnowledgeCandidate/);
+  assert.match(creator, /isCustomGenre/);
+  assert.match(creator, /isCustomSubgenre/);
+  assert.match(catalog, /slice\(0, 120\)/);
+  assert.match(catalog, /record_knowledge_candidate/);
+  assert.match(migration, /knowledge_candidate_signals/);
+  assert.match(migration, /value_original/);
+  assert.match(migration, /use_count/);
+  assert.doesNotMatch(migration, /knowledge_candidate_signals[\s\S]{0,600}(article_body|prompt_text|ai_answer)/i);
+});
+
+test("knowledge database keeps catalog RLS and candidate raw rows inaccessible to clients", async () => {
+  const migration = await readRepo("supabase/migrations/20260913145500_knowledge_engine.sql");
+
+  for (const table of ["knowledge_catalog", "knowledge_candidate_signals", "knowledge_candidate_decisions"]) {
+    assert.match(migration, new RegExp(`alter table public\\.${table} enable row level security`));
+    assert.match(migration, new RegExp(`alter table public\\.${table} force row level security`));
+  }
+  assert.match(migration, /revoke all on table public\.knowledge_candidate_signals from public, anon, authenticated/);
+  assert.match(migration, /revoke all on table public\.knowledge_candidate_decisions from public, anon, authenticated/);
+  assert.match(migration, /active admin required/);
+  assert.match(migration, /sum\(s\.use_count\)::bigint as total_uses/);
+  assert.match(migration, /count\(distinct s\.user_id\)::bigint as distinct_users/);
+  assert.doesNotMatch(migration, /returns table \([\s\S]{0,300}user_id uuid/);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+});
+
+test("runtime catalog loads only active rules and admin review is isolated behind the admin route", async () => {
+  const catalog = await read("lib/knowledge-catalog.ts");
+  const bootstrap = await read("components/knowledge-runtime-bootstrap.tsx");
+  const admin = await read("components/admin-knowledge-page.tsx");
+  const route = await read("app/admin/knowledge/page.tsx");
+  const tools = await read("components/phase-tools-page.tsx");
+
+  assert.match(catalog, /\.eq\("status", "active"\)/);
+  assert.match(catalog, /\.limit\(500\)/);
+  assert.match(bootstrap, /loadActiveKnowledgeCatalog/);
+  assert.match(bootstrap, /setRuntimeKnowledgeCatalog/);
+  assert.match(admin, /role === "admin"/);
+  assert.match(admin, /status === "active"/);
+  assert.match(admin, /adminListKnowledgeCandidates/);
+  assert.match(admin, /adminReviewKnowledgeCandidate/);
+  assert.match(route, /AdminKnowledgePage/);
+  assert.match(tools, /href: "\/admin\/knowledge"/);
+});

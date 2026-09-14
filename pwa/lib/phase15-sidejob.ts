@@ -1,3 +1,5 @@
+import { compileKnowledgeContext } from "@/lib/knowledge-engine";
+
 export type SideJobInput = {
   weeklyHours: number;
   faceReveal: "yes" | "no" | "either";
@@ -94,6 +96,12 @@ const candidates: Candidate[] = [
   },
 ];
 
+const goalLabels: Record<SideJobInput["goal"], string> = {
+  first_income: "最初の小さな収益機会を検証する",
+  stable: "継続しやすい副業の仕組みを作る",
+  skill: "将来にも転用できるスキルを身につける",
+};
+
 function skillScore(value: number, weight: number): number {
   const normalized = Math.max(0, Math.min(5, Math.trunc(value)));
   return normalized * weight;
@@ -163,5 +171,13 @@ export function buildSideJobStrategyPrompt(
   input: SideJobInput,
   suggestions: SideJobSuggestion[],
 ): string {
-  return `あなたはAI副業の企画編集者です。以下の条件と候補を元に、初心者が現実的に試せる30日プランを作成してください。\n\n【絶対ルール】\n- 収益額・成功率・フォロワー数などを保証しない。\n- 架空の実績、体験談、顧客レビューを作らない。\n- 未確認のサービス料金・規約・最新仕様を断定しない。\n- 高額な先行投資を前提にしない。\n- 違法行為、無断転載、スパム、なりすましを提案しない。\n\n【本人条件】\n週の作業時間: ${input.weeklyHours}時間\n顔出し: ${input.faceReveal}\n予算: ${input.budget}\n文章得意度: ${input.writing}/5\n画像得意度: ${input.image}/5\n動画得意度: ${input.video}/5\n営業得意度: ${input.sales}/5\n経験: ${input.experience}\n目標: ${input.goal}\n\n【候補】\n${suggestions.map((item, index) => `${index + 1}. ${item.title}\n理由: ${item.reason.join(" / ")}`).join("\n")}\n\n【出力】\n- 最優先1案と、選ぶ理由\n- 1週目〜4週目の作業\n- 1回あたりの作業単位\n- 必要な成果物テンプレート\n- 続ける/方向転換する判断基準\n- 収益保証ではなく、検証可能な小さな目標で作る`;
+  const knowledge = compileKnowledgeContext({
+    task: "article",
+    genre: "AI副業",
+    audience: input.experience === "beginner" ? "副業初心者" : "副業経験が少しある人",
+    purpose: goalLabels[input.goal],
+  });
+  const topCandidate = suggestions[0]?.title ?? "候補から比較して決定";
+
+  return `あなたはAI副業の企画編集者です。以下の条件と候補を元に、初心者が現実的に試せる30日プランを作成してください。\n\n【絶対ルール】\n- 収益額・成功率・フォロワー数などを保証しない。\n- 架空の実績、体験談、顧客レビューを作らない。\n- 未確認のサービス料金・規約・最新仕様を断定しない。\n- 高額な先行投資を前提にしない。\n- 違法行為、無断転載、スパム、なりすましを提案しない。\n- AASの候補順位は適性の参考であり、収益性や成功可能性の保証として扱わない。\n\n${knowledge.promptBlock}\n\n【今回の計画で優先して検討する候補】\n${topCandidate}\n\n【本人条件】\n週の作業時間: ${input.weeklyHours}時間\n顔出し: ${input.faceReveal}\n予算: ${input.budget}\n文章得意度: ${input.writing}/5\n画像得意度: ${input.image}/5\n動画得意度: ${input.video}/5\n営業得意度: ${input.sales}/5\n経験: ${input.experience}\n目標: ${input.goal}\n\n【候補】\n${suggestions.map((item, index) => `${index + 1}. ${item.title}\n理由: ${item.reason.join(" / ")}`).join("\n")}\n\n【出力】\n- 最優先1案と、選ぶ理由\n- 1週目〜4週目の作業\n- 1回あたりの作業単位\n- 必要な成果物テンプレート\n- AIに任せる作業と、人が確認する作業\n- 続ける/方向転換する判断基準\n- 収益保証ではなく、検証可能な小さな目標で作る`;
 }

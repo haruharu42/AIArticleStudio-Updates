@@ -23,6 +23,7 @@ const memberTools: ToolCard[] = [
 
 const adminTools: ToolCard[] = [
   { href: "/admin", category: "運用", title: "管理ダッシュボード", description: "ユーザー、利用権、招待コード、要対応項目をまとめて確認します。" },
+  { href: "/admin/knowledge", category: "ナレッジ", title: "AASナレッジ管理", description: "自由入力されたジャンル候補を匿名集計で確認し、正式Knowledgeへ承認します。" },
   { href: "/admin/promotion?mode=article", category: "販売", title: "販売・宣伝記事作成", description: "note・Brain・Tips・ブログ向けにAASの紹介・販売記事を作成します。" },
   { href: "/admin/promotion?mode=social", category: "SNS販促", title: "SNSプロモーション", description: "X・Instagram・Threads・TikTok・YouTube Shorts向け販促素材を作成します。" },
   { href: "/admin/promotion?mode=campaign", category: "販促設計", title: "キャンペーン設計", description: "記事とSNSを連動させた販売開始・機能紹介の投稿計画を作成します。" },

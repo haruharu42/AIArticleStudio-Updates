@@ -1,3 +1,5 @@
+import { compileKnowledgeContext } from "@/lib/knowledge-engine";
+
 export type AdminProductFacts = {
   productName: string;
   editions: string;
@@ -84,6 +86,12 @@ export function buildAdminArticlePromotionPrompt(
   facts: AdminProductFacts,
   input: AdminArticlePromotionInput,
 ): string {
+  const knowledge = compileKnowledgeContext({
+    task: "promotion",
+    publicationTarget: input.platform,
+    audience: input.audience || facts.targetAudience,
+    purpose: input.purpose,
+  }).promptBlock;
   return `あなたは日本語のプロダクトマーケティング編集者です。
 AI Article Studioを紹介・販売するための完成記事を作成してください。
 
@@ -95,6 +103,8 @@ ${FACT_SAFETY}
 想定読者: ${input.audience || facts.targetAudience || "要確認"}
 特に紹介したい内容: ${input.focus || "製品全体"}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
+
+${knowledge}
 
 【確認済み製品情報】
 ${factsBlock(facts)}
@@ -119,6 +129,11 @@ export function buildAdminSocialPromotionPrompt(
     tiktok: "TikTok向け。冒頭3秒のフック、30〜45秒の縦動画台本、画面テロップ案を作る。",
     youtube: "YouTube Shorts向け。30〜60秒の台本、タイトル案、概要欄用の短文を作る。",
   };
+  const knowledge = compileKnowledgeContext({
+    task: "promotion",
+    audience: `${input.audience || facts.targetAudience || "要確認"} / SNS: ${input.platform}`,
+    purpose: input.purpose,
+  }).promptBlock;
 
   return `あなたはSNSプロモーション担当者です。
 AI Article Studioを紹介するSNS販促素材を作成してください。
@@ -133,6 +148,8 @@ ${FACT_SAFETY}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
 作成数: ${Math.max(1, Math.min(10, input.variants))}案
 媒体ルール: ${platformRule[input.platform]}
+
+${knowledge}
 
 【確認済み製品情報】
 ${factsBlock(facts)}
@@ -149,6 +166,11 @@ export function buildAdminCampaignPrompt(
   facts: AdminProductFacts,
   input: AdminCampaignInput,
 ): string {
+  const knowledge = compileKnowledgeContext({
+    task: "promotion",
+    audience: input.audience || facts.targetAudience,
+    purpose: input.goal,
+  }).promptBlock;
   return `あなたはAI Article Studioの販売キャンペーン設計担当者です。
 単発投稿ではなく、記事とSNSを連動させた販売・紹介キャンペーンを設計してください。
 
@@ -161,6 +183,8 @@ ${FACT_SAFETY}
 使用媒体: ${input.channels}
 販売条件・オファー: ${input.offer || facts.priceText || "要確認"}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
+
+${knowledge}
 
 【確認済み製品情報】
 ${factsBlock(facts)}
