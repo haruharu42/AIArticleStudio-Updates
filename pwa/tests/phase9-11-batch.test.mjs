@@ -66,6 +66,7 @@ test("Phase 10 admin surface uses existing account and entitlement RPCs plus inv
 test("Phase 11 article creator saves an atomic article/workspace and restores guided dropdowns", async () => {
   const api = await read("lib/phase11-create.ts");
   const page = await read("components/phase11-create-page.tsx");
+  const setup = await read("components/create-ai-setup.tsx");
   const progress = await read("lib/phase11-wizard-progress.ts");
   const route = await read("app/create/page.tsx");
   const options = await read("lib/phase18-content-options.ts");
@@ -114,7 +115,8 @@ test("Phase 11 article creator saves an atomic article/workspace and restores gu
   assert.doesNotMatch(progress, /service[_-]?role|sb_secret_/i);
   assert.match(options, /AI副業/);
   assert.match(options, /生活・暮らし/);
-  assert.match(route, /Phase11CreatePage/);
+  assert.match(route, /CreateAiSetup/);
+  assert.match(setup, /Phase11CreatePage/);
 });
 
 test("root uses the approved beginner dashboard across mobile and desktop", async () => {
