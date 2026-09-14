@@ -162,7 +162,7 @@ export function CommercePlansPage() {
             <p className="eyebrow">ACCESS CODE</p>
             <h2 id="commerce-invite-title">利用コードをお持ちの方</h2>
             <p>note・Brain・Tips等で購入後に案内された利用コードを、このAASアカウントへ登録できます。内部では既存の安全な招待コード基盤を利用します。</p>
-            <small>旧表記：招待コードをお持ちの方 / AAS ID: {inviteProfile.aas_user_id}</small>
+            <small>旧表記：招待コードをお持ちの方 / 「招待コードを登録」 / AAS ID: {inviteProfile.aas_user_id}</small>
           </div>
           <div className="commerce-invite-form">
             <label>
