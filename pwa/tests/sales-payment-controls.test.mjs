@@ -91,3 +91,16 @@ test("plans and access-code UI obey public sales settings", async () => {
     assert.ok(settingsLib.includes(planCode), `missing plan gate: ${planCode}`);
   }
 });
+
+test("commercial transaction copy follows the active sales mode", async () => {
+  const page = await readPwa("components/commercial-transactions-page.tsx");
+
+  assert.match(page, /fetchPublicSalesSettings/);
+  assert.match(page, /planSalesEnabled/);
+  assert.match(page, /stripeSalesEnabled/);
+  assert.match(page, /externalSalesEnabled/);
+  assert.match(page, /AAS内のStripe新規購入は停止しています/);
+  assert.match(page, /外部販売ページで案内する支払方法/);
+  assert.match(page, /案内された利用コードをAASへ登録/);
+  assert.match(page, /visibleStripePlans/);
+});
