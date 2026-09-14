@@ -119,6 +119,9 @@ test("tools hub and beginner-first root expose all functional routes with SNS in
   assert.match(toolsRoute, /PhaseToolsPage/);
   assert.match(rootPage, /Phase18BeginnerHome/);
   assert.match(shell, /Phase7App/);
+  assert.match(shell, /if \(state\.kind === "loading"\) return <BeginnerAccessFallback \/>;/);
+  assert.match(shell, /if \(state\.kind === "unavailable"\) return <BeginnerAccessFallback unavailable \/>;/);
+  assert.doesNotMatch(shell, /state\.kind !== "ready" \|\| !client\) return <Phase7App \/>/);
   assert.match(shell, /href="\/tools"/);
   assert.match(shell, /href="\/images"/);
   assert.match(shell, /href="\/sns"/);
@@ -140,6 +143,22 @@ test("tools hub and beginner-first root expose all functional routes with SNS in
   assert.match(beginnerCss, /\.beginner-action-grid/);
   assert.match(dashboardCss, /\.beginner-mobile-nav/);
   assert.match(dashboardCss, /\.beginner-desktop-sidebar/);
+});
+
+test("service worker fetches current UI assets before cache fallback and purges older cache generations", async () => {
+  const sw = await read("public/sw.js");
+
+  assert.match(sw, /aas-pwa-phase17-prod-v2-runtime-v3/);
+  assert.match(sw, /new Request\(request, \{ cache: "no-store" \}\)/);
+  assert.match(sw, /keys\.filter\(\(key\) => key !== CACHE_NAME\)/);
+  assert.match(sw, /if \(request\.mode === "navigate"\)[\s\S]*fetch\(freshRequest\(request\)\)/);
+  assert.match(sw, /if \(url\.pathname\.startsWith\("\/_next\/static\/"\)\)[\s\S]*networkFirst\(request\)/);
+  assert.match(sw, /async function networkFirst\(request\)[\s\S]*fetch\(freshRequest\(request\)\)[\s\S]*cache\.match\(request\)/);
+  assert.match(sw, /url\.pathname\.startsWith\("\/auth\/callback"\)/);
+  assert.match(sw, /url\.pathname\.startsWith\("\/api\/"\)/);
+  assert.match(sw, /url\.searchParams\.has\("access_token"\)/);
+  assert.match(sw, /url\.searchParams\.has\("refresh_token"\)/);
+  assert.doesNotMatch(sw.match(/const APP_SHELL = \[[\s\S]*?\];/)?.[0] ?? "", /["']\/["']/);
 });
 
 test("package includes the Phase 12-17 contract test and keeps dependency pins unchanged", async () => {

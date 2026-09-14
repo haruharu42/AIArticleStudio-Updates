@@ -1,4 +1,4 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v2";
+const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v3";
 const APP_SHELL = [
   "/offline.html",
   "/manifest.webmanifest",
@@ -6,6 +6,23 @@ const APP_SHELL = [
   "/icon-192.png",
   "/icon-512.png",
 ];
+
+function freshRequest(request) {
+  return new Request(request, { cache: "no-store" });
+}
+
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    const response = await fetch(freshRequest(request));
+    if (response.ok) {
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return (await cache.match(request)) || Response.error();
+  }
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -37,7 +54,7 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(async () => {
+      fetch(freshRequest(request)).catch(async () => {
         const cache = await caches.open(CACHE_NAME);
         return (await cache.match("/offline.html")) || Response.error();
       }),
@@ -45,12 +62,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.startsWith("/_next/static/") || APP_SHELL.includes(url.pathname)) {
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  if (APP_SHELL.includes(url.pathname)) {
     event.respondWith(
       caches.match(request).then(
         (cached) =>
           cached ||
-          fetch(request).then((response) => {
+          fetch(freshRequest(request)).then((response) => {
             if (response.ok) {
               const copy = response.clone();
               void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));

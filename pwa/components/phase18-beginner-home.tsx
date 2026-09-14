@@ -106,6 +106,37 @@ function QuickSelect({
   );
 }
 
+function BeginnerAccessFallback({ unavailable = false }: { unavailable?: boolean }) {
+  return (
+    <div className="beginner-shell">
+      <header className="beginner-topbar">
+        <a className="beginner-brand" href="/" aria-label="AI Article Studio ホーム">
+          <span aria-hidden="true">✦</span>
+          <strong>AI ARTICLE <em>STUDIO</em></strong>
+        </a>
+      </header>
+      <main className="beginner-main">
+        <section className="beginner-recommend" role={unavailable ? "alert" : "status"} aria-live="polite">
+          <div>
+            <span className="beginner-recommend-label">{unavailable ? "CONNECTION" : "LOADING"}</span>
+            <h2>{unavailable ? "接続状態を確認できませんでした" : "アカウントと利用権を確認しています"}</h2>
+            <p>
+              {unavailable
+                ? "通信状態を確認して、もう一度読み込んでください。"
+                : "確認が終わると現在のホーム画面を表示します。"}
+            </p>
+          </div>
+          {unavailable ? (
+            <button type="button" onClick={() => window.location.reload()}>再読み込み</button>
+          ) : (
+            <span className="beginner-access-badge">確認中…</span>
+          )}
+        </section>
+      </main>
+    </div>
+  );
+}
+
 export function Phase18BeginnerHome() {
   const [state, setState] = useState<HomeState>({ kind: "loading" });
   const [client, setClient] = useState<SupabaseClient | null>(null);
@@ -175,7 +206,10 @@ export function Phase18BeginnerHome() {
     return `/create?${params.toString()}`;
   }, [quickSetup]);
 
-  if (state.kind !== "ready" || !client) return <Phase7App />;
+  if (state.kind === "loading") return <BeginnerAccessFallback />;
+  if (state.kind === "unavailable") return <BeginnerAccessFallback unavailable />;
+  if (state.kind !== "ready") return <Phase7App />;
+  if (!client) return <BeginnerAccessFallback />;
 
   const profile = state.profile;
   const mayLeave = () => !imageBusy && (!imageUnsaved || window.confirm("未保存の画像情報・選択した画像を破棄して移動しますか？"));

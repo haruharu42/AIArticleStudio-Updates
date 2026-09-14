@@ -1,7 +1,10 @@
 # Server-side Worker bindings for local TEST-mode billing only.
-# Copy to .dev.vars locally. Never commit real values.
+# Copy to .dev.vars locally. Never commit real secret values.
 AAS_COMMERCE_MODE=off
 AAS_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+# Public API key used only to validate user access tokens with Supabase Auth.
+AAS_SUPABASE_PUBLISHABLE_KEY=sb_publishable_REPLACE_ME
+# Server-only elevated key used for billing RPCs and protected data access.
 AAS_SUPABASE_SERVICE_ROLE_KEY=REPLACE_LOCALLY_ONLY
 AAS_STRIPE_SECRET_KEY=sk_test_REPLACE_LOCALLY_ONLY
 AAS_STRIPE_WEBHOOK_SECRET=whsec_REPLACE_LOCALLY_ONLY
