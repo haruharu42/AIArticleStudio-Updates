@@ -232,6 +232,7 @@ jobs:
           output_file="$RUNNER_TEMP/aas-preview-upload.txt"
           npx wrangler versions upload \
             --config "$CONFIG_PATH" \
+            --keep-vars \
             --preview-alias aas-preview \
             --message "AAS PWA preview $GITHUB_SHA" \
             2>&1 | tee "$output_file"
@@ -262,6 +263,7 @@ jobs:
             echo '- Worker: `ai-article-studio-pwa-preview`'
             echo '- Alias: `aas-preview`'
             echo "- Preview URL: $PREVIEW_URL"
+            echo '- Dashboard-managed runtime variables/secrets preserved with `--keep-vars`'
             echo '- Production workers.dev route: unchanged / disabled by generated config'
             echo '- Custom production route/domain: not modified'
           } >> "$GITHUB_STEP_SUMMARY"
