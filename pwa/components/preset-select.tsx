@@ -14,6 +14,9 @@ type PresetSelectProps = {
   disabled?: boolean;
   customPlaceholder?: string;
   otherLabel?: string;
+  customInputType?: "text" | "number";
+  customMin?: number;
+  customMax?: number;
 };
 
 const OTHER_VALUE = "__aas_other__";
@@ -27,6 +30,9 @@ export function PresetSelect({
   disabled = false,
   customPlaceholder = "自由に入力してください",
   otherLabel = "その他（自由入力）",
+  customInputType = "text",
+  customMin,
+  customMax,
 }: PresetSelectProps) {
   const isPreset = options.some((option) => option.value === value);
   const selection = isPreset ? value : OTHER_VALUE;
@@ -49,11 +55,15 @@ export function PresetSelect({
       </select>
       {selection === OTHER_VALUE && (
         <input
+          type={customInputType}
+          inputMode={customInputType === "number" ? "numeric" : undefined}
+          min={customMin}
+          max={customMax}
           value={value}
           disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           placeholder={customPlaceholder}
-          maxLength={160}
+          maxLength={customInputType === "text" ? 160 : undefined}
         />
       )}
     </label>
