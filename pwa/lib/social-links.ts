@@ -22,7 +22,7 @@ export const SOCIAL_PLATFORM_OPTIONS = [
 const SOCIAL_URLS: Record<SupportedSocialPlatform, string> = {
   x: "https://x.com/compose/post",
   instagram: "https://www.instagram.com/",
-  threads: "https://www.threads.net/",
+  threads: "https://www.threads.com/",
   tiktok: "https://www.tiktok.com/",
   facebook: "https://www.facebook.com/",
   linkedin: "https://www.linkedin.com/feed/",
