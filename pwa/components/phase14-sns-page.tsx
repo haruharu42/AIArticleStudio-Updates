@@ -82,14 +82,25 @@ export function Phase14SnsPage() {
 
   const generatePrompt = async () => {
     if (!detail || generateInFlightRef.current) return;
+
+    const trimmedMax = maxCharacters.trim();
+    let parsedMax: number | null = null;
+    if (trimmedMax) {
+      const candidate = Number(trimmedMax);
+      if (!Number.isFinite(candidate) || candidate < 1 || candidate > 100000) {
+        setMessage("編集上の文字数目安は1〜100000の数字で入力してください。無効な入力では利用回数を消費しません。");
+        return;
+      }
+      parsedMax = Math.trunc(candidate);
+    }
+
     generateInFlightRef.current = true; setGenerateBusy(true); setMessage("");
     try {
       const result = await consumeFreeTrialUsage(getSupabaseClient(), "sns_generate");
       if (!result.allowed) { setGeneratedPrompt(""); setGeneratedFingerprint(""); setMessage(trialUsageMessage(result)); return; }
-      const parsedMax = maxCharacters.trim() ? Number(maxCharacters) : null;
       const prompt = buildSocialPrompt(detail, {
         platform, goal, tone,
-        maxCharacters: parsedMax !== null && Number.isFinite(parsedMax) && parsedMax > 0 ? Math.trunc(parsedMax) : null,
+        maxCharacters: parsedMax,
         hashtags,
       });
       setGeneratedPrompt(prompt); setGeneratedFingerprint(promptFingerprint);
@@ -129,7 +140,7 @@ export function Phase14SnsPage() {
           <label className="route-field"><span>SNS</span><select value={platform} onChange={(event) => setPlatform(event.target.value as SocialPlatform)}>{SOCIAL_PLATFORM_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
           <label className="route-field"><span>目的</span><select value={goal} onChange={(event) => setGoal(event.target.value as SocialGoal)}>{GOAL_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
           <PresetSelect label="トーン" value={tone} onChange={setTone} options={TONE_OPTIONS} customPlaceholder="例: 静かで落ち着いた専門家風" />
-          <PresetSelect label="編集上の文字数目安" value={maxCharacters} onChange={setMaxCharacters} options={CHARACTER_LIMIT_OPTIONS} customPlaceholder="数字を入力（例: 2500）" />
+          <PresetSelect label="編集上の文字数目安" value={maxCharacters} onChange={setMaxCharacters} options={CHARACTER_LIMIT_OPTIONS} customPlaceholder="数字を入力（例: 2500）" customInputType="number" customMin={1} customMax={100000} />
           <label className="choice-card compact"><input type="checkbox" checked={hashtags} onChange={(event) => setHashtags(event.target.checked)} /><span><strong>ハッシュタグ候補を含める</strong></span></label>
         </div>
 
