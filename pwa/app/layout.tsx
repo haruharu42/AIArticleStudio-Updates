@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AdminHomeTopbar } from "@/components/admin-home-topbar";
+import { AppErrorReporter } from "@/components/app-error-reporter";
 import { KnowledgeRuntimeBootstrap } from "@/components/knowledge-runtime-bootstrap";
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
 import "./globals.css";
@@ -19,6 +20,7 @@ import "./phase26-knowledge.css";
 import "./phase27-commerce.css";
 import "./phase28-free-trial.css";
 import "./phase29-admin-compact-entitlements.css";
+import "./phase30-security-operations.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
@@ -45,14 +47,11 @@ export const viewport: Viewport = {
   themeColor: "#f6f9ff",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ja">
       <body>
+        <AppErrorReporter />
         <KnowledgeRuntimeBootstrap />
         <AdminHomeTopbar />
         {children}
