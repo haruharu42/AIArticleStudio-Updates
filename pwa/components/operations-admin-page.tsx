@@ -5,8 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   loadOpsSnapshot,
   probeWorkerHealth,
+  refreshOpsCapacity,
   runOpsSecurityAudit,
   setOpsEventStatus,
+  updateOpsCapacitySettings,
   type OpsEventStatus,
   type OpsSnapshot,
 } from "@/lib/operations-admin";
@@ -15,12 +17,32 @@ import { getSupabaseClient } from "@/lib/supabase";
 type Gate = { kind: "loading" } | { kind: "signed_out" } | { kind: "denied" } | { kind: "ready"; aasId: string } | { kind: "error"; message: string };
 type SeverityFilter = "all" | "critical" | "error" | "warning" | "info";
 type StatusFilter = "all" | OpsEventStatus;
+type CapacityDraft = {
+  planLabel: string;
+  databaseLimitGb: string;
+  storageLimitGb: string;
+  warningPercent: string;
+  dangerPercent: string;
+  criticalPercent: string;
+};
+
+const GIB = 1024 ** 3;
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "medium" }).format(date);
+}
+
+function formatBytes(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return "—";
+  if (value < 1024) return `${Math.max(0, Math.round(value))} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let next = Math.max(0, value);
+  let unit = -1;
+  do { next /= 1024; unit += 1; } while (next >= 1024 && unit < units.length - 1);
+  return `${next >= 100 ? next.toFixed(0) : next >= 10 ? next.toFixed(1) : next.toFixed(2)} ${units[unit]}`;
 }
 
 function healthLabel(value: string): string {
@@ -38,6 +60,19 @@ function severityLabel(value: string): string {
   return "Info";
 }
 
+function limitToGb(value: number | null): string {
+  if (value === null) return "";
+  return String(Math.round((value / GIB) * 1000) / 1000);
+}
+
+function capacityClass(percent: number | null, warning: number, danger: number, critical: number): string {
+  if (percent === null) return "unknown";
+  if (percent >= critical) return "critical";
+  if (percent >= danger) return "error";
+  if (percent >= warning) return "warning";
+  return "healthy";
+}
+
 export function OperationsAdminPage() {
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [snapshot, setSnapshot] = useState<OpsSnapshot | null>(null);
@@ -48,6 +83,7 @@ export function OperationsAdminPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({});
+  const [capacityDraft, setCapacityDraft] = useState<CapacityDraft | null>(null);
 
   const refresh = useCallback(async () => {
     const client = getSupabaseClient();
@@ -91,7 +127,7 @@ export function OperationsAdminPage() {
     try {
       await runOpsSecurityAudit(getSupabaseClient());
       await refresh();
-      setMessage("セキュリティ監査を実行し、最新状態へ更新しました。");
+      setMessage("セキュリティ監査と容量監視を実行し、最新状態へ更新しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "監査を実行できませんでした。");
     } finally { setBusy(false); }
@@ -121,20 +157,100 @@ export function OperationsAdminPage() {
 
   const counts = snapshot?.counts ?? { open: 0, critical: 0, error: 0, warning: 0 };
   const latestRun = snapshot?.runs[0] ?? null;
+  const capacity = snapshot?.capacity ?? null;
   const overall = counts.critical > 0 || counts.error > 0 || latestRun?.status === "failed" || worker?.ok === false ? "error" : counts.warning > 0 || latestRun?.status === "warning" ? "warning" : "healthy";
+  const capacityForm: CapacityDraft = capacityDraft ?? {
+    planLabel: capacity?.planLabel ?? "未設定",
+    databaseLimitGb: limitToGb(capacity?.database.limitBytes ?? null),
+    storageLimitGb: limitToGb(capacity?.storage.limitBytes ?? null),
+    warningPercent: String(capacity?.warningPercent ?? 70),
+    dangerPercent: String(capacity?.dangerPercent ?? 85),
+    criticalPercent: String(capacity?.criticalPercent ?? 95),
+  };
+
+  const saveCapacitySettings = async () => {
+    const dbGb = capacityForm.databaseLimitGb.trim() ? Number(capacityForm.databaseLimitGb) : null;
+    const storageGb = capacityForm.storageLimitGb.trim() ? Number(capacityForm.storageLimitGb) : null;
+    const warning = Number.parseInt(capacityForm.warningPercent, 10);
+    const danger = Number.parseInt(capacityForm.dangerPercent, 10);
+    const critical = Number.parseInt(capacityForm.criticalPercent, 10);
+    if ((dbGb !== null && (!Number.isFinite(dbGb) || dbGb <= 0)) || (storageGb !== null && (!Number.isFinite(storageGb) || storageGb <= 0))) {
+      setMessage("容量上限は0より大きいGB値、または空欄で入力してください。"); return;
+    }
+    if (!Number.isInteger(warning) || !Number.isInteger(danger) || !Number.isInteger(critical) || warning < 1 || warning >= danger || danger >= critical || critical > 100) {
+      setMessage("警告しきい値は 1〜100 の範囲で、注意 < 警告 < 重大 の順にしてください。"); return;
+    }
+    setBusy(true); setMessage("");
+    try {
+      await updateOpsCapacitySettings(getSupabaseClient(), {
+        planLabel: capacityForm.planLabel,
+        databaseLimitBytes: dbGb === null ? null : Math.round(dbGb * GIB),
+        storageLimitBytes: storageGb === null ? null : Math.round(storageGb * GIB),
+        warningPercent: warning,
+        dangerPercent: danger,
+        criticalPercent: critical,
+      });
+      setCapacityDraft(null);
+      await refresh();
+      setMessage("Supabase容量上限と警告しきい値を保存しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "容量設定を保存できませんでした。");
+    } finally { setBusy(false); }
+  };
+
+  const refreshCapacity = async () => {
+    setBusy(true); setMessage("");
+    try {
+      await refreshOpsCapacity(getSupabaseClient());
+      await refresh();
+      setMessage("Supabaseの現在容量を再計測しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "容量を更新できませんでした。");
+    } finally { setBusy(false); }
+  };
 
   return (
     <main className="admin-page ops-admin-page">
       <header className="admin-head admin-dashboard-head">
-        <div><p className="eyebrow">SECURITY & OPERATIONS CENTER</p><h1>セキュリティ・運用</h1><p>{gate.aasId} / エラー・セキュリティイベント・定期監査・システム状態をまとめて確認します。</p></div>
+        <div><p className="eyebrow">SECURITY & OPERATIONS CENTER</p><h1>セキュリティ・運用</h1><p>{gate.aasId} / エラー・セキュリティイベント・定期監査・Supabase容量をまとめて確認します。</p></div>
         <div className="admin-head-actions"><button className="primary-action" disabled={busy} type="button" onClick={() => void runAudit()}>{busy ? "監査中…" : "今すぐ監査"}</button><a className="route-back" href="/admin">← 管理ダッシュボード</a></div>
       </header>
       {message && <div className="route-notice" role="status">{message}</div>}
 
-      <section className={`ops-overall ops-${overall}`}><div><span>現在の状態</span><strong>{healthLabel(overall)}</strong></div><p>監視イベントは発生時に集約記録し、DB/Storage/RPC権限は1時間ごとに自動監査します。管理画面は60秒ごとに更新します。</p></section>
+      <section className={`ops-overall ops-${overall}`}><div><span>現在の状態</span><strong>{healthLabel(overall)}</strong></div><p>監視イベントは発生時に集約記録し、DB/Storage/RPC権限は1時間ごとに自動監査します。容量も1時間ごとに再計測します。</p></section>
 
       <section className="ops-count-grid" aria-label="未解決イベント件数">
         <article><span>未解決</span><strong>{counts.open}</strong></article><article className="critical"><span>Critical</span><strong>{counts.critical}</strong></article><article className="error"><span>Error</span><strong>{counts.error}</strong></article><article className="warning"><span>Warning</span><strong>{counts.warning}</strong></article>
+      </section>
+
+      <section className="admin-panel admin-dashboard-section ops-capacity-section">
+        <div className="admin-panel-heading"><div><p className="eyebrow">SUPABASE CAPACITY</p><h2>Supabase使用容量</h2></div><button className="secondary-action" disabled={busy} type="button" onClick={() => void refreshCapacity()}>再計測</button></div>
+        {capacity ? <>
+          <div className="ops-capacity-meta"><span>設定プラン: <strong>{capacity.planLabel}</strong></span><span>最終計測: {formatDate(capacity.checkedAt)}</span></div>
+          <div className="ops-capacity-grid">
+            {[{ label: "Database", metric: capacity.database }, { label: "Storage", metric: capacity.storage }].map(({ label, metric }) => {
+              const state = capacityClass(metric.percent, capacity.warningPercent, capacity.dangerPercent, capacity.criticalPercent);
+              return <article key={label} className={`ops-capacity-card ops-${state}`}>
+                <header><span>{label}</span><strong>{metric.percent === null ? "上限未設定" : `${metric.percent.toFixed(1)}%`}</strong></header>
+                <div className="ops-capacity-value"><strong>{formatBytes(metric.usedBytes)}</strong><span>使用中</span></div>
+                <progress max={100} value={Math.min(100, Math.max(0, metric.percent ?? 0))} aria-label={`${label}使用率`} />
+                <dl><div><dt>上限</dt><dd>{formatBytes(metric.limitBytes)}</dd></div><div><dt>残り</dt><dd>{formatBytes(metric.remainingBytes)}</dd></div>{label === "Storage" && <div><dt>ファイル</dt><dd>{capacity.storage.objectCount.toLocaleString("ja-JP")} 件</dd></div>}</dl>
+              </article>;
+            })}
+          </div>
+          <div className="ops-capacity-settings">
+            <div><strong>容量監視設定</strong><small>契約プラン変更時も管理画面から変更できます。上限を空欄にすると残容量・使用率警告を停止します。</small></div>
+            <div className="ops-capacity-form">
+              <label className="route-field"><span>プラン名</span><input value={capacityForm.planLabel} onChange={(e) => setCapacityDraft({ ...capacityForm, planLabel: e.target.value.slice(0, 80) })} placeholder="例: Free / Pro" /></label>
+              <label className="route-field"><span>Database上限 (GB)</span><input inputMode="decimal" value={capacityForm.databaseLimitGb} onChange={(e) => setCapacityDraft({ ...capacityForm, databaseLimitGb: e.target.value })} placeholder="例: 0.5" /></label>
+              <label className="route-field"><span>Storage上限 (GB)</span><input inputMode="decimal" value={capacityForm.storageLimitGb} onChange={(e) => setCapacityDraft({ ...capacityForm, storageLimitGb: e.target.value })} placeholder="例: 1" /></label>
+              <label className="route-field"><span>注意 (%)</span><input inputMode="numeric" value={capacityForm.warningPercent} onChange={(e) => setCapacityDraft({ ...capacityForm, warningPercent: e.target.value })} /></label>
+              <label className="route-field"><span>警告 (%)</span><input inputMode="numeric" value={capacityForm.dangerPercent} onChange={(e) => setCapacityDraft({ ...capacityForm, dangerPercent: e.target.value })} /></label>
+              <label className="route-field"><span>重大 (%)</span><input inputMode="numeric" value={capacityForm.criticalPercent} onChange={(e) => setCapacityDraft({ ...capacityForm, criticalPercent: e.target.value })} /></label>
+            </div>
+            <div className="admin-actions"><button className="primary-action" disabled={busy} type="button" onClick={() => void saveCapacitySettings()}>容量設定を保存</button>{capacityDraft && <button className="secondary-action" disabled={busy} type="button" onClick={() => setCapacityDraft(null)}>変更を破棄</button>}</div>
+          </div>
+        </> : <div className="admin-empty-state compact"><strong>容量情報を取得しています。</strong></div>}
       </section>
 
       <section className="admin-panel admin-dashboard-section">
