@@ -79,7 +79,7 @@ export function SalesSettingsAdminPage() {
   }, []);
 
   const changed = JSON.stringify(settings) !== JSON.stringify(saved);
-  const set = <K extends keyof SalesSettings>(key: K, value: SalesSettings[K]) => {
+  const set = <K extends keyof SalesSettings,>(key: K, value: SalesSettings[K]) => {
     setSettings((current) => ({ ...current, [key]: value }));
   };
 
