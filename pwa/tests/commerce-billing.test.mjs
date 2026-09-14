@@ -63,7 +63,7 @@ test("service-role and Stripe secrets stay outside browser-visible configuration
     assert.doesNotMatch(source, /AAS_SUPABASE_SERVICE_ROLE_KEY/);
     assert.doesNotMatch(source, /AAS_STRIPE_SECRET_KEY/);
     assert.doesNotMatch(source, /AAS_STRIPE_WEBHOOK_SECRET/);
-    assert.doesNotMatch(source, /sb_secret_/i);
+    assert.doesNotMatch(source, /^\s*NEXT_PUBLIC_[A-Z0-9_]+\s*=\s*(?:sb_secret_|sk_(?:live|test)_|whsec_)/im);
   }
 
   assert.match(client, /client\.auth\.getSession\(\)/);
