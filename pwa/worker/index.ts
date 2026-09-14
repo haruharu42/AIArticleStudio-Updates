@@ -3,6 +3,7 @@ import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } fr
 import handler from "vinext/server/app-router-entry";
 import { handleBillingRequest, type BillingEnv } from "./billing";
 import { recordSystemEvent, safeOpsHealthResponse } from "./ops";
+import { handleSalesControlRequest } from "./sales-controls";
 
 interface Env extends BillingEnv {
   ASSETS: {
@@ -54,6 +55,9 @@ const worker = {
     }
 
     try {
+      const salesControlResponse = await handleSalesControlRequest(request, env);
+      if (salesControlResponse) return withSecurityHeaders(salesControlResponse);
+
       const billingResponse = await handleBillingRequest(request, env);
       if (billingResponse) {
         if (billingResponse.status >= 500) {
