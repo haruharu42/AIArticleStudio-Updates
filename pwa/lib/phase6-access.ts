@@ -64,6 +64,12 @@ function parseProfile(value: unknown): AasProfile {
   };
 }
 
+function routeRootToPlansWhenEntitlementIsMissing(): void {
+  if (typeof window === "undefined") return;
+  if (window.location.pathname !== "/") return;
+  window.location.replace("/plans?from=login");
+}
+
 export async function loadAccessState(
   client: SupabaseClient,
 ): Promise<AccessState> {
@@ -108,6 +114,7 @@ export async function loadAccessState(
   }
 
   if (canAccess !== true) {
+    routeRootToPlansWhenEntitlementIsMissing();
     return { kind: "entitlement_denied", user, profile };
   }
 
