@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { consumeFreeTrialUsage, trialUsageMessage } from "@/lib/free-trial";
 import { OPENAI_LINKS } from "@/lib/openai-links";
 import {
   getCloudArticleDetail,
@@ -42,8 +43,12 @@ export function Phase13ImagePromptPage() {
   const [coverEnabled, setCoverEnabled] = useState(true);
   const [inlineEnabled, setInlineEnabled] = useState(false);
   const [inlineCount, setInlineCount] = useState(2);
+  const [generatedPrompts, setGeneratedPrompts] = useState<ImagePromptItem[]>([]);
+  const [generatedFingerprint, setGeneratedFingerprint] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [generateBusy, setGenerateBusy] = useState(false);
+  const generateInFlightRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -73,7 +78,7 @@ export function Phase13ImagePromptPage() {
 
   const choose = async (articleId: string) => {
     if (gate.kind !== "ready") return;
-    setDetail(null); setMessage("");
+    setDetail(null); setGeneratedPrompts([]); setGeneratedFingerprint(""); setMessage("");
     if (!articleId) return;
     setBusy(true);
     try {
@@ -96,21 +101,58 @@ export function Phase13ImagePromptPage() {
     }
   };
 
-  const prompts = useMemo<ImagePromptItem[]>(() => {
-    if (!detail) return [];
-    return buildImagePromptPlan({
-      title: detail.title,
-      theme,
-      publicationTarget: publicationTarget(detail.publicationTarget),
-      genre: detail.genre || "",
-      subgenre: detail.subgenre || "",
-      ageGroup,
-      gender,
-      coverEnabled,
-      inlineEnabled,
-      inlineCount,
-    });
-  }, [ageGroup, coverEnabled, detail, gender, inlineCount, inlineEnabled, theme]);
+  const promptFingerprint = useMemo(() => detail ? JSON.stringify({
+    id: detail.id,
+    revision: detail.revision,
+    theme,
+    ageGroup,
+    gender,
+    coverEnabled,
+    inlineEnabled,
+    inlineCount,
+  }) : "", [ageGroup, coverEnabled, detail, gender, inlineCount, inlineEnabled, theme]);
+  const promptsReady = Boolean(promptFingerprint) && generatedFingerprint === promptFingerprint;
+
+  const generatePrompts = async () => {
+    if (!detail || generateInFlightRef.current) return;
+    if (!coverEnabled && !inlineEnabled) {
+      setMessage("アイキャッチまたは挿絵をONにしてください。");
+      return;
+    }
+    generateInFlightRef.current = true;
+    setGenerateBusy(true);
+    setMessage("");
+    try {
+      const result = await consumeFreeTrialUsage(getSupabaseClient(), "image_generate");
+      if (!result.allowed) {
+        setGeneratedPrompts([]);
+        setGeneratedFingerprint("");
+        setMessage(trialUsageMessage(result));
+        return;
+      }
+      setGeneratedPrompts(buildImagePromptPlan({
+        title: detail.title,
+        theme,
+        publicationTarget: publicationTarget(detail.publicationTarget),
+        genre: detail.genre || "",
+        subgenre: detail.subgenre || "",
+        ageGroup,
+        gender,
+        coverEnabled,
+        inlineEnabled,
+        inlineCount,
+      }));
+      setGeneratedFingerprint(promptFingerprint);
+      setMessage(result.bypassLimits ? "画像生成プロンプトを作成しました。" : `画像生成プロンプトを1回作成しました。${trialUsageMessage(result)}`);
+    } catch (error) {
+      setGeneratedPrompts([]);
+      setGeneratedFingerprint("");
+      setMessage(error instanceof Error ? error.message : "画像生成の利用回数を確認できませんでした。");
+    } finally {
+      generateInFlightRef.current = false;
+      setGenerateBusy(false);
+    }
+  };
 
   const copy = async (value: string) => {
     try {
@@ -147,7 +189,7 @@ export function Phase13ImagePromptPage() {
       <section className="creator-card">
         <label className="route-field">
           <span>元記事</span>
-          <select defaultValue="" onChange={(event) => void choose(event.target.value)} disabled={busy}>
+          <select defaultValue="" onChange={(event) => void choose(event.target.value)} disabled={busy || generateBusy}>
             <option value="">記事を選択</option>
             {articles.map((article) => <option key={article.id} value={article.id}>{article.title}</option>)}
           </select>
@@ -171,8 +213,11 @@ export function Phase13ImagePromptPage() {
               {inlineEnabled && <label className="route-field"><span>挿絵枚数</span><input type="number" min={1} max={10} value={inlineCount} onChange={(event) => setInlineCount(Math.max(1, Math.min(10, Number(event.target.value) || 1)))} /></label>}
             </div>
 
-            <div className="image-prompt-list">
-              {prompts.map((item) => (
+            <p className="panel-muted">設定変更だけでは回数を消費しません。「画像生成プロンプトを作成」を押した時だけ画像生成1回として記録されます。</p>
+            <button className="primary-action" type="button" disabled={generateBusy || (!coverEnabled && !inlineEnabled)} onClick={() => void generatePrompts()}>{generateBusy ? "利用回数を確認中…" : promptsReady ? "画像生成プロンプトを作り直す" : "画像生成プロンプトを作成"}</button>
+
+            {promptsReady && <div className="image-prompt-list">
+              {generatedPrompts.map((item) => (
                 <article className="image-prompt-card" key={`${item.kind}-${item.order}`}>
                   <header>
                     <div><span>{item.kind === "cover" ? "アイキャッチ" : `挿絵 ${item.order}`}</span>{item.insertionMarker && <small>{`<!-- ${item.insertionMarker} -->`}</small>}</div>
@@ -184,9 +229,10 @@ export function Phase13ImagePromptPage() {
                   <textarea className="prompt-area" readOnly value={item.prompt} />
                 </article>
               ))}
-            </div>
+            </div>}
 
-            {prompts.length === 0 && <p className="route-notice">アイキャッチまたは挿絵をONにしてください。</p>}
+            {promptsReady && <p className="beginner-help">生成後のコピーやChatGPT Images起動では追加消費しません。設定を変えて作り直した時だけ次の1回として記録されます。</p>}
+            {!coverEnabled && !inlineEnabled && <p className="route-notice">アイキャッチまたは挿絵をONにしてください。</p>}
           </>
         )}
 
