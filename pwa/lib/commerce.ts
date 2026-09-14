@@ -231,14 +231,16 @@ export function openBillingPortal(): Promise<string> {
 
 export function formatCommercePrice(price: PublicCommercePrice | null): string {
   if (!price) return "価格設定準備中";
+  const currency = price.currency.toLowerCase();
+  const amount = currency === "jpy" ? price.unitAmount : price.unitAmount / 100;
   try {
     return new Intl.NumberFormat("ja-JP", {
       style: "currency",
       currency: price.currency.toUpperCase(),
-      maximumFractionDigits: price.currency.toLowerCase() === "jpy" ? 0 : 2,
-    }).format(price.unitAmount / 100);
+      maximumFractionDigits: currency === "jpy" ? 0 : 2,
+    }).format(amount);
   } catch {
-    return `${price.unitAmount / 100} ${price.currency.toUpperCase()}`;
+    return `${amount} ${price.currency.toUpperCase()}`;
   }
 }
 
