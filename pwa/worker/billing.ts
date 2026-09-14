@@ -1,5 +1,6 @@
 export interface BillingEnv {
   AAS_SUPABASE_URL?: string;
+  AAS_SUPABASE_PUBLISHABLE_KEY?: string;
   AAS_SUPABASE_SERVICE_ROLE_KEY?: string;
   AAS_STRIPE_SECRET_KEY?: string;
   AAS_STRIPE_WEBHOOK_SECRET?: string;
@@ -156,6 +157,23 @@ function backendReady(env: BillingEnv): boolean {
   );
 }
 
+function authApiKey(env: BillingEnv): string {
+  return clean(env.AAS_SUPABASE_PUBLISHABLE_KEY) || clean(env.AAS_SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function authDiagnostic(error: unknown): string {
+  const code = error instanceof Error ? error.message : "";
+  return [
+    "authorization_missing",
+    "billing_not_configured",
+    "auth_user_rejected",
+    "profile_lookup_failed",
+    "profile_not_found",
+  ].includes(code)
+    ? code
+    : "auth_unknown";
+}
+
 function planForCode(planCode: string): PlanDefinition | null {
   return PLANS.find((plan) => plan.planCode === planCode) ?? null;
 }
@@ -209,7 +227,9 @@ async function supabaseServiceRequest(
     ...init,
     headers: {
       apikey: serviceKey,
-      authorization: `Bearer ${serviceKey}`,
+      ...(!serviceKey.startsWith("sb_secret_")
+        ? { authorization: `Bearer ${serviceKey}` }
+        : {}),
       ...(init.body ? { "content-type": "application/json" } : {}),
       ...(init.headers ?? {}),
     },
@@ -246,26 +266,32 @@ async function authenticate(request: Request, env: BillingEnv): Promise<{
 }> {
   const authorization = request.headers.get("authorization") ?? "";
   const match = /^Bearer\s+(.+)$/i.exec(authorization);
-  if (!match) throw new Error("unauthorized");
+  if (!match) throw new Error("authorization_missing");
 
   const baseUrl = clean(env.AAS_SUPABASE_URL).replace(/\/$/, "");
   const serviceKey = clean(env.AAS_SUPABASE_SERVICE_ROLE_KEY);
-  if (!baseUrl || !serviceKey) throw new Error("billing_not_configured");
+  const apiKey = authApiKey(env);
+  if (!baseUrl || !serviceKey || !apiKey) throw new Error("billing_not_configured");
 
   const authResponse = await fetch(`${baseUrl}/auth/v1/user`, {
     headers: {
-      apikey: serviceKey,
+      apikey: apiKey,
       authorization: `Bearer ${match[1]}`,
     },
   });
   const authPayload = asRecord(await safeJson(authResponse));
   const userId = authPayload && typeof authPayload.id === "string" ? authPayload.id : "";
-  if (!authResponse.ok || !userId) throw new Error("unauthorized");
+  if (!authResponse.ok || !userId) throw new Error("auth_user_rejected");
 
-  const profileRows = await supabaseRows(
-    env,
-    `/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=id,role,status&limit=1`,
-  );
+  let profileRows: JsonRecord[];
+  try {
+    profileRows = await supabaseRows(
+      env,
+      `/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=id,role,status&limit=1`,
+    );
+  } catch {
+    throw new Error("profile_lookup_failed");
+  }
   const profile = profileRows[0];
   if (!profile) throw new Error("profile_not_found");
 
@@ -409,8 +435,9 @@ async function createCheckout(request: Request, env: BillingEnv): Promise<Respon
   let identity: Awaited<ReturnType<typeof authenticate>>;
   try {
     identity = await authenticate(request, env);
-  } catch {
-    return jsonResponse({ error: "ログイン状態を確認できませんでした。" }, 401);
+  } catch (error) {
+    const diagnostic = mode === "test" ? ` [TEST:${authDiagnostic(error)}]` : "";
+    return jsonResponse({ error: `ログイン状態を確認できませんでした。${diagnostic}` }, 401);
   }
   if (identity.profile.role !== "user" || identity.profile.status !== "active") {
     return jsonResponse({ error: "購入には有効な一般ユーザーアカウントが必要です。" }, 403);
@@ -491,15 +518,17 @@ async function createCheckout(request: Request, env: BillingEnv): Promise<Respon
 }
 
 async function createPortal(request: Request, env: BillingEnv): Promise<Response> {
-  if (commerceMode(env) === "off" || !backendReady(env)) {
+  const mode = commerceMode(env);
+  if (mode === "off" || !backendReady(env)) {
     return jsonResponse({ error: "契約管理は現在準備中です。" }, 503);
   }
 
   let identity: Awaited<ReturnType<typeof authenticate>>;
   try {
     identity = await authenticate(request, env);
-  } catch {
-    return jsonResponse({ error: "ログイン状態を確認できませんでした。" }, 401);
+  } catch (error) {
+    const diagnostic = mode === "test" ? ` [TEST:${authDiagnostic(error)}]` : "";
+    return jsonResponse({ error: `ログイン状態を確認できませんでした。${diagnostic}` }, 401);
   }
   if (identity.profile.role !== "user") {
     return jsonResponse({ error: "一般ユーザーの契約のみ管理できます。" }, 403);
