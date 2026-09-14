@@ -39,6 +39,11 @@
 .trial-user-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
 .trial-manual-start { display: grid; grid-template-columns: minmax(180px, 280px) auto; align-items: end; gap: 10px; margin-top: 12px; }
 .trial-manual-start > small { grid-column: 1 / -1; color: #7d8da1; font-size: 8px; }
+.trial-feature-gate { display: grid; gap: 12px; }
+.trial-feature-gate > h1,
+.trial-feature-gate > p { margin-top: 0; }
+.trial-gate-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.trial-gate-actions a { color: #315f94; font-size: 9px; font-weight: 800; text-decoration: none; }
 
 @media (max-width: 760px) {
   .free-trial-banner { grid-template-columns: 1fr; }
