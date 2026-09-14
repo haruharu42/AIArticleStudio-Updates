@@ -1,0 +1,111 @@
+/* Compact entitlement history in the admin user detail panel. */
+
+.admin-entitlement-list {
+  display: grid;
+  gap: 5px;
+}
+
+.admin-entitlement-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 10px;
+  min-width: 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.admin-entitlement-top {
+  grid-column: 1 / -1;
+  gap: 8px;
+}
+
+.admin-entitlement-top strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+.admin-entitlement-top span {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  font-size: 7px;
+}
+
+.admin-entitlement-list > div:not(.active) .admin-entitlement-top span {
+  background: #eef2f7;
+  color: #6f8197;
+}
+
+.admin-entitlement-list > div > small {
+  grid-column: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 7px;
+  line-height: 1.3;
+}
+
+.admin-entitlement-list dl {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  min-width: 0;
+  margin: 0;
+}
+
+.admin-entitlement-list dl > div,
+.admin-entitlement-list dl > div.full {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  min-width: 0;
+  grid-column: auto;
+}
+
+.admin-entitlement-list dt,
+.admin-entitlement-list dd {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.admin-entitlement-list dt {
+  font-size: 7px;
+  white-space: nowrap;
+}
+
+.admin-entitlement-list dd {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 8px;
+}
+
+@media (max-width: 620px) {
+  .admin-entitlement-list > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    padding: 7px 9px;
+  }
+
+  .admin-entitlement-list > div > small,
+  .admin-entitlement-list dl {
+    grid-column: 1;
+  }
+
+  .admin-entitlement-list dl {
+    justify-content: flex-start;
+    gap: 2px 8px;
+  }
+
+  .admin-entitlement-list dd {
+    max-width: min(48vw, 170px);
+  }
+}
