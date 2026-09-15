@@ -11,6 +11,8 @@ import {
 import { fetchPublicSalesSettings, type SalesSettings } from "@/lib/sales-settings";
 import { getSupabaseClient } from "@/lib/supabase";
 
+type LimitKind = "daily" | "feature" | null;
+
 function formatEnd(value: string | null): string {
   if (!value) return "—";
   try {
@@ -27,26 +29,32 @@ function dismissedKey(usageDate: string): string {
 export function FreeTrialBanner() {
   const [status, setStatus] = useState<FreeTrialStatus | null>(null);
   const [sales, setSales] = useState<SalesSettings | null>(null);
-  const [showLimitDialog, setShowLimitDialog] = useState(false);
+  const [limitKind, setLimitKind] = useState<LimitKind>(null);
 
-  const loadStatus = useCallback(async (forceDialog = false) => {
+  const loadStatus = useCallback(async (forcedKind: Exclude<LimitKind, null> | null = null) => {
     try {
       const next = await getMyFreeTrialStatus(getSupabaseClient());
       setStatus(next);
       if (next.bypassLimits || next.trialStatus !== "active") {
-        setShowLimitDialog(false);
+        setLimitKind(null);
         return;
       }
+
+      if (forcedKind) {
+        setLimitKind(forcedKind);
+        return;
+      }
+
       const remaining = Math.max(0, next.dailyTotalLimit - next.totalUsed);
-      if (remaining > 0 && !forceDialog) {
-        setShowLimitDialog(false);
+      if (remaining > 0) {
+        setLimitKind(null);
         return;
       }
       const dismissed = window.localStorage.getItem(dismissedKey(next.usageDate)) === "1";
-      setShowLimitDialog(forceDialog || !dismissed);
+      setLimitKind(dismissed ? null : "daily");
     } catch {
       setStatus(null);
-      setShowLimitDialog(false);
+      setLimitKind(null);
     }
   }, []);
 
@@ -60,8 +68,14 @@ export function FreeTrialBanner() {
     const onUsageChanged = (event: Event) => {
       if (!active) return;
       const detail = (event as CustomEvent<TrialUsageResult>).detail;
-      const blocked = detail?.allowed === false && (detail.reason === "daily_limit" || detail.reason === "feature_limit");
-      void loadStatus(blocked);
+      const forcedKind: Exclude<LimitKind, null> | null = detail?.allowed === false
+        ? detail.reason === "daily_limit"
+          ? "daily"
+          : detail.reason === "feature_limit"
+            ? "feature"
+            : null
+        : null;
+      void loadStatus(forcedKind);
     };
     const onFocus = () => { if (active) void loadStatus(); };
     window.addEventListener(FREE_TRIAL_USAGE_CHANGED_EVENT, onUsageChanged);
@@ -77,22 +91,25 @@ export function FreeTrialBanner() {
 
   const remaining = Math.max(0, status.dailyTotalLimit - status.totalUsed);
   const purchaseUrl = sales?.externalSalesEnabled && sales.externalSalesUrl ? sales.externalSalesUrl : "";
+  const permanentFree = status.endsAt === null && status.remainingDays === null;
   const closeLimitDialog = () => {
-    try {
-      window.localStorage.setItem(dismissedKey(status.usageDate), "1");
-    } catch {
-      // Dismiss still works for this render even when storage is unavailable.
+    if (limitKind === "daily") {
+      try {
+        window.localStorage.setItem(dismissedKey(status.usageDate), "1");
+      } catch {
+        // Dismiss still works for this render even when storage is unavailable.
+      }
     }
-    setShowLimitDialog(false);
+    setLimitKind(null);
   };
 
   return (
     <>
-      <section className="free-trial-banner" aria-label="無料トライアル状態">
+      <section className="free-trial-banner" aria-label="無料利用状態">
         <div>
-          <span className="free-trial-badge">無料トライアル</span>
-          <strong>残り {status.remainingDays ?? 0} 日</strong>
-          <small>終了予定 {formatEnd(status.endsAt)}</small>
+          <span className="free-trial-badge">{permanentFree ? "無料プラン" : "無料トライアル"}</span>
+          <strong>{permanentFree ? "期限なし" : `残り ${status.remainingDays ?? 0} 日`}</strong>
+          <small>{permanentFree ? "日次の無料回数はリセット後に復活します" : `終了予定 ${formatEnd(status.endsAt)}`}</small>
         </div>
         <div className="free-trial-usage">
           <span>本日の利用</span>
@@ -106,13 +123,14 @@ export function FreeTrialBanner() {
         )}
       </section>
 
-      {showLimitDialog && (
+      {limitKind && (
         <div className="free-limit-backdrop" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) closeLimitDialog(); }}>
           <section className="free-limit-dialog" role="dialog" aria-modal="true" aria-labelledby="free-limit-title">
             <button className="free-limit-close" type="button" aria-label="閉じる" onClick={closeLimitDialog}>×</button>
-            <span className="free-trial-badge">本日の無料枠を使い切りました</span>
-            <h2 id="free-limit-title">明日になると無料利用回数が戻ります</h2>
+            <span className="free-trial-badge">{limitKind === "daily" ? "本日の無料枠を使い切りました" : "この機能の本日の無料回数に達しました"}</span>
+            <h2 id="free-limit-title">{limitKind === "daily" ? "次のリセットで無料利用回数が戻ります" : "この機能は次のリセット後に再び利用できます"}</h2>
             <p>{status.resetTimezone} {String(status.resetHour).padStart(2, "0")}:00 のリセット後に、管理者が設定した1日分の無料回数を再び利用できます。</p>
+            {limitKind === "feature" && remaining > 0 && <p>ほかの機能は、本日の残り総回数 {remaining} 回の範囲で引き続き利用できます。</p>}
             {purchaseUrl && (
               <p>今すぐ継続して利用する場合は、外部販売ページで利用権をご確認ください。購入後に案内される利用コードをAASへ登録すると、有効な利用権として利用できます。</p>
             )}
