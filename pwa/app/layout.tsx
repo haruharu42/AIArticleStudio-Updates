@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { AdminHomeTopbar } from "@/components/admin-home-topbar";
 import { AppErrorReporter } from "@/components/app-error-reporter";
+import { FreeTrialBanner } from "@/components/free-trial-banner";
 import { KnowledgeRuntimeBootstrap } from "@/components/knowledge-runtime-bootstrap";
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
 import "./globals.css";
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AppErrorReporter />
         <KnowledgeRuntimeBootstrap />
         <AdminHomeTopbar />
+        <div className="free-trial-global-shell"><FreeTrialBanner /></div>
         {children}
         <PersistentMobileNav />
       </body>
