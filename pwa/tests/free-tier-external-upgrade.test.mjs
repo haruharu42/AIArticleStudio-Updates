@@ -44,6 +44,20 @@ test("permanent daily free tier preserves paid/admin bypass and daily quotas", a
   assert.doesNotMatch(migration, /delete\s+from\s+public\.user_entitlements/i);
 });
 
+test("permanent daily free usage works without a legacy timed-trial row", async () => {
+  const [independentUsage, conflictFix] = await Promise.all([
+    readRepo("supabase/migrations/20260915143000_permanent_daily_free_independent_usage.sql"),
+    readRepo("supabase/migrations/20260915144500_permanent_daily_free_usage_conflict_fix.sql"),
+  ]);
+
+  assert.match(independentUsage, /references public\.profiles\(id\) on delete cascade/i);
+  assert.match(independentUsage, /settings\.permanent_daily_free_enabled is true/i);
+  assert.match(independentUsage, /if not settings\.permanent_daily_free_enabled then/i);
+  assert.match(independentUsage, /where profile\.id = current_user_id\s+for update/i);
+  assert.doesNotMatch(independentUsage, /delete\s+from\s+public\.user_entitlements/i);
+  assert.match(conflictFix, /on conflict on constraint free_trial_daily_usage_pkey/i);
+});
+
 test("admin can configure permanent mode and all daily limits", async () => {
   const [panel, helper] = await Promise.all([
     readPwa("components/free-trial-admin-panel.tsx"),
