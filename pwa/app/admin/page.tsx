@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const sections = [
   {
     href: "/admin/users",
@@ -47,20 +49,20 @@ export default function AdminPage() {
           <p>管理機能を目的別に分離しました。必要な機能だけを開いて操作できます。</p>
         </div>
         <div className="admin-head-actions">
-          <a className="route-back" href="/">← ホームへ戻る</a>
+          <Link className="route-back" href="/">← ホームへ戻る</Link>
         </div>
       </header>
 
       <section className="admin-dashboard-section" aria-label="管理機能一覧">
         <div className="admin-form-grid">
           {sections.map((section) => (
-            <a key={section.href} className="choice-card compact" href={section.href}>
+            <Link key={section.href} className="choice-card compact" href={section.href}>
               <span>
                 <small>{section.eyebrow}</small>
                 <strong>{section.title}</strong>
                 <small>{section.description}</small>
               </span>
-            </a>
+            </Link>
           ))}
         </div>
       </section>
