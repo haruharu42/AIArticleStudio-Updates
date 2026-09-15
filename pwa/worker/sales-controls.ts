@@ -6,6 +6,7 @@ export interface SalesControlEnv {
 type SalesSettings = {
   externalSalesEnabled: boolean;
   accessCodeEnabled: boolean;
+  externalSalesUrl: string;
   stripeCheckoutEnabled: boolean;
   pwa7DayEnabled: boolean;
   pwaMonthlyEnabled: boolean;
@@ -41,7 +42,7 @@ async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | 
   if (!baseUrl || !serviceKey) return null;
 
   const response = await fetch(
-    `${baseUrl}/rest/v1/commerce_sales_settings?id=eq.1&select=external_sales_enabled,access_code_enabled,stripe_checkout_enabled,pwa_7day_enabled,pwa_monthly_enabled,windows_monthly_enabled,bundle_monthly_enabled&limit=1`,
+    `${baseUrl}/rest/v1/commerce_sales_settings?id=eq.1&select=external_sales_enabled,access_code_enabled,external_sales_url,stripe_checkout_enabled,pwa_7day_enabled,pwa_monthly_enabled,windows_monthly_enabled,bundle_monthly_enabled&limit=1`,
     {
       method: "GET",
       headers: {
@@ -59,6 +60,7 @@ async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | 
   return {
     externalSalesEnabled: row.external_sales_enabled === true,
     accessCodeEnabled: row.access_code_enabled === true,
+    externalSalesUrl: clean(row.external_sales_url),
     stripeCheckoutEnabled: row.stripe_checkout_enabled === true,
     pwa7DayEnabled: row.pwa_7day_enabled === true,
     pwaMonthlyEnabled: row.pwa_monthly_enabled === true,

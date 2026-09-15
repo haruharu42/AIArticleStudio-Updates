@@ -19,6 +19,7 @@ type Gate =
 const EMPTY: SalesSettings = {
   externalSalesEnabled: true,
   accessCodeEnabled: true,
+  externalSalesUrl: "",
   stripeCheckoutEnabled: false,
   pwa7DayEnabled: false,
   pwaMonthlyEnabled: false,
@@ -121,6 +122,20 @@ export function SalesSettingsAdminPage() {
         <div className="admin-panel-heading"><div><p className="eyebrow">EXTERNAL SALES</p><h2>外部販売・利用コード</h2></div></div>
         <Toggle checked={settings.externalSalesEnabled} onChange={(value) => set("externalSalesEnabled", value)} title="note / Brain / Tips等の外部販売" description="外部サービスで販売する運用を受付中として表示します。" />
         <Toggle checked={settings.accessCodeEnabled} onChange={(value) => set("accessCodeEnabled", value)} title="利用コード受付" description="購入者へ渡した利用コード（既存の招待コード基盤）の新規登録を許可します。" />
+        <label className="sales-url-field">
+          <span><strong>購入ページURL（note等）</strong><small>無料利用回数を使い切ったユーザーへ表示する購入先です。空欄なら購入ボタンは表示しません。HTTPSのみ設定できます。</small></span>
+          <input
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            placeholder="https://note.com/..."
+            value={settings.externalSalesUrl}
+            onChange={(event) => set("externalSalesUrl", event.target.value)}
+          />
+          {settings.externalSalesUrl.trim().startsWith("https://") && (
+            <a href={settings.externalSalesUrl.trim()} target="_blank" rel="noopener noreferrer">設定中の購入ページを確認 ↗</a>
+          )}
+        </label>
       </section>
 
       <section className="admin-panel sales-settings-section">
@@ -138,7 +153,8 @@ export function SalesSettingsAdminPage() {
       <section className="admin-panel sales-current-mode">
         <h2>現在の販売モード</h2>
         <p><strong>外部販売:</strong> {settings.externalSalesEnabled ? "ON" : "OFF"} / <strong>利用コード:</strong> {settings.accessCodeEnabled ? "ON" : "OFF"} / <strong>Stripe:</strong> {settings.stripeCheckoutEnabled ? "ON" : "OFF"}</p>
-        <p>初期運用は「外部販売 ON・利用コード ON・Stripe OFF」です。X等から直接集客する段階でPWA月額などをONにできます。</p>
+        <p><strong>購入ページ:</strong> {settings.externalSalesUrl.trim() ? "設定済み" : "未設定"}</p>
+        <p>初期運用は「外部販売 ON・利用コード ON・Stripe OFF」です。無料枠終了時は、外部販売ONかつ購入ページURL設定済みの場合だけ購入案内を表示します。</p>
       </section>
 
       <div className="sales-save-bar">

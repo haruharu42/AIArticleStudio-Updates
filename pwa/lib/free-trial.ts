@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+export const FREE_TRIAL_USAGE_CHANGED_EVENT = "aas:free-trial-usage-changed";
+
 export type TrialFeature =
   | "article_generate"
   | "title_generate"
@@ -178,6 +180,11 @@ function parseStatus(value: unknown): FreeTrialStatus {
   };
 }
 
+function notifyFreeTrialUsageChanged(result: TrialUsageResult): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(FREE_TRIAL_USAGE_CHANGED_EVENT, { detail: result }));
+}
+
 export async function ensureMyFreeTrial(client: SupabaseClient): Promise<boolean> {
   const { data, error } = await client.rpc("ensure_my_free_trial");
   if (error) throw rpcError(error, "無料トライアルの開始条件を確認できませんでした。");
@@ -194,7 +201,7 @@ export async function consumeFreeTrialUsage(client: SupabaseClient, feature: Tri
   const { data, error } = await client.rpc("consume_free_trial_usage", { p_feature: feature });
   if (error) throw rpcError(error, "無料トライアルの利用回数を確認できませんでした。");
   const row = firstRow(data, "利用回数");
-  return {
+  const result: TrialUsageResult = {
     allowed: bool(row.allowed),
     bypassLimits: bool(row.bypass_limits),
     reason: text(row.reason, "判定理由"),
@@ -205,6 +212,8 @@ export async function consumeFreeTrialUsage(client: SupabaseClient, feature: Tri
     featureLimit: integer(row.feature_limit, "機能上限"),
     remaining: integer(row.remaining, "残り回数"),
   };
+  notifyFreeTrialUsageChanged(result);
+  return result;
 }
 
 export function trialUsageMessage(result: TrialUsageResult): string {
