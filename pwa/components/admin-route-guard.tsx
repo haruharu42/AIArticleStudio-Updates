@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
@@ -75,7 +76,7 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
         {gate.kind === "signed_out" && <p className="route-notice error">このページを表示するにはログインが必要です。</p>}
         {gate.kind === "denied" && <p className="route-notice error">このページを表示する権限がありません。</p>}
         {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-        {gate.kind !== "loading" && <a className="route-back" href="/">← ホームへ戻る</a>}
+        {gate.kind !== "loading" && <Link className="route-back" href="/">← ホームへ戻る</Link>}
       </section>
     </main>
   );
