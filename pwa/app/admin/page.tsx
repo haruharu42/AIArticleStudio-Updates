@@ -1,43 +1,6 @@
 import Link from "next/link";
 
-const sections = [
-  {
-    href: "/admin/users",
-    eyebrow: "USERS & ACCESS",
-    title: "ユーザー・利用権",
-    description: "ユーザー承認、停止・再開、PWA / Windows利用権、利用コードの発行と管理。",
-  },
-  {
-    href: "/admin/free-trial",
-    eyebrow: "FREE PLAN",
-    title: "無料利用・回数制限",
-    description: "無料ユーザーの日次回数、リセット時刻、個別利用状況を管理。",
-  },
-  {
-    href: "/admin/sales",
-    eyebrow: "SALES",
-    title: "販売・アップグレード導線",
-    description: "note等の購入URL、外部販売、利用コード、Stripe販売スイッチを管理。",
-  },
-  {
-    href: "/admin/promotion",
-    eyebrow: "PROMOTION",
-    title: "販売促進・SNS",
-    description: "販売記事、SNS投稿、キャンペーンなどのプロモーション機能。",
-  },
-  {
-    href: "/admin/knowledge",
-    eyebrow: "KNOWLEDGE",
-    title: "ナレッジ管理",
-    description: "ジャンル・サブジャンル候補や学習候補を確認・承認。",
-  },
-  {
-    href: "/admin/operations",
-    eyebrow: "SECURITY & OPS",
-    title: "セキュリティ・運用",
-    description: "セキュリティ監査、容量監視、運用イベントとシステム状態を確認。",
-  },
-] as const;
+import { ADMIN_SECTIONS } from "@/lib/admin-sections";
 
 export default function AdminPage() {
   return (
@@ -55,8 +18,8 @@ export default function AdminPage() {
 
       <section className="admin-dashboard-section" aria-label="管理機能一覧">
         <div className="admin-form-grid">
-          {sections.map((section) => (
-            <Link key={section.href} className="choice-card compact" href={section.href}>
+          {ADMIN_SECTIONS.map((section) => (
+            <Link key={section.id} className="choice-card compact" href={section.href}>
               <span>
                 <small>{section.eyebrow}</small>
                 <strong>{section.title}</strong>
