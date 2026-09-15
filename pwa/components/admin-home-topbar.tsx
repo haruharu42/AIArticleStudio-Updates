@@ -1,13 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
+import { ADMIN_HOME_SHORTCUT_IDS, ADMIN_SECTIONS } from "@/lib/admin-sections";
 import { getSupabaseClient } from "@/lib/supabase";
 
 export function AdminHomeTopbar() {
   const pathname = usePathname();
   const [admin, setAdmin] = useState(false);
+  const shortcuts = useMemo(
+    () => ADMIN_HOME_SHORTCUT_IDS.map((id) => ADMIN_SECTIONS.find((section) => section.id === id)).filter(Boolean),
+    [],
+  );
 
   useEffect(() => {
     if (pathname !== "/") {
@@ -53,11 +59,8 @@ export function AdminHomeTopbar() {
     <aside className="admin-home-topbar" aria-label="管理者専用ショートカット">
       <div><span>ADMIN</span><strong>管理者モード</strong><small>ユーザー・無料利用・販売・セキュリティを機能別に管理できます。</small></div>
       <nav>
-        <a href="/admin">管理ダッシュボード</a>
-        <a href="/admin/users">ユーザー・利用権</a>
-        <a href="/admin/free-trial">無料利用設定</a>
-        <a href="/admin/sales">販売設定</a>
-        <a href="/admin/operations">セキュリティ・運用</a>
+        <Link href="/admin">管理ダッシュボード</Link>
+        {shortcuts.map((section) => section && <Link key={section.id} href={section.href}>{section.shortTitle}</Link>)}
       </nav>
     </aside>
   );
