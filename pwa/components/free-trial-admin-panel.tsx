@@ -220,7 +220,7 @@ export function FreeTrialAdminPanel({ selectedUser }: { selectedUser: AdminUser 
             ) : (
               <div className="trial-manual-start">
                 {!permanentDailyFreeEnabled && <NumberField label="手動開始する日数" value={manualDays} min={1} max={365} onChange={setManualDays} />}
-                <button className="primary-action" disabled={busy || selectedUser.status !== "active"} type="button" onClick={() => void runUserAction(() => startAdminUserFreeTrial(getSupabaseClient(), selectedUser.id, permanentDailyFreeEnabled ? settings.durationDays : manualDays), permanentDailyFreeEnabled ? "期限なし日次無料枠を開始しました。" : "無料トライアルを開始しました。")}>{permanentDailyFreeEnabled ? "このユーザーの無料枠を開始" : "このユーザーの初回トライアルを開始"}</button>
+                <button className="primary-action" disabled={busy || selectedUser.status !== "active"} type="button" onClick={() => void runUserAction(() => startAdminUserFreeTrial(getSupabaseClient(), selectedUser.id, permanentDailyFreeEnabled ? (settings?.durationDays ?? 7) : manualDays), permanentDailyFreeEnabled ? "期限なし日次無料枠を開始しました。" : "無料トライアルを開始しました。")}>{permanentDailyFreeEnabled ? "このユーザーの無料枠を開始" : "このユーザーの初回トライアルを開始"}</button>
                 {selectedUser.status !== "active" && <small>手動開始にはactive一般ユーザーが必要です。</small>}
               </div>
             )}
