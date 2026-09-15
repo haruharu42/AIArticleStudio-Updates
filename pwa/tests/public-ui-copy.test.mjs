@@ -90,13 +90,16 @@ test("admin promotion prompts protect confirmed product facts and cover article 
 
 test("active admins receive a top-of-home dashboard shortcut and an admin nav item", async () => {
   const topbar = await read("components/admin-home-topbar.tsx");
+  const sections = await read("lib/admin-sections.ts");
   const nav = await read("components/persistent-mobile-nav.tsx");
   const css = await read("app/phase24-admin-promotion.css");
   const layout = await read("app/layout.tsx");
   assert.match(topbar, /pathname !== "\/"/);
   assert.match(topbar, /data\.role === "admin"/);
   assert.match(topbar, /管理ダッシュボード/);
-  assert.match(topbar, /販売・SNSプロモーション/);
+  assert.match(topbar, /ADMIN_HOME_SHORTCUT_IDS/);
+  assert.match(sections, /販売促進・SNS/);
+  assert.match(sections, /\/admin\/promotion/);
   assert.match(nav, /data\.role === "admin"/);
   assert.match(nav, />管理<\/button>/);
   assert.match(nav, /go\("\/admin"\)/);
