@@ -98,9 +98,12 @@ test("operations health endpoint and admin UI are wired without exposing secrets
 
 test("global error boundary reports safe messages instead of stack traces", async () => {
   const reporter = await read("components/app-error-reporter.tsx");
+  const ops = await read("lib/ops.ts");
   const boundary = await read("app/error.tsx");
   assert.match(reporter, /unhandledrejection/);
-  assert.match(reporter, /WINDOW_ERROR/);
+  assert.match(reporter, /windowErrorDiagnostic/);
+  assert.match(ops, /WINDOW_ERROR/);
+  assert.match(ops, /WINDOW_SCRIPT_ERROR_OPAQUE/);
   assert.match(boundary, /ROUTE_RENDER_ERROR/);
-  assert.doesNotMatch(`${reporter}\n${boundary}`, /\.stack/);
+  assert.doesNotMatch(`${reporter}\n${ops}\n${boundary}`, /\.stack/);
 });

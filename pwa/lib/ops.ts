@@ -8,6 +8,19 @@ type ClientErrorInput = {
   requestId?: string;
 };
 
+type WindowErrorLike = {
+  error?: unknown;
+  message?: string;
+  filename?: string;
+  lineno?: number;
+  colno?: number;
+};
+
+export type WindowErrorDiagnostic = {
+  errorCode: "WINDOW_ERROR" | "WINDOW_SCRIPT_ERROR_OPAQUE";
+  message: string;
+};
+
 const SECRET_PATTERNS = [
   /sb_secret_[A-Za-z0-9_-]+/gi,
   /sk_(?:live|test)_[A-Za-z0-9_-]+/gi,
@@ -31,6 +44,46 @@ function safeCode(value: string): string {
 function safeRoute(value?: string): string | null {
   const route = value || (typeof window !== "undefined" ? window.location.pathname : "");
   return route ? route.split("?", 1)[0].slice(0, 160) : null;
+}
+
+function safeScriptSource(value?: string): string {
+  const raw = safeText(value ?? "", 240);
+  if (!raw) return "";
+
+  try {
+    const base = typeof window !== "undefined" ? window.location.href : "https://aas.invalid/";
+    const url = new URL(raw, base);
+    const sameOrigin = typeof window !== "undefined" && url.origin === window.location.origin;
+    const source = sameOrigin ? url.pathname : `${url.host}${url.pathname}`;
+    return safeText(source || "/", 180);
+  } catch {
+    return safeText(raw.split(/[?#]/, 1)[0], 180);
+  }
+}
+
+export function windowErrorDiagnostic(event: WindowErrorLike): WindowErrorDiagnostic {
+  const baseMessage = errorMessage(event.error ?? event.message ?? "Unexpected client error");
+  const source = safeScriptSource(event.filename);
+  const line = Number.isFinite(event.lineno) && Number(event.lineno) > 0 ? Number(event.lineno) : 0;
+  const column = Number.isFinite(event.colno) && Number(event.colno) > 0 ? Number(event.colno) : 0;
+  const opaque = baseMessage === "Script error." && !event.error && !source && line === 0 && column === 0;
+
+  if (opaque) {
+    return {
+      errorCode: "WINDOW_SCRIPT_ERROR_OPAQUE",
+      message: "Script error. | browser-withheld-source-details",
+    };
+  }
+
+  const details: string[] = [];
+  if (source) details.push(`source=${source}`);
+  if (line > 0) details.push(`line=${line}`);
+  if (column > 0) details.push(`column=${column}`);
+
+  return {
+    errorCode: "WINDOW_ERROR",
+    message: safeText(details.length > 0 ? `${baseMessage} | ${details.join(" ")}` : baseMessage, 700),
+  };
 }
 
 export async function reportClientError(input: ClientErrorInput): Promise<void> {

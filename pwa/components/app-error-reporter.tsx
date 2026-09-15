@@ -2,14 +2,15 @@
 
 import { useEffect } from "react";
 
-import { errorMessage, reportClientError } from "@/lib/ops";
+import { errorMessage, reportClientError, windowErrorDiagnostic } from "@/lib/ops";
 
 export function AppErrorReporter() {
   useEffect(() => {
     const onError = (event: ErrorEvent) => {
+      const diagnostic = windowErrorDiagnostic(event);
       void reportClientError({
-        errorCode: "WINDOW_ERROR",
-        message: errorMessage(event.error ?? event.message),
+        errorCode: diagnostic.errorCode,
+        message: diagnostic.message,
         feature: "global-runtime",
         route: window.location.pathname,
       });
