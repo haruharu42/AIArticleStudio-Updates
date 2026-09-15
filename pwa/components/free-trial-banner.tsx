@@ -60,10 +60,13 @@ export function FreeTrialBanner() {
 
   useEffect(() => {
     let active = true;
-    void Promise.allSettled([
-      loadStatus(),
-      fetchPublicSalesSettings().then((next) => { if (active) setSales(next); }),
-    ]);
+    queueMicrotask(() => {
+      if (!active) return;
+      void Promise.allSettled([
+        loadStatus(),
+        fetchPublicSalesSettings().then((next) => { if (active) setSales(next); }),
+      ]);
+    });
 
     const onUsageChanged = (event: Event) => {
       if (!active) return;
