@@ -52,14 +52,14 @@ test("Stripe Checkout is gated server-side and billing portal remains available"
 });
 
 test("admin UI exposes all requested sales switches", async () => {
-  const [adminPage, settingsPage, settingsLib, layout] = await Promise.all([
-    readPwa("app/admin/page.tsx"),
+  const [adminSections, settingsPage, settingsLib, layout] = await Promise.all([
+    readPwa("lib/admin-sections.ts"),
     readPwa("components/sales-settings-admin-page.tsx"),
     readPwa("lib/sales-settings.ts"),
     readPwa("app/layout.tsx"),
   ]);
 
-  assert.match(adminPage, /href="\/admin\/sales"/);
+  assert.match(adminSections, /href: "\/admin\/sales"/);
   for (const label of [
     "note / Brain / Tips等の外部販売",
     "利用コード受付",
