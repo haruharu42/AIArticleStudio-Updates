@@ -15,17 +15,23 @@ test("all /admin routes are wrapped by the shared active-admin gate", () => {
   assert.match(guard, /このページを表示する権限がありません/);
 });
 
-test("admin home is navigation-only and user management has its own route", () => {
+test("admin home is navigation-only and sections are centralized", () => {
   const home = read("app/admin/page.tsx");
   const users = read("app/admin/users/page.tsx");
+  const registry = read("lib/admin-sections.ts");
 
   assert.doesNotMatch(home, /Phase10AdminPage/);
-  assert.match(home, /href: "\/admin\/users"/);
-  assert.match(home, /href: "\/admin\/free-trial"/);
-  assert.match(home, /href: "\/admin\/sales"/);
-  assert.match(home, /href: "\/admin\/promotion"/);
-  assert.match(home, /href: "\/admin\/knowledge"/);
-  assert.match(home, /href: "\/admin\/operations"/);
+  assert.match(home, /ADMIN_SECTIONS\.map/);
+  for (const route of [
+    "/admin/users",
+    "/admin/free-trial",
+    "/admin/sales",
+    "/admin/promotion",
+    "/admin/knowledge",
+    "/admin/operations",
+  ]) {
+    assert.match(registry, new RegExp(route.replaceAll("/", "\\/")));
+  }
   assert.match(users, /Phase10AdminPage/);
 });
 
@@ -35,4 +41,5 @@ test("public home admin shortcut stays hidden until active-admin state is verifi
   assert.match(topbar, /useState\(false\)/);
   assert.match(topbar, /data\.role === "admin" && data\.status === "active"/);
   assert.match(topbar, /!admin\) return null/);
+  assert.match(topbar, /ADMIN_HOME_SHORTCUT_IDS/);
 });
