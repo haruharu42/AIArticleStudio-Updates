@@ -6,6 +6,7 @@ import {
   FREE_TRIAL_USAGE_CHANGED_EVENT,
   getMyFreeTrialStatus,
   type FreeTrialStatus,
+  type TrialUsageResult,
 } from "@/lib/free-trial";
 import { fetchPublicSalesSettings, type SalesSettings } from "@/lib/sales-settings";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -28,7 +29,7 @@ export function FreeTrialBanner() {
   const [sales, setSales] = useState<SalesSettings | null>(null);
   const [showLimitDialog, setShowLimitDialog] = useState(false);
 
-  const loadStatus = useCallback(async () => {
+  const loadStatus = useCallback(async (forceDialog = false) => {
     try {
       const next = await getMyFreeTrialStatus(getSupabaseClient());
       setStatus(next);
@@ -37,12 +38,12 @@ export function FreeTrialBanner() {
         return;
       }
       const remaining = Math.max(0, next.dailyTotalLimit - next.totalUsed);
-      if (remaining > 0) {
+      if (remaining > 0 && !forceDialog) {
         setShowLimitDialog(false);
         return;
       }
       const dismissed = window.localStorage.getItem(dismissedKey(next.usageDate)) === "1";
-      setShowLimitDialog(!dismissed);
+      setShowLimitDialog(forceDialog || !dismissed);
     } catch {
       setStatus(null);
       setShowLimitDialog(false);
@@ -56,13 +57,19 @@ export function FreeTrialBanner() {
       fetchPublicSalesSettings().then((next) => { if (active) setSales(next); }),
     ]);
 
-    const refresh = () => { if (active) void loadStatus(); };
-    window.addEventListener(FREE_TRIAL_USAGE_CHANGED_EVENT, refresh);
-    window.addEventListener("focus", refresh);
+    const onUsageChanged = (event: Event) => {
+      if (!active) return;
+      const detail = (event as CustomEvent<TrialUsageResult>).detail;
+      const blocked = detail?.allowed === false && (detail.reason === "daily_limit" || detail.reason === "feature_limit");
+      void loadStatus(blocked);
+    };
+    const onFocus = () => { if (active) void loadStatus(); };
+    window.addEventListener(FREE_TRIAL_USAGE_CHANGED_EVENT, onUsageChanged);
+    window.addEventListener("focus", onFocus);
     return () => {
       active = false;
-      window.removeEventListener(FREE_TRIAL_USAGE_CHANGED_EVENT, refresh);
-      window.removeEventListener("focus", refresh);
+      window.removeEventListener(FREE_TRIAL_USAGE_CHANGED_EVENT, onUsageChanged);
+      window.removeEventListener("focus", onFocus);
     };
   }, [loadStatus]);
 
