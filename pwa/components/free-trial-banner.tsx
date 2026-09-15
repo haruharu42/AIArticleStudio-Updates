@@ -68,13 +68,15 @@ export function FreeTrialBanner() {
     const onUsageChanged = (event: Event) => {
       if (!active) return;
       const detail = (event as CustomEvent<TrialUsageResult>).detail;
-      const forcedKind: Exclude<LimitKind, null> | null = detail?.allowed === false
-        ? detail.reason === "daily_limit"
-          ? "daily"
-          : detail.reason === "feature_limit"
-            ? "feature"
-            : null
-        : null;
+      let forcedKind: Exclude<LimitKind, null> | null = null;
+      if (detail?.reason === "daily_limit" || (detail?.allowed === true && detail.dailyTotalLimit <= detail.totalUsed)) {
+        forcedKind = "daily";
+      } else if (
+        detail?.reason === "feature_limit"
+        || (detail?.allowed === true && detail.featureLimit <= detail.featureUsed && detail.totalUsed < detail.dailyTotalLimit)
+      ) {
+        forcedKind = "feature";
+      }
       void loadStatus(forcedKind);
     };
     const onFocus = () => { if (active) void loadStatus(); };
@@ -90,7 +92,7 @@ export function FreeTrialBanner() {
   if (!status || status.bypassLimits || status.trialStatus !== "active") return null;
 
   const remaining = Math.max(0, status.dailyTotalLimit - status.totalUsed);
-  const purchaseUrl = sales?.externalSalesEnabled && sales.externalSalesUrl ? sales.externalSalesUrl : "";
+  const purchaseUrl = sales?.externalSalesEnabled && sales.accessCodeEnabled && sales.externalSalesUrl ? sales.externalSalesUrl : "";
   const permanentFree = status.endsAt === null && status.remainingDays === null;
   const closeLimitDialog = () => {
     if (limitKind === "daily") {
