@@ -47,7 +47,8 @@ test("Phase 9 invite route redeems entitlement without requiring existing PWA ac
 test("Phase 10 admin surface uses existing account and entitlement RPCs plus invite RPCs", async () => {
   const api = await read("lib/phase10-admin.ts");
   const page = await read("components/phase10-admin-page.tsx");
-  const route = await read("app/admin/page.tsx");
+  const route = await read("app/admin/users/page.tsx");
+  const adminLayout = await read("app/admin/layout.tsx");
   for (const rpc of ["admin_list_users", "admin_set_user_status", "admin_list_user_entitlements", "admin_grant_entitlement", "admin_revoke_entitlement", "admin_create_pwa_invite", "admin_list_pwa_invites", "admin_revoke_pwa_invite"]) {
     assert.match(api, new RegExp(`\\"${rpc}\\"`));
   }
@@ -60,6 +61,7 @@ test("Phase 10 admin surface uses existing account and entitlement RPCs plus inv
   assert.match(page, /PWAを取消/);
   assert.match(page, /招待コードを作成/);
   assert.match(route, /Phase10AdminPage/);
+  assert.match(adminLayout, /AdminRouteGuard/);
   assert.doesNotMatch(`${api}\n${page}`, /sb_secret_|service[_-]?role/i);
 });
 

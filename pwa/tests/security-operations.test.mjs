@@ -77,6 +77,7 @@ test("operations health endpoint and admin UI are wired without exposing secrets
   const adminClient = await read("lib/operations-admin.ts");
   const layout = await read("app/layout.tsx");
   const topbar = await read("components/admin-home-topbar.tsx");
+  const sections = await read("lib/admin-sections.ts");
   assert.match(worker, /\/api\/ops\/health/);
   assert.match(route, /OperationsAdminPage/);
   assert.match(page, /Security & Operations|SECURITY & OPERATIONS/);
@@ -90,7 +91,8 @@ test("operations health endpoint and admin UI are wired without exposing secrets
   assert.match(adminClient, /admin_ops_refresh_capacity/);
   assert.match(layout, /AppErrorReporter/);
   assert.match(layout, /phase30-security-operations\.css/);
-  assert.match(topbar, /\/admin\/operations/);
+  assert.match(topbar, /ADMIN_HOME_SHORTCUT_IDS/);
+  assert.match(sections, /\/admin\/operations/);
   assert.doesNotMatch(`${page}\n${adminClient}`, /AAS_SUPABASE_SERVICE_ROLE_KEY|AAS_STRIPE_SECRET_KEY|AAS_STRIPE_WEBHOOK_SECRET/);
 });
 
