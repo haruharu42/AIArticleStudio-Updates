@@ -63,13 +63,14 @@ test("build configuration rejects secret browser keys", async () => {
   assert.doesNotMatch(config, /SUPABASE_SERVICE_ROLE_KEY/);
 });
 
-test("registration legal links have first-party routes and remain explicit preview drafts", async () => {
+test("registration legal links use first-party routes and current support guidance", async () => {
   const client = await read("lib/supabase.ts");
   const config = await read("next.config.ts");
   const shell = await read("components/legal-document.tsx");
   const terms = await read("app/terms/page.tsx");
   const privacy = await read("app/privacy/page.tsx");
   const aiTerms = await read("app/ai-terms/page.tsx");
+  const support = await read("app/support/page.tsx");
 
   assert.match(client, /NEXT_PUBLIC_AAS_TERMS_URL \?\? "\/terms"/);
   assert.match(client, /NEXT_PUBLIC_AAS_PRIVACY_URL \?\? "\/privacy"/);
@@ -77,8 +78,14 @@ test("registration legal links have first-party routes and remain explicit previ
   assert.match(config, /"\/terms"/);
   assert.match(config, /"\/privacy"/);
   assert.match(config, /"\/ai-terms"/);
-  assert.match(shell, /公開準備ドラフト/);
-  assert.match(terms, /正式販売前/);
+  assert.match(shell, /現在の提供条件/);
+  assert.doesNotMatch(shell, /公開準備ドラフト/);
+  assert.match(shell, /AAS内のStripe新規購入は停止中/);
+  assert.match(shell, /href="\/support"/);
+  assert.match(terms, /\/support/);
   assert.match(privacy, /個人情報/);
+  assert.match(privacy, /\/support/);
   assert.match(aiTerms, /AI利用条件/);
+  assert.match(aiTerms, /\/support/);
+  assert.match(support, /SupportRequestPage/);
 });
