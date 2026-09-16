@@ -107,3 +107,54 @@ test("global error boundary reports safe messages instead of stack traces", asyn
   assert.match(boundary, /ROUTE_RENDER_ERROR/);
   assert.doesNotMatch(`${reporter}\n${ops}\n${boundary}`, /\.stack/);
 });
+
+test("user data isolation hardening is explicit and continuously audited", async () => {
+  const sql = await readRepo("supabase/migrations/20260916023000_user_data_isolation_hardening.sql");
+  for (const table of [
+    "admin_user_actions",
+    "article_quota_settings",
+    "billing_customers",
+    "billing_events",
+    "commerce_sales_settings",
+    "knowledge_candidate_decisions",
+    "knowledge_candidate_signals",
+    "pwa_invite_redemptions",
+    "pwa_invites",
+  ]) {
+    assert.match(sql, new RegExp(`['\"]${table}['\"]`));
+  }
+  for (const policy of [
+    "profiles_select_self_or_admin",
+    "articles_select_own_active",
+    "article_workspaces_select_own_active",
+    "article_assets_select_own_active",
+    "user_entitlements_select_own",
+    "billing_checkout_sessions_select_own",
+    "billing_subscriptions_select_own",
+    "user_writing_profiles_select_own_active",
+  ]) {
+    assert.match(sql, new RegExp(policy));
+  }
+  for (const storagePolicy of [
+    "article_assets_storage_insert_prepared",
+    "article_assets_storage_select_ready",
+    "article_assets_storage_select_delete_pending",
+    "article_assets_storage_delete_pending",
+  ]) {
+    assert.match(sql, new RegExp(storagePolicy));
+  }
+  assert.match(sql, /for all to anon, authenticated using \(false\) with check \(false\)/);
+  assert.match(sql, /revoke all on table public\.%I from public, anon, authenticated/);
+  assert.match(sql, /auth\.uid/);
+  assert.match(sql, /raw_user_meta_data\|user_metadata/);
+  assert.match(sql, /security_invoker=true/);
+  assert.match(sql, /private\.is_active_admin/);
+  assert.match(sql, /USER_DATA_OWNER_POLICY_MISSING/);
+  assert.match(sql, /USER_DATA_STORAGE_POLICY_WEAK/);
+  assert.match(sql, /USER_METADATA_AUTHORIZATION/);
+  assert.match(sql, /ADMIN_RPC_AUTHORIZATION_MISSING/);
+  assert.match(sql, /user-data-isolation/);
+  assert.match(sql, /aas-user-data-isolation-audit-hourly/);
+  assert.match(sql, /7 \* \* \* \*/);
+  assert.match(sql, /private\.ops_run_user_data_isolation_audit\(\)/);
+});
