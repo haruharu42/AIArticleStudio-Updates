@@ -4,15 +4,24 @@ import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("all /admin routes are wrapped by the shared active-admin gate", () => {
+test("all /admin routes are wrapped by the shared active-admin and MFA gate", () => {
   const layout = read("app/admin/layout.tsx");
   const guard = read("components/admin-route-guard.tsx");
 
   assert.match(layout, /AdminRouteGuard/);
   assert.match(layout, /<AdminRouteGuard>\{children\}<\/AdminRouteGuard>/);
   assert.match(guard, /profile\.role !== "admin" \|\| profile\.status !== "active"/);
+  assert.match(guard, /auth\.mfa\.listFactors\(\)/);
+  assert.match(guard, /factor\.status === "verified"/);
+  assert.match(guard, /auth\.mfa\.getAuthenticatorAssuranceLevel\(\)/);
+  assert.match(guard, /aal\.currentLevel !== "aal2"/);
+  assert.match(guard, /auth\.mfa\.enroll\(\{/);
+  assert.match(guard, /factorType: "totp"/);
+  assert.match(guard, /auth\.mfa\.challenge\(\{ factorId \}\)/);
+  assert.match(guard, /auth\.mfa\.verify\(\{/);
   assert.match(guard, /gate\.kind === "ready"/);
   assert.match(guard, /このページを表示する権限がありません/);
+  assert.match(guard, /管理者画面を保護するため/);
 });
 
 test("admin home is navigation-only and sections are centralized", () => {
