@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { SecurityRepairPrompt } from "@/components/security-repair-prompt";
 import { getSupabaseClient } from "@/lib/supabase";
 
 type TotpFactor = {
@@ -242,6 +243,17 @@ export function AdminSecurityPage() {
 
       {message && <p className="route-notice">{message}</p>}
       {errorMessage && <p className="route-notice error">{errorMessage}</p>}
+      {errorMessage && (
+        <SecurityRepairPrompt
+          context="管理者セキュリティ / MFA認証器 (/admin/security)"
+          summary={errorMessage}
+          details={[
+            { label: "画面", value: "/admin/security" },
+            { label: "確認済みMFA数", value: verifiedFactors.length },
+            { label: "登録中", value: enrollment ? "yes" : "no" },
+          ]}
+        />
+      )}
     </main>
   );
 }
