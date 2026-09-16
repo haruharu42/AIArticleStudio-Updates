@@ -47,6 +47,14 @@ function parseSettings(value: unknown): SalesSettings {
   };
 }
 
+export function normalizePwaOnlySalesSettings(settings: SalesSettings): SalesSettings {
+  return {
+    ...settings,
+    windowsMonthlyEnabled: false,
+    bundleMonthlyEnabled: false,
+  };
+}
+
 export async function fetchPublicSalesSettings(): Promise<SalesSettings> {
   const response = await fetch("/api/sales/settings", {
     method: "GET",
@@ -54,27 +62,28 @@ export async function fetchPublicSalesSettings(): Promise<SalesSettings> {
     cache: "no-store",
   });
   if (!response.ok) throw new Error("販売受付設定を取得できませんでした。");
-  return parseSettings(await response.json());
+  return normalizePwaOnlySalesSettings(parseSettings(await response.json()));
 }
 
 export async function loadAdminSalesSettings(client: SupabaseClient): Promise<SalesSettings> {
   const { data, error } = await client.rpc("admin_get_commerce_sales_settings");
   if (error) throw new Error("販売・決済設定を取得できませんでした。");
   const row = Array.isArray(data) ? data[0] : data;
-  return parseSettings(row);
+  return normalizePwaOnlySalesSettings(parseSettings(row));
 }
 
 export async function updateAdminSalesSettings(client: SupabaseClient, settings: SalesSettings): Promise<void> {
-  const externalSalesUrl = validateExternalSalesUrl(settings.externalSalesUrl);
+  const normalized = normalizePwaOnlySalesSettings(settings);
+  const externalSalesUrl = validateExternalSalesUrl(normalized.externalSalesUrl);
   const { error } = await client.rpc("admin_update_commerce_sales_settings", {
-    p_external_sales_enabled: settings.externalSalesEnabled,
-    p_access_code_enabled: settings.accessCodeEnabled,
+    p_external_sales_enabled: normalized.externalSalesEnabled,
+    p_access_code_enabled: normalized.accessCodeEnabled,
     p_external_sales_url: externalSalesUrl || null,
-    p_stripe_checkout_enabled: settings.stripeCheckoutEnabled,
-    p_pwa_7day_enabled: settings.pwa7DayEnabled,
-    p_pwa_monthly_enabled: settings.pwaMonthlyEnabled,
-    p_windows_monthly_enabled: settings.windowsMonthlyEnabled,
-    p_bundle_monthly_enabled: settings.bundleMonthlyEnabled,
+    p_stripe_checkout_enabled: normalized.stripeCheckoutEnabled,
+    p_pwa_7day_enabled: normalized.pwa7DayEnabled,
+    p_pwa_monthly_enabled: normalized.pwaMonthlyEnabled,
+    p_windows_monthly_enabled: false,
+    p_bundle_monthly_enabled: false,
   });
   if (error) throw new Error("販売・決済設定を保存できませんでした。");
 }
@@ -83,7 +92,5 @@ export function planSalesEnabled(settings: SalesSettings | null, planCode: Comme
   if (!settings?.stripeCheckoutEnabled) return false;
   if (planCode === "AAS-PWA-7DAY") return settings.pwa7DayEnabled;
   if (planCode === "AAS-PWA-MONTHLY") return settings.pwaMonthlyEnabled;
-  if (planCode === "AAS-WIN-MONTHLY") return settings.windowsMonthlyEnabled;
-  if (planCode === "AAS-BUNDLE-MONTHLY") return settings.bundleMonthlyEnabled;
   return false;
 }
