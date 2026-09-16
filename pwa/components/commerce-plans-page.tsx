@@ -71,7 +71,9 @@ export function CommercePlansPage() {
   }, [state]);
 
   const visiblePlans = useMemo(
-    () => (config?.plans ?? []).filter((plan) => planSalesEnabled(salesSettings, plan.planCode)),
+    () => (config?.plans ?? []).filter(
+      (plan) => plan.platformScope === "pwa" && planSalesEnabled(salesSettings, plan.planCode),
+    ),
     [config, salesSettings],
   );
 
@@ -139,7 +141,7 @@ export function CommercePlansPage() {
         <Link href="/" className="commerce-back">← AI記事スタジオへ戻る</Link>
         <p className="eyebrow">PLANS</p>
         <h1>利用プラン</h1>
-        <p>ログイン後、PWA利用権がない一般ユーザーにはこの画面を案内します。現在受付中の購入方法または利用コードが表示されます。</p>
+        <p>ログイン後、PWA利用権がない一般ユーザーにはこの画面を案内します。現在受付中のPWA購入方法または利用コードが表示されます。</p>
         {config?.mode === "test" && salesSettings?.stripeCheckoutEnabled && <strong className="commerce-mode test">TEST MODE / 実課金なし</strong>}
         {config?.mode === "live" && salesSettings?.stripeCheckoutEnabled && <strong className="commerce-mode live">LIVE</strong>}
         {!salesSettings?.stripeCheckoutEnabled && <strong className="commerce-mode off">Stripe新規受付停止中</strong>}
@@ -151,8 +153,8 @@ export function CommercePlansPage() {
         <section className="commerce-empty">
           <h2>外部販売を受付中です</h2>
           <p>{salesSettings.accessCodeEnabled
-            ? "現在は note・Brain・Tips などの案内先で購入後、案内された利用コードをAASへ登録する運用に対応しています。"
-            : "現在は note・Brain・Tips などの案内先で外部販売を受付中です。購入後の利用方法は販売ページの案内に従ってください。"}</p>
+            ? "現在は外部販売ページで購入後、案内された利用コードをAASへ登録する運用に対応しています。"
+            : "現在は外部販売ページで販売を受付中です。購入後の利用方法は販売ページの案内に従ってください。"}</p>
         </section>
       )}
 
@@ -161,7 +163,7 @@ export function CommercePlansPage() {
           <div>
             <p className="eyebrow">ACCESS CODE</p>
             <h2 id="commerce-invite-title">利用コードをお持ちの方</h2>
-            <p>note・Brain・Tips等で購入後に案内された利用コードを、このAASアカウントへ登録できます。内部では既存の安全な招待コード基盤を利用します。</p>
+            <p>購入後に案内された利用コードを、このAASアカウントへ登録できます。内部では既存の安全な招待コード基盤を利用します。</p>
             <small>旧表記：招待コードをお持ちの方 / 「招待コードを登録」 / AAS ID: {inviteProfile.aas_user_id}</small>
           </div>
           <div className="commerce-invite-form">
@@ -213,7 +215,7 @@ export function CommercePlansPage() {
                   <span>{renewalLabel(plan)}</span>
                 </div>
                 <ul>
-                  <li>{plan.platformScope === "pwa" ? "PWA版" : plan.platformScope === "windows" ? "Windows版" : "PWA版 + Windows版"}の利用権</li>
+                  <li>PWA版の利用権</li>
                   <li>{plan.purchaseType === "one_time" ? "購入日から7日間・自動更新なし" : "1か月ごとの自動更新"}</li>
                   <li>{plan.purchaseType === "subscription" ? "解約後も現在の請求期間終了までは利用可能" : "期間終了後は自動的に利用終了"}</li>
                 </ul>
