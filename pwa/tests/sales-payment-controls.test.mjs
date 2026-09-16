@@ -51,7 +51,7 @@ test("Stripe Checkout is gated server-side and billing portal remains available"
   assert.match(billing, /\/api\/billing\/portal/);
 });
 
-test("admin UI exposes all requested sales switches", async () => {
+test("admin UI exposes sales controls while PWA runtime forces legacy plan switches off", async () => {
   const [adminSections, settingsPage, settingsLib, layout] = await Promise.all([
     readPwa("lib/admin-sections.ts"),
     readPwa("components/sales-settings-admin-page.tsx"),
@@ -66,30 +66,35 @@ test("admin UI exposes all requested sales switches", async () => {
     "Stripe新規購入受付",
     "PWA 7日利用パス",
     "PWA 月額プラン",
-    "Windows 月額プラン",
-    "PWA + Windows 月額",
   ]) assert.ok(settingsPage.includes(label), `missing admin setting: ${label}`);
   assert.match(settingsPage, /既存の月額契約・利用期間・利用権は停止・取消しされません/);
   assert.match(settingsLib, /admin_get_commerce_sales_settings/);
   assert.match(settingsLib, /admin_update_commerce_sales_settings/);
+  assert.match(settingsLib, /windowsMonthlyEnabled: false/);
+  assert.match(settingsLib, /bundleMonthlyEnabled: false/);
+  assert.match(settingsLib, /p_windows_monthly_enabled: false/);
+  assert.match(settingsLib, /p_bundle_monthly_enabled: false/);
   assert.match(layout, /phase32-sales-settings\.css/);
 });
 
-test("plans and access-code UI obey public sales settings", async () => {
+test("plans and access-code UI obey PWA-only public sales settings", async () => {
   const [plans, settingsLib] = await Promise.all([
     readPwa("components/commerce-plans-page.tsx"),
     readPwa("lib/sales-settings.ts"),
   ]);
 
   assert.match(plans, /fetchPublicSalesSettings/);
+  assert.match(plans, /plan\.platformScope === "pwa"/);
   assert.match(plans, /planSalesEnabled\(salesSettings, plan\.planCode\)/);
   assert.match(plans, /salesSettings\?\.accessCodeEnabled/);
   assert.match(plans, /利用コードをお持ちの方/);
   assert.match(plans, /Stripe新規受付停止中/);
   assert.match(settingsLib, /if \(!settings\?\.stripeCheckoutEnabled\) return false/);
-  for (const planCode of ["AAS-PWA-7DAY", "AAS-PWA-MONTHLY", "AAS-WIN-MONTHLY", "AAS-BUNDLE-MONTHLY"]) {
-    assert.ok(settingsLib.includes(planCode), `missing plan gate: ${planCode}`);
+  for (const planCode of ["AAS-PWA-7DAY", "AAS-PWA-MONTHLY"]) {
+    assert.ok(settingsLib.includes(planCode), `missing PWA plan gate: ${planCode}`);
   }
+  assert.equal(settingsLib.includes('if (planCode === "AAS-WIN-MONTHLY")'), false);
+  assert.equal(settingsLib.includes('if (planCode === "AAS-BUNDLE-MONTHLY")'), false);
 });
 
 test("commercial transaction copy follows the active sales mode", async () => {
