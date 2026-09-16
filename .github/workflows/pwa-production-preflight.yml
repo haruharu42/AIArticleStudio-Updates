@@ -257,7 +257,7 @@ jobs:
             throw 'Bootstrap helper must enforce workers_dev=false'
           }
           if ($source -notmatch 'preview_urls must be true') {
-            throw 'Bootstrap helper must require Preview URLs to remain enabled'
+            throw 'Bootstrap helper must enforce preview_urls=true'
           }
           if ($source -notmatch 'Production routes must be absent') {
             throw 'Bootstrap helper must reject production routes'
