@@ -24,6 +24,18 @@ test("all /admin routes are wrapped by the shared active-admin and MFA gate", ()
   assert.match(guard, /管理者画面を保護するため/);
 });
 
+test("admin MFA enrollment recovers from interrupted unverified primary factors", () => {
+  const guard = read("components/admin-route-guard.tsx");
+
+  assert.match(guard, /ADMIN_MFA_FRIENDLY_NAME = "AAS PWA Admin"/);
+  assert.match(guard, /factor\.status !== "verified"/);
+  assert.match(guard, /factor\.friendly_name === ADMIN_MFA_FRIENDLY_NAME/);
+  assert.match(guard, /auth\.mfa\.unenroll\(\{ factorId: factor\.id \}\)/);
+  assert.match(guard, /スマホ1台だけで設定する場合/);
+  assert.match(guard, /セットアップキー/);
+  assert.match(guard, /設定をキャンセル/);
+});
+
 test("database admin boundary requires an AAL2 MFA-backed admin session", () => {
   const migration = read("../supabase/migrations/20260916060000_pwa_admin_require_aal2.sql");
 

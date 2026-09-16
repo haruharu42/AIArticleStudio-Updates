@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 
 import { getSupabaseClient } from "@/lib/supabase";
 
+const ADMIN_MFA_FRIENDLY_NAME = "AAS PWA Admin";
+
 type Gate =
   | { kind: "loading" }
   | { kind: "signed_out" }
@@ -107,9 +109,22 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
     setActionError("");
     try {
       const client = getSupabaseClient();
+
+      // A browser refresh or interrupted setup can leave an unverified TOTP factor behind.
+      // Remove only the unfinished primary-admin factor before creating a fresh enrollment.
+      const { data: factors, error: factorsError } = await client.auth.mfa.listFactors();
+      if (factorsError) throw factorsError;
+      const unfinishedPrimaryFactors = factors.totp.filter(
+        (factor) => factor.status !== "verified" && factor.friendly_name === ADMIN_MFA_FRIENDLY_NAME,
+      );
+      for (const factor of unfinishedPrimaryFactors) {
+        const { error: cleanupError } = await client.auth.mfa.unenroll({ factorId: factor.id });
+        if (cleanupError) throw cleanupError;
+      }
+
       const { data, error } = await client.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: "AAS PWA Admin",
+        friendlyName: ADMIN_MFA_FRIENDLY_NAME,
       });
       if (error) throw error;
       setEnrollment({
@@ -117,8 +132,26 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
         qrCode: data.totp.qr_code,
         secret: data.totp.secret,
       });
+      setCode("");
     } catch {
-      setActionError("MFAの設定を開始できませんでした。再読み込みしてもう一度お試しください。");
+      setActionError("MFAの設定を開始できませんでした。通信状態を確認して、もう一度お試しください。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cancelEnrollment = async () => {
+    if (!enrollment) return;
+    setBusy(true);
+    setActionError("");
+    try {
+      const client = getSupabaseClient();
+      const { error } = await client.auth.mfa.unenroll({ factorId: enrollment.factorId });
+      if (error) throw error;
+      setEnrollment(null);
+      setCode("");
+    } catch {
+      setActionError("MFA設定をキャンセルできませんでした。再読み込み後にもう一度お試しください。");
     } finally {
       setBusy(false);
     }
@@ -169,19 +202,26 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
             ) : (
               <>
                 <p className="route-notice">QRコードをGoogle Authenticator、1Password等で読み取り、表示された6桁コードを入力してください。</p>
+                <p className="trial-admin-note">スマホ1台だけで設定する場合は、下の「QRコードを読めない場合」を開き、表示されるセットアップキーを認証アプリへ手入力してください。</p>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={enrollment.qrCode} alt="AAS管理者MFA登録用QRコード" style={{ width: 220, maxWidth: "100%", margin: "0 auto", background: "white", padding: 8, borderRadius: 10 }} />
                 <details>
                   <summary>QRコードを読めない場合</summary>
+                  <p style={{ marginTop: 8 }}>セットアップキー（他人には共有しないでください）</p>
                   <code style={{ display: "block", overflowWrap: "anywhere", marginTop: 8 }}>{enrollment.secret}</code>
                 </details>
                 <label className="editor-field">
                   <span>6桁の認証コード</span>
                   <input value={code} onChange={(event) => setCode(event.target.value)} inputMode="numeric" autoComplete="one-time-code" maxLength={6} />
                 </label>
-                <button className="primary-action" type="button" disabled={busy} onClick={() => void verifyTotp(enrollment.factorId)}>
-                  {busy ? "確認しています…" : "MFAを有効化して管理画面へ"}
-                </button>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <button className="primary-action" type="button" disabled={busy} onClick={() => void verifyTotp(enrollment.factorId)}>
+                    {busy ? "確認しています…" : "MFAを有効化して管理画面へ"}
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => void cancelEnrollment()}>
+                    設定をキャンセル
+                  </button>
+                </div>
               </>
             )}
           </div>
