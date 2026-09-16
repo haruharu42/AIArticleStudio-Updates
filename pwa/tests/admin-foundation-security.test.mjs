@@ -24,6 +24,16 @@ test("all /admin routes are wrapped by the shared active-admin and MFA gate", ()
   assert.match(guard, /管理者画面を保護するため/);
 });
 
+test("database admin boundary requires an AAL2 MFA-backed admin session", () => {
+  const migration = read("../supabase/migrations/20260916060000_pwa_admin_require_aal2.sql");
+
+  assert.match(migration, /create or replace function private\.is_active_admin\(\)/i);
+  assert.match(migration, /auth\.jwt\(\)->>'aal'/);
+  assert.match(migration, /= 'aal2'/);
+  assert.match(migration, /role = 'admin'/);
+  assert.match(migration, /status = 'active'/);
+});
+
 test("admin home is navigation-only and sections are centralized", () => {
   const home = read("app/admin/page.tsx");
   const users = read("app/admin/users/page.tsx");
