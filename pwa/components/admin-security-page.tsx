@@ -28,12 +28,11 @@ export function AdminSecurityPage() {
   const [code, setCode] = useState("");
 
   const loadFactors = useCallback(async () => {
-    setLoading(true);
-    setErrorMessage("");
     try {
       const client = getSupabaseClient();
       const { data, error } = await client.auth.mfa.listFactors();
       if (error) throw error;
+      setErrorMessage("");
       setFactors(data.totp.map((factor) => ({
         id: factor.id,
         friendlyName: factor.friendly_name || "TOTP認証器",
