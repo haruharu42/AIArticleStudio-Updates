@@ -10,15 +10,11 @@ type SalesSettings = {
   stripeCheckoutEnabled: boolean;
   pwa7DayEnabled: boolean;
   pwaMonthlyEnabled: boolean;
-  windowsMonthlyEnabled: boolean;
-  bundleMonthlyEnabled: boolean;
 };
 
-const PLAN_FLAGS: Record<string, keyof Pick<SalesSettings, "pwa7DayEnabled" | "pwaMonthlyEnabled" | "windowsMonthlyEnabled" | "bundleMonthlyEnabled">> = {
+const PLAN_FLAGS: Record<string, keyof Pick<SalesSettings, "pwa7DayEnabled" | "pwaMonthlyEnabled">> = {
   "AAS-PWA-7DAY": "pwa7DayEnabled",
   "AAS-PWA-MONTHLY": "pwaMonthlyEnabled",
-  "AAS-WIN-MONTHLY": "windowsMonthlyEnabled",
-  "AAS-BUNDLE-MONTHLY": "bundleMonthlyEnabled",
 };
 
 function clean(value: unknown): string {
@@ -42,7 +38,7 @@ async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | 
   if (!baseUrl || !serviceKey) return null;
 
   const response = await fetch(
-    `${baseUrl}/rest/v1/commerce_sales_settings?id=eq.1&select=external_sales_enabled,access_code_enabled,external_sales_url,stripe_checkout_enabled,pwa_7day_enabled,pwa_monthly_enabled,windows_monthly_enabled,bundle_monthly_enabled&limit=1`,
+    `${baseUrl}/rest/v1/commerce_sales_settings?id=eq.1&select=external_sales_enabled,access_code_enabled,external_sales_url,stripe_checkout_enabled,pwa_7day_enabled,pwa_monthly_enabled&limit=1`,
     {
       method: "GET",
       headers: {
@@ -64,8 +60,6 @@ async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | 
     stripeCheckoutEnabled: row.stripe_checkout_enabled === true,
     pwa7DayEnabled: row.pwa_7day_enabled === true,
     pwaMonthlyEnabled: row.pwa_monthly_enabled === true,
-    windowsMonthlyEnabled: row.windows_monthly_enabled === true,
-    bundleMonthlyEnabled: row.bundle_monthly_enabled === true,
   };
 }
 

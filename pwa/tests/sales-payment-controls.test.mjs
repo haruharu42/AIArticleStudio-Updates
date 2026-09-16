@@ -47,11 +47,16 @@ test("Stripe Checkout is gated server-side and billing portal remains available"
   assert.match(salesWorker, /販売受付設定を確認できないため、新規決済を停止しています/);
   assert.match(salesWorker, /Stripeでの新規購入受付は停止しています/);
   assert.doesNotMatch(salesWorker, /\/api\/billing\/portal/);
+  assert.doesNotMatch(salesWorker, /AAS-WIN-MONTHLY/);
+  assert.doesNotMatch(salesWorker, /AAS-BUNDLE-MONTHLY/);
+  assert.doesNotMatch(salesWorker, /windows_monthly_enabled/);
+  assert.doesNotMatch(salesWorker, /bundle_monthly_enabled/);
   assert.ok(index.indexOf("handleSalesControlRequest") < index.indexOf("handleBillingRequest(request, env)"));
+  assert.match(index, /rejectLegacyCheckout/);
   assert.match(billing, /\/api\/billing\/portal/);
 });
 
-test("admin UI exposes sales controls while PWA runtime forces legacy plan switches off", async () => {
+test("admin UI exposes sales controls while PWA runtime omits legacy plan switches", async () => {
   const [adminSections, settingsPage, settingsLib, layout] = await Promise.all([
     readPwa("lib/admin-sections.ts"),
     readPwa("components/sales-settings-admin-page.tsx"),
@@ -72,8 +77,8 @@ test("admin UI exposes sales controls while PWA runtime forces legacy plan switc
   assert.doesNotMatch(settingsPage, /title="PWA \+ Windows 月額"/);
   assert.match(settingsLib, /admin_get_commerce_sales_settings/);
   assert.match(settingsLib, /admin_update_commerce_sales_settings/);
-  assert.match(settingsLib, /windowsMonthlyEnabled: false/);
-  assert.match(settingsLib, /bundleMonthlyEnabled: false/);
+  assert.doesNotMatch(settingsLib, /windowsMonthlyEnabled/);
+  assert.doesNotMatch(settingsLib, /bundleMonthlyEnabled/);
   assert.match(settingsLib, /p_windows_monthly_enabled: false/);
   assert.match(settingsLib, /p_bundle_monthly_enabled: false/);
   assert.match(layout, /phase32-sales-settings\.css/);

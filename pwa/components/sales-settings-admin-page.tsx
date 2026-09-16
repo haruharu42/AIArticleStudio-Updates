@@ -23,8 +23,6 @@ const EMPTY: SalesSettings = {
   stripeCheckoutEnabled: false,
   pwa7DayEnabled: false,
   pwaMonthlyEnabled: false,
-  windowsMonthlyEnabled: false,
-  bundleMonthlyEnabled: false,
 };
 
 function Toggle({

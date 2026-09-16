@@ -9,8 +9,6 @@ export type SalesSettings = {
   stripeCheckoutEnabled: boolean;
   pwa7DayEnabled: boolean;
   pwaMonthlyEnabled: boolean;
-  windowsMonthlyEnabled: boolean;
-  bundleMonthlyEnabled: boolean;
   updatedAt?: string;
 };
 
@@ -41,17 +39,7 @@ function parseSettings(value: unknown): SalesSettings {
     stripeCheckoutEnabled: row.stripeCheckoutEnabled === true || row.stripe_checkout_enabled === true,
     pwa7DayEnabled: row.pwa7DayEnabled === true || row.pwa_7day_enabled === true,
     pwaMonthlyEnabled: row.pwaMonthlyEnabled === true || row.pwa_monthly_enabled === true,
-    windowsMonthlyEnabled: row.windowsMonthlyEnabled === true || row.windows_monthly_enabled === true,
-    bundleMonthlyEnabled: row.bundleMonthlyEnabled === true || row.bundle_monthly_enabled === true,
     updatedAt: typeof row.updated_at === "string" ? row.updated_at : undefined,
-  };
-}
-
-export function normalizePwaOnlySalesSettings(settings: SalesSettings): SalesSettings {
-  return {
-    ...settings,
-    windowsMonthlyEnabled: false,
-    bundleMonthlyEnabled: false,
   };
 }
 
@@ -62,26 +50,26 @@ export async function fetchPublicSalesSettings(): Promise<SalesSettings> {
     cache: "no-store",
   });
   if (!response.ok) throw new Error("販売受付設定を取得できませんでした。");
-  return normalizePwaOnlySalesSettings(parseSettings(await response.json()));
+  return parseSettings(await response.json());
 }
 
 export async function loadAdminSalesSettings(client: SupabaseClient): Promise<SalesSettings> {
   const { data, error } = await client.rpc("admin_get_commerce_sales_settings");
   if (error) throw new Error("販売・決済設定を取得できませんでした。");
   const row = Array.isArray(data) ? data[0] : data;
-  return normalizePwaOnlySalesSettings(parseSettings(row));
+  return parseSettings(row);
 }
 
 export async function updateAdminSalesSettings(client: SupabaseClient, settings: SalesSettings): Promise<void> {
-  const normalized = normalizePwaOnlySalesSettings(settings);
-  const externalSalesUrl = validateExternalSalesUrl(normalized.externalSalesUrl);
+  const externalSalesUrl = validateExternalSalesUrl(settings.externalSalesUrl);
   const { error } = await client.rpc("admin_update_commerce_sales_settings", {
-    p_external_sales_enabled: normalized.externalSalesEnabled,
-    p_access_code_enabled: normalized.accessCodeEnabled,
+    p_external_sales_enabled: settings.externalSalesEnabled,
+    p_access_code_enabled: settings.accessCodeEnabled,
     p_external_sales_url: externalSalesUrl || null,
-    p_stripe_checkout_enabled: normalized.stripeCheckoutEnabled,
-    p_pwa_7day_enabled: normalized.pwa7DayEnabled,
-    p_pwa_monthly_enabled: normalized.pwaMonthlyEnabled,
+    p_stripe_checkout_enabled: settings.stripeCheckoutEnabled,
+    p_pwa_7day_enabled: settings.pwa7DayEnabled,
+    p_pwa_monthly_enabled: settings.pwaMonthlyEnabled,
+    // Keep the legacy RPC signature pinned off for database/backward compatibility.
     p_windows_monthly_enabled: false,
     p_bundle_monthly_enabled: false,
   });
