@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { SecurityRepairPrompt, type SecurityRepairPromptDetail } from "@/components/security-repair-prompt";
-import type { OpsSnapshot } from "@/lib/operations-admin";
+import { loadOpsSnapshot, probeWorkerHealth, type OpsSnapshot } from "@/lib/operations-admin";
+import { getSupabaseClient } from "@/lib/supabase";
 
 export function OperationsSecurityRepairPrompt({
   snapshot,
@@ -75,5 +76,57 @@ export function OperationsSecurityRepairPrompt({
       summary={problem.summary}
       details={problem.details}
     />
+  );
+}
+
+export function OperationsSecurityRepairPanel() {
+  const [snapshot, setSnapshot] = useState<OpsSnapshot | null>(null);
+  const [worker, setWorker] = useState<{ ok: boolean; latencyMs: number; checkedAt: string } | null>(null);
+  const [loadError, setLoadError] = useState("");
+
+  const refresh = useCallback(async () => {
+    try {
+      const [nextSnapshot, nextWorker] = await Promise.all([
+        loadOpsSnapshot(getSupabaseClient()),
+        probeWorkerHealth(),
+      ]);
+      setSnapshot(nextSnapshot);
+      setWorker(nextWorker);
+      setLoadError("");
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Security & Operations情報を取得できませんでした。");
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 60_000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
+
+  if (loadError) {
+    return (
+      <div className="admin-page" style={{ paddingBottom: 0 }}>
+        <SecurityRepairPrompt
+          context="管理者 Security & Operations (/admin/operations)"
+          summary={loadError}
+          details={[{ label: "画面", value: "/admin/operations" }]}
+        />
+      </div>
+    );
+  }
+
+  const hasProblem = worker?.ok === false
+    || (snapshot?.events ?? []).some((event) => event.status !== "resolved" && event.severity !== "info")
+    || (snapshot?.findings ?? []).some((finding) => finding.severity !== "info")
+    || snapshot?.runs[0]?.status === "failed"
+    || snapshot?.runs[0]?.status === "warning";
+
+  if (!hasProblem) return null;
+
+  return (
+    <div className="admin-page" style={{ paddingBottom: 0 }}>
+      <OperationsSecurityRepairPrompt snapshot={snapshot} worker={worker} />
+    </div>
   );
 }
