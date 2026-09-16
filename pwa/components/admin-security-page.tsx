@@ -18,6 +18,15 @@ type Enrollment = {
   secret: string;
 };
 
+function mapTotpFactors(factors: Array<{ id: string; friendly_name?: string; status: string; created_at: string }>): TotpFactor[] {
+  return factors.map((factor) => ({
+    id: factor.id,
+    friendlyName: factor.friendly_name || "TOTP認証器",
+    status: factor.status,
+    createdAt: factor.created_at,
+  }));
+}
+
 export function AdminSecurityPage() {
   const [factors, setFactors] = useState<TotpFactor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,12 +42,7 @@ export function AdminSecurityPage() {
       const { data, error } = await client.auth.mfa.listFactors();
       if (error) throw error;
       setErrorMessage("");
-      setFactors(data.totp.map((factor) => ({
-        id: factor.id,
-        friendlyName: factor.friendly_name || "TOTP認証器",
-        status: factor.status,
-        createdAt: factor.created_at,
-      })));
+      setFactors(mapTotpFactors(data.totp));
     } catch {
       setErrorMessage("MFA認証器の一覧を取得できませんでした。");
     } finally {
@@ -47,8 +51,26 @@ export function AdminSecurityPage() {
   }, []);
 
   useEffect(() => {
-    void loadFactors();
-  }, [loadFactors]);
+    let active = true;
+    const client = getSupabaseClient();
+    void client.auth.mfa.listFactors().then(({ data, error }) => {
+      if (!active) return;
+      if (error) {
+        setErrorMessage("MFA認証器の一覧を取得できませんでした。");
+      } else {
+        setErrorMessage("");
+        setFactors(mapTotpFactors(data.totp));
+      }
+      setLoading(false);
+    }).catch(() => {
+      if (!active) return;
+      setErrorMessage("MFA認証器の一覧を取得できませんでした。");
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const verifiedFactors = useMemo(() => factors.filter((factor) => factor.status === "verified"), [factors]);
 
