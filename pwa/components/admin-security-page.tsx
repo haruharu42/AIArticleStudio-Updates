@@ -152,12 +152,10 @@ export function AdminSecurityPage() {
       const client = getSupabaseClient();
       const { error } = await client.auth.mfa.unenroll({ factorId });
       if (error) throw error;
-      setMessage("MFA認証器を削除しました。");
       await client.auth.refreshSession();
-      await loadFactors();
+      window.location.reload();
     } catch {
       setErrorMessage("MFA認証器を削除できませんでした。現在のMFA認証状態を確認してください。");
-    } finally {
       setBusy(false);
     }
   };
