@@ -104,8 +104,14 @@ test("plans and access-code UI obey PWA-only public sales settings", async () =>
   assert.equal(settingsLib.includes('if (planCode === "AAS-BUNDLE-MONTHLY")'), false);
 });
 
-test("commercial transaction copy follows the active sales mode", async () => {
-  const page = await readPwa("components/commercial-transactions-page.tsx");
+test("commercial transaction copy follows the active sales mode and exposes a support route", async () => {
+  const [page, support, terms, privacy, aiTerms] = await Promise.all([
+    readPwa("components/commercial-transactions-page.tsx"),
+    readPwa("components/support-request-page.tsx"),
+    readPwa("app/terms/page.tsx"),
+    readPwa("app/privacy/page.tsx"),
+    readPwa("app/ai-terms/page.tsx"),
+  ]);
 
   assert.match(page, /fetchPublicSalesSettings/);
   assert.match(page, /planSalesEnabled/);
@@ -115,4 +121,18 @@ test("commercial transaction copy follows the active sales mode", async () => {
   assert.match(page, /外部販売ページで案内する支払方法/);
   assert.match(page, /案内された利用コードをAASへ登録/);
   assert.match(page, /visibleStripePlans/);
+  assert.match(page, /supportUrl = safeHttpsUrl\(seller\?\.supportUrl\) \|\| "\/support"/);
+  assert.match(page, /問い合わせ・開示請求/);
+  assert.match(page, /現在の外部販売ページを開く/);
+
+  assert.match(support, /販売者情報の開示請求/);
+  assert.match(support, /fetchPublicSalesSettings/);
+  assert.match(support, /外部販売ページを開く/);
+  assert.match(support, /クレジットカード番号/);
+  assert.match(support, /アクセストークン/);
+
+  for (const legalPage of [terms, privacy, aiTerms]) {
+    assert.doesNotMatch(legalPage, /公開準備ドラフト/);
+    assert.match(legalPage, /\/support/);
+  }
 });
