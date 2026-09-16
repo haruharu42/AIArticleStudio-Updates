@@ -10,6 +10,7 @@ const read = (relative) => readFile(path.join(root, relative), "utf8");
 test("new sales are restricted to PWA while legacy billing recognition stays intact", async () => {
   const entry = await read("worker/index.ts");
   const billing = await read("worker/billing.ts");
+  const salesWorker = await read("worker/sales-controls.ts");
   const sales = await read("lib/sales-settings.ts");
   const admin = await read("components/sales-settings-admin-page.tsx");
 
@@ -23,9 +24,17 @@ test("new sales are restricted to PWA while legacy billing recognition stays int
   assert.match(entry, /\/api\/billing\/config/);
   assert.match(entry, /commerceReady/);
 
-  assert.match(sales, /normalizePwaOnlySalesSettings/);
-  assert.match(sales, /windowsMonthlyEnabled: false/);
-  assert.match(sales, /bundleMonthlyEnabled: false/);
+  // PWA runtime models no longer carry dead Windows/Bundle sale flags.
+  assert.doesNotMatch(sales, /windowsMonthlyEnabled/);
+  assert.doesNotMatch(sales, /bundleMonthlyEnabled/);
+  assert.doesNotMatch(salesWorker, /windowsMonthlyEnabled/);
+  assert.doesNotMatch(salesWorker, /bundleMonthlyEnabled/);
+  assert.doesNotMatch(salesWorker, /windows_monthly_enabled/);
+  assert.doesNotMatch(salesWorker, /bundle_monthly_enabled/);
+  assert.doesNotMatch(salesWorker, /AAS-WIN-MONTHLY/);
+  assert.doesNotMatch(salesWorker, /AAS-BUNDLE-MONTHLY/);
+
+  // The database RPC still accepts the legacy arguments, so keep them fail-closed.
   assert.match(sales, /p_windows_monthly_enabled: false/);
   assert.match(sales, /p_bundle_monthly_enabled: false/);
   assert.match(sales, /if \(planCode === "AAS-PWA-7DAY"\)/);
