@@ -4,19 +4,17 @@ AI記事スタジオの更新ファイル・バージョン管理用リポジト
 
 ## Current product direction
 
-2026-09-12より **PWA First** を正式な製品開発方針とする。
+2026-09-16より **PWA版を唯一の主製品（Primary Product）** として開発・販売準備・運用改善を進める。
 
-- PWA版: 主製品。新機能、UX、販売準備、公開検証を優先。
-- Windows版: 保守モード。既存ユーザー保護、セキュリティ、重大不具合、Updater/互換性を維持。
-- 共通基盤: Supabase Auth / profiles / entitlements / RLS / articles / workspaces / private Storageを継続利用。
-- Windows版を即時廃止せず、既存のWindows利用権も維持する。
+- PWA版: 正式な開発・販売対象。新機能、UX、セキュリティ、管理画面、利用権、無料枠、公開検証を集中して進める。
+- Windows版: 凍結資産。既存ソース・release・Updater資産は削除せず保管するが、新機能開発・通常保守・新規販売の対象から外す。
+- 共通基盤: Supabase Auth / profiles / entitlements / RLS / articles / workspaces / private StorageはPWA基盤として継続利用する。
+- 既存Windows entitlementの取り消しや破壊的移行は、この方針変更だけでは実施しない。
 
 詳細:
 
-- [PWA First Product Strategy](docs/PWA_FIRST_PRODUCT_STRATEGY_2026-09-12.md)
-- Tracking issue: #49
-
-現在のPWA UX改善はPR #48を優先トラックとして進める。
+- [PWA Primary / Windows Freeze Policy](docs/PWA_PRIMARY_WINDOWS_FREEZE_2026-09-16.md)
+- [旧 PWA First Product Strategy](docs/PWA_FIRST_PRODUCT_STRATEGY_2026-09-12.md)
 
 ## Preview deployment
 

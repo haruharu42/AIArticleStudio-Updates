@@ -116,7 +116,7 @@ export function BillingAccountPage() {
         <Link href="/" className="commerce-back">← AI記事スタジオへ戻る</Link>
         <p className="eyebrow">BILLING</p>
         <h1>契約・利用権</h1>
-        <p>現在の利用権、月額契約、更新予定を確認できます。カード番号などの決済情報はAI記事スタジオでは保持せず、Stripeの契約管理画面で扱います。</p>
+        <p>現在のPWA利用権、月額契約、更新予定を確認できます。カード番号などの決済情報はAI記事スタジオでは保持せず、Stripeの契約管理画面で扱います。</p>
       </section>
 
       {message && <p className="commerce-message" role="status">{message}</p>}
@@ -141,11 +141,6 @@ export function BillingAccountPage() {
             <article>
               <span>PWA利用権</span>
               <strong>{profile.role === "admin" || billing?.pwaAccess ? "利用可能" : "利用不可"}</strong>
-              <small>{profile.role === "admin" ? "管理者権限" : "現在の有効な利用権"}</small>
-            </article>
-            <article>
-              <span>Windows利用権</span>
-              <strong>{profile.role === "admin" || billing?.windowsAccess ? "利用可能" : "利用不可"}</strong>
               <small>{profile.role === "admin" ? "管理者権限" : "現在の有効な利用権"}</small>
             </article>
           </section>
