@@ -40,20 +40,20 @@ export function LegalDocument({
             margin: "24px 0 8px",
             padding: "5px 10px",
             borderRadius: 999,
-            background: "#fff5cc",
-            color: "#6a4a00",
+            background: "#eef4ff",
+            color: "#234a91",
             fontWeight: 700,
             fontSize: 13,
           }}
         >
-          公開準備ドラフト
+          現在の提供条件
         </p>
         <h1 style={{ margin: "8px 0 10px", fontSize: "clamp(28px, 5vw, 40px)" }}>
           {title}
         </h1>
         <p style={{ marginTop: 0, color: "#5b6578" }}>{description}</p>
-        <p style={{ color: "#6a4a00", fontSize: 14 }}>
-          この文書はPWA preview検証用のドラフトです。一般販売・正式公開前に運営者情報、販売条件、問い合わせ窓口を確定し、必要に応じて専門家の確認を受けます。
+        <p style={{ color: "#5b6578", fontSize: 14 }}>
+          現在の新規販売は外部販売ページと利用コードによる受付を基本としています。AAS内のStripe新規購入は停止中で、直販を開始する場合は対象条件を購入確定前に表示します。
         </p>
         <hr style={{ border: 0, borderTop: "1px solid #e5eaf2", margin: "28px 0" }} />
         <div>{children}</div>
@@ -63,6 +63,7 @@ export function LegalDocument({
           <Link href="/privacy">プライバシーポリシー</Link>
           <Link href="/ai-terms">AI利用条件</Link>
           <Link href="/commercial-transactions">特定商取引法に基づく表記</Link>
+          <Link href="/support">お問い合わせ・開示請求</Link>
         </nav>
       </article>
     </main>
