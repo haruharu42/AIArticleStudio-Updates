@@ -67,7 +67,9 @@ test("admin UI exposes sales controls while PWA runtime forces legacy plan switc
     "PWA 7日利用パス",
     "PWA 月額プラン",
   ]) assert.ok(settingsPage.includes(label), `missing admin setting: ${label}`);
-  assert.match(settingsPage, /既存の月額契約・利用期間・利用権は停止・取消しされません/);
+  assert.match(settingsPage, /既存の契約・利用期間・利用権は停止・取消しされません/);
+  assert.doesNotMatch(settingsPage, /title="Windows 月額プラン"/);
+  assert.doesNotMatch(settingsPage, /title="PWA \+ Windows 月額"/);
   assert.match(settingsLib, /admin_get_commerce_sales_settings/);
   assert.match(settingsLib, /admin_update_commerce_sales_settings/);
   assert.match(settingsLib, /windowsMonthlyEnabled: false/);
