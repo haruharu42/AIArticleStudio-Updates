@@ -4,6 +4,7 @@ export type AdminSectionId =
   | "sales"
   | "promotion"
   | "knowledge"
+  | "security"
   | "operations";
 
 export type AdminSection = {
@@ -22,7 +23,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     eyebrow: "USERS & ACCESS",
     title: "ユーザー・利用権",
     shortTitle: "ユーザー・利用権",
-    description: "ユーザー承認、停止・再開、PWA / Windows利用権、利用コードの発行と管理。",
+    description: "ユーザー承認、停止・再開、PWA利用権、利用コードの発行と管理。",
   },
   {
     id: "free-plan",
@@ -38,7 +39,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     eyebrow: "SALES",
     title: "販売・アップグレード導線",
     shortTitle: "販売設定",
-    description: "note等の購入URL、外部販売、利用コード、Stripe販売スイッチを管理。",
+    description: "外部購入URL、利用コード、PWA向けStripe販売スイッチを管理。",
   },
   {
     id: "promotion",
@@ -57,6 +58,14 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     description: "ジャンル・サブジャンル候補や学習候補を確認・承認。",
   },
   {
+    id: "security",
+    href: "/admin/security",
+    eyebrow: "ADMIN MFA",
+    title: "管理者MFA・認証器",
+    shortTitle: "管理者MFA",
+    description: "管理者のTOTP認証器を確認し、紛失対策用の予備認証器を管理。",
+  },
+  {
     id: "operations",
     href: "/admin/operations",
     eyebrow: "SECURITY & OPS",
@@ -70,5 +79,6 @@ export const ADMIN_HOME_SHORTCUT_IDS: readonly AdminSectionId[] = [
   "users",
   "free-plan",
   "sales",
+  "security",
   "operations",
 ];

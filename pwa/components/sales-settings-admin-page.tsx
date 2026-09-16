@@ -111,11 +111,11 @@ export function SalesSettingsAdminPage() {
   return (
     <main className="admin-page sales-settings-page">
       <header className="admin-head admin-dashboard-head">
-        <div><p className="eyebrow">SALES & BILLING</p><h1>販売・決済設定</h1><p>{gate.aasId} / 新規販売の受付方法を管理します。</p></div>
+        <div><p className="eyebrow">SALES & BILLING</p><h1>販売・決済設定</h1><p>{gate.aasId} / PWA版の新規販売受付を管理します。</p></div>
         <div className="admin-head-actions"><a className="route-back" href="/admin">← 管理ダッシュボード</a></div>
       </header>
 
-      <div className="route-notice">OFFにしても、既存の月額契約・利用期間・利用権は停止・取消しされません。新規受付だけを止めます。</div>
+      <div className="route-notice">OFFにしても、既存の契約・利用期間・利用権は停止・取消しされません。新規受付だけを止めます。</div>
       {message && <div className="route-notice">{message}</div>}
 
       <section className="admin-panel sales-settings-section">
@@ -139,13 +139,11 @@ export function SalesSettingsAdminPage() {
       </section>
 
       <section className="admin-panel sales-settings-section">
-        <div className="admin-panel-heading"><div><p className="eyebrow">STRIPE</p><h2>Stripe新規決済</h2></div></div>
-        <Toggle checked={settings.stripeCheckoutEnabled} onChange={(value) => set("stripeCheckoutEnabled", value)} title="Stripe新規購入受付" description="全Stripeプラン共通のマスタースイッチです。OFFならCheckoutをサーバー側でも拒否します。" />
+        <div className="admin-panel-heading"><div><p className="eyebrow">STRIPE</p><h2>PWA Stripe新規決済</h2></div></div>
+        <Toggle checked={settings.stripeCheckoutEnabled} onChange={(value) => set("stripeCheckoutEnabled", value)} title="Stripe新規購入受付" description="PWA向けStripeプラン共通のマスタースイッチです。OFFならCheckoutをサーバー側でも拒否します。" />
         <div className="sales-plan-grid">
           <Toggle checked={settings.pwa7DayEnabled} onChange={(value) => set("pwa7DayEnabled", value)} title="PWA 7日利用パス" description="自動更新なしの7日券を表示・受付します。" />
           <Toggle checked={settings.pwaMonthlyEnabled} onChange={(value) => set("pwaMonthlyEnabled", value)} title="PWA 月額プラン" description="PWA版の月額新規契約を表示・受付します。" />
-          <Toggle checked={settings.windowsMonthlyEnabled} onChange={(value) => set("windowsMonthlyEnabled", value)} title="Windows 月額プラン" description="Windows版の月額新規契約を表示・受付します。" />
-          <Toggle checked={settings.bundleMonthlyEnabled} onChange={(value) => set("bundleMonthlyEnabled", value)} title="PWA + Windows 月額" description="両方を使うセット月額の新規契約を表示・受付します。" />
         </div>
         {!settings.stripeCheckoutEnabled && <p className="sales-master-off">StripeマスタースイッチがOFFのため、個別プランをONにしても現在は購入できません。後日の販売準備として設定を保存できます。</p>}
       </section>

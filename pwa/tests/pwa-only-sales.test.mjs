@@ -11,6 +11,7 @@ test("new sales are restricted to PWA while legacy billing recognition stays int
   const entry = await read("worker/index.ts");
   const billing = await read("worker/billing.ts");
   const sales = await read("lib/sales-settings.ts");
+  const admin = await read("components/sales-settings-admin-page.tsx");
 
   assert.match(entry, /PWA_NEW_SALE_PLAN_CODES/);
   assert.match(entry, /"AAS-PWA-7DAY"/);
@@ -29,6 +30,11 @@ test("new sales are restricted to PWA while legacy billing recognition stays int
   assert.match(sales, /p_bundle_monthly_enabled: false/);
   assert.match(sales, /if \(planCode === "AAS-PWA-7DAY"\)/);
   assert.match(sales, /if \(planCode === "AAS-PWA-MONTHLY"\)/);
+
+  assert.match(admin, /PWA 7日利用パス/);
+  assert.match(admin, /PWA 月額プラン/);
+  assert.doesNotMatch(admin, /title="Windows 月額プラン"/);
+  assert.doesNotMatch(admin, /title="PWA \+ Windows 月額"/);
 
   // Historical plans remain recognizable so old subscription/webhook records can still reconcile.
   assert.match(billing, /AAS-WIN-MONTHLY/);
