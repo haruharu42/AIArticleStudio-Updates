@@ -7,6 +7,9 @@ import { useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase";
 
 const ADMIN_MFA_FRIENDLY_NAME = "AAS PWA Admin";
+// Temporary development switch. Keep the MFA flow in place, but do not require it
+// until the product is ready for public release. Re-enable before production launch.
+const ADMIN_MFA_REQUIRED = false;
 
 type Gate =
   | { kind: "loading" }
@@ -56,6 +59,11 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
         }
         if (profile.role !== "admin" || profile.status !== "active") {
           setGate({ kind: "denied" });
+          return;
+        }
+
+        if (!ADMIN_MFA_REQUIRED) {
+          setGate({ kind: "ready" });
           return;
         }
 
