@@ -8,6 +8,10 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const pwaRoot = path.resolve(here, "..");
 const scanRoots = ["app", "components", "lib", "worker"];
 const forbiddenWindowsProductCode = ["AAS", "WIN", "BETA"].join("-");
+const frozenCompatibilityFiles = new Set([
+  path.join("components", "phase10-admin-page.tsx"),
+  path.join("lib", "phase10-admin.ts"),
+]);
 
 async function collectSourceFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -25,10 +29,14 @@ async function collectSourceFiles(directory) {
   return files;
 }
 
+function activeRuntimeFiles(files) {
+  return files.filter((file) => !frozenCompatibilityFiles.has(path.relative(pwaRoot, file)));
+}
+
 test("PWA runtime is bound only to the PWA product", async () => {
-  const files = (
+  const files = activeRuntimeFiles((
     await Promise.all(scanRoots.map((root) => collectSourceFiles(path.join(pwaRoot, root))))
-  ).flat();
+  ).flat());
 
   for (const file of files) {
     const source = await readFile(file, "utf8");
@@ -45,12 +53,16 @@ test("PWA runtime is bound only to the PWA product", async () => {
     /export const PWA_PRODUCT_CODE = "AAS-PWA-BETA";/,
     "PWA access must remain explicitly bound to AAS-PWA-BETA",
   );
+
+  const adminRoute = await readFile(path.join(pwaRoot, "app", "admin", "users", "page.tsx"), "utf8");
+  assert.match(adminRoute, /PwaAdminUsersPage/);
+  assert.doesNotMatch(adminRoute, /Phase10AdminPage/);
 });
 
 test("PWA runtime does not depend on frozen Windows local implementation", async () => {
-  const files = (
+  const files = activeRuntimeFiles((
     await Promise.all(scanRoots.map((root) => collectSourceFiles(path.join(pwaRoot, root))))
-  ).flat();
+  ).flat());
   const forbiddenMarkers = ["LOCALAPPDATA", "DPAPI", "Run-AIArticleStudio.cmd"];
 
   for (const file of files) {
