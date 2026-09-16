@@ -55,8 +55,8 @@ test("PWA runtime is bound only to the PWA product", async () => {
   );
 
   const adminRoute = await readFile(path.join(pwaRoot, "app", "admin", "users", "page.tsx"), "utf8");
-  assert.match(adminRoute, /PwaAdminUsersPage/);
-  assert.doesNotMatch(adminRoute, /Phase10AdminPage/);
+  assert.match(adminRoute, /pwa-admin-users-page/);
+  assert.doesNotMatch(adminRoute, /@\/components\/phase10-admin-page/);
 });
 
 test("PWA runtime does not depend on frozen Windows local implementation", async () => {
