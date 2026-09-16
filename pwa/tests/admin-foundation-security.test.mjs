@@ -4,13 +4,16 @@ import test from "node:test";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
-test("all /admin routes are wrapped by the shared active-admin and MFA gate", () => {
+test("all /admin routes keep the active-admin boundary while MFA is temporarily optional", () => {
   const layout = read("app/admin/layout.tsx");
   const guard = read("components/admin-route-guard.tsx");
 
   assert.match(layout, /AdminRouteGuard/);
   assert.match(layout, /<AdminRouteGuard>\{children\}<\/AdminRouteGuard>/);
   assert.match(guard, /profile\.role !== "admin" \|\| profile\.status !== "active"/);
+  assert.match(guard, /ADMIN_MFA_REQUIRED = false/);
+  assert.match(guard, /if \(!ADMIN_MFA_REQUIRED\)/);
+  assert.match(guard, /setGate\(\{ kind: "ready" \}\)/);
   assert.match(guard, /auth\.mfa\.listFactors\(\)/);
   assert.match(guard, /factor\.status === "verified"/);
   assert.match(guard, /auth\.mfa\.getAuthenticatorAssuranceLevel\(\)/);
@@ -21,7 +24,6 @@ test("all /admin routes are wrapped by the shared active-admin and MFA gate", ()
   assert.match(guard, /auth\.mfa\.verify\(\{/);
   assert.match(guard, /gate\.kind === "ready"/);
   assert.match(guard, /このページを表示する権限がありません/);
-  assert.match(guard, /管理者画面を保護するため/);
 });
 
 test("admin MFA enrollment recovers from interrupted unverified primary factors", () => {
@@ -36,14 +38,15 @@ test("admin MFA enrollment recovers from interrupted unverified primary factors"
   assert.match(guard, /設定をキャンセル/);
 });
 
-test("database admin boundary requires an AAL2 MFA-backed admin session", () => {
-  const migration = read("../supabase/migrations/20260916060000_pwa_admin_require_aal2.sql");
+test("database admin boundary temporarily allows active admins without AAL2", () => {
+  const migration = read("../supabase/migrations/20260917073000_pwa_admin_mfa_temporarily_optional.sql");
 
   assert.match(migration, /create or replace function private\.is_active_admin\(\)/i);
-  assert.match(migration, /auth\.jwt\(\)->>'aal'/);
-  assert.match(migration, /= 'aal2'/);
   assert.match(migration, /role = 'admin'/);
   assert.match(migration, /status = 'active'/);
+  assert.doesNotMatch(migration, /auth\.jwt\(\)->>'aal'/);
+  assert.doesNotMatch(migration, /= 'aal2'/);
+  assert.match(migration, /Re-enable the AAL2 condition before public production launch/);
 });
 
 test("admin home is navigation-only and sections are centralized", () => {
