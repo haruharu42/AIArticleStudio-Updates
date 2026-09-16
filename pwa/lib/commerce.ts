@@ -58,7 +58,6 @@ export type BillingSubscription = {
 export type MyBillingState = {
   subscriptions: BillingSubscription[];
   pwaAccess: boolean;
-  windowsAccess: boolean;
 };
 
 export const COMMERCE_PLAN_COPY: Record<
@@ -275,23 +274,21 @@ function parseSubscription(value: unknown): BillingSubscription | null {
 }
 
 export async function loadMyBillingState(client: SupabaseClient): Promise<MyBillingState> {
-  const [subscriptionsResult, pwaAccessResult, windowsAccessResult] = await Promise.all([
+  const [subscriptionsResult, pwaAccessResult] = await Promise.all([
     client
       .from("billing_subscriptions")
       .select("id,plan_code,status,cancel_at_period_end,current_period_start,current_period_end,ended_at,livemode,updated_at")
       .order("updated_at", { ascending: false }),
     client.rpc("can_access_product", { p_product_code: "AAS-PWA-BETA" }),
-    client.rpc("can_access_product", { p_product_code: "AAS-WIN-BETA" }),
   ]);
 
   if (subscriptionsResult.error) throw new Error("契約情報を取得できませんでした。");
-  if (pwaAccessResult.error || windowsAccessResult.error) throw new Error("利用権を確認できませんでした。");
+  if (pwaAccessResult.error) throw new Error("PWA利用権を確認できませんでした。");
 
   return {
     subscriptions: (subscriptionsResult.data ?? [])
       .map(parseSubscription)
       .filter((item): item is BillingSubscription => item !== null),
     pwaAccess: pwaAccessResult.data === true,
-    windowsAccess: windowsAccessResult.data === true,
   };
 }
