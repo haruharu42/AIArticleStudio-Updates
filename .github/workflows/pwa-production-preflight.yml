@@ -40,10 +40,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22.13.0"
           cache: npm
@@ -148,10 +148,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22.13.0"
           cache: npm
@@ -257,7 +257,7 @@ jobs:
             throw 'Bootstrap helper must enforce workers_dev=false'
           }
           if ($source -notmatch 'preview_urls must be true') {
-            throw 'Bootstrap helper must enforce preview_urls=true'
+            throw 'Bootstrap helper must require Preview URLs to remain enabled'
           }
           if ($source -notmatch 'Production routes must be absent') {
             throw 'Bootstrap helper must reject production routes'
