@@ -1,5 +1,5 @@
-import { PwaAdminUsersPage } from "@/components/pwa-admin-users-page";
+import { PwaAdminUsersPage as Phase10AdminPage } from "@/components/pwa-admin-users-page";
 
 export default function AdminUsersPage() {
-  return <PwaAdminUsersPage />;
+  return <Phase10AdminPage />;
 }
