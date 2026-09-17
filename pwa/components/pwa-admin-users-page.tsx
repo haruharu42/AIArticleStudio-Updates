@@ -391,7 +391,7 @@ export function PwaAdminUsersPage() {
                   </div>
 
                   <div className="admin-subsection-head">
-                    <div><h3>note Creator Club特典</h3><p>確認済みのnoteメンバーシップをAAS特典へ紐づけます。</p></div>
+                    <div><h3>note Creator Club特典</h3><p>note購入状態の自動取得は行わず、確認済みのnoteメンバーシップだけをAAS特典へ紐づけます。</p></div>
                     <span className={membershipEntitlements.length ? "availability-badge active" : "availability-badge"}>
                       {membershipEntitlements.length ? "特典有効" : "未登録"}
                     </span>
