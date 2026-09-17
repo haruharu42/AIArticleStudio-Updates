@@ -108,16 +108,16 @@ export function Phase13ImagePromptPage() {
         coverEnabled, inlineEnabled, inlineCount,
       }));
       setGeneratedFingerprint(promptFingerprint);
-      setMessage(result.bypassLimits ? "画像生成プロンプトを作成しました。" : `画像生成プロンプトを1回作成しました。${trialUsageMessage(result)}`);
+      setMessage(result.bypassLimits ? "画像生成プロンプトと保存用ファイル名を作成しました。" : `画像生成プロンプトを1回作成しました。${trialUsageMessage(result)}`);
     } catch (error) {
       setGeneratedPrompts([]); setGeneratedFingerprint("");
       setMessage(error instanceof Error ? error.message : "画像生成の利用回数を確認できませんでした。");
     } finally { generateInFlightRef.current = false; setGenerateBusy(false); }
   };
 
-  const copy = async (value: string) => {
-    try { await navigator.clipboard.writeText(value); setMessage("画像生成プロンプトをコピーしました。次にChatGPT Imagesを開いて貼り付けてください。"); }
-    catch { setMessage("自動コピーできません。テキスト欄からコピーしてください。"); }
+  const copy = async (value: string, label: string) => {
+    try { await navigator.clipboard.writeText(value); setMessage(`${label}をコピーしました。`); }
+    catch { setMessage("自動コピーできません。表示欄から手動でコピーしてください。"); }
   };
 
   if (gate.kind !== "ready") return (
@@ -138,6 +138,7 @@ export function Phase13ImagePromptPage() {
       </header>
 
       <section className="creator-card">
+        <div className="route-notice" role="note">画像本体はAASのSupabase Storageへアップロードしません。ChatGPT Images等で生成した画像はスマホ・PCへ保存し、AASが表示する推奨ファイル名で管理してください。</div>
         <label className="route-field"><span>元記事</span><select defaultValue="" onChange={(event) => void choose(event.target.value)} disabled={busy || generateBusy}><option value="">記事を選択</option>{articles.map((article) => <option key={article.id} value={article.id}>{article.title}</option>)}</select></label>
 
         {detail && <>
@@ -157,17 +158,19 @@ export function Phase13ImagePromptPage() {
 
           {promptsReady && <div className="image-prompt-list">{generatedPrompts.map((item) => (
             <article className="image-prompt-card" key={`${item.kind}-${item.order}`}>
-              <header><div><span>{item.kind === "cover" ? "アイキャッチ" : `挿絵 ${item.order}`}</span>{item.insertionMarker && <small>{`<!-- ${item.insertionMarker} -->`}</small>}</div><div className="image-prompt-actions"><button className="secondary-action" type="button" onClick={() => void copy(item.prompt)}>コピー</button><a className="openai-launch-action" href={OPENAI_LINKS.images} target="_blank" rel="noreferrer">ChatGPT Imagesを開く ↗</a></div></header>
+              <header><div><span>{item.kind === "cover" ? "アイキャッチ" : `挿絵 ${item.order}`}</span>{item.insertionMarker && <small>{`<!-- ${item.insertionMarker} -->`}</small>}</div><div className="image-prompt-actions"><button className="secondary-action" type="button" onClick={() => void copy(item.prompt, "画像生成プロンプト")}>プロンプトをコピー</button><a className="openai-launch-action" href={OPENAI_LINKS.images} target="_blank" rel="noreferrer">ChatGPT Imagesを開く ↗</a></div></header>
+              <div className="route-field"><span>推奨ファイル名</span><div className="image-prompt-actions"><code style={{ overflowWrap: "anywhere" }}>{item.suggestedFilename}</code><button className="secondary-action" type="button" onClick={() => void copy(item.suggestedFilename, "ファイル名")}>ファイル名をコピー</button></div></div>
+              <div className="route-field"><span>alt候補</span><div className="image-prompt-actions"><span>{item.altText}</span><button className="secondary-action" type="button" onClick={() => void copy(item.altText, "alt候補")}>altをコピー</button></div></div>
               <textarea className="prompt-area" readOnly value={item.prompt} />
             </article>
           ))}</div>}
-          {promptsReady && <p className="beginner-help">生成後のコピーやChatGPT Images起動では追加消費しません。設定を変えて作り直した時だけ次の1回として記録されます。</p>}
+          {promptsReady && <p className="beginner-help">画像生成後はAASへアップロードせず、端末へ保存してください。推奨ファイル名には記事タイトルと「アイキャッチ / 挿絵番号」が入るため、後から見ても用途を判別できます。</p>}
           {!coverEnabled && !inlineEnabled && <p className="route-notice">アイキャッチまたは挿絵をONにしてください。</p>}
         </>}
 
         {articles.length === 0 && <p className="panel-muted">記事がありません。先に記事を作成してください。</p>}
         {message && <div className="route-notice">{message}</div>}
-        <p className="panel-muted">記事の条件をもとに画像生成用プロンプトを作成します。プロンプトをコピーしてChatGPT Imagesで生成し、完成画像は記事ライブラリの画像管理から保存できます。</p>
+        <p className="panel-muted">記事条件から画像生成用プロンプト・推奨ファイル名・alt候補を作成します。生成画像は端末へ保存して管理するため、Supabase Storage容量を消費しません。</p>
       </section>
     </main>
   );
