@@ -1,3 +1,4 @@
+import { parseStoredArticleDraft } from "@/lib/article-create-draft";
 import type { ArticleCreationDraft } from "@/lib/phase11-create";
 
 const STORAGE_VERSION = 1;
@@ -35,16 +36,21 @@ export function loadArticleWizardProgress(ownerId: string): ArticleWizardProgres
       || !Number.isInteger(parsed.step)
       || (parsed.step as number) < 0
       || (parsed.step as number) > 6
-      || !isRecord(parsed.draft)
       || typeof parsed.tagsText !== "string"
       || typeof parsed.updatedAt !== "string") {
       window.localStorage.removeItem(storageKey(ownerId));
       return null;
     }
 
+    const draft = parseStoredArticleDraft(parsed.draft);
+    if (!draft) {
+      window.localStorage.removeItem(storageKey(ownerId));
+      return null;
+    }
+
     return {
       step: parsed.step as number,
-      draft: parsed.draft as unknown as ArticleCreationDraft,
+      draft,
       tagsText: parsed.tagsText,
       updatedAt: parsed.updatedAt,
     };
