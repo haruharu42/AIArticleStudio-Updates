@@ -36,7 +36,7 @@ test("keeps article creation deferred, owned image assets in articles, and route
   assert.match(app, /const navigateRoute = \(path: string\) => \{ if \(mayLeave\(\)\) window\.location\.assign\(path\); \};/);
   assert.match(app, /記事の画像<small>画像計画<\/small>/);
   assert.equal((app.match(/navigateRoute\("\/images"\)/g) || []).length, 2);
-  assert.match(library, /listCloudArticles/);
+  assert.match(library, /listArticleLibraryPage/);
   assert.match(library, /getCloudArticleDetail/);
   assert.match(library, /updateCloudArticle/);
   assert.match(library, /deleteCloudArticle/);
