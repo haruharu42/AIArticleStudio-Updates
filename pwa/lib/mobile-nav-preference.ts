@@ -12,6 +12,8 @@ export type MobileNavItemKey =
   | "snsPlan"
   | "publish"
   | "analytics"
+  | "ranking"
+  | "profile"
   | "manual";
 
 export type MobileNavItem = {
@@ -32,6 +34,8 @@ export const MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   { key: "snsPlan", label: "SNS設計", icon: "◎", href: "/sns-plan" },
   { key: "publish", label: "公開", icon: "⇧", href: "/publish" },
   { key: "analytics", label: "分析", icon: "▥", href: "/analytics" },
+  { key: "ranking", label: "ランキング", icon: "🏆", href: "/ranking" },
+  { key: "profile", label: "プロフィール", icon: "◎", href: "/profile" },
   { key: "manual", label: "使い方", icon: "?", href: "/manual" },
 ] as const;
 
