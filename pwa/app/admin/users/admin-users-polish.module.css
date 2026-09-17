@@ -4,7 +4,7 @@
 
 @media (min-width: 980px) {
   .polish :global(.admin-dashboard) {
-    grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.45fr);
+    grid-template-columns: minmax(330px, 0.82fr) minmax(0, 1.5fr);
   }
 
   .polish :global(.admin-dashboard > .admin-card:first-child),
@@ -24,28 +24,72 @@
   }
 }
 
-.polish :global(.admin-dashboard > .admin-card:first-child) {
+.polish :global(.admin-hero-card) {
   position: relative;
   overflow: hidden;
   border-color: #cfe0f6;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.98));
+    radial-gradient(circle at 88% 0%, rgba(59, 130, 246, 0.13), transparent 24rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.99), rgba(239, 246, 255, 0.98));
 }
 
-.polish :global(.admin-dashboard > .admin-card:first-child)::after {
+.polish :global(.admin-hero-card)::after {
   content: "ADMIN";
   position: absolute;
   right: 22px;
-  top: 18px;
-  color: rgba(37, 99, 235, 0.08);
-  font-size: clamp(2.4rem, 6vw, 5.2rem);
+  top: 8px;
+  color: rgba(37, 99, 235, 0.055);
+  font-size: clamp(3rem, 7vw, 6.5rem);
   font-weight: 900;
   letter-spacing: 0.08em;
   pointer-events: none;
 }
 
+.polish :global(.admin-hero-copy) {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+}
+
+.polish :global(.admin-kpi-grid) {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.polish :global(.admin-kpi-grid article) {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 15px 16px;
+  border: 1px solid #d9e7f8;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.055);
+}
+
+.polish :global(.admin-kpi-grid span) {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.polish :global(.admin-kpi-grid strong) {
+  color: #10213b;
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+  line-height: 1;
+}
+
+.polish :global(.admin-kpi-grid small) {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
 .polish :global(.admin-user-list) {
-  max-height: min(56dvh, 620px);
+  max-height: min(54dvh, 620px);
   overflow: auto;
   padding-right: 3px;
   scrollbar-width: thin;
@@ -57,6 +101,228 @@
 
 .polish :global(.admin-user-list button.selected) {
   box-shadow: inset 4px 0 0 #2563eb, 0 8px 24px rgba(37, 99, 235, 0.1);
+}
+
+.polish :global(.admin-user-id-line) {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.polish :global(.admin-user-name) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.polish :global(.status-chip),
+.polish :global(.role-chip),
+.polish :global(.availability-badge) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 25px;
+  padding: 4px 9px;
+  border: 1px solid #dbe5f1;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.polish :global(.status-active),
+.polish :global(.availability-badge.active) {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.polish :global(.status-pending) {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.polish :global(.status-suspended) {
+  border-color: #fecaca;
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.polish :global(.status-disabled) {
+  border-color: #e2e8f0;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.polish :global(.role-chip) {
+  border-color: #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.polish :global(.admin-filter-row) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.polish :global(.admin-filter-row button) {
+  min-height: 34px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.polish :global(.admin-filter-row button.active) {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.18);
+}
+
+.polish :global(.admin-search-field input) {
+  padding-left: 14px;
+  background: #fbfdff;
+}
+
+.polish :global(.admin-empty-state) {
+  display: grid;
+  gap: 7px;
+  padding: 24px 16px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.polish :global(.admin-empty-state strong) {
+  color: #334155;
+}
+
+.polish :global(.admin-empty-state span),
+.polish :global(.admin-empty-copy) {
+  color: #64748b;
+  font-size: 0.84rem;
+}
+
+.polish :global(.admin-empty-state button) {
+  justify-self: center;
+  margin-top: 4px;
+}
+
+.polish :global(.admin-selected-head) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.polish :global(.admin-selected-head h2) {
+  margin-bottom: 4px;
+}
+
+.polish :global(.admin-selected-name) {
+  margin-bottom: 0 !important;
+  color: #334155 !important;
+  font-weight: 700;
+}
+
+.polish :global(.admin-selected-badges) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.polish :global(.admin-user-meta-grid) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 10px 0 20px;
+}
+
+.polish :global(.admin-user-meta-grid article) {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  background: #f8fafc;
+}
+
+.polish :global(.admin-user-meta-grid span) {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 750;
+}
+
+.polish :global(.admin-user-meta-grid strong) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #1e293b;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.polish :global(.admin-notice-panel) {
+  display: grid;
+  gap: 4px;
+  padding: 14px 15px;
+  border: 1px solid #c7d2fe;
+  border-radius: 14px;
+  background: #f5f7ff;
+}
+
+.polish :global(.admin-notice-panel strong) {
+  color: #3730a3;
+}
+
+.polish :global(.admin-notice-panel span) {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.polish :global(.admin-status-actions) {
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e6eef8;
+}
+
+.polish :global(.admin-subsection-head) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.polish :global(.admin-subsection-head h3) {
+  margin: 0 0 4px;
+  padding: 0;
+  border: 0;
+}
+
+.polish :global(.admin-subsection-head h3)::before {
+  display: none;
+}
+
+.polish :global(.admin-subsection-head p) {
+  margin: 0 !important;
+  font-size: 0.82rem;
 }
 
 .polish :global(.admin-entitlement-list article) {
@@ -95,12 +361,137 @@
   color: #991b1b;
 }
 
+.polish :global(.admin-code-summary) {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.polish :global(.admin-code-summary span) {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 7px 10px;
+  border: 1px solid #dbe5f1;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.polish :global(.admin-code-summary strong) {
+  color: #1d4ed8;
+  font-size: 0.95rem;
+}
+
+.polish :global(.admin-code-title) {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.polish :global(.admin-code-title small) {
+  color: #94a3b8;
+}
+
+.polish :global(.admin-code-actions) {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.polish :global(.admin-code-actions button) {
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
+.polish :global(.admin-loading-card) {
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.polish :global(.admin-loading-card p) {
+  margin: 0;
+}
+
+.polish :global(.admin-loading-dot) {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #2563eb;
+  box-shadow: 0 0 0 7px rgba(37, 99, 235, 0.1);
+  animation: adminPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes adminPulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.6; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+@media (max-width: 900px) {
+  .polish :global(.admin-kpi-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .polish :global(.admin-user-meta-grid) {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 760px) {
-  .polish :global(.admin-dashboard > .admin-card:first-child)::after {
+  .polish :global(.admin-hero-card)::after {
     display: none;
+  }
+
+  .polish :global(.admin-kpi-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .polish :global(.admin-kpi-grid article) {
+    padding: 12px;
+    border-radius: 13px;
   }
 
   .polish :global(.admin-user-list) {
     max-height: none;
+  }
+
+  .polish :global(.admin-user-name) {
+    white-space: normal;
+  }
+
+  .polish :global(.admin-filter-row) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .polish :global(.admin-filter-row button) {
+    width: 100%;
+  }
+
+  .polish :global(.admin-selected-head),
+  .polish :global(.admin-subsection-head) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .polish :global(.admin-selected-badges),
+  .polish :global(.admin-code-summary) {
+    justify-content: flex-start;
+  }
+
+  .polish :global(.admin-code-actions) {
+    justify-content: stretch;
+  }
+
+  .polish :global(.admin-code-actions button) {
+    flex: 1 1 120px;
   }
 }
