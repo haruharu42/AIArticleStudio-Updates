@@ -164,7 +164,7 @@ export function Phase13ImagePromptPage() {
               <textarea className="prompt-area" readOnly value={item.prompt} />
             </article>
           ))}</div>}
-          {promptsReady && <p className="beginner-help">画像生成後はAASへアップロードせず、端末へ保存してください。推奨ファイル名には記事タイトルと「アイキャッチ / 挿絵番号」が入るため、後から見ても用途を判別できます。</p>}
+          {promptsReady && <p className="beginner-help">生成後のコピーやChatGPT Images起動では追加消費しません。画像生成後はAASへアップロードせず端末へ保存してください。推奨ファイル名には記事タイトルと「アイキャッチ / 挿絵番号」が入るため、後から見ても用途を判別できます。</p>}
           {!coverEnabled && !inlineEnabled && <p className="route-notice">アイキャッチまたは挿絵をONにしてください。</p>}
         </>}
 
