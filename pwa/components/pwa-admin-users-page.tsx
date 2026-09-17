@@ -247,7 +247,6 @@ export function PwaAdminUsersPage() {
           <p className="eyebrow">PWA USER ACCESS</p>
           <h1>PWAユーザー利用管理</h1>
           <p>PWA利用権はPC・スマホ・タブレット共通です。端末ごとの承認や追加の利用権付与は必要ありません。</p>
-          <p className="admin-detail-note">Windowsアプリ版は現在凍結中です。この画面ではPWA版だけを管理し、既存Windows機能・利用権は変更しません。</p>
         </div>
         {state === "ready" && (
           <div className="admin-simple-stats" aria-label="利用状況">
