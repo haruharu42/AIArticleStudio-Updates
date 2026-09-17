@@ -29,6 +29,10 @@ test("pins patched framework versions, current release metadata, and PWA cache g
 test("keeps article creation deferred, owned image assets in articles, and routes image planning to /images", async () => {
   const app = await read("components/phase6-app.tsx");
   const library = await read("components/phase7-library.tsx");
+  const listView = await read("components/article-library/article-library-list.tsx");
+  const detailView = await read("components/article-library/article-library-detail.tsx");
+  const editor = await read("components/article-library/article-library-editor.tsx");
+  const viewLogic = await read("lib/article-library-view.ts");
 
   assert.match(app, /Phase7Library/);
   assert.match(app, /navigate\("library"\)/);
@@ -42,6 +46,17 @@ test("keeps article creation deferred, owned image assets in articles, and route
   assert.match(library, /deleteCloudArticle/);
   assert.doesNotMatch(library, /create_article/);
   assert.doesNotMatch(library, /prepare_article_asset/);
+  assert.match(library, /ArticleLibraryListView/);
+  assert.match(library, /ArticleLibraryDetailView/);
+  assert.match(library, /ArticleLibraryEditor/);
+  assert.match(viewLogic, /buildArticleLibrarySavePayload/);
+  assert.match(viewLogic, /price <= 0/);
+  assert.doesNotMatch(`${listView}\n${detailView}\n${editor}`, /listArticleLibraryPage|getCloudArticleDetail|updateCloudArticle|deleteCloudArticle/);
+  assert.doesNotMatch(`${listView}\n${detailView}\n${editor}`, /getSupabaseClient|\.rpc\(/);
+  assert.match(library, /listRequestIdRef/);
+  assert.match(library, /detailRequestIdRef/);
+  assert.match(library, /requestId !== listRequestIdRef\.current/);
+  assert.match(library, /requestId !== detailRequestIdRef\.current/);
 });
 
 test("keeps list reads body-free and gates every article operation", async () => {

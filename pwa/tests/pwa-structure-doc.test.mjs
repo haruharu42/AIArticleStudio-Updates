@@ -10,6 +10,10 @@ test("PWA structure guide records the enforced runtime boundaries", async () => 
   const guide = await readFile(path.join(root, "STRUCTURE.md"), "utf8");
   assert.match(guide, /lib\/access-control\.ts/);
   assert.match(guide, /lib\/article-create-draft\.ts/);
+  assert.match(guide, /components\/article-library\//);
+  assert.match(guide, /components\/phase7-library\.tsx/);
+  assert.match(guide, /lib\/article-library-view\.ts/);
+  assert.match(guide, /ignore stale responses/);
   assert.match(guide, /components\/admin-users\//);
   assert.match(guide, /components\/pwa-admin-users-page\.tsx/);
   assert.match(guide, /lib\/admin-users-view\.ts/);

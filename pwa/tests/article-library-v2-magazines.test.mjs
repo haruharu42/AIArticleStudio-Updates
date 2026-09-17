@@ -10,10 +10,15 @@ const vite = await createServer({ appType: 'custom', configFile: false, root, re
 after(() => vite.close());
 
 const library = await vite.ssrLoadModule('/lib/article-library-v2.ts');
+const libraryView = await vite.ssrLoadModule('/lib/article-library-view.ts');
 const exporter = await vite.ssrLoadModule('/lib/article-export.ts');
 
 const migration = await fs.readFile(`${repoRoot}/supabase/migrations/20260917061400_article_library_v2.sql`, 'utf8');
-const libraryUi = await fs.readFile(`${root}/components/phase7-library.tsx`, 'utf8');
+const libraryController = await fs.readFile(`${root}/components/phase7-library.tsx`, 'utf8');
+const libraryListUi = await fs.readFile(`${root}/components/article-library/article-library-list.tsx`, 'utf8');
+const libraryDetailUi = await fs.readFile(`${root}/components/article-library/article-library-detail.tsx`, 'utf8');
+const libraryEditorUi = await fs.readFile(`${root}/components/article-library/article-library-editor.tsx`, 'utf8');
+const libraryUi = [libraryController, libraryListUi, libraryDetailUi, libraryEditorUi].join('\n');
 const exportUi = await fs.readFile(`${root}/components/article-export-page.tsx`, 'utf8');
 
 test('library v2 RPC is metadata-only, paged, owner-bound and PWA-gated', () => {
@@ -50,11 +55,36 @@ test('note magazine settings round-trip in PWA-only workspace metadata', () => {
 test('article library exposes filters, sorting, paging, archive, duplicate and PC export links', () => {
   for (const expected of [
     'ARTICLE LIBRARY 2.0', 'noteマガジン', 'ジャンル', 'サブジャンル', '状態順',
-    'さらに${PAGE_SIZE}件読み込む', '複製', 'アーカイブから戻す', 'PC一括保存へ',
+    'さらに${ARTICLE_LIBRARY_PAGE_SIZE}件読み込む', '複製', 'アーカイブから戻す', 'PC一括保存へ',
   ]) assert.ok(libraryUi.includes(expected), expected);
-  assert.match(libraryUi, /listArticleLibraryPage/);
-  assert.match(libraryUi, /duplicateCloudArticle/);
-  assert.match(libraryUi, /withNoteMagazineWorkspace/);
+  assert.match(libraryController, /listArticleLibraryPage/);
+  assert.match(libraryController, /duplicateCloudArticle/);
+  assert.match(libraryController, /withNoteMagazineWorkspace/);
+  assert.doesNotMatch(libraryListUi, /Windows版またはPWA/);
+  assert.match(libraryListUi, /PWAで作成した記事や、これまでに同期済みの記事/);
+});
+
+test('article library edit validation matches the positive-price database contract', () => {
+  const detail = {
+    id: '10000000-0000-4000-8000-000000000001', userId: '00000000-0000-4000-8000-000000000002',
+    title: '価格テスト', publicationTarget: 'note', articleType: 'paid', genre: null, subgenre: null, status: 'ready', price: 100,
+    tags: [], revision: 1, createdAt: '2026-09-17T00:00:00Z', updatedAt: '2026-09-17T00:00:00Z', body: '本文',
+    scheduledAt: null, publishedAt: null, publishedUrl: null,
+    workspace: { articleId: '10000000-0000-4000-8000-000000000001', userId: '00000000-0000-4000-8000-000000000002', requestJson: {}, workspaceJson: {}, imagePlanJson: {}, sourceBody: null, publishBody: null, workspaceVersion: 1, createdAt: null, updatedAt: null },
+  };
+  const values = libraryView.articleLibraryEditValuesFromDetail(detail);
+
+  const zero = libraryView.buildArticleLibrarySavePayload({ ...values, price: '0' });
+  assert.equal(zero.ok, false);
+  assert.match(zero.message, /1以上の整数/);
+
+  const one = libraryView.buildArticleLibrarySavePayload({ ...values, price: '1' });
+  assert.equal(one.ok, true);
+  assert.equal(one.value.article.price, 1);
+
+  const invalidTarget = libraryView.buildArticleLibrarySavePayload({ ...values, publicationTarget: '' });
+  assert.equal(invalidTarget.ok, false);
+  assert.match(invalidTarget.message, /掲載先/);
 });
 
 test('desktop export creates markdown text html json and a valid store-only zip envelope', async () => {
