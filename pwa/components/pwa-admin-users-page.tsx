@@ -437,7 +437,7 @@ export function PwaAdminUsersPage() {
                         <label className="route-field full"><span>note確認メモ（任意）</span><input value={membershipReference} onChange={(event) => setMembershipReference(event.target.value)} placeholder="例: 2026-09 note確認" /></label>
                       </div>
                     </details>
-                    <p className="admin-detail-note">note購入状態の自動取得は行いません。確認済みのメンバーシップだけを設定してください。</p>
+                    <p className="admin-detail-note">note購入状態の自動取得は行わず、確認済みのメンバーシップだけを設定してください。</p>
                   </article>
                 </div>
               )}
