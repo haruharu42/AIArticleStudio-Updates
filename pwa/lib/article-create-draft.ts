@@ -135,3 +135,75 @@ export function validateArticleCreateStep(
   }
   return null;
 }
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+export function parseStoredArticleDraft(value: unknown): ArticleCreationDraft | null {
+  if (!isRecord(value)) return null;
+
+  const generationMode = value.generationMode;
+  const publicationTarget = value.publicationTarget;
+  const articleType = value.articleType;
+  const saveStatus = value.saveStatus;
+  const targetLength = value.targetLength;
+  const price = value.price;
+  const inlineCount = value.inlineCount;
+
+  if (
+    (generationMode !== "prompt_export" && generationMode !== "manual")
+    || (publicationTarget !== "note" && publicationTarget !== "tips" && publicationTarget !== "brain" && publicationTarget !== "blog")
+    || (articleType !== "free" && articleType !== "paid")
+    || (saveStatus !== "draft" && saveStatus !== "writing" && saveStatus !== "ready")
+    || typeof value.theme !== "string"
+    || typeof value.title !== "string"
+    || typeof value.genre !== "string"
+    || typeof value.subgenre !== "string"
+    || typeof value.ageGroup !== "string"
+    || typeof value.gender !== "string"
+    || !AGE_GROUP_OPTIONS.some((option) => option === value.ageGroup)
+    || !GENDER_OPTIONS.some((option) => option === value.gender)
+    || typeof targetLength !== "number"
+    || !TARGET_LENGTH_OPTIONS.some((option) => option.value === targetLength)
+    || (price !== null && (typeof price !== "number" || !Number.isInteger(price) || price <= 0))
+    || typeof value.affiliateEnabled !== "boolean"
+    || typeof value.magazineEnabled !== "boolean"
+    || !isStringArray(value.tags)
+    || typeof value.coverEnabled !== "boolean"
+    || typeof value.inlineEnabled !== "boolean"
+    || typeof inlineCount !== "number"
+    || !Number.isInteger(inlineCount)
+    || inlineCount < 1
+    || inlineCount > 5
+    || typeof value.body !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    generationMode,
+    theme: value.theme,
+    title: value.title,
+    publicationTarget,
+    articleType,
+    genre: value.genre.slice(0, 120),
+    subgenre: value.subgenre.slice(0, 120),
+    ageGroup: value.ageGroup,
+    gender: value.gender,
+    targetLength,
+    price,
+    affiliateEnabled: value.affiliateEnabled,
+    magazineEnabled: value.magazineEnabled,
+    tags: [...value.tags],
+    coverEnabled: value.coverEnabled,
+    inlineEnabled: value.inlineEnabled,
+    inlineCount,
+    body: value.body,
+    saveStatus,
+  };
+}
