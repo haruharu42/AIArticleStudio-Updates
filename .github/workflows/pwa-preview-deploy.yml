@@ -90,7 +90,7 @@ jobs:
           echo 'Required preview credentials/configuration are present; values were not printed.'
 
       - name: Checkout exact selected commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.expected_sha }}
           persist-credentials: false
@@ -114,7 +114,7 @@ jobs:
           echo "Exact checkout confirmed: $actual"
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22.13.0"
           cache: npm
