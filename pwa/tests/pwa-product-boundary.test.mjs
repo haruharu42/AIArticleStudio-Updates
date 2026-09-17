@@ -47,12 +47,16 @@ test("PWA runtime is bound only to the PWA product", async () => {
     );
   }
 
-  const accessSource = await readFile(path.join(pwaRoot, "lib", "phase6-access.ts"), "utf8");
+  const accessSource = await readFile(path.join(pwaRoot, "lib", "access-control.ts"), "utf8");
+  const phase6Source = await readFile(path.join(pwaRoot, "lib", "phase6-access.ts"), "utf8");
   assert.match(
     accessSource,
-    /export const PWA_PRODUCT_CODE = "AAS-PWA-BETA";/,
-    "PWA access must remain explicitly bound to AAS-PWA-BETA",
+    /export const PWA_PRODUCT_CODE = "AAS-PWA-BETA" as const;/,
+    "central access control must remain explicitly bound to AAS-PWA-BETA",
   );
+  assert.match(phase6Source, /PWA_PRODUCT_CODE/);
+  assert.match(phase6Source, /@\/lib\/access-control/);
+  assert.doesNotMatch(phase6Source, /const PWA_PRODUCT_CODE\s*=/);
 
   const adminRoute = await readFile(path.join(pwaRoot, "app", "admin", "users", "page.tsx"), "utf8");
   assert.match(adminRoute, /pwa-admin-users-page/);
