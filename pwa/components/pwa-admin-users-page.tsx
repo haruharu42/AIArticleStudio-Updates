@@ -3,14 +3,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  CREATOR_MEMBERSHIP_PLANS,
+  clearCreatorMembershipPlan,
   createPwaAccessCode,
   grantPwaEntitlement,
+  listCreatorMembershipEntitlements,
   listPwaAccessCodes,
   listPwaAdminUsers,
   listPwaEntitlements,
   revokePwaAccessCode,
   revokePwaEntitlement,
+  setCreatorMembershipPlan,
   setPwaAdminUserStatus,
+  type CreatorMembershipPlanCode,
   type PwaAdminEntitlement,
   type PwaAdminInvite,
   type PwaAdminUser,
@@ -42,6 +47,7 @@ export function PwaAdminUsersPage() {
   const [users, setUsers] = useState<PwaAdminUser[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [entitlements, setEntitlements] = useState<PwaAdminEntitlement[]>([]);
+  const [membershipEntitlements, setMembershipEntitlements] = useState<PwaAdminEntitlement[]>([]);
   const [codes, setCodes] = useState<PwaAdminInvite[]>([]);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
@@ -49,6 +55,9 @@ export function PwaAdminUsersPage() {
   const [grantChannel, setGrantChannel] = useState("admin-pwa");
   const [grantReference, setGrantReference] = useState("");
   const [grantExpiry, setGrantExpiry] = useState("");
+  const [membershipPlan, setMembershipPlan] = useState<CreatorMembershipPlanCode>("CREATOR_CLUB");
+  const [membershipReference, setMembershipReference] = useState("");
+  const [membershipExpiry, setMembershipExpiry] = useState("");
   const [codeLabel, setCodeLabel] = useState("");
   const [codeChannel, setCodeChannel] = useState("external-sale");
   const [codeReference, setCodeReference] = useState("");
@@ -72,9 +81,16 @@ export function PwaAdminUsersPage() {
   const refreshSelectedEntitlements = useCallback(async (userId: string) => {
     if (!userId) {
       setEntitlements([]);
+      setMembershipEntitlements([]);
       return;
     }
-    setEntitlements(await listPwaEntitlements(getSupabaseClient(), userId));
+    const client = getSupabaseClient();
+    const [nextPwa, nextMembership] = await Promise.all([
+      listPwaEntitlements(client, userId),
+      listCreatorMembershipEntitlements(client, userId),
+    ]);
+    setEntitlements(nextPwa);
+    setMembershipEntitlements(nextMembership);
   }, []);
 
   const refresh = useCallback(async () => {
@@ -94,16 +110,17 @@ export function PwaAdminUsersPage() {
 
   useEffect(() => {
     let active = true;
-    void (async () => {
-      try {
-        await refresh();
-        if (active) setState("ready");
-      } catch (error) {
-        if (!active) return;
-        setState("error");
-        setMessage(error instanceof Error ? error.message : "管理データを取得できませんでした。");
-      }
-    })();
+    queueMicrotask(() => {
+      if (!active) return;
+      void refresh().then(
+        () => { if (active) setState("ready"); },
+        (error: unknown) => {
+          if (!active) return;
+          setState("error");
+          setMessage(error instanceof Error ? error.message : "管理データを取得できませんでした。");
+        },
+      );
+    });
     return () => {
       active = false;
     };
@@ -115,7 +132,7 @@ export function PwaAdminUsersPage() {
     try {
       await refreshSelectedEntitlements(user.id);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "PWA利用権を取得できませんでした。");
+      setMessage(error instanceof Error ? error.message : "利用権を取得できませんでした。");
     }
   };
 
@@ -161,7 +178,7 @@ export function PwaAdminUsersPage() {
       <section className="admin-card">
         <p className="eyebrow">PWA USER MANAGEMENT</p>
         <h1>ユーザー・PWA利用権</h1>
-        <p>正式運用対象はPWAのみです。この画面から操作できる製品利用権もPWAに限定しています。</p>
+        <p>PWA利用権とCreator Club特典を分離して管理します。note購入状態の自動取得は行わず、確認済みプランだけを登録できます。</p>
         {message && <p role="status" className="admin-message">{message}</p>}
         {state === "error" && <button type="button" onClick={() => window.location.reload()}>再読み込み</button>}
       </section>
@@ -253,6 +270,45 @@ export function PwaAdminUsersPage() {
                       () => revokePwaEntitlement(getSupabaseClient(), selected.id),
                       "PWA利用権を取り消しました。",
                     )}>PWAを取消</button>
+                  </div>
+
+                  <h3>note Creator Club特典</h3>
+                  <p>確認済みのnoteメンバーシップをAAS特典へ紐づけます。切替時は以前のCreator Clubプランを安全に無効化して1プランだけ有効にします。</p>
+                  {membershipEntitlements.length ? (
+                    <div className="admin-entitlement-list">
+                      {membershipEntitlements.map((item) => (
+                        <article key={item.id}>
+                          <strong>{item.productName}</strong>
+                          <span>{item.status}{isCurrent(item) ? " / 特典有効" : ""}</span>
+                          <small>期限: {formatDate(item.expiresAt)} / {item.salesChannel}</small>
+                        </article>
+                      ))}
+                    </div>
+                  ) : <p>Creator Club特典は未登録です。</p>}
+
+                  <div className="admin-form-grid">
+                    <label className="route-field">
+                      <span>Creator Clubプラン</span>
+                      <select value={membershipPlan} onChange={(event) => setMembershipPlan(event.target.value as CreatorMembershipPlanCode)}>
+                        {CREATOR_MEMBERSHIP_PLANS.map((plan) => <option key={plan.code} value={plan.code}>{plan.label}</option>)}
+                      </select>
+                    </label>
+                    <label className="route-field"><span>特典期限（任意）</span><input type="datetime-local" value={membershipExpiry} onChange={(event) => setMembershipExpiry(event.target.value)} /></label>
+                    <label className="route-field full"><span>note確認メモ・外部参照（任意）</span><input value={membershipReference} onChange={(event) => setMembershipReference(event.target.value)} placeholder="例: 2026-09 note確認" /></label>
+                  </div>
+                  <div className="admin-actions">
+                    <button type="button" disabled={busy} onClick={() => void run(
+                      () => setCreatorMembershipPlan(getSupabaseClient(), selected.id, {
+                        planCode: membershipPlan,
+                        expiresAt: membershipExpiry ? new Date(membershipExpiry).toISOString() : undefined,
+                        externalReference: membershipReference,
+                      }),
+                      "Creator Clubプランを登録しました。",
+                    )}>Creator Clubを登録・変更</button>
+                    <button type="button" disabled={busy} onClick={() => void run(
+                      () => clearCreatorMembershipPlan(getSupabaseClient(), selected.id),
+                      "Creator Clubプランを解除しました。記事やプロフィールは削除されません。",
+                    )}>Creator Clubを解除</button>
                   </div>
                 </>
               )}
