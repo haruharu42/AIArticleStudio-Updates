@@ -1,0 +1,106 @@
+.polish :global(.admin-dashboard) {
+  align-items: start;
+}
+
+@media (min-width: 980px) {
+  .polish :global(.admin-dashboard) {
+    grid-template-columns: minmax(320px, 0.82fr) minmax(0, 1.45fr);
+  }
+
+  .polish :global(.admin-dashboard > .admin-card:first-child),
+  .polish :global(.admin-dashboard > .admin-card:last-child) {
+    grid-column: 1 / -1;
+  }
+
+  .polish :global(.admin-dashboard > .admin-card:nth-child(2)) {
+    position: sticky;
+    top: 18px;
+    max-height: calc(100dvh - 132px);
+    overflow: auto;
+  }
+
+  .polish :global(.admin-dashboard > .admin-card:nth-child(3)) {
+    min-height: 100%;
+  }
+}
+
+.polish :global(.admin-dashboard > .admin-card:first-child) {
+  position: relative;
+  overflow: hidden;
+  border-color: #cfe0f6;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.98));
+}
+
+.polish :global(.admin-dashboard > .admin-card:first-child)::after {
+  content: "ADMIN";
+  position: absolute;
+  right: 22px;
+  top: 18px;
+  color: rgba(37, 99, 235, 0.08);
+  font-size: clamp(2.4rem, 6vw, 5.2rem);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+
+.polish :global(.admin-user-list) {
+  max-height: min(56dvh, 620px);
+  overflow: auto;
+  padding-right: 3px;
+  scrollbar-width: thin;
+}
+
+.polish :global(.admin-user-list button) {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.025);
+}
+
+.polish :global(.admin-user-list button.selected) {
+  box-shadow: inset 4px 0 0 #2563eb, 0 8px 24px rgba(37, 99, 235, 0.1);
+}
+
+.polish :global(.admin-entitlement-list article) {
+  border-left: 4px solid #60a5fa;
+}
+
+.polish :global(.admin-invite-list article) {
+  border-left: 4px solid #94a3b8;
+}
+
+.polish :global(.admin-card h3) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #e6eef8;
+}
+
+.polish :global(.admin-card h3)::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #3b82f6;
+  box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.1);
+}
+
+.polish :global(.admin-actions button:last-child:not(:first-child)) {
+  border-color: #d7dee8;
+  background: #fff;
+}
+
+.polish :global(.admin-actions button:last-child:not(:first-child):hover:not(:disabled)) {
+  border-color: #f0a6a6;
+  background: #fff7f7;
+  color: #991b1b;
+}
+
+@media (max-width: 760px) {
+  .polish :global(.admin-dashboard > .admin-card:first-child)::after {
+    display: none;
+  }
+
+  .polish :global(.admin-user-list) {
+    max-height: none;
+  }
+}
