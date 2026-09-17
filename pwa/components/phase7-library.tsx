@@ -444,14 +444,18 @@ export function Phase7Library({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  useEffect(() => { setDesktopDownloads(isDesktopBrowser()); }, []);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDesktopDownloads(isDesktopBrowser()), 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
   useEffect(() => { onUnsavedChange?.(imageUnsaved); return () => onUnsavedChange?.(false); }, [imageUnsaved, onUnsavedChange]);
   useEffect(() => { onBusyChange?.(imageBusy || busy); return () => onBusyChange?.(false); }, [busy, imageBusy, onBusyChange]);
 
   const leaveImages = () => !imageBusy && (!imageUnsaved || window.confirm("未保存の画像情報を破棄して移動しますか？"));
 
   const fetchPage = useCallback(async (offset: number, append: boolean) => {
-    append ? setLoadingMore(true) : setLoading(true);
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     setError("");
     try {
       const page = await listArticleLibraryPage(client, ownerId, {
@@ -465,7 +469,8 @@ export function Phase7Library({
     } catch (caught) {
       setError(articleLibraryMessage(caught));
     } finally {
-      append ? setLoadingMore(false) : setLoading(false);
+      if (append) setLoadingMore(false);
+      else setLoading(false);
     }
   }, [client, filters, ownerId]);
 
