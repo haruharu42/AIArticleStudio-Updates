@@ -41,6 +41,7 @@ export function CreatorHud() {
 
   const displayName = dashboard.publicName || "Creator";
   const cadence = formatRefreshCadence(dashboard.knowledgeRefreshHours);
+  const membershipLabel = dashboard.membershipBadgeLabel || dashboard.membershipPlanName || "◆ Creator Club";
 
   return (
     <section className={`${styles.shell} ${styles.hud}`} aria-label="Creator Level">
@@ -53,7 +54,7 @@ export function CreatorHud() {
             <p className={styles.eyebrow}>CREATOR STATUS</p>
             <div className={styles.nameRow}>
               <strong>{displayName}</strong>
-              {dashboard.noteMember && <span className={styles.memberBadge}>◆ Creator Club</span>}
+              {dashboard.noteMember && <span className={styles.memberBadge}>{membershipLabel}</span>}
             </div>
             <div className={styles.levelRow}>
               <span>Lv.{dashboard.level}</span>
@@ -68,7 +69,7 @@ export function CreatorHud() {
           <span className={styles.statBig}>{dashboard.completedArticles}</span>
           <div className={styles.statMeta}>
             <span>今週 {dashboard.weeklyXp} XP</span>
-            <span>連続 {dashboard.currentStreak}日</span>
+            <span>記事枠 +{dashboard.creatorArticleQuotaBonus}</span>
           </div>
         </div>
 
@@ -80,10 +81,15 @@ export function CreatorHud() {
             </span>
           </div>
           <strong>{cadence}更新</strong>
-          <small>Knowledge v{dashboard.knowledgeVersion} · メンバーはFreshを利用</small>
+          <small>
+            {dashboard.noteMember
+              ? `${dashboard.membershipPlanName} · 記事XP ×${dashboard.articleXpMultiplier.toFixed(1)}`
+              : `Knowledge v${dashboard.knowledgeVersion} · 通常ナレッジ`}
+          </small>
         </div>
 
         <div className={styles.hudActions}>
+          <Link className={styles.actionLink} href="/missions">🎯 ミッション{dashboard.claimableMissions > 0 ? ` (${dashboard.claimableMissions})` : ""}</Link>
           <Link className={styles.actionLink} href="/ranking">🏆 ランキング</Link>
           <Link className={styles.actionLink} href="/profile">⚙ プロフィール</Link>
         </div>
