@@ -80,7 +80,7 @@ test("PWA image UI uses local saving while legacy Storage code remains available
   assert.match(articleImages, /記事の画像（端末保存）/);
   assert.match(articleImages, /Supabase Storageへアップロードせず/);
   assert.match(articleImages, /PWAからの新規アップロード・差し替えは現在停止/);
-  assert.doesNotMatch(articleImages, /uploadArticleImage|prepareImageFile|画像を追加|差し替え/);
+  assert.doesNotMatch(articleImages, /uploadArticleImage|prepareImageFile|画像を追加/);
 
   assert.match(storageLibrary, /uploadArticleImage/);
   assert.match(storageLibrary, /prepare_article_asset_checked/);
