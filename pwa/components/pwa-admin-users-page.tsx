@@ -182,7 +182,7 @@ export function PwaAdminUsersPage() {
     if (!selected) return;
     await run(
       () => grantPwaEntitlement(getSupabaseClient(), selected.id, { salesChannel: "admin-pwa" }),
-      "PWAを使えるようにしました。",
+      "PWA利用権を付与しました。PC・スマホ・タブレットで共通して利用できます。",
     );
   };
 
@@ -244,9 +244,10 @@ export function PwaAdminUsersPage() {
     <main className="admin-dashboard">
       <section className="admin-card admin-hero-card">
         <div className="admin-hero-copy">
-          <p className="eyebrow">USER ACCESS</p>
-          <h1>ユーザー利用管理</h1>
-          <p>基本操作は「ユーザーを選ぶ → 状態を確認 → 必要なボタンを押す」の3ステップだけです。</p>
+          <p className="eyebrow">PWA USER ACCESS</p>
+          <h1>PWAユーザー利用管理</h1>
+          <p>PWA利用権はPC・スマホ・タブレット共通です。端末ごとの承認や追加の利用権付与は必要ありません。</p>
+          <p className="admin-detail-note">Windowsアプリ版は現在凍結中です。この画面ではPWA版だけを管理し、既存Windows機能・利用権は変更しません。</p>
         </div>
         {state === "ready" && (
           <div className="admin-simple-stats" aria-label="利用状況">
@@ -328,12 +329,12 @@ export function PwaAdminUsersPage() {
                 </div>
               </div>
 
-              <p className="admin-next-guide">下の3項目だけ確認すれば、通常のユーザー管理は完了です。</p>
+              <p className="admin-next-guide">通常の管理は「アカウント」「PWA利用権」「Creator Club特典」の3項目だけです。</p>
 
               {selected.role === "admin" ? (
                 <div className="admin-notice-panel">
                   <strong>管理者アカウントです</strong>
-                  <span>管理者はPWAを利用できるため、一般ユーザー向けの利用権操作は不要です。</span>
+                  <span>管理者はPC・スマホ・タブレットからPWAを利用できます。一般ユーザー向けの利用権操作は不要です。</span>
                 </div>
               ) : (
                 <div className="admin-simple-actions">
@@ -373,17 +374,17 @@ export function PwaAdminUsersPage() {
                         <h3>PWA利用権</h3>
                       </div>
                       <span className={entitlements.length ? "availability-badge active" : "availability-badge"}>
-                        {entitlements.length ? "利用可能" : "未付与"}
+                        {entitlements.length ? "全端末で利用可能" : "未付与"}
                       </span>
                     </div>
-                    <p>{entitlements.length ? "このユーザーはPWA版を利用できます。" : "PWA版を使わせる場合は利用権を付与します。"}</p>
+                    <p>{entitlements.length ? "PC・スマホ・タブレットすべてでPWA版を利用できます。端末ごとの追加承認は不要です。" : "PWA利用権を1つ付与すると、PC・スマホ・タブレットすべてで利用できます。"}</p>
                     {entitlements.length ? (
                       <button type="button" className="secondary-action" disabled={busy} onClick={() => void run(
                         () => revokePwaEntitlement(getSupabaseClient(), selected.id),
                         "PWA利用権を取り消しました。",
                       )}>PWA利用権を取り消す</button>
                     ) : (
-                      <button type="button" disabled={busy} onClick={() => void grantSimplePwaAccess()}>PWAを使えるようにする</button>
+                      <button type="button" disabled={busy} onClick={() => void grantSimplePwaAccess()}>PWA利用権を付与する</button>
                     )}
                     <details className="admin-advanced-details">
                       <summary>期限や付与元を指定する</summary>
@@ -398,7 +399,7 @@ export function PwaAdminUsersPage() {
                           externalReference: grantReference,
                           expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined,
                         }),
-                        "指定した条件でPWA利用権を付与しました。",
+                        "指定した条件でPWA利用権を付与しました。PC・スマホ・タブレット共通で利用できます。",
                       )}>詳細条件で付与する</button>
                       {entitlements.length > 0 && <p className="admin-detail-note">現在利用権があるため、再付与する場合は一度取り消してください。</p>}
                     </details>
@@ -446,7 +447,7 @@ export function PwaAdminUsersPage() {
                 <summary>このユーザーの詳細情報を見る</summary>
                 <div className="admin-user-meta-grid">
                   <article><span>登録日時</span><strong>{formatDate(selected.createdAt)}</strong></article>
-                  <article><span>PWA利用権</span><strong>{entitlements.length ? "利用可能" : "なし"}</strong></article>
+                  <article><span>PWA利用権（全端末共通）</span><strong>{entitlements.length ? "利用可能" : "なし"}</strong></article>
                   <article><span>Creator Club</span><strong>{membershipEntitlements[0]?.productName ?? "未登録"}</strong></article>
                 </div>
                 {entitlements.length > 0 && (
@@ -475,7 +476,7 @@ export function PwaAdminUsersPage() {
               </summary>
 
               <div className="admin-tools-body">
-                <p className="admin-tools-guide">通常のユーザー管理では、この機能を操作する必要はありません。</p>
+                <p className="admin-tools-guide">通常のユーザー管理では、この機能を操作する必要はありません。発行したコードで付与されるPWA利用権もPC・スマホ・タブレット共通です。</p>
                 <div className="admin-form-grid">
                   <label className="route-field"><span>ラベル</span><input value={codeLabel} onChange={(event) => setCodeLabel(event.target.value)} placeholder="例: note購入者 9月" /></label>
                   <label className="route-field"><span>販売チャネル</span><input value={codeChannel} onChange={(event) => setCodeChannel(event.target.value)} /></label>
