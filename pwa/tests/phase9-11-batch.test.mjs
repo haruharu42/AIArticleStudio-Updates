@@ -65,9 +65,12 @@ test("Phase 10 admin surface uses existing account and entitlement RPCs plus inv
   assert.doesNotMatch(`${api}\n${page}`, /sb_secret_|service[_-]?role/i);
 });
 
-test("Phase 11 article creator saves an atomic article/workspace and restores guided dropdowns", async () => {
+test("Phase 11 article creator separates access, controller, draft logic and step UI", async () => {
   const api = await read("lib/phase11-create.ts");
   const page = await read("components/phase11-create-page.tsx");
+  const stepUi = await read("components/article-create/article-create-steps.tsx");
+  const draftHelpers = await read("lib/article-create-draft.ts");
+  const accessControl = await read("lib/access-control.ts");
   const setup = await read("components/create-ai-setup.tsx");
   const progress = await read("lib/phase11-wizard-progress.ts");
   const route = await read("app/create/page.tsx");
@@ -89,22 +92,46 @@ test("Phase 11 article creator saves an atomic article/workspace and restores gu
   assert.match(api, /<!-- IMAGE:01 -->/);
   assert.doesNotMatch(api, /service[_-]?role|sb_secret_/i);
 
-  for (const label of ["生成方法", "画像計画", "本文条件", "タイトル", "本文生成", "プレビュー", "保存"]) assert.match(page, new RegExp(label));
-  assert.match(page, /prompt_export/);
+  for (const label of ["生成方法", "画像計画", "本文条件", "タイトル", "本文生成", "プレビュー", "保存"]) {
+    assert.match(draftHelpers, new RegExp(label));
+  }
   assert.match(page, /createArticleFromWizard/);
-  assert.match(page, /GENRE_OPTIONS/);
-  assert.match(page, /subgenreOptionsFor/);
-  assert.match(page, /AGE_GROUP_OPTIONS/);
-  assert.match(page, /GENDER_OPTIONS/);
-  assert.match(page, /TARGET_LENGTH_OPTIONS/);
-  assert.match(page, /launchAiApp/);
-  assert.match(page, /key: "chatgpt", label: "ChatGPT"/);
-  assert.match(page, /key: "claude", label: "Claude"/);
-  assert.match(page, /key: "gemini", label: "Gemini"/);
-  assert.match(page, /launchAiApp\(app\.key\)/);
-  assert.doesNotMatch(page, /OPENAI_LINKS\.chatgpt/);
-  assert.match(page, /initialDraftFromLocation/);
-  assert.match(page, /home-quick-setup/);
+  assert.match(page, /ARTICLE_CREATE_STEPS/);
+  assert.match(page, /GenerationMethodStep/);
+  assert.match(page, /ArticleConditionsStep/);
+  assert.match(page, /TitleStep/);
+  assert.match(page, /BodyStep/);
+  assert.match(page, /PreviewStep/);
+  assert.match(page, /SaveStep/);
+  assert.doesNotMatch(page, /GENRE_OPTIONS|AGE_GROUP_OPTIONS|GENDER_OPTIONS|TARGET_LENGTH_OPTIONS|launchAiApp/);
+
+  assert.match(stepUi, /GENRE_OPTIONS/);
+  assert.match(stepUi, /subgenreOptionsFor/);
+  assert.match(stepUi, /AGE_GROUP_OPTIONS/);
+  assert.match(stepUi, /GENDER_OPTIONS/);
+  assert.match(stepUi, /TARGET_LENGTH_OPTIONS/);
+  assert.match(stepUi, /launchAiApp/);
+  assert.match(stepUi, /key: "chatgpt", label: "ChatGPT"/);
+  assert.match(stepUi, /key: "claude", label: "Claude"/);
+  assert.match(stepUi, /key: "gemini", label: "Gemini"/);
+  assert.match(stepUi, /launchAiApp\(app\.key\)/);
+  assert.doesNotMatch(stepUi, /OPENAI_LINKS\.chatgpt/);
+
+  assert.match(draftHelpers, /DEFAULT_ARTICLE_DRAFT/);
+  assert.match(draftHelpers, /initialDraftFromLocation/);
+  assert.match(draftHelpers, /home-quick-setup/);
+  assert.match(draftHelpers, /parseArticleTags/);
+  assert.match(draftHelpers, /validateArticleCreateStep/);
+  assert.match(draftHelpers, /parseStoredArticleDraft/);
+
+  assert.match(page, /loadCoreAccessState/);
+  assert.match(setup, /loadCoreAccessState/);
+  assert.doesNotMatch(page, /\.from\("profiles"\)|can_access_product/);
+  assert.doesNotMatch(setup, /\.from\("profiles"\)|can_access_product/);
+  assert.match(accessControl, /\.from\("profiles"\)/);
+  assert.match(accessControl, /"can_access_product"/);
+  assert.match(accessControl, /PWA_PRODUCT_CODE/);
+
   assert.match(page, /loadArticleWizardProgress/);
   assert.match(page, /saveArticleWizardProgress/);
   assert.match(page, /clearArticleWizardProgress/);
@@ -114,6 +141,8 @@ test("Phase 11 article creator saves an atomic article/workspace and restores gu
   assert.match(progress, /window\.localStorage/);
   assert.match(progress, /STORAGE_VERSION = 1/);
   assert.match(progress, /updatedAt/);
+  assert.match(progress, /parseStoredArticleDraft/);
+  assert.doesNotMatch(progress, /as unknown as ArticleCreationDraft/);
   assert.doesNotMatch(progress, /service[_-]?role|sb_secret_/i);
   assert.match(options, /AI副業/);
   assert.match(options, /生活・暮らし/);
