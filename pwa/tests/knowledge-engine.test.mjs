@@ -47,14 +47,15 @@ test("knowledge context is shared by article title image social promotion sidejo
 
 test("custom genre and subgenre inputs record only compact knowledge candidate signals", async () => {
   const creatorPage = await read("components/phase11-create-page.tsx");
+  const stepUi = await read("components/article-create/article-create-steps.tsx");
   const creator = await read("lib/phase11-create.ts");
   const catalog = await read("lib/knowledge-catalog.ts");
   const migration = await readRepo("supabase/migrations/20260913145500_knowledge_engine.sql");
 
   assert.match(creatorPage, /setCustomGenre/);
-  assert.match(creatorPage, /genreSelectionValue/);
-  assert.match(creatorPage, /subgenreSelectionValue/);
-  assert.match(creatorPage, /taxonomy-custom-input/);
+  assert.match(stepUi, /genreSelectionValue/);
+  assert.match(stepUi, /subgenreSelectionValue/);
+  assert.match(stepUi, /taxonomy-custom-input/);
   assert.match(creator, /recordKnowledgeCandidate/);
   assert.match(creator, /isCustomGenre/);
   assert.match(creator, /isCustomSubgenre/);

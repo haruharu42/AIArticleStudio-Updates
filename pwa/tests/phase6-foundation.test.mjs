@@ -7,23 +7,29 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
-test("pins the browser client and PWA product contract", async () => {
+test("pins the browser client and centralized PWA access contract", async () => {
   const packageJson = JSON.parse(await read("package.json"));
-  const access = await read("lib/phase6-access.ts");
+  const accessBoundary = await read("lib/access-control.ts");
+  const phase6 = await read("lib/phase6-access.ts");
   const client = await read("lib/supabase.ts");
 
   assert.equal(packageJson.dependencies["@supabase/supabase-js"], "2.112.3");
-  assert.match(access, /AAS-PWA-BETA/);
-  assert.match(access, /auth\.getUser\(\)/);
-  assert.match(access, /\.from\("profiles"\)/);
-  assert.match(access, /"can_access_product"/);
+  assert.match(accessBoundary, /AAS-PWA-BETA/);
+  assert.match(accessBoundary, /auth\.getUser\(\)/);
+  assert.match(accessBoundary, /\.from\("profiles"\)/);
+  assert.match(accessBoundary, /"can_access_product"/);
+  assert.match(accessBoundary, /PWA利用権の確認に失敗しました/);
+  assert.match(phase6, /loadCoreAccessState/);
+  assert.match(phase6, /ensureMyFreeTrial/);
+  assert.doesNotMatch(phase6, /\.from\("profiles"\)|"can_access_product"/);
   assert.match(client, /flowType:\s*"pkce"/);
   assert.match(client, /detectSessionInUrl:\s*false/);
   assert.match(client, /sb_secret_/);
 });
 
-test("keeps Phase 6 separate from article and image data", async () => {
+test("keeps the access boundary separate from article and image data", async () => {
   const source = [
+    await read("lib/access-control.ts"),
     await read("lib/phase6-access.ts"),
     await read("lib/supabase.ts"),
   ].join("\n");

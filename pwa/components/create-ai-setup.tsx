@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { Phase11CreatePage } from "@/components/phase11-create-page";
+import { loadCoreAccessState } from "@/lib/access-control";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   AI_PLAN_LABELS,
@@ -36,34 +37,14 @@ export function CreateAiSetup() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const { data: { user }, error: userError } = await client.auth.getUser();
+        const access = await loadCoreAccessState(client);
         if (!active) return;
-        if (userError || !user) {
+        if (access.kind !== "ready") {
           setState({ kind: "bypass" });
           return;
         }
 
-        const { data: profile, error: profileError } = await client
-          .from("profiles")
-          .select("id,status")
-          .eq("id", user.id)
-          .single();
-        if (!active) return;
-        if (profileError || !profile || profile.id !== user.id || profile.status !== "active") {
-          setState({ kind: "bypass" });
-          return;
-        }
-
-        const { data: access, error: accessError } = await client.rpc("can_access_product", {
-          p_product_code: "AAS-PWA-BETA",
-        });
-        if (!active) return;
-        if (accessError || access !== true) {
-          setState({ kind: "bypass" });
-          return;
-        }
-
-        const writingProfile = await loadWritingProfile(client, user.id);
+        const writingProfile = await loadWritingProfile(client, access.user.id);
         if (!active) return;
         setState({ kind: "setup", profile: writingProfile });
       } catch (error) {

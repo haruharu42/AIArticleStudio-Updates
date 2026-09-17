@@ -50,6 +50,7 @@ test("AI app launcher keeps Android one-tap and gives iOS an explicit app/Web ch
 test("beginner home and article wizard use the shared AI app launcher", async () => {
   const home = await read("components/phase18-beginner-home.tsx");
   const creator = await read("components/phase11-create-page.tsx");
+  const creatorSteps = await read("components/article-create/article-create-steps.tsx");
   const images = await read("components/phase13-image-page.tsx");
   const tools = await read("components/phase-tools-page.tsx");
 
@@ -60,18 +61,18 @@ test("beginner home and article wizard use the shared AI app launcher", async ()
   assert.match(home, /iPhone \/ iPadでは「アプリを開く」と「Web版を開く」を選べます/);
   assert.match(home, /Google Play/);
   assert.doesNotMatch(home, /iPhone は App Store/);
-  assert.match(creator, /AIを使って作る/);
-  assert.match(creator, /key: "chatgpt", label: "ChatGPT"/);
-  assert.match(creator, /key: "claude", label: "Claude"/);
-  assert.match(creator, /key: "gemini", label: "Gemini"/);
-  assert.match(creator, /launchAiApp\(app\.key\)/);
-  assert.match(creator, /AI用タイトルプロンプト/);
-  assert.match(creator, /AI用完成記事プロンプト/);
-  assert.doesNotMatch(creator, /href=\{OPENAI_LINKS\.chatgpt\}/);
+  assert.match(creatorSteps, /AIを使って作る/);
+  assert.match(creatorSteps, /key: "chatgpt", label: "ChatGPT"/);
+  assert.match(creatorSteps, /key: "claude", label: "Claude"/);
+  assert.match(creatorSteps, /key: "gemini", label: "Gemini"/);
+  assert.match(creatorSteps, /launchAiApp\(app\.key\)/);
+  assert.match(creatorSteps, /AI用タイトルプロンプト/);
+  assert.match(creatorSteps, /AI用完成記事プロンプト/);
+  assert.doesNotMatch(creatorSteps, /href=\{OPENAI_LINKS\.chatgpt\}/);
   assert.match(images, /ChatGPT Imagesを開く/);
   assert.match(tools, /ChatGPT Work/);
   assert.match(tools, /OpenAIツール/);
   assert.match(creator, /createArticleFromWizard/);
   assert.match(images, /buildImagePromptPlan/);
-  assert.doesNotMatch(`${home}\n${creator}\n${images}\n${tools}`, /sora\.chatgpt\.com/i);
+  assert.doesNotMatch(`${home}\n${creator}\n${creatorSteps}\n${images}\n${tools}`, /sora\.chatgpt\.com/i);
 });
