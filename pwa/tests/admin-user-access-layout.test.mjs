@@ -12,6 +12,7 @@ test("admin user access page keeps its scoped simplified workflow", async () => 
   const baseCss = await read("app/admin/users/admin-users-page.module.css");
   const polishCss = await read("app/admin/users/admin-users-polish.module.css");
   const component = await read("components/pwa-admin-users-page.tsx");
+  const adminUsers = await read("lib/pwa-admin-users.ts");
 
   assert.match(page, /admin-users-page\.module\.css/);
   assert.match(page, /admin-users-polish\.module\.css/);
@@ -46,15 +47,23 @@ test("admin user access page keeps its scoped simplified workflow", async () => 
     assert.match(polishCss, new RegExp(`:global\\(\\.${className}`));
   }
 
-  assert.match(component, /基本操作は「ユーザーを選ぶ → 状態を確認 → 必要なボタンを押す」の3ステップだけです/);
+  assert.match(component, /PWAユーザー利用管理/);
+  assert.match(component, /PWA利用権はPC・スマホ・タブレット共通です/);
+  assert.match(component, /端末ごとの承認や追加の利用権付与は必要ありません/);
+  assert.match(component, /Windowsアプリ版は現在凍結中です/);
+  assert.match(component, /既存Windows機能・利用権は変更しません/);
   assert.match(component, /まず操作したいユーザーを選択します/);
-  assert.match(component, /下の3項目だけ確認すれば、通常のユーザー管理は完了です/);
-  assert.match(component, /PWAを使えるようにする/);
+  assert.match(component, /通常の管理は「アカウント」「PWA利用権」「Creator Club特典」の3項目だけです/);
+  assert.match(component, /PWA利用権を付与する/);
+  assert.match(component, /全端末で利用可能/);
   assert.match(component, /期限や付与元を指定する/);
   assert.match(component, /期限・確認メモを設定する/);
   assert.match(component, /通常のユーザー管理では、この機能を操作する必要はありません/);
   assert.match(component, /note購入状態の自動取得は行わず/);
   assert.match(component, /利用コードをコピーしました/);
+
+  assert.match(adminUsers, /export const PWA_PRODUCT = "AAS-PWA-BETA" as const/);
+  assert.doesNotMatch(adminUsers, /PWA_(?:PC|MOBILE)_PRODUCT/);
 
   assert.match(baseCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(baseCss, /@media \(max-width: 760px\)/);
