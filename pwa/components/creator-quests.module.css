@@ -1,0 +1,168 @@
+.missionSummary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.missionSummary > div {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(87, 105, 204, 0.22);
+  border-radius: 14px;
+  padding: 13px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(241, 245, 255, 0.9));
+}
+
+.missionSummary > div::after {
+  content: "";
+  position: absolute;
+  right: -16px;
+  bottom: -22px;
+  width: 56px;
+  height: 56px;
+  border: 1px solid rgba(88, 105, 225, 0.14);
+  transform: rotate(45deg);
+}
+
+.missionSummary small,
+.planBenefits small {
+  display: block;
+  color: #7a86a7;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.missionSummary strong,
+.planBenefits strong {
+  display: block;
+  margin-top: 5px;
+  color: #2d3c6c;
+  font-size: 16px;
+}
+
+.missionGrid,
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.missionCard,
+.planCard {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(96, 113, 199, 0.22);
+  border-radius: 19px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(91, 84, 255, 0.12), transparent 34%),
+    linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(242, 246, 255, 0.93));
+  box-shadow: 0 13px 30px rgba(43, 62, 125, 0.08);
+}
+
+.missionCard::before,
+.planCard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  background-image:
+    linear-gradient(rgba(81, 96, 181, 0.15) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(81, 96, 181, 0.15) 1px, transparent 1px);
+  background-size: 26px 26px;
+  mask-image: linear-gradient(135deg, transparent, #000 55%, transparent);
+}
+
+.missionCard > *,
+.planCard > * {
+  position: relative;
+  z-index: 1;
+}
+
+.missionHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 25px;
+}
+
+.missionCard h2,
+.planCard h2 {
+  margin: 12px 0 6px;
+  color: #24345f;
+  font-size: 18px;
+}
+
+.missionCard p,
+.planCard p {
+  margin: 0;
+  color: #687493;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.missionProgressText {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+  color: #516083;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.missionProgressText strong {
+  color: #4e61da;
+}
+
+.planCurrent {
+  border-color: rgba(80, 98, 235, 0.58);
+  box-shadow:
+    0 0 0 2px rgba(84, 101, 235, 0.09),
+    0 18px 40px rgba(54, 72, 157, 0.14);
+}
+
+.planBenefits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.planBenefits > div {
+  border: 1px solid rgba(111, 126, 191, 0.18);
+  border-radius: 12px;
+  padding: 11px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 720px) {
+  .missionSummary,
+  .planBenefits {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .missionGrid,
+  .planGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 440px) {
+  .missionSummary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .missionCard,
+  .planCard {
+    padding: 15px;
+    border-radius: 17px;
+  }
+}

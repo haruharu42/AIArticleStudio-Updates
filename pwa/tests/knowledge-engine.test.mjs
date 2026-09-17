@@ -82,15 +82,18 @@ test("knowledge database keeps catalog RLS and candidate raw rows inaccessible t
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
 });
 
-test("runtime catalog loads only active rules and admin review is isolated behind the admin route", async () => {
+test("runtime catalog loads only active membership-aware rules and admin review is isolated behind the admin route", async () => {
   const catalog = await read("lib/knowledge-catalog.ts");
+  const membershipMigration = await readRepo("supabase/migrations/20260917202000_creator_membership_plans_missions_quota.sql");
   const bootstrap = await read("components/knowledge-runtime-bootstrap.tsx");
   const admin = await read("components/admin-knowledge-page.tsx");
   const route = await read("app/admin/knowledge/page.tsx");
   const tools = await read("components/phase-tools-page.tsx");
 
-  assert.match(catalog, /\.eq\("status", "active"\)/);
-  assert.match(catalog, /\.limit\(500\)/);
+  assert.match(catalog, /client\.rpc\("list_my_active_knowledge_catalog"\)/);
+  assert.match(membershipMigration, /catalog\.status = 'active'/);
+  assert.match(membershipMigration, /limit 500/i);
+  assert.match(membershipMigration, /public\.has_active_creator_membership\(\)/);
   assert.match(bootstrap, /loadActiveKnowledgeCatalog/);
   assert.match(bootstrap, /setRuntimeKnowledgeCatalog/);
   assert.match(admin, /role === "admin"/);

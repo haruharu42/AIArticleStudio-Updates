@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CreatorHud } from "@/components/creator-hud";
 import { FreeTrialBanner } from "@/components/free-trial-banner";
 import { Phase18BeginnerHome } from "@/components/phase18-beginner-home";
 
@@ -6,6 +7,7 @@ export default function Home() {
   return (
     <>
       <FreeTrialBanner />
+      <CreatorHud />
       <Phase18BeginnerHome />
       <nav className="commerce-public-shortcuts" aria-label="料金・契約情報">
         <Link href="/plans">利用プラン</Link>

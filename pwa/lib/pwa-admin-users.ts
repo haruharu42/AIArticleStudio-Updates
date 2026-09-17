@@ -2,6 +2,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const PWA_PRODUCT = "AAS-PWA-BETA" as const;
 
+export const CREATOR_MEMBERSHIP_PLANS = [
+  { code: "CREATOR_CLUB", label: "Creator Club" },
+  { code: "CREATOR_CLUB_PLUS", label: "Creator Club Plus" },
+  { code: "CREATOR_CLUB_PRO", label: "Creator Club Pro" },
+] as const;
+export type CreatorMembershipPlanCode = (typeof CREATOR_MEMBERSHIP_PLANS)[number]["code"];
+
+const CREATOR_MEMBERSHIP_PRODUCTS = new Set([
+  "AAS-NOTE-CREATOR-CLUB",
+  "AAS-NOTE-CREATOR-CLUB-PLUS",
+  "AAS-NOTE-CREATOR-CLUB-PRO",
+]);
+
 export type PwaAdminUser = {
   id: string;
   aasUserId: string;
@@ -61,17 +74,33 @@ function safeInteger(value: unknown, name: string): number {
   return value;
 }
 
+function parseEntitlement(row: Record<string, unknown>): PwaAdminEntitlement {
+  return {
+    id: text(row.id, "id"),
+    productCode: text(row.product_code, "product_code"),
+    productName: text(row.product_name, "product_name"),
+    status: text(row.status, "status"),
+    salesChannel: text(row.sales_channel, "sales_channel"),
+    externalReference: nullableText(row.external_reference, "external_reference"),
+    grantedAt: text(row.granted_at, "granted_at"),
+    expiresAt: nullableText(row.expires_at, "expires_at"),
+  };
+}
+
 function adminError(error: unknown, fallback: string): Error {
   const source = error && typeof error === "object" ? (error as Record<string, unknown>) : {};
   const message = typeof source.message === "string" ? source.message.toLowerCase() : "";
   if (message.includes("active admin required") || message.includes("aal2")) {
-    return new Error("管理者MFAを確認できません。6桁コードで再認証してからお試しください。");
+    return new Error("管理者認証を確認できません。再認証してからお試しください。");
   }
   if (message.includes("invalid status transition")) {
     return new Error("現在の状態ではその変更を実行できません。");
   }
   if (message.includes("active entitlement not found")) {
     return new Error("有効なPWA利用権がありません。");
+  }
+  if (message.includes("active creator membership plan not found")) {
+    return new Error("選択したCreator Clubプランは現在利用できません。");
   }
   return new Error(fallback);
 }
@@ -103,26 +132,26 @@ export async function setPwaAdminUserStatus(
   if (error) throw adminError(error, "アカウント状態の変更に失敗しました。");
 }
 
+async function listAllUserEntitlements(client: SupabaseClient, userId: string): Promise<PwaAdminEntitlement[]> {
+  const { data, error } = await client.rpc("admin_list_user_entitlements", {
+    p_target_user_id: userId,
+  });
+  if (error) throw adminError(error, "利用権の取得に失敗しました。");
+  return rows(data).map(parseEntitlement);
+}
+
 export async function listPwaEntitlements(
   client: SupabaseClient,
   userId: string,
 ): Promise<PwaAdminEntitlement[]> {
-  const { data, error } = await client.rpc("admin_list_user_entitlements", {
-    p_target_user_id: userId,
-  });
-  if (error) throw adminError(error, "PWA利用権の取得に失敗しました。");
-  return rows(data)
-    .filter((row) => row.product_code === PWA_PRODUCT)
-    .map((row) => ({
-      id: text(row.id, "id"),
-      productCode: text(row.product_code, "product_code"),
-      productName: text(row.product_name, "product_name"),
-      status: text(row.status, "status"),
-      salesChannel: text(row.sales_channel, "sales_channel"),
-      externalReference: nullableText(row.external_reference, "external_reference"),
-      grantedAt: text(row.granted_at, "granted_at"),
-      expiresAt: nullableText(row.expires_at, "expires_at"),
-    }));
+  return (await listAllUserEntitlements(client, userId)).filter((item) => item.productCode === PWA_PRODUCT);
+}
+
+export async function listCreatorMembershipEntitlements(
+  client: SupabaseClient,
+  userId: string,
+): Promise<PwaAdminEntitlement[]> {
+  return (await listAllUserEntitlements(client, userId)).filter((item) => CREATOR_MEMBERSHIP_PRODUCTS.has(item.productCode));
 }
 
 export async function grantPwaEntitlement(
@@ -146,6 +175,33 @@ export async function revokePwaEntitlement(client: SupabaseClient, userId: strin
     p_product_code: PWA_PRODUCT,
   });
   if (error) throw adminError(error, "PWA利用権の取り消しに失敗しました。");
+}
+
+export async function setCreatorMembershipPlan(
+  client: SupabaseClient,
+  userId: string,
+  input: {
+    planCode: CreatorMembershipPlanCode;
+    expiresAt?: string;
+    salesChannel?: string;
+    externalReference?: string;
+  },
+): Promise<void> {
+  const { error } = await client.rpc("admin_set_creator_membership_plan", {
+    p_target_user_id: userId,
+    p_plan_code: input.planCode,
+    p_expires_at: input.expiresAt || null,
+    p_sales_channel: input.salesChannel?.trim() || "note-membership-admin",
+    p_external_reference: input.externalReference?.trim() || null,
+  });
+  if (error) throw adminError(error, "Creator Clubプランを更新できませんでした。");
+}
+
+export async function clearCreatorMembershipPlan(client: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await client.rpc("admin_clear_creator_membership_plan", {
+    p_target_user_id: userId,
+  });
+  if (error) throw adminError(error, "Creator Clubプランを解除できませんでした。");
 }
 
 function parseInvite(row: Record<string, unknown>): PwaAdminInvite {

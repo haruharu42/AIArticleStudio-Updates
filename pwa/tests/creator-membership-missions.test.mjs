@@ -1,0 +1,98 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+const repoRoot = path.resolve(root, "..");
+const readPwa = (relative) => readFile(path.join(root, relative), "utf8");
+const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
+
+test("creator client uses v2 dashboard with a legacy compatibility fallback", async () => {
+  const source = await readPwa("lib/creator-system.ts");
+  assert.match(source, /client\.rpc\("get_my_creator_dashboard_v2"\)/);
+  assert.match(source, /client\.rpc\("get_my_creator_dashboard"\)/);
+  assert.match(source, /getMyCreatorMissions/);
+  assert.match(source, /claimCreatorMissionReward/);
+  assert.match(source, /listCreatorMembershipPlans/);
+});
+
+test("creator pages keep membership, missions and ranking separate and beginner-readable", async () => {
+  const missions = await readPwa("app/missions/page.tsx");
+  const membership = await readPwa("app/membership/page.tsx");
+  const ranking = await readPwa("app/ranking/page.tsx");
+
+  assert.match(missions, /getMyCreatorMissions/);
+  assert.match(missions, /claimCreatorMissionReward/);
+  assert.match(missions, /記事制作を進めるだけで達成できます/);
+  assert.match(missions, /creator-quests\.module\.css/);
+
+  assert.match(membership, /listCreatorMembershipPlans/);
+  assert.match(membership, /AASに登録されたnoteメンバーシッププラン/);
+  assert.match(membership, /note購入状態の自動取得は別の連携機能/);
+  assert.match(membership, /creator-quests\.module\.css/);
+
+  assert.match(ranking, /12時間ごとのスナップショット/);
+  assert.match(ranking, /最初の1回だけ加算/);
+  assert.match(ranking, /queueMicrotask/);
+});
+
+test("membership migration is additive, tier-aware and preserves article RPC names", async () => {
+  const migration = await readRepo("supabase/migrations/20260917202000_creator_membership_plans_missions_quota.sql");
+  const flexibility = await readRepo("supabase/migrations/20260917202100_creator_membership_plan_tier_flexibility.sql");
+
+  assert.match(migration, /AAS-NOTE-CREATOR-CLUB-PLUS/);
+  assert.match(migration, /AAS-NOTE-CREATOR-CLUB-PRO/);
+  assert.match(migration, /create table if not exists public\.creator_membership_plans/);
+  assert.match(migration, /create table if not exists public\.creator_mission_definitions/);
+  assert.match(migration, /private\.creator_article_quota_bonus/);
+  assert.match(migration, /create or replace function public\.create_article\(p_article jsonb default '\{\}'::jsonb\)/i);
+  assert.match(migration, /create or replace function public\.get_my_article_stock_summary\(\)/);
+  assert.match(migration, /article_quota_bonus_every_levels integer not null default 5/);
+  assert.match(migration, /article_quota_bonus_per_step integer not null default 10/);
+  assert.match(flexibility, /drop index if exists public\.creator_membership_plans_active_tier_idx/);
+  assert.match(flexibility, /creator_membership_plans_tier_lookup_idx/);
+
+  assert.doesNotMatch(migration, /latest\.json/i);
+  assert.doesNotMatch(migration, /Update\.ps1/i);
+  assert.doesNotMatch(migration, /windows\/|app\/auth_ui\.py/i);
+});
+
+test("mission completion remains tied to first valid completed article", async () => {
+  const migration = await readRepo("supabase/migrations/20260917202000_creator_membership_plans_missions_quota.sql");
+  assert.match(migration, /creator_article_completions/);
+  assert.match(migration, /on conflict \(article_id\) do nothing/i);
+  assert.match(migration, /new\.status not in \('ready', 'waiting_publish', 'published'\)/);
+  assert.match(migration, /body_chars < min_body_chars/);
+  assert.match(migration, /progress_creator_missions\(new\.user_id, 'article_completed', 1\)/);
+});
+
+test("generation credits are stored as rewards without changing the existing usage limiter in this feature", async () => {
+  const migration = await readRepo("supabase/migrations/20260917202000_creator_membership_plans_missions_quota.sql");
+  const freeTrial = await readPwa("lib/free-trial.ts");
+
+  assert.match(migration, /bonus_generation_credits/);
+  assert.match(migration, /reward_generation_credits/);
+  assert.doesNotMatch(migration, /create or replace function public\.consume_free_trial_usage/i);
+  assert.match(freeTrial, /consume_free_trial_usage/);
+});
+
+test("admin can atomically register one verified Creator Club plan without touching PWA access", async () => {
+  const migration = await readRepo("supabase/migrations/20260917202200_creator_membership_admin_management.sql");
+  const client = await readPwa("lib/pwa-admin-users.ts");
+  const page = await readPwa("components/pwa-admin-users-page.tsx");
+
+  assert.match(migration, /admin_set_creator_membership_plan/);
+  assert.match(migration, /admin_clear_creator_membership_plan/);
+  assert.match(migration, /set status = 'revoked'/);
+  assert.match(migration, /creator_membership_plans/);
+  assert.doesNotMatch(migration, /AAS-PWA-BETA/);
+
+  assert.match(client, /CREATOR_MEMBERSHIP_PLANS/);
+  assert.match(client, /admin_set_creator_membership_plan/);
+  assert.match(client, /admin_clear_creator_membership_plan/);
+  assert.match(page, /note購入状態の自動取得は行わず/);
+  assert.match(page, /Creator Clubを登録・変更/);
+  assert.match(page, /Creator Clubを解除/);
+});
