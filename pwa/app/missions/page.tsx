@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import questStyles from "@/components/creator-quests.module.css";
+import styles from "@/components/creator-system.module.css";
 import {
   claimCreatorMissionReward,
   getMyCreatorDashboard,
@@ -11,7 +13,6 @@ import {
   type CreatorMission,
 } from "@/lib/creator-system";
 import { getSupabaseClient } from "@/lib/supabase";
-import styles from "@/components/creator-system.module.css";
 
 function cadenceLabel(cadence: CreatorMission["cadence"]): string {
   if (cadence === "weekly") return "WEEKLY";
@@ -82,7 +83,7 @@ export default function CreatorMissionsPage() {
 
         {dashboard ? (
           <section className={styles.panel}>
-            <div className={styles.missionSummary}>
+            <div className={questStyles.missionSummary}>
               <div><small>CREATOR LEVEL</small><strong>Lv.{dashboard.level}</strong></div>
               <div><small>CLAIMABLE</small><strong>{dashboard.claimableMissions}</strong></div>
               <div><small>PLAN</small><strong>{dashboard.membershipPlanName || "Standard"}</strong></div>
@@ -96,18 +97,18 @@ export default function CreatorMissionsPage() {
         {loading ? <div className={styles.empty}>ミッションを読み込んでいます…</div> : null}
 
         {!loading && !error ? (
-          <section className={styles.missionGrid} aria-label="利用可能なミッション">
+          <section className={questStyles.missionGrid} aria-label="利用可能なミッション">
             {missions.map((mission) => {
               const percent = Math.min(100, Math.round((mission.progress / mission.targetCount) * 100));
               return (
-                <article className={styles.missionCard} key={mission.missionCode}>
-                  <div className={styles.missionHeader}>
+                <article className={questStyles.missionCard} key={mission.missionCode}>
+                  <div className={questStyles.missionHeader}>
                     <span className={styles.tierBadge}>{cadenceLabel(mission.cadence)}</span>
                     {mission.minimumTierRank > 0 ? <span className={styles.memberBadge}>◆ MEMBER</span> : null}
                   </div>
                   <h2>{mission.title}</h2>
                   <p>{mission.description}</p>
-                  <div className={styles.missionProgressText}>
+                  <div className={questStyles.missionProgressText}>
                     <span>{mission.progress} / {mission.targetCount}</span>
                     <strong>+{mission.rewardXp} XP</strong>
                   </div>
