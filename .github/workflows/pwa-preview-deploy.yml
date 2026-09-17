@@ -1,7 +1,10 @@
 name: "🚀 Previewへデプロイ"
-run-name: "🚀 Preview • ${{ inputs.expected_sha }}"
+run-name: "🚀 Preview • ${{ inputs.expected_sha || github.sha }}"
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       expected_sha:
@@ -39,29 +42,43 @@ jobs:
       WRANGLER_WRITE_LOGS: "false"
 
     steps:
-      - name: Validate manual confirmation and pinned SHA
+      - name: Resolve and validate preview SHA
+        id: target
         shell: bash
         working-directory: .
         env:
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
+          EVENT_REF: ${{ github.ref }}
+          INPUT_EXPECTED_SHA: ${{ inputs.expected_sha }}
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
-          if [ "$CONFIRMATION" != "DEPLOY_PREVIEW" ]; then
-            echo 'Preview upload requires confirmation text DEPLOY_PREVIEW.' >&2
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$CONFIRMATION" != "DEPLOY_PREVIEW" ]; then
+              echo 'Preview upload requires confirmation text DEPLOY_PREVIEW.' >&2
+              exit 1
+            fi
+            expected_sha="$INPUT_EXPECTED_SHA"
+            if [ "$EVENT_SHA" != "$expected_sha" ]; then
+              echo 'Selected workflow ref does not point at expected_sha.' >&2
+              echo "Selected ref SHA: $EVENT_SHA" >&2
+              echo "Expected SHA:     $expected_sha" >&2
+              exit 1
+            fi
+          else
+            if [ "$EVENT_NAME" != "push" ] || [ "$EVENT_REF" != "refs/heads/main" ]; then
+              echo 'Automatic Preview deploy is allowed only for pushes to main.' >&2
+              exit 1
+            fi
+            expected_sha="$EVENT_SHA"
+          fi
+          if ! printf '%s' "$expected_sha" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo 'Preview SHA must be an exact lowercase 40-character Git commit SHA.' >&2
             exit 1
           fi
-          if ! printf '%s' "$EXPECTED_SHA" | grep -Eq '^[0-9a-f]{40}$'; then
-            echo 'expected_sha must be an exact lowercase 40-character Git commit SHA.' >&2
-            exit 1
-          fi
-          if [ "$GITHUB_SHA" != "$EXPECTED_SHA" ]; then
-            echo "Selected workflow ref does not point at expected_sha." >&2
-            echo "Selected ref SHA: $GITHUB_SHA" >&2
-            echo "Expected SHA:     $EXPECTED_SHA" >&2
-            exit 1
-          fi
-          echo "Pinned preview SHA validated: $EXPECTED_SHA"
+          echo "sha=$expected_sha" >> "$GITHUB_OUTPUT"
+          echo "Pinned preview SHA validated: $expected_sha"
 
       - name: Validate required Actions secrets
         shell: bash
@@ -92,14 +109,14 @@ jobs:
       - name: Checkout exact selected commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.expected_sha }}
+          ref: ${{ steps.target.outputs.sha }}
           persist-credentials: false
 
       - name: Verify checked-out commit
         shell: bash
         working-directory: .
         env:
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          EXPECTED_SHA: ${{ steps.target.outputs.sha }}
         run: |
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
@@ -253,7 +270,7 @@ jobs:
         working-directory: .
         env:
           PREVIEW_URL: ${{ steps.upload.outputs.preview_url }}
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          EXPECTED_SHA: ${{ steps.target.outputs.sha }}
         run: |
           set -euo pipefail
           {
