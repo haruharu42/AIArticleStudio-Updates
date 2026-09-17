@@ -61,14 +61,11 @@ function parseCatalogRow(row: Record<string, unknown>): KnowledgeRule | null {
 }
 
 export async function loadActiveKnowledgeCatalog(client: SupabaseClient): Promise<KnowledgeRule[]> {
-  const { data, error } = await client
-    .from("knowledge_catalog")
-    .select("key,kind,label,parent_label,aliases,guidance,deliverables,cautions,tasks,priority,status")
-    .eq("status", "active")
-    .order("priority", { ascending: false })
-    .limit(500);
+  // Membership-aware RPC keeps the prompt compiler unchanged while allowing
+  // Fresh knowledge to be released before it reaches the Stable channel.
+  const { data, error } = await client.rpc("list_my_active_knowledge_catalog");
   if (error) throw new Error("ナレッジを読み込めませんでした。");
-  return (data ?? []).map((row) => parseCatalogRow(row as Record<string, unknown>)).filter((rule): rule is KnowledgeRule => Boolean(rule));
+  return (data ?? []).map((row: Record<string, unknown>) => parseCatalogRow(row)).filter((rule: KnowledgeRule | null): rule is KnowledgeRule => Boolean(rule));
 }
 
 export async function recordKnowledgeCandidate(
