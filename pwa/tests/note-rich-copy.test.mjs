@@ -1,0 +1,92 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import test, { after } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { createServer } from 'vite';
+
+const root = fileURLToPath(new URL('..', import.meta.url));
+const vite = await createServer({ appType: 'custom', configFile: false, root, resolve: { alias: { '@': root } }, server: { middlewareMode: true, hmr: false } });
+after(() => vite.close());
+
+const rich = await vite.ssrLoadModule('/lib/note-rich-text.ts');
+const exporter = await vite.ssrLoadModule('/lib/article-export.ts');
+const exportUi = await fs.readFile(`${root}/components/article-export-page.tsx`, 'utf8');
+const richSource = await fs.readFile(`${root}/lib/note-rich-text.ts`, 'utf8');
+
+const markdown = `# 大見出し
+
+## 小見出し
+
+**重要**な本文と[公式](https://example.com)。
+
+- 項目A
+- 項目B
+
+1. 手順1
+2. 手順2
+
+> 補足です
+
+---
+
+\`code\`
+
+\`\`\`
+const safe = true;
+\`\`\``;
+
+test('note rich renderer preserves supported structural decoration and escapes raw html', () => {
+  const html = rich.markdownToNoteHtml(`${markdown}\n\n<script>alert(1)</script>`);
+  assert.match(html, /<h1>大見出し<\/h1>/);
+  assert.match(html, /<h2>小見出し<\/h2>/);
+  assert.match(html, /<strong>重要<\/strong>/);
+  assert.match(html, /<a href="https:\/\/example\.com">公式<\/a>/);
+  assert.match(html, /<ul><li>項目A<\/li><li>項目B<\/li><\/ul>/);
+  assert.match(html, /<ol><li>手順1<\/li><li>手順2<\/li><\/ol>/);
+  assert.match(html, /<blockquote>補足です<\/blockquote>/);
+  assert.match(html, /<hr>/);
+  assert.match(html, /<pre><code>const safe = true;<\/code><\/pre>/);
+  assert.doesNotMatch(html, /<script>/);
+  assert.match(html, /&lt;script&gt;/);
+});
+
+test('plain text conversion removes markdown decoration while keeping readable content', () => {
+  const text = rich.markdownToPlainText(markdown);
+  assert.match(text, /大見出し/);
+  assert.match(text, /重要な本文/);
+  assert.match(text, /公式 \(https:\/\/example\.com\)/);
+  assert.match(text, /• 項目A/);
+  assert.doesNotMatch(text, /\*\*重要\*\*/);
+  assert.doesNotMatch(text, /^##/m);
+});
+
+test('clipboard implementation writes html and plain text with a browser fallback', () => {
+  assert.match(richSource, /"text\/html"/);
+  assert.match(richSource, /"text\/plain"/);
+  assert.match(richSource, /navigator\.clipboard\.write/);
+  assert.match(richSource, /document\.execCommand\("copy"\)/);
+});
+
+test('article export UI separates note rich copy, markdown and plain copy', () => {
+  assert.match(exportUi, /note用・装飾付きコピー/);
+  assert.match(exportUi, /Markdownをコピー/);
+  assert.match(exportUi, /プレーンをコピー/);
+  assert.match(exportUi, /装飾HTML保存/);
+  assert.match(exportUi, /detail\.publicationTarget === "note"/);
+});
+
+test('html export renders structured article html and txt export is plain', () => {
+  const detail = {
+    id: '10000000-0000-4000-8000-000000000001', userId: '00000000-0000-4000-8000-000000000002',
+    title: '装飾テスト', publicationTarget: 'note', articleType: 'free', genre: 'AI副業', subgenre: '初心者', status: 'ready', price: null,
+    tags: [], revision: 1, createdAt: '2026-09-17T00:00:00Z', updatedAt: '2026-09-17T00:00:00Z', body: markdown,
+    scheduledAt: null, publishedAt: null, publishedUrl: null,
+    workspace: { articleId: '10000000-0000-4000-8000-000000000001', userId: '00000000-0000-4000-8000-000000000002', requestJson: {}, workspaceJson: {}, imagePlanJson: {}, sourceBody: null, publishBody: markdown, workspaceVersion: 1, createdAt: null, updatedAt: null },
+  };
+  const html = exporter.articleExportHtml(detail);
+  const text = exporter.articleExportText(detail);
+  assert.match(html, /<h1>大見出し<\/h1>/);
+  assert.match(html, /<strong>重要<\/strong>/);
+  assert.doesNotMatch(html, /<pre style="white-space:pre-wrap;font:inherit">/);
+  assert.doesNotMatch(text, /\*\*重要\*\*/);
+});
