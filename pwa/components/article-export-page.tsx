@@ -80,7 +80,10 @@ export function ArticleExportPage() {
   const [statusFilter, setStatusFilter] = useState<ArticleStatus | "">("");
   const [message, setMessage] = useState("");
 
-  useEffect(() => { setDesktop(isDesktopBrowser()); }, []);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDesktop(isDesktopBrowser()), 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   useEffect(() => {
     let active = true;
