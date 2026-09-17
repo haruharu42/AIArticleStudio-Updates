@@ -18,7 +18,11 @@ export type ImagePromptItem = {
   order: number;
   insertionMarker: string | null;
   prompt: string;
+  suggestedFilename: string;
+  altText: string;
 };
+
+const MAX_FILENAME_TITLE_LENGTH = 90;
 
 const style = [
   "日本の現代的な2Dアニメ調",
@@ -36,6 +40,36 @@ const avoid = [
   "実在ブランドのロゴ・商標・特徴的な商品形状を入れない",
   "記事に根拠のない数字・ランキング・価格・評価を画像内へ書かない",
 ].join("。") + "。";
+
+export function sanitizeImageFilenameBase(title: string): string {
+  const normalized = title
+    .normalize("NFKC")
+    .replace(/[\\/:*?"<>|\u0000-\u001F]/g, "_")
+    .replace(/\s+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^[._\s]+|[._\s]+$/g, "");
+  const safe = normalized || "article-image";
+  const shortened = Array.from(safe).slice(0, MAX_FILENAME_TITLE_LENGTH).join("");
+  return shortened.replace(/[._\s]+$/g, "") || "article-image";
+}
+
+export function buildSuggestedImageFilename(
+  title: string,
+  kind: "cover" | "inline",
+  order = 0,
+): string {
+  const base = sanitizeImageFilenameBase(title);
+  const suffix = kind === "cover"
+    ? "アイキャッチ"
+    : `挿絵${String(Math.max(1, Math.trunc(order))).padStart(2, "0")}`;
+  return `${base}_${suffix}.png`;
+}
+
+function buildAltText(title: string, kind: "cover" | "inline", order = 0): string {
+  const subject = title.trim() || "記事";
+  if (kind === "cover") return `${subject}のアイキャッチ画像`;
+  return `${subject}の挿絵${String(Math.max(1, Math.trunc(order))).padStart(2, "0")}`;
+}
 
 function common(input: ImagePromptPlanInput): string {
   const knowledge = compileKnowledgeContext({
@@ -56,18 +90,23 @@ export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptIt
       kind: "cover",
       order: 0,
       insertionMarker: null,
+      suggestedFilename: buildSuggestedImageFilename(input.title, "cover"),
+      altText: buildAltText(input.title, "cover"),
       prompt: `次の記事用アイキャッチ画像を1枚作成してください。\n${common(input)}\n構図: 横長のアイキャッチを想定し、記事テーマが一目で伝わる主役を1つに絞る。人物を使う場合は親しみやすく、余白を十分に取る。\n文字方針: 原則として画像内文字は入れない。必要な場合でも記事タイトル全文を描画せず、短い補助語だけにする。`,
     });
   }
   if (input.inlineEnabled) {
     const count = Math.max(0, Math.min(10, Math.trunc(input.inlineCount)));
     for (let index = 0; index < count; index += 1) {
-      const number = String(index + 1).padStart(2, "0");
+      const order = index + 1;
+      const number = String(order).padStart(2, "0");
       items.push({
         kind: "inline",
-        order: index + 1,
+        order,
         insertionMarker: `IMAGE:${number}`,
-        prompt: `次の記事の挿絵${index + 1}を1枚作成してください。\n${common(input)}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、同じ構図を繰り返さない。\n差し込みマーカー: <!-- IMAGE:${number} -->\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。`,
+        suggestedFilename: buildSuggestedImageFilename(input.title, "inline", order),
+        altText: buildAltText(input.title, "inline", order),
+        prompt: `次の記事の挿絵${order}を1枚作成してください。\n${common(input)}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、同じ構図を繰り返さない。\n差し込みマーカー: <!-- IMAGE:${number} -->\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。`,
       });
     }
   }
