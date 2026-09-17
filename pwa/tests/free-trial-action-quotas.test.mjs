@@ -40,17 +40,19 @@ test("all six configurable free-trial feature codes are wired to explicit curren
 
 test("title and article quotas are consumed only by explicit prompt generation", async () => {
   const creator = await read("components/phase11-create-page.tsx");
+  const stepUi = await read("components/article-create/article-create-steps.tsx");
 
-  assert.match(creator, /タイトル候補を生成/);
-  assert.match(creator, /完成記事プロンプトを作成/);
+  assert.match(stepUi, /タイトル候補を生成/);
+  assert.match(stepUi, /完成記事プロンプトを作成/);
   assert.match(creator, /titlePromptAuthorized === titlePrompt/);
   assert.match(creator, /articlePromptAuthorized === articlePrompt/);
   assert.match(creator, /titleQuotaInFlightRef\.current/);
   assert.match(creator, /articleQuotaInFlightRef\.current/);
   assert.equal((creator.match(/consumeFreeTrialUsage\(/g) || []).length, 2);
-  assert.match(creator, /copyText\(titlePrompt, setMessage\)/);
-  assert.match(creator, /copyText\(articlePrompt, setMessage\)/);
-  assert.match(creator, /生成後のコピーやAIアプリ起動では追加消費しません/);
+  assert.doesNotMatch(stepUi, /consumeFreeTrialUsage\(/);
+  assert.match(stepUi, /copyText\(titlePrompt, setMessage\)/);
+  assert.match(stepUi, /copyText\(articlePrompt, setMessage\)/);
+  assert.match(stepUi, /生成後のコピーやAIアプリ起動では追加消費しません/);
 });
 
 test("image quota is consumed only when image prompts are explicitly created", async () => {
