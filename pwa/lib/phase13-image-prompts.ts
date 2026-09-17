@@ -1,3 +1,4 @@
+import { buildSuggestedImageFilename } from "@/lib/image-file-names";
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
 
 export type ImagePromptPlanInput = {
@@ -18,6 +19,8 @@ export type ImagePromptItem = {
   order: number;
   insertionMarker: string | null;
   prompt: string;
+  suggestedFilename: string;
+  altText: string;
 };
 
 const style = [
@@ -52,22 +55,30 @@ function common(input: ImagePromptPlanInput): string {
 export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptItem[] {
   const items: ImagePromptItem[] = [];
   if (input.coverEnabled) {
+    const suggestedFilename = buildSuggestedImageFilename({ title: input.title, kind: "cover" });
+    const altText = `${input.title || "記事"}の内容を表すアイキャッチ画像`;
     items.push({
       kind: "cover",
       order: 0,
       insertionMarker: null,
-      prompt: `次の記事用アイキャッチ画像を1枚作成してください。\n${common(input)}\n構図: 横長のアイキャッチを想定し、記事テーマが一目で伝わる主役を1つに絞る。人物を使う場合は親しみやすく、余白を十分に取る。\n文字方針: 原則として画像内文字は入れない。必要な場合でも記事タイトル全文を描画せず、短い補助語だけにする。`,
+      suggestedFilename,
+      altText,
+      prompt: `次の記事用アイキャッチ画像を1枚作成してください。\n${common(input)}\n構図: 横長のアイキャッチを想定し、記事テーマが一目で伝わる主役を1つに絞る。人物を使う場合は親しみやすく、余白を十分に取る。\n文字方針: 原則として画像内文字は入れない。必要な場合でも記事タイトル全文を描画せず、短い補助語だけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASへアップロードせず、端末へこのファイル名で保存してください。`,
     });
   }
   if (input.inlineEnabled) {
     const count = Math.max(0, Math.min(10, Math.trunc(input.inlineCount)));
     for (let index = 0; index < count; index += 1) {
       const number = String(index + 1).padStart(2, "0");
+      const suggestedFilename = buildSuggestedImageFilename({ title: input.title, kind: "inline", order: index + 1 });
+      const altText = `${input.title || "記事"}の本文を補足する挿絵${index + 1}`;
       items.push({
         kind: "inline",
         order: index + 1,
         insertionMarker: `IMAGE:${number}`,
-        prompt: `次の記事の挿絵${index + 1}を1枚作成してください。\n${common(input)}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、同じ構図を繰り返さない。\n差し込みマーカー: <!-- IMAGE:${number} -->\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。`,
+        suggestedFilename,
+        altText,
+        prompt: `次の記事の挿絵${index + 1}を1枚作成してください。\n${common(input)}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、同じ構図を繰り返さない。\n差し込みマーカー: <!-- IMAGE:${number} -->\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASへアップロードせず、端末へこのファイル名で保存してください。`,
       });
     }
   }
