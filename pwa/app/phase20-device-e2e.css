@@ -1,0 +1,517 @@
+/* Phase 20: real-device E2E polish for the beginner-first PWA. */
+
+/* Keep the article library on the approved white/light-blue surface even though
+   the legacy Phase 7 library styles were originally authored for the dark UI. */
+.beginner-dashboard-shell,
+.beginner-dashboard-frame,
+.beginner-library-main,
+.beginner-library-main .library-page {
+  background: #f7faff;
+  color: #10213f;
+}
+
+.beginner-library-main .library-page {
+  min-height: calc(100dvh - 170px);
+  border-radius: 20px;
+}
+
+.beginner-library-main .library-head,
+.beginner-library-main .library-toolbar,
+.beginner-library-main .article-list,
+.beginner-library-main .article-row,
+.beginner-library-main .article-detail,
+.beginner-library-main .editor-card,
+.beginner-library-main .library-empty {
+  border-color: #dfe8f4;
+  background: #fff;
+  color: #10213f;
+}
+
+.beginner-library-main .library-head {
+  border: 1px solid #dfe8f4;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgb(23 69 135 / 5%);
+}
+
+.beginner-library-main .library-toolbar {
+  box-shadow: 0 10px 30px rgb(23 69 135 / 5%);
+}
+
+.beginner-library-main .article-list {
+  box-shadow: 0 10px 30px rgb(23 69 135 / 5%);
+}
+
+.beginner-library-main .article-row + .article-row {
+  border-color: #e4ebf5;
+}
+
+.beginner-library-main .article-row:hover {
+  background: #f5f9ff;
+}
+
+.beginner-library-main .library-loading,
+.beginner-library-main .article-date {
+  color: #7185a2;
+}
+
+.beginner-library-main .article-main small,
+.beginner-library-main .article-date small {
+  color: #788ca7;
+}
+
+.beginner-library-main .article-status {
+  background: #eef3fa;
+  color: #526984;
+}
+
+.beginner-library-main .article-status.status-ready,
+.beginner-library-main .article-status.status-published {
+  background: #eaf9f3;
+  color: #187a5d;
+}
+
+.beginner-library-main .article-status.status-writing,
+.beginner-library-main .article-status.status-waiting_publish {
+  background: #f0ebff;
+  color: #6749be;
+}
+
+.beginner-library-main .row-arrow {
+  color: #8295af;
+}
+
+.beginner-library-main .library-search input,
+.beginner-library-main .editor-field input,
+.beginner-library-main .editor-field select,
+.beginner-library-main .editor-field textarea {
+  border-color: #cfdaea;
+  background: #f8fbff;
+  color: #172b49;
+}
+
+.beginner-library-main .back-action {
+  color: #31506f;
+}
+
+.beginner-library-main .secondary-action {
+  background: #223b63;
+  color: #fff;
+}
+
+.beginner-library-main .article-detail > header {
+  background: linear-gradient(135deg, #f4f8ff, #edf5ff);
+  color: #10213f;
+}
+
+.beginner-library-main .detail-badges span {
+  border-color: #d2e0f1;
+  color: #476584;
+}
+
+.beginner-library-main .detail-meta,
+.beginner-library-main .body-section + .body-section {
+  border-color: #e2eaf4;
+}
+
+.beginner-library-main .detail-meta dd {
+  color: #203552;
+}
+
+.beginner-library-main .body-section pre {
+  border-color: #dfe8f4;
+  background: #f8fbff;
+  color: #243a59;
+}
+
+/* Unify legacy feature routes and their loading/access states with the approved
+   beginner-first white/light-blue visual language. The functional components
+   keep their existing class names, so this layer intentionally overrides only
+   the old dark Phase 9-17 presentation. */
+.standalone-page,
+.creator-page:not(.beginner-creator-page),
+.admin-page {
+  background: linear-gradient(180deg, #f8fbff 0%, #f2f7ff 100%);
+  color: #10213f;
+}
+
+.standalone-card,
+.creator-page:not(.beginner-creator-page) .creator-card,
+.admin-page .admin-panel {
+  border-color: #dfe8f4;
+  background: #fff;
+  color: #10213f;
+  box-shadow: 0 12px 34px rgb(23 69 135 / 7%);
+}
+
+.standalone-page .eyebrow,
+.creator-page:not(.beginner-creator-page) .eyebrow,
+.admin-page .eyebrow {
+  color: #79a5ed;
+}
+
+.standalone-page .standalone-lead,
+.creator-page:not(.beginner-creator-page) .creator-head p:last-child,
+.creator-page:not(.beginner-creator-page) .panel-muted,
+.admin-page .admin-head p:last-child,
+.admin-page .panel-muted {
+  color: #7185a2;
+}
+
+.standalone-page .route-back,
+.creator-page:not(.beginner-creator-page) .route-back,
+.admin-page .route-back,
+.route-inline-link {
+  color: #176bd9;
+}
+
+.route-notice {
+  border-color: #bde8d9;
+  background: #effaf6;
+  color: #176b54;
+}
+
+.route-notice.error {
+  border-color: #f2c7d0;
+  background: #fff4f6;
+  color: #a13b53;
+}
+
+.creator-page:not(.beginner-creator-page) .route-field > span,
+.standalone-page .route-field > span,
+.admin-page .route-field > span {
+  color: #536b89;
+}
+
+.creator-page:not(.beginner-creator-page) .route-field input,
+.creator-page:not(.beginner-creator-page) .route-field select,
+.creator-page:not(.beginner-creator-page) .route-field textarea,
+.standalone-page .route-field input,
+.standalone-page .route-field select,
+.standalone-page .route-field textarea,
+.admin-page .route-field input,
+.admin-page .route-field select,
+.admin-page .route-field textarea,
+.admin-page .admin-search input {
+  border-color: #cfdaea;
+  background: #f8fbff;
+  color: #172b49;
+  color-scheme: light;
+}
+
+.creator-page:not(.beginner-creator-page) .choice-card,
+.admin-page .choice-card {
+  border-color: #d9e4f2;
+  background: #f8fbff;
+  color: #17304f;
+}
+
+.creator-page:not(.beginner-creator-page) .choice-card small,
+.admin-page .choice-card small {
+  color: #7589a5;
+}
+
+.creator-page:not(.beginner-creator-page) .route-meta,
+.admin-page .route-meta {
+  border-color: #dfe8f4;
+  background: #fff;
+}
+
+.creator-page:not(.beginner-creator-page) .route-meta > div:nth-child(even),
+.admin-page .route-meta > div:nth-child(even),
+.creator-page:not(.beginner-creator-page) .route-meta > div:nth-child(n + 3),
+.admin-page .route-meta > div:nth-child(n + 3) {
+  border-color: #e4ebf5;
+}
+
+.creator-page:not(.beginner-creator-page) .route-meta dt,
+.admin-page .route-meta dt {
+  color: #788ca7;
+}
+
+.creator-page:not(.beginner-creator-page) .route-meta dd,
+.admin-page .route-meta dd {
+  color: #203552;
+}
+
+.creator-page:not(.beginner-creator-page) .creator-preview {
+  border-color: #dfe8f4;
+  background: #f8fbff;
+  color: #243a59;
+}
+
+.creator-page:not(.beginner-creator-page) .primary-action,
+.standalone-page .primary-action,
+.admin-page .primary-action {
+  border-color: #176bd9;
+  background: linear-gradient(135deg, #1b80ff, #166bea);
+  color: #fff;
+}
+
+.creator-page:not(.beginner-creator-page) .secondary-action,
+.standalone-page .secondary-action,
+.admin-page .secondary-action {
+  border-color: #c7d9ef;
+  background: #eef5ff;
+  color: #285a91;
+}
+
+.creator-page:not(.beginner-creator-page) .tool-card {
+  border-color: #dce7f4;
+  background: #fff;
+  color: #17304f;
+  box-shadow: 0 10px 30px rgb(23 69 135 / 6%);
+}
+
+.creator-page:not(.beginner-creator-page) .tool-card:hover {
+  border-color: #9dc7fb;
+  background: #f8fbff;
+}
+
+.creator-page:not(.beginner-creator-page) .tool-card > span {
+  color: #4b86dd;
+}
+
+.creator-page:not(.beginner-creator-page) .tool-card p {
+  color: #7185a2;
+}
+
+.creator-page:not(.beginner-creator-page) .tool-card strong {
+  color: #176bd9;
+}
+
+.creator-page:not(.beginner-creator-page) .openai-tools-section {
+  border-color: #dce8f8;
+  background: linear-gradient(135deg, #fff, #f7faff);
+  color: #17304f;
+  box-shadow: 0 10px 30px rgb(23 69 135 / 6%);
+}
+
+.creator-page:not(.beginner-creator-page) .openai-tools-heading small,
+.creator-page:not(.beginner-creator-page) .openai-tools-note {
+  color: #7185a2;
+}
+
+.creator-page:not(.beginner-creator-page) .openai-tools-grid a {
+  border-color: #dce7f4;
+  background: #fff;
+  color: #17304f;
+}
+
+.creator-page:not(.beginner-creator-page) .openai-tools-grid span {
+  color: #176fd9;
+}
+
+.creator-page:not(.beginner-creator-page) .openai-tools-grid b {
+  color: #6f87a8;
+}
+
+.creator-page:not(.beginner-creator-page) .image-prompt-card,
+.creator-page:not(.beginner-creator-page) .sidejob-card,
+.creator-page:not(.beginner-creator-page) .metric-card,
+.creator-page:not(.beginner-creator-page) .analytics-list > div {
+  border-color: #dce7f4;
+  background: #fff;
+  color: #17304f;
+  box-shadow: 0 8px 24px rgb(23 69 135 / 5%);
+}
+
+.creator-page:not(.beginner-creator-page) .image-prompt-card > header {
+  border-color: #e3ebf5;
+}
+
+.creator-page:not(.beginner-creator-page) .image-prompt-card > header small,
+.creator-page:not(.beginner-creator-page) .sidejob-card ul,
+.creator-page:not(.beginner-creator-page) .sidejob-card ol,
+.creator-page:not(.beginner-creator-page) .metric-card span,
+.creator-page:not(.beginner-creator-page) .metric-card small,
+.creator-page:not(.beginner-creator-page) .analytics-list span,
+.creator-page:not(.beginner-creator-page) .analytics-note {
+  color: #7185a2;
+}
+
+.creator-page:not(.beginner-creator-page) .image-prompt-card textarea {
+  background: #f8fbff;
+  color: #243a59;
+}
+
+.creator-page:not(.beginner-creator-page) .sidejob-card > span {
+  color: #4b86dd;
+}
+
+.creator-page:not(.beginner-creator-page) .sidejob-card > strong {
+  color: #187a5d;
+}
+
+.creator-page:not(.beginner-creator-page) .analytics-list strong {
+  color: #203552;
+}
+
+.admin-page .admin-user,
+.admin-page .entitlement-list > div,
+.admin-page .invite-row {
+  border-color: #dce7f4;
+  background: #f8fbff;
+  color: #17304f;
+}
+
+.admin-page .admin-user.active {
+  border-color: #9dc7fb;
+  background: #edf5ff;
+}
+
+.admin-page .admin-user span,
+.admin-page .admin-user small,
+.admin-page .entitlement-list small,
+.admin-page .invite-row small {
+  color: #7185a2;
+}
+
+.admin-page .entitlement-list span,
+.admin-page .invite-row > span {
+  color: #187a5d;
+}
+
+.admin-page .invite-row code {
+  color: #315d99;
+}
+
+.phase-quick-nav {
+  border-color: #d8e4f2;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 14px 36px rgb(23 69 135 / 14%);
+}
+
+.phase-quick-nav a {
+  border-color: #d8e4f2;
+  background: #f7faff;
+  color: #31506f;
+}
+
+.phase-quick-nav a.quick-primary {
+  border-color: #176bd9;
+  background: linear-gradient(135deg, #1b80ff, #166bea);
+  color: #fff;
+}
+
+/* iOS does not expose reliable installed-app detection to Safari/PWAs. Keep
+   the choice explicit so users are never sent to the App Store by a guess. */
+.ai-ios-launch-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: end center;
+  background: rgb(12 28 54 / 42%);
+  padding: 18px 14px calc(18px + env(safe-area-inset-bottom));
+  backdrop-filter: blur(4px);
+}
+
+.ai-ios-launch-dialog {
+  width: min(100%, 430px);
+  display: grid;
+  gap: 12px;
+  border: 1px solid #dfe8f5;
+  border-radius: 22px;
+  background: #fff;
+  color: #10213f;
+  padding: 20px;
+  box-shadow: 0 24px 70px rgb(16 33 63 / 24%);
+}
+
+.ai-ios-launch-dialog > strong {
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.ai-ios-launch-dialog > p {
+  margin: 0;
+  color: #6f83a0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.ai-ios-launch-actions {
+  display: grid;
+  gap: 9px;
+}
+
+.ai-ios-launch-actions button,
+.ai-ios-launch-cancel {
+  min-height: 48px;
+  border-radius: 13px;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.ai-ios-launch-primary {
+  border: 0;
+  background: linear-gradient(135deg, #1b80ff, #166bea);
+  color: #fff;
+}
+
+.ai-ios-launch-secondary {
+  border: 1px solid #b9d6fb;
+  background: #f4f9ff;
+  color: #176bd9;
+}
+
+.ai-ios-launch-cancel {
+  border: 0;
+  background: transparent;
+  color: #687d99;
+}
+
+/* On iPhone, show all seven wizard steps at once instead of requiring a
+   horizontal swipe that makes STEP 6/7 look as if they do not exist. */
+@media (max-width: 650px) {
+  .beginner-creator-page .wizard-steps {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .beginner-creator-page .wizard-steps li {
+    min-height: 62px;
+    gap: 4px;
+    padding: 7px 1px;
+    font-size: 7px;
+    line-height: 1.25;
+  }
+
+  .beginner-creator-page .wizard-steps li span {
+    width: 21px;
+    height: 21px;
+    font-size: 8px;
+  }
+
+  .beginner-library-main .library-head {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .beginner-library-main .library-head .access-badge {
+    width: fit-content;
+  }
+
+  .beginner-library-main .library-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .beginner-library-main .library-search {
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .beginner-creator-page .wizard-steps {
+    gap: 3px;
+  }
+
+  .beginner-creator-page .wizard-steps li {
+    font-size: 6.5px;
+  }
+}

@@ -1,5 +1,5 @@
-import { Phase11CreatePage } from "@/components/phase11-create-page";
+import { CreateAiSetup } from "@/components/create-ai-setup";
 
 export default function CreatePage() {
-  return <Phase11CreatePage />;
+  return <CreateAiSetup />;
 }

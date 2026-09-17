@@ -10,9 +10,9 @@ export default function AiTermsPage() {
   return (
     <LegalDocument
       title="AI記事スタジオ PWA AI利用条件"
-      description="AI支援、プロンプト、生成物を安全に利用するための公開準備ドラフトです。"
+      description="AI支援、プロンプト、生成物を安全に利用するための条件を定めます。"
     >
-      <p>最終更新予定日: 2026年9月11日</p>
+      <p>最終更新日: 2026年9月16日</p>
 
       <h2>1. AI支援の位置づけ</h2>
       <p>
@@ -76,7 +76,7 @@ export default function AiTermsPage() {
 
       <h2>13. お問い合わせ</h2>
       <p>
-        正式公開時の運営者名と問い合わせ窓口は、一般販売前に本ページまたは関連ページへ表示します。
+        AI機能や本条件に関する問い合わせは、<a href="/support">お問い合わせ・開示請求ページ</a>をご確認ください。
       </p>
     </LegalDocument>
   );

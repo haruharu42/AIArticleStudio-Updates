@@ -121,7 +121,7 @@ export function Phase16PublishPage() {
   if (gate.kind !== "ready") {
     return (
       <main className="standalone-page"><section className="standalone-card">
-        <p className="eyebrow">PUBLICATION · PHASE 16</p><h1>公開管理</h1>
+        <p className="eyebrow">PUBLISHING</p><h1>公開管理</h1>
         {gate.kind === "loading" && <p className="route-notice">記事を確認しています…</p>}
         {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
         {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
@@ -133,7 +133,7 @@ export function Phase16PublishPage() {
   return (
     <main className="creator-page">
       <header className="creator-head">
-        <div><p className="eyebrow">PUBLICATION · PHASE 16</p><h1>記事の公開状態を管理</h1><p>{gate.aasId} / note・Tips・Brain・ブログの公開情報を共通DBへ保存</p></div>
+        <div><p className="eyebrow">PUBLISHING</p><h1>記事の公開状態を管理</h1><p>{gate.aasId} / note・Tips・Brain・ブログの公開情報を記事ライブラリと一緒に管理できます</p></div>
         <a className="route-back" href="/tools">← 機能一覧</a>
       </header>
       <section className="creator-card">
@@ -150,7 +150,7 @@ export function Phase16PublishPage() {
           </>
         )}
         {message && <div className="route-notice">{message}</div>}
-        <p className="panel-muted">この画面は公開状態の記録を行います。外部サービスへの自動投稿は、各サービスのOAuth/API仕様を接続する後続工程です。</p>
+        <p className="panel-muted">この画面では公開予定・公開済みURL・公開日時を記録します。外部サービスへの自動投稿は行いません。</p>
       </section>
     </main>
   );

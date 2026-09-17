@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { launchAiApp } from "@/lib/ai-app-links";
+import { consumeFreeTrialUsage, trialUsageMessage } from "@/lib/free-trial";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   buildArticlePrompt,
@@ -13,6 +15,20 @@ import {
   type PublicationTarget,
   type SaveStatus,
 } from "@/lib/phase11-create";
+import {
+  clearArticleWizardProgress,
+  loadArticleWizardProgress,
+  saveArticleWizardProgress,
+} from "@/lib/phase11-wizard-progress";
+import {
+  AGE_GROUP_OPTIONS,
+  GENDER_OPTIONS,
+  GENRE_OPTIONS,
+  TARGET_LENGTH_OPTIONS,
+  genreSelectionValue,
+  subgenreOptionsFor,
+  subgenreSelectionValue,
+} from "@/lib/phase18-content-options";
 
 type Gate =
   | { kind: "loading" }
@@ -43,15 +59,65 @@ const initialDraft: ArticleCreationDraft = {
   saveStatus: "writing",
 };
 
-const steps = [
-  "生成方法",
-  "画像計画",
-  "本文条件",
-  "タイトル",
-  "本文生成",
-  "プレビュー",
-  "保存",
-];
+const steps = ["生成方法", "画像計画", "本文条件", "タイトル", "本文生成", "プレビュー", "保存"];
+const aiLaunchOptions = [
+  { key: "chatgpt", label: "ChatGPT" },
+  { key: "claude", label: "Claude" },
+  { key: "gemini", label: "Gemini" },
+] as const;
+
+function initialDraftFromLocation(): ArticleCreationDraft {
+  const next = { ...initialDraft };
+  if (typeof window === "undefined") return next;
+
+  const params = new URLSearchParams(window.location.search);
+  const publicationTarget = params.get("publicationTarget");
+  if (publicationTarget === "note" || publicationTarget === "tips" || publicationTarget === "brain" || publicationTarget === "blog") {
+    next.publicationTarget = publicationTarget;
+  }
+
+  const articleType = params.get("articleType");
+  if (articleType === "free" || articleType === "paid") {
+    next.articleType = articleType;
+    next.price = articleType === "paid" ? 1 : null;
+  }
+
+  const genre = params.get("genre");
+  if (genre) next.genre = genre.slice(0, 120);
+
+  const subgenre = params.get("subgenre");
+  if (subgenre) next.subgenre = subgenre.slice(0, 120);
+  else {
+    const allowedSubgenres = subgenreOptionsFor(next.genre);
+    if (!allowedSubgenres.includes(next.subgenre)) next.subgenre = allowedSubgenres[0] ?? "AIおまかせ";
+  }
+
+  const ageGroup = params.get("ageGroup");
+  if (ageGroup && AGE_GROUP_OPTIONS.some((option) => option === ageGroup)) next.ageGroup = ageGroup;
+
+  const gender = params.get("gender");
+  if (gender && GENDER_OPTIONS.some((option) => option === gender)) next.gender = gender;
+
+  const targetLength = Number(params.get("targetLength"));
+  if (TARGET_LENGTH_OPTIONS.some((option) => option.value === targetLength)) next.targetLength = targetLength;
+
+  const inlineCount = Number(params.get("inlineCount"));
+  if (Number.isSafeInteger(inlineCount) && inlineCount >= 1 && inlineCount <= 5) {
+    next.inlineEnabled = true;
+    next.inlineCount = inlineCount;
+  } else if (params.get("inlineCount") === "0") {
+    next.inlineEnabled = false;
+  }
+
+  return next;
+}
+
+function initialMessageFromLocation(): string {
+  if (typeof window === "undefined") return "";
+  return new URLSearchParams(window.location.search).get("from") === "home-quick-setup"
+    ? "ホームで選んだ基本設定を引き継ぎました。順番に確認しながら進めてください。"
+    : "";
+}
 
 function copyText(value: string, setMessage: (value: string) => void) {
   if (!navigator.clipboard) {
@@ -67,11 +133,18 @@ function copyText(value: string, setMessage: (value: string) => void) {
 export function Phase11CreatePage() {
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<ArticleCreationDraft>(initialDraft);
+  const [draft, setDraft] = useState<ArticleCreationDraft>(() => initialDraftFromLocation());
   const [tagsText, setTagsText] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(() => initialMessageFromLocation());
   const [busy, setBusy] = useState(false);
+  const [titleBusy, setTitleBusy] = useState(false);
+  const [articleBusy, setArticleBusy] = useState(false);
+  const [titlePromptAuthorized, setTitlePromptAuthorized] = useState("");
+  const [articlePromptAuthorized, setArticlePromptAuthorized] = useState("");
   const [createdId, setCreatedId] = useState("");
+  const progressOwnerIdRef = useRef("");
+  const titleQuotaInFlightRef = useRef(false);
+  const articleQuotaInFlightRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -90,6 +163,15 @@ export function Phase11CreatePage() {
         if (profile.status !== "active") { setGate({ kind: "denied", message: "記事作成にはactiveアカウントが必要です。" }); return; }
         const { data: access, error: accessError } = await client.rpc("can_access_product", { p_product_code: "AAS-PWA-BETA" });
         if (accessError || access !== true) { setGate({ kind: "denied", message: "PWA利用権が必要です。" }); return; }
+
+        const saved = loadArticleWizardProgress(user.id);
+        if (saved) {
+          setStep(saved.step);
+          setDraft(saved.draft);
+          setTagsText(saved.tagsText);
+          setMessage("前回の作業内容を復元しました。");
+        }
+        progressOwnerIdRef.current = user.id;
         setGate({ kind: "ready", ownerId: user.id, aasId: profile.aas_user_id });
       } catch (error) {
         if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "初期化に失敗しました。" });
@@ -99,28 +181,119 @@ export function Phase11CreatePage() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (gate.kind !== "ready" || progressOwnerIdRef.current !== gate.ownerId || createdId) return;
+    saveArticleWizardProgress(gate.ownerId, { step, draft, tagsText });
+  }, [gate, step, draft, tagsText, createdId]);
+
   const localTitles = useMemo(() => suggestLocalTitles(draft), [draft]);
   const titlePrompt = useMemo(() => buildTitlePrompt({ ...draft, tags: tagsText.split(/[,、\n]/).map((tag) => tag.trim()).filter(Boolean) }), [draft, tagsText]);
   const articlePrompt = useMemo(() => buildArticlePrompt({ ...draft, tags: tagsText.split(/[,、\n]/).map((tag) => tag.trim()).filter(Boolean) }), [draft, tagsText]);
+  const subgenreOptions = useMemo(() => subgenreOptionsFor(draft.genre), [draft.genre]);
+  const genreSelectValue = genreSelectionValue(draft.genre);
+  const subgenreSelectValue = subgenreSelectionValue(draft.genre, draft.subgenre);
+  const titleCandidatesReady = titlePromptAuthorized === titlePrompt;
+  const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const setGenre = (genre: string) => {
+    if (genre === "その他") {
+      setDraft((current) => ({ ...current, genre: "その他", subgenre: "AIおまかせ" }));
+      return;
+    }
+    const nextSubgenres = subgenreOptionsFor(genre);
+    setDraft((current) => ({
+      ...current,
+      genre,
+      subgenre: nextSubgenres.includes(current.subgenre) ? current.subgenre : nextSubgenres[0] ?? "AIおまかせ",
+    }));
+  };
+
+  const setCustomGenre = (value: string) => {
+    setDraft((current) => ({ ...current, genre: value.slice(0, 120), subgenre: "AIおまかせ" }));
+  };
+
+  const setSubgenre = (value: string) => {
+    patch("subgenre", value === "その他" ? "その他" : value);
   };
 
   const setArticleType = (value: ArticleType) => {
     setDraft((current) => ({
       ...current,
       articleType: value,
-      price:
-        value === "free"
-          ? null
-          : current.price !== null && current.price > 0
-            ? current.price
-            : 1,
+      price: value === "free" ? null : current.price !== null && current.price > 0 ? current.price : 1,
     }));
   };
 
-  const next = () => { setMessage(""); setStep((current) => Math.min(steps.length - 1, current + 1)); };
+  const generateTitleCandidates = async () => {
+    if (titleQuotaInFlightRef.current) return;
+    titleQuotaInFlightRef.current = true;
+    setTitleBusy(true);
+    setMessage("");
+    try {
+      const result = await consumeFreeTrialUsage(getSupabaseClient(), "title_generate");
+      if (!result.allowed) {
+        setTitlePromptAuthorized("");
+        setMessage(trialUsageMessage(result));
+        return;
+      }
+      setTitlePromptAuthorized(titlePrompt);
+      setMessage(
+        result.bypassLimits
+          ? "タイトル候補を生成しました。"
+          : `タイトル候補を1回生成しました。${trialUsageMessage(result)}`,
+      );
+    } catch (error) {
+      setTitlePromptAuthorized("");
+      setMessage(error instanceof Error ? error.message : "タイトル候補の利用回数を確認できませんでした。");
+    } finally {
+      titleQuotaInFlightRef.current = false;
+      setTitleBusy(false);
+    }
+  };
+
+  const generateArticlePrompt = async () => {
+    if (articleQuotaInFlightRef.current) return;
+    articleQuotaInFlightRef.current = true;
+    setArticleBusy(true);
+    setMessage("");
+    try {
+      const result = await consumeFreeTrialUsage(getSupabaseClient(), "article_generate");
+      if (!result.allowed) {
+        setArticlePromptAuthorized("");
+        setMessage(trialUsageMessage(result));
+        return;
+      }
+      setArticlePromptAuthorized(articlePrompt);
+      setMessage(
+        result.bypassLimits
+          ? "完成記事プロンプトを作成しました。"
+          : `完成記事プロンプトを1回作成しました。${trialUsageMessage(result)}`,
+      );
+    } catch (error) {
+      setArticlePromptAuthorized("");
+      setMessage(error instanceof Error ? error.message : "記事生成の利用回数を確認できませんでした。");
+    } finally {
+      articleQuotaInFlightRef.current = false;
+      setArticleBusy(false);
+    }
+  };
+
+  const next = () => {
+    setMessage("");
+    if (step === 2 && (!draft.genre.trim() || draft.genre === "その他")) {
+      setMessage("「その他」を選んだ場合はジャンル名を入力してください。");
+      return;
+    }
+    if (step === 2 && (!draft.subgenre.trim() || draft.subgenre === "その他")) {
+      setMessage("「その他」を選んだ場合はサブジャンル名を入力してください。");
+      return;
+    }
+    setStep((current) => Math.min(steps.length - 1, current + 1));
+  };
   const back = () => { setMessage(""); setStep((current) => Math.max(0, current - 1)); };
 
   const save = async () => {
@@ -132,6 +305,7 @@ export function Phase11CreatePage() {
         gate.ownerId,
         { ...draft, tags: tagsText.split(/[,、\n]/).map((tag) => tag.trim()).filter(Boolean) },
       );
+      clearArticleWizardProgress(gate.ownerId);
       setCreatedId(result.id);
       setMessage(`「${result.title}」をクラウド記事ライブラリへ保存しました。`);
     } catch (error) {
@@ -144,7 +318,7 @@ export function Phase11CreatePage() {
   if (gate.kind !== "ready") {
     return (
       <main className="standalone-page"><section className="standalone-card">
-        <p className="eyebrow">ARTICLE CREATOR · PHASE 11</p><h1>記事を作る</h1>
+        <p className="eyebrow">ARTICLE CREATOR</p><h1>記事を作る</h1>
         {gate.kind === "loading" && <p className="route-notice">アカウントと利用権を確認しています…</p>}
         {gate.kind === "signed_out" && <p className="route-notice error">先にホームからログインしてください。</p>}
         {gate.kind === "denied" && <p className="route-notice error">{gate.message}</p>}
@@ -155,9 +329,13 @@ export function Phase11CreatePage() {
   }
 
   return (
-    <main className="creator-page">
+    <main className="creator-page beginner-creator-page">
       <header className="creator-head">
-        <div><p className="eyebrow">ARTICLE CREATOR · PHASE 11</p><h1>記事を作る</h1><p>{gate.aasId} / Windowsと共通のクラウド記事へ保存</p></div>
+        <div>
+          <p className="eyebrow">ARTICLE CREATOR</p>
+          <h1>記事を作る</h1>
+          <p>上から順番に選ぶだけで、記事条件・画像計画・タイトル・本文をまとめて保存できます。</p>
+        </div>
         <a className="route-back" href="/">← ホーム</a>
       </header>
 
@@ -168,78 +346,100 @@ export function Phase11CreatePage() {
       <section className="creator-card">
         {step === 0 && (
           <div className="wizard-pane">
-            <p className="eyebrow">STEP 1</p><h2>生成方法</h2>
-            <label className="choice-card"><input type="radio" checked={draft.generationMode === "prompt_export"} onChange={() => patch("generationMode", "prompt_export")} /><span><strong>ChatGPTプロンプト書き出し</strong><small>API残高なしでも利用可能。タイトル・本文用プロンプトをコピーして生成結果を戻します。</small></span></label>
-            <label className="choice-card"><input type="radio" checked={draft.generationMode === "manual"} onChange={() => patch("generationMode", "manual")} /><span><strong>手動作成</strong><small>タイトルと本文を自分で入力して共通記事ライブラリへ保存します。</small></span></label>
+            <p className="eyebrow">STEP 1</p><h2>どの方法で記事を作りますか？</h2>
+            <label className="choice-card"><input type="radio" checked={draft.generationMode === "prompt_export"} onChange={() => patch("generationMode", "prompt_export")} /><span><strong>AIを使って作る</strong><small>ChatGPT・Claude・Geminiで使えるタイトル・本文プロンプトを作成します。生成結果を貼り付けて保存できます。</small></span></label>
+            <label className="choice-card"><input type="radio" checked={draft.generationMode === "manual"} onChange={() => patch("generationMode", "manual")} /><span><strong>自分で本文を書く</strong><small>タイトルと本文を直接入力して共通記事ライブラリへ保存します。</small></span></label>
             <label className="route-field"><span>記事テーマ</span><textarea value={draft.theme} onChange={(e) => patch("theme", e.target.value)} placeholder="例: 30代初心者向けのAI副業の始め方" /></label>
+            <p className="beginner-help">迷った場合は「誰向けに・何を解決する記事か」を1文で入力してください。</p>
           </div>
         )}
 
         {step === 1 && (
-          <div className="wizard-pane"><p className="eyebrow">STEP 2</p><h2>画像計画</h2>
-            <label className="choice-card"><input type="checkbox" checked={draft.coverEnabled} onChange={(e) => patch("coverEnabled", e.target.checked)} /><span><strong>アイキャッチ画像</strong><small>記事のカバー画像を作成する前提で画像計画へ保存します。</small></span></label>
-            <label className="choice-card"><input type="checkbox" checked={draft.inlineEnabled} onChange={(e) => patch("inlineEnabled", e.target.checked)} /><span><strong>挿絵</strong><small>本文内へ画像差し込み候補を作ります。</small></span></label>
-            {draft.inlineEnabled && <label className="route-field"><span>挿絵枚数</span><input type="number" min={1} max={10} value={draft.inlineCount} onChange={(e) => patch("inlineCount", Math.max(1, Math.min(10, Number(e.target.value) || 1)))} /></label>}
+          <div className="wizard-pane"><p className="eyebrow">STEP 2</p><h2>記事に画像を入れますか？</h2>
+            <label className="choice-card"><input type="checkbox" checked={draft.coverEnabled} onChange={(e) => patch("coverEnabled", e.target.checked)} /><span><strong>アイキャッチ画像を作る</strong><small>記事の先頭に表示するメイン画像です。基本はONがおすすめです。</small></span></label>
+            <label className="choice-card"><input type="checkbox" checked={draft.inlineEnabled} onChange={(e) => patch("inlineEnabled", e.target.checked)} /><span><strong>挿絵を作る</strong><small>本文の途中に入れる画像です。必要な場合だけONにしてください。</small></span></label>
+            {draft.inlineEnabled && <label className="route-field"><span>挿絵枚数</span><select value={draft.inlineCount} onChange={(e) => patch("inlineCount", Number(e.target.value))}><option value={1}>1枚</option><option value={2}>2枚</option><option value={3}>3枚</option><option value={4}>4枚</option><option value={5}>5枚</option></select></label>}
           </div>
         )}
 
         {step === 2 && (
-          <div className="wizard-pane"><p className="eyebrow">STEP 3</p><h2>本文条件</h2>
+          <div className="wizard-pane"><p className="eyebrow">STEP 3</p><h2>記事の基本条件を選んでください</h2>
+            <p className="beginner-help">年齢・ジャンル・サブジャンルなどの選択条件をAAS Knowledge Compilerが組み合わせ、タイトル・本文・画像・SNS向けの指示へ反映します。</p>
             <div className="creator-form-grid">
               <label className="route-field"><span>掲載先</span><select value={draft.publicationTarget} onChange={(e) => patch("publicationTarget", e.target.value as PublicationTarget)}><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></select></label>
-              <label className="route-field"><span>無料 / 有料</span><select value={draft.articleType} onChange={(e) => setArticleType(e.target.value as ArticleType)}><option value="free">無料</option><option value="paid">有料</option></select></label>
-              <label className="route-field"><span>ジャンル</span><input value={draft.genre} onChange={(e) => patch("genre", e.target.value)} /></label>
-              <label className="route-field"><span>サブジャンル</span><input value={draft.subgenre} onChange={(e) => patch("subgenre", e.target.value)} /></label>
-              <label className="route-field"><span>対象年齢</span><input value={draft.ageGroup} onChange={(e) => patch("ageGroup", e.target.value)} placeholder="30代 / 60代 / AIおまかせ" /></label>
-              <label className="route-field"><span>対象性別</span><input value={draft.gender} onChange={(e) => patch("gender", e.target.value)} placeholder="女性 / 男性 / AIおまかせ" /></label>
-              <label className="route-field"><span>文字数目安</span><input type="number" min={500} max={50000} step={500} value={draft.targetLength} onChange={(e) => patch("targetLength", Number(e.target.value) || 500)} /></label>
+              <label className="route-field"><span>記事タイプ</span><select value={draft.articleType} onChange={(e) => setArticleType(e.target.value as ArticleType)}><option value="free">無料記事</option><option value="paid">有料記事</option></select></label>
+              <label className="route-field"><span>ジャンル</span><select value={genreSelectValue} onChange={(e) => setGenre(e.target.value)}>{GENRE_OPTIONS.map((genre) => <option key={genre} value={genre}>{genre}</option>)}</select>{genreSelectValue === "その他" && <input className="taxonomy-custom-input" value={draft.genre === "その他" ? "" : draft.genre} onChange={(e) => setCustomGenre(e.target.value)} placeholder="例: 観葉植物、ペット防災、AI英会話" maxLength={120} />}</label>
+              <label className="route-field"><span>サブジャンル</span><select value={subgenreSelectValue} onChange={(e) => setSubgenre(e.target.value)}>{subgenreOptions.map((subgenre) => <option key={subgenre} value={subgenre}>{subgenre}</option>)}</select>{subgenreSelectValue === "その他" && <input className="taxonomy-custom-input" value={draft.subgenre === "その他" ? "" : draft.subgenre} onChange={(e) => patch("subgenre", e.target.value.slice(0, 120))} placeholder="サブジャンルを具体的に入力" maxLength={120} />}</label>
+              <label className="route-field"><span>対象年齢</span><select value={draft.ageGroup} onChange={(e) => patch("ageGroup", e.target.value)}>{AGE_GROUP_OPTIONS.map((age) => <option key={age} value={age}>{age}</option>)}</select></label>
+              <label className="route-field"><span>対象性別</span><select value={draft.gender} onChange={(e) => patch("gender", e.target.value)}>{GENDER_OPTIONS.map((gender) => <option key={gender} value={gender}>{gender}</option>)}</select></label>
+              <label className="route-field"><span>文字数の目安</span><select value={draft.targetLength} onChange={(e) => patch("targetLength", Number(e.target.value))}>{TARGET_LENGTH_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
               {draft.articleType === "paid" && <label className="route-field"><span>価格（円）</span><input type="number" min={1} value={draft.price ?? 1} onChange={(e) => patch("price", Math.max(1, Number(e.target.value) || 1))} /></label>}
-              <label className="choice-card compact"><input type="checkbox" checked={draft.affiliateEnabled} onChange={(e) => patch("affiliateEnabled", e.target.checked)} /><span><strong>アフィリエイト ON</strong></span></label>
-              <label className="choice-card compact"><input type="checkbox" checked={draft.magazineEnabled} onChange={(e) => patch("magazineEnabled", e.target.checked)} /><span><strong>マガジン ON</strong></span></label>
-              <label className="route-field full"><span>タグ（カンマ・改行区切り）</span><input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="AI副業, 初心者, ChatGPT" /></label>
+              <label className="choice-card compact"><input type="checkbox" checked={draft.affiliateEnabled} onChange={(e) => patch("affiliateEnabled", e.target.checked)} /><span><strong>アフィリエイトを使う</strong><small>商品・サービス紹介を含む記事の場合にON</small></span></label>
+              <label className="choice-card compact"><input type="checkbox" checked={draft.magazineEnabled} onChange={(e) => patch("magazineEnabled", e.target.checked)} /><span><strong>マガジンに入れる</strong><small>note等でシリーズ管理する場合にON</small></span></label>
+              <label className="route-field full"><span>タグ（任意）</span><input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="AI副業, 初心者, ChatGPT" /></label>
             </div>
+            {(genreSelectValue === "その他" || subgenreSelectValue === "その他") && <p className="knowledge-learning-note">自由入力したジャンル・サブジャンルは、記事本文とは分離して候補名と利用回数だけを集計します。管理者は個人を特定せず集計候補を確認し、必要なものだけ正式ナレッジへ承認できます。</p>}
           </div>
         )}
 
         {step === 3 && (
-          <div className="wizard-pane"><p className="eyebrow">STEP 4</p><h2>タイトル候補</h2>
-            <p className="panel-muted">ローカル候補から選ぶか、ChatGPTへタイトル用プロンプトを渡して候補を作成してください。</p>
-            <div className="title-candidates">{localTitles.map((title) => <button type="button" key={title} onClick={() => patch("title", title)} className={draft.title === title ? "active" : ""}>{title}</button>)}</div>
-            <label className="route-field"><span>選択タイトル</span><input value={draft.title} onChange={(e) => patch("title", e.target.value)} /></label>
-            {draft.generationMode === "prompt_export" && <><label className="route-field"><span>ChatGPT用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label><button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button></>}
+          <div className="wizard-pane"><p className="eyebrow">STEP 4</p><h2>タイトルを選んでください</h2>
+            <p className="panel-muted">自分でタイトルを入力する場合は回数を消費しません。「タイトル候補を生成」を押した時だけ無料トライアルのタイトル生成1回として記録されます。</p>
+            <button className="secondary-action" type="button" disabled={titleBusy} onClick={() => void generateTitleCandidates()}>{titleBusy ? "利用回数を確認中…" : titleCandidatesReady ? "タイトル候補を作り直す" : "タイトル候補を生成"}</button>
+            {titleCandidatesReady && <div className="title-candidates">{localTitles.map((title) => <button type="button" key={title} onClick={() => patch("title", title)} className={draft.title === title ? "active" : ""}>{title}</button>)}</div>}
+            <label className="route-field"><span>選択タイトル</span><input value={draft.title} onChange={(e) => patch("title", e.target.value)} placeholder="候補を使わず直接入力もできます" /></label>
+            {draft.generationMode === "prompt_export" && titleCandidatesReady && <>
+              <label className="route-field"><span>AI用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
+              <div className="openai-prompt-actions">
+                <button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button>
+                {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => launchAiApp(app.key)}>{app.label}を開く ↗</button>)}
+              </div>
+              <p className="beginner-help">候補生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて候補を作り直した時だけ次の1回として記録されます。</p>
+            </>}
           </div>
         )}
 
         {step === 4 && (
-          <div className="wizard-pane"><p className="eyebrow">STEP 5</p><h2>本文生成</h2>
-            {draft.generationMode === "prompt_export" && <><label className="route-field"><span>ChatGPT用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label><button className="secondary-action" type="button" onClick={() => copyText(articlePrompt, setMessage)}>完成記事プロンプトをコピー</button></>}
-            <label className="route-field"><span>{draft.generationMode === "prompt_export" ? "生成した本文を貼り付け" : "本文"}</span><textarea className="body-area" value={draft.body} onChange={(e) => patch("body", e.target.value)} placeholder="# 見出し\n本文…" /></label>
+          <div className="wizard-pane"><p className="eyebrow">STEP 5</p><h2>本文を準備します</h2>
+            {draft.generationMode === "prompt_export" && <>
+              <p className="panel-muted">この画面を開くだけでは回数を消費しません。「完成記事プロンプトを作成」を押した時だけ記事生成1回として記録されます。</p>
+              <button className="secondary-action" type="button" disabled={articleBusy} onClick={() => void generateArticlePrompt()}>{articleBusy ? "利用回数を確認中…" : articlePromptReady ? "完成記事プロンプトを作り直す" : "完成記事プロンプトを作成"}</button>
+              {articlePromptReady && <>
+                <label className="route-field"><span>AI用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
+                <div className="openai-prompt-actions">
+                  <button className="secondary-action" type="button" onClick={() => copyText(articlePrompt, setMessage)}>完成記事プロンプトをコピー</button>
+                  {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => launchAiApp(app.key)}>{app.label}を開く ↗</button>)}
+                </div>
+                <p className="beginner-help">生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
+              </>}
+            </>}
+            <label className="route-field"><span>{draft.generationMode === "prompt_export" ? "生成した本文をここへ貼り付け" : "本文"}</span><textarea className="body-area" value={draft.body} onChange={(e) => patch("body", e.target.value)} placeholder="# 見出し\n本文…" /></label>
           </div>
         )}
 
         {step === 5 && (
-          <div className="wizard-pane"><p className="eyebrow">STEP 6</p><h2>プレビュー</h2>
-            <div className="preview-meta"><span>{draft.publicationTarget}</span><span>{draft.articleType === "paid" ? "有料" : "無料"}</span><span>{draft.genre || "ジャンル未指定"}</span><span>{draft.body.length.toLocaleString()}文字</span></div>
+          <div className="wizard-pane"><p className="eyebrow">STEP 6</p><h2>内容を確認しましょう</h2>
+            <div className="preview-meta"><span>{draft.publicationTarget}</span><span>{draft.articleType === "paid" ? "有料" : "無料"}</span><span>{draft.genre || "ジャンル未指定"}</span><span>{draft.subgenre || "サブジャンル未指定"}</span><span>{draft.body.length.toLocaleString()}文字</span></div>
             <h3>{draft.title || "タイトル未入力"}</h3>
             <pre className="creator-preview">{draft.body || "本文がまだありません。"}</pre>
           </div>
         )}
 
         {step === 6 && (
-          <div className="wizard-pane"><p className="eyebrow">STEP 7</p><h2>クラウドへ保存</h2>
-            <p className="panel-muted">記事・編集条件・画像計画を1つのWorkspaceとして保存します。Windows版から同じ記事を続けて編集できます。</p>
+          <div className="wizard-pane"><p className="eyebrow">STEP 7</p><h2>記事ライブラリへ保存</h2>
+            <p className="panel-muted">記事・編集条件・画像計画を1つのWorkspaceとして保存します。保存後はPWAの記事ライブラリからいつでも続けて編集できます。</p>
             <label className="route-field"><span>保存状態</span><select value={draft.saveStatus} onChange={(e) => patch("saveStatus", e.target.value as SaveStatus)}><option value="draft">下書き</option><option value="writing">執筆中</option><option value="ready">完成</option></select></label>
-            <dl className="route-meta"><div><dt>タイトル</dt><dd>{draft.title || "未入力"}</dd></div><div><dt>掲載先</dt><dd>{draft.publicationTarget}</dd></div><div><dt>本文</dt><dd>{draft.body.length.toLocaleString()}文字</dd></div><div><dt>画像</dt><dd>cover {draft.coverEnabled ? "ON" : "OFF"} / inline {draft.inlineEnabled ? draft.inlineCount : 0}</dd></div></dl>
+            <dl className="route-meta"><div><dt>タイトル</dt><dd>{draft.title || "未入力"}</dd></div><div><dt>掲載先</dt><dd>{draft.publicationTarget}</dd></div><div><dt>ジャンル</dt><dd>{draft.genre} / {draft.subgenre}</dd></div><div><dt>本文</dt><dd>{draft.body.length.toLocaleString()}文字</dd></div><div><dt>画像</dt><dd>cover {draft.coverEnabled ? "ON" : "OFF"} / inline {draft.inlineEnabled ? draft.inlineCount : 0}</dd></div></dl>
             {!createdId && <button className="primary-action" type="button" disabled={busy || !draft.title.trim()} onClick={() => void save()}>{busy ? "保存中…" : "記事ライブラリへ保存"}</button>}
             {createdId && <div className="route-notice"><strong>保存完了</strong><br />Article ID: {createdId}</div>}
           </div>
         )}
 
-        {message && <div className={createdId ? "route-notice" : "route-notice"}>{message}</div>}
+        {message && <div className="route-notice">{message}</div>}
 
         <footer className="wizard-actions">
-          <button className="secondary-action" type="button" disabled={step === 0 || busy} onClick={back}>戻る</button>
-          {step < steps.length - 1 && <button className="primary-action" type="button" disabled={busy} onClick={next}>次へ</button>}
+          <button className="secondary-action" type="button" disabled={step === 0 || busy || titleBusy || articleBusy} onClick={back}>戻る</button>
+          {step < steps.length - 1 && <button className="primary-action" type="button" disabled={busy || titleBusy || articleBusy} onClick={next}>次へ →</button>}
           {createdId && <a className="primary-action" href="/">ホームへ戻る</a>}
         </footer>
       </section>

@@ -1,0 +1,138 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+const repoRoot = path.resolve(root, "..");
+const readPwa = (relative) => readFile(path.join(root, relative), "utf8");
+const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
+
+test("sales settings default to external/code on and Stripe sales off", async () => {
+  const migration = await readRepo("supabase/migrations/20260915074000_commerce_sales_controls.sql");
+
+  assert.match(migration, /external_sales_enabled boolean not null default true/i);
+  assert.match(migration, /access_code_enabled boolean not null default true/i);
+  assert.match(migration, /stripe_checkout_enabled boolean not null default false/i);
+  assert.match(migration, /pwa_7day_enabled boolean not null default false/i);
+  assert.match(migration, /pwa_monthly_enabled boolean not null default false/i);
+  assert.match(migration, /windows_monthly_enabled boolean not null default false/i);
+  assert.match(migration, /bundle_monthly_enabled boolean not null default false/i);
+});
+
+test("sales settings are active-admin controlled and do not destructively revoke existing rights", async () => {
+  const migration = await readRepo("supabase/migrations/20260915074000_commerce_sales_controls.sql");
+
+  assert.match(migration, /admin_get_commerce_sales_settings/);
+  assert.match(migration, /admin_update_commerce_sales_settings/);
+  assert.match(migration, /private\.is_active_admin\(\)/);
+  assert.match(migration, /access_code_enabled/);
+  assert.match(migration, /access code redemption is disabled/);
+  assert.doesNotMatch(migration, /delete\s+from\s+public\.user_entitlements/i);
+  assert.doesNotMatch(migration, /delete\s+from\s+public\.billing_subscriptions/i);
+  assert.doesNotMatch(migration, /update\s+public\.billing_subscriptions\s+set\s+status/i);
+});
+
+test("Stripe Checkout is gated server-side and billing portal remains available", async () => {
+  const [salesWorker, index, billing] = await Promise.all([
+    readPwa("worker/sales-controls.ts"),
+    readPwa("worker/index.ts"),
+    readPwa("worker/billing.ts"),
+  ]);
+
+  assert.match(salesWorker, /\/api\/billing\/checkout/);
+  assert.match(salesWorker, /stripeCheckoutEnabled/);
+  assert.match(salesWorker, /PLAN_FLAGS/);
+  assert.match(salesWorker, /販売受付設定を確認できないため、新規決済を停止しています/);
+  assert.match(salesWorker, /Stripeでの新規購入受付は停止しています/);
+  assert.doesNotMatch(salesWorker, /\/api\/billing\/portal/);
+  assert.doesNotMatch(salesWorker, /AAS-WIN-MONTHLY/);
+  assert.doesNotMatch(salesWorker, /AAS-BUNDLE-MONTHLY/);
+  assert.doesNotMatch(salesWorker, /windows_monthly_enabled/);
+  assert.doesNotMatch(salesWorker, /bundle_monthly_enabled/);
+  assert.ok(index.indexOf("handleSalesControlRequest") < index.indexOf("handleBillingRequest(request, env)"));
+  assert.match(index, /rejectLegacyCheckout/);
+  assert.match(billing, /\/api\/billing\/portal/);
+});
+
+test("admin UI exposes sales controls while PWA runtime omits legacy plan switches", async () => {
+  const [adminSections, settingsPage, settingsLib, layout] = await Promise.all([
+    readPwa("lib/admin-sections.ts"),
+    readPwa("components/sales-settings-admin-page.tsx"),
+    readPwa("lib/sales-settings.ts"),
+    readPwa("app/layout.tsx"),
+  ]);
+
+  assert.match(adminSections, /href: "\/admin\/sales"/);
+  for (const label of [
+    "note / Brain / Tips等の外部販売",
+    "利用コード受付",
+    "Stripe新規購入受付",
+    "PWA 7日利用パス",
+    "PWA 月額プラン",
+  ]) assert.ok(settingsPage.includes(label), `missing admin setting: ${label}`);
+  assert.match(settingsPage, /既存の契約・利用期間・利用権は停止・取消しされません/);
+  assert.doesNotMatch(settingsPage, /title="Windows 月額プラン"/);
+  assert.doesNotMatch(settingsPage, /title="PWA \+ Windows 月額"/);
+  assert.match(settingsLib, /admin_get_commerce_sales_settings/);
+  assert.match(settingsLib, /admin_update_commerce_sales_settings/);
+  assert.doesNotMatch(settingsLib, /windowsMonthlyEnabled/);
+  assert.doesNotMatch(settingsLib, /bundleMonthlyEnabled/);
+  assert.match(settingsLib, /p_windows_monthly_enabled: false/);
+  assert.match(settingsLib, /p_bundle_monthly_enabled: false/);
+  assert.match(layout, /phase32-sales-settings\.css/);
+});
+
+test("plans and access-code UI obey PWA-only public sales settings", async () => {
+  const [plans, settingsLib] = await Promise.all([
+    readPwa("components/commerce-plans-page.tsx"),
+    readPwa("lib/sales-settings.ts"),
+  ]);
+
+  assert.match(plans, /fetchPublicSalesSettings/);
+  assert.match(plans, /plan\.platformScope === "pwa"/);
+  assert.match(plans, /planSalesEnabled\(salesSettings, plan\.planCode\)/);
+  assert.match(plans, /salesSettings\?\.accessCodeEnabled/);
+  assert.match(plans, /利用コードをお持ちの方/);
+  assert.match(plans, /Stripe新規受付停止中/);
+  assert.match(settingsLib, /if \(!settings\?\.stripeCheckoutEnabled\) return false/);
+  for (const planCode of ["AAS-PWA-7DAY", "AAS-PWA-MONTHLY"]) {
+    assert.ok(settingsLib.includes(planCode), `missing PWA plan gate: ${planCode}`);
+  }
+  assert.equal(settingsLib.includes('if (planCode === "AAS-WIN-MONTHLY")'), false);
+  assert.equal(settingsLib.includes('if (planCode === "AAS-BUNDLE-MONTHLY")'), false);
+});
+
+test("commercial transaction copy follows the active sales mode and exposes a support route", async () => {
+  const [page, support, terms, privacy, aiTerms] = await Promise.all([
+    readPwa("components/commercial-transactions-page.tsx"),
+    readPwa("components/support-request-page.tsx"),
+    readPwa("app/terms/page.tsx"),
+    readPwa("app/privacy/page.tsx"),
+    readPwa("app/ai-terms/page.tsx"),
+  ]);
+
+  assert.match(page, /fetchPublicSalesSettings/);
+  assert.match(page, /planSalesEnabled/);
+  assert.match(page, /stripeSalesEnabled/);
+  assert.match(page, /externalSalesEnabled/);
+  assert.match(page, /AAS内のStripe新規購入は停止しています/);
+  assert.match(page, /外部販売ページで案内する支払方法/);
+  assert.match(page, /案内された利用コードをAASへ登録/);
+  assert.match(page, /visibleStripePlans/);
+  assert.match(page, /supportUrl = safeHttpsUrl\(seller\?\.supportUrl\) \|\| "\/support"/);
+  assert.match(page, /問い合わせ・開示請求/);
+  assert.match(page, /現在の外部販売ページを開く/);
+
+  assert.match(support, /販売者情報の開示請求/);
+  assert.match(support, /fetchPublicSalesSettings/);
+  assert.match(support, /外部販売ページを開く/);
+  assert.match(support, /クレジットカード番号/);
+  assert.match(support, /アクセストークン/);
+
+  for (const legalPage of [terms, privacy, aiTerms]) {
+    assert.doesNotMatch(legalPage, /公開準備ドラフト/);
+    assert.match(legalPage, /\/support/);
+  }
+});

@@ -1,0 +1,11 @@
+/* Keep the customizable mobile nav evenly distributed for 2-6 visible items. */
+.persistent-mobile-nav,
+.persistent-mobile-nav.admin-enabled {
+  display: flex;
+  grid-template-columns: none;
+}
+
+.persistent-mobile-nav > button {
+  min-width: 0;
+  flex: 1 1 0;
+}

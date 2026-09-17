@@ -7,20 +7,20 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
-test("Phase 12 specializes article prompts without weakening editorial safety", async () => {
+test("Phase 12 specializes article prompts through the shared knowledge compiler without weakening editorial safety", async () => {
   const profiles = await read("lib/phase12-prompt-profiles.ts");
+  const knowledge = await read("lib/knowledge-engine.ts");
   const creator = await read("lib/phase11-create.ts");
 
-  assert.match(profiles, /AI\\s\*副業/);
-  assert.match(profiles, /美容/);
-  assert.match(profiles, /ガジェット/);
-  assert.match(profiles, /生活/);
-  assert.match(profiles, /SNS/);
-  assert.match(profiles, /note:/);
-  assert.match(profiles, /tips:/);
-  assert.match(profiles, /brain:/);
-  assert.match(profiles, /収益額や成果を保証しない/);
-  assert.match(profiles, /有料部分/);
+  assert.match(profiles, /compileKnowledgeContext/);
+  assert.match(profiles, /KnowledgeTask/);
+  assert.match(profiles, /性別だけから価値観・職業・生活状況を決めつけない/);
+  for (const label of ["AI副業", "美容", "ガジェット", "生活・暮らし", "SNS運用", "note", "Tips", "Brain"]) {
+    assert.match(knowledge, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(knowledge, /収益額・成功率・案件獲得を保証しない/);
+  assert.match(knowledge, /有料コンテンツでは/);
+  assert.match(knowledge, /未確認の価格、統計、ランキング、レビュー、最新仕様、成果を事実として補完しない/);
   assert.match(creator, /getPromptSpecialization/);
   assert.match(creator, /prompt_profile_version: 12/);
 });
@@ -70,7 +70,7 @@ test("Phase 15 ranks side jobs as an internal fit aid and exports a non-guarante
   assert.match(api, /YouTube \/ TikTok \/ 配信クリエイター/);
   assert.match(api, /収益額・成功率・フォロワー数などを保証しない/);
   assert.match(api, /\.sort\(\(a, b\) => b\.score - a\.score/);
-  assert.match(page, /適合スコアはアプリ内の比較用/);
+  assert.match(page, /適合スコアはAAS内の比較用/);
   assert.match(route, /Phase15SideJobPage/);
 });
 
@@ -101,13 +101,15 @@ test("Phase 17 reports only internal article metrics until external analytics ar
   assert.match(route, /Phase17AnalyticsPage/);
 });
 
-test("tools hub and quick navigation expose the new functional routes on the stable root shell", async () => {
+test("tools hub and beginner-first root expose all functional routes with SNS in mobile navigation", async () => {
   const tools = await read("components/phase-tools-page.tsx");
   const toolsRoute = await read("app/tools/page.tsx");
-  const quick = await read("components/phase9-11-quick-nav.tsx");
+  const shell = await read("components/phase18-beginner-home.tsx");
   const rootPage = await read("app/page.tsx");
   const layout = await read("app/layout.tsx");
   const css = await read("app/phase12-17.css");
+  const beginnerCss = await read("app/phase18-beginner.css");
+  const dashboardCss = await read("app/phase19-dashboard.css");
 
   for (const href of ["/create", "/images", "/sns", "/sidejob", "/publish", "/analytics"]) {
     assert.match(tools, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
@@ -115,15 +117,48 @@ test("tools hub and quick navigation expose the new functional routes on the sta
   assert.match(tools, /try \{/);
   assert.match(tools, /getSupabaseClient\(\)/);
   assert.match(toolsRoute, /PhaseToolsPage/);
-  assert.match(quick, /href="\/tools"/);
-  assert.match(rootPage, /Phase7App/);
+  assert.match(rootPage, /Phase18BeginnerHome/);
+  assert.match(shell, /Phase7App/);
+  assert.match(shell, /if \(state\.kind === "loading"\) return <BeginnerAccessFallback \/>;/);
+  assert.match(shell, /if \(state\.kind === "unavailable"\) return <BeginnerAccessFallback unavailable \/>;/);
+  assert.doesNotMatch(shell, /state\.kind !== "ready" \|\| !client\) return <Phase7App \/>/);
+  assert.match(shell, /href="\/tools"/);
+  assert.match(shell, /href="\/images"/);
+  assert.match(shell, /href="\/sns"/);
+  assert.match(shell, />作成<\/button>/);
+  assert.match(shell, />ライブラリ<\/button>/);
+  assert.match(shell, />SNS<\/button>/);
+  assert.match(shell, />設定<\/button>/);
+  assert.doesNotMatch(shell, />画像<\/button>/);
   assert.match(layout, /phase12-17\.css/);
+  assert.match(layout, /phase18-beginner\.css/);
+  assert.match(layout, /phase19-dashboard\.css/);
   assert.match(layout, /"aas-phase": "17"/);
   assert.match(layout, /"aas-release-stage": "production-preview"/);
   assert.doesNotMatch(layout, /phase8-local/);
   assert.match(css, /\.tool-grid/);
   assert.match(css, /\.analytics-grid/);
   assert.match(css, /\.image-prompt-list/);
+  assert.match(beginnerCss, /\.beginner-bottom-nav/);
+  assert.match(beginnerCss, /\.beginner-action-grid/);
+  assert.match(dashboardCss, /\.beginner-mobile-nav/);
+  assert.match(dashboardCss, /\.beginner-desktop-sidebar/);
+});
+
+test("service worker fetches current UI assets before cache fallback and purges older cache generations", async () => {
+  const sw = await read("public/sw.js");
+
+  assert.match(sw, /aas-pwa-phase17-prod-v2-runtime-v3/);
+  assert.match(sw, /new Request\(request, \{ cache: "no-store" \}\)/);
+  assert.match(sw, /keys\.filter\(\(key\) => key !== CACHE_NAME\)/);
+  assert.match(sw, /if \(request\.mode === "navigate"\)[\s\S]*fetch\(freshRequest\(request\)\)/);
+  assert.match(sw, /if \(url\.pathname\.startsWith\("\/_next\/static\/"\)\)[\s\S]*networkFirst\(request\)/);
+  assert.match(sw, /async function networkFirst\(request\)[\s\S]*fetch\(freshRequest\(request\)\)[\s\S]*cache\.match\(request\)/);
+  assert.match(sw, /url\.pathname\.startsWith\("\/auth\/callback"\)/);
+  assert.match(sw, /url\.pathname\.startsWith\("\/api\/"\)/);
+  assert.match(sw, /url\.searchParams\.has\("access_token"\)/);
+  assert.match(sw, /url\.searchParams\.has\("refresh_token"\)/);
+  assert.doesNotMatch(sw.match(/const APP_SHELL = \[[\s\S]*?\];/)?.[0] ?? "", /["']\/["']/);
 });
 
 test("package includes the Phase 12-17 contract test and keeps dependency pins unchanged", async () => {

@@ -72,13 +72,14 @@ test("Phase 15 member tools require the same PWA access gate as the rest of the 
   assert.match(tools, /const cards = ready \? memberTools : \[\]/);
 });
 
-test("tools hub exposes output and SNS planning alongside the existing Phase 9-17 surfaces", async () => {
+test("tools hub exposes output and SNS planning with public-facing categories", async () => {
   const tools = await read("components/phase-tools-page.tsx");
   const packageJson = JSON.parse(await read("package.json"));
 
   assert.match(tools, /href: "\/export"/);
   assert.match(tools, /href: "\/sns-plan"/);
-  assert.match(tools, /Phase 11 出力/);
+  assert.match(tools, /category: "出力"/);
   assert.match(tools, /SNSアカウント設計/);
+  assert.doesNotMatch(tools, /Phase 11 出力/);
   assert.match(packageJson.scripts.test, /phase11-15-utilities\.test\.mjs/);
 });

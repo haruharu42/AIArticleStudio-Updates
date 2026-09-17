@@ -40,10 +40,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22.13.0"
           cache: npm
@@ -79,7 +79,7 @@ jobs:
           grep -Fq '/api/' public/sw.js
           grep -Fq 'access_token' public/sw.js
           grep -Fq 'refresh_token' public/sw.js
-          grep -Fq 'aas-pwa-phase17-prod-v1' public/sw.js
+          grep -Fq 'aas-pwa-phase17-prod-v2' public/sw.js
           if grep -Fq 'aas-pwa-phase8-v1' public/sw.js; then
             echo 'Stale Phase 8 production cache generation remains.' >&2
             exit 1
@@ -148,10 +148,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22.13.0"
           cache: npm
