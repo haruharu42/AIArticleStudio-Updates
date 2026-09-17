@@ -203,13 +203,7 @@ function ArticleList({ articles, onOpen }: { articles: ArticleLibraryItem[]; onO
           <span className={`article-status status-${article.status}`}>{ARTICLE_STATUS_LABELS[article.status]}</span>
           <span className="article-date">
             <small>更新</small>
-            {new Intl.DateTimeFormat("ja-JP", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-            }).format(new Date(article.updatedAt))}
+            {formatArticleLibraryDate(article.updatedAt)}
           </span>
           <span className="row-arrow" aria-hidden="true">›</span>
         </button>
