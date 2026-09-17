@@ -1,9 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { AdminAccessCodePanel } from "@/components/admin-users/admin-access-code-panel";
 import {
-  CREATOR_MEMBERSHIP_PLANS,
+  AdminSelectedUserPanel,
+  AdminUserSelectionPanel,
+} from "@/components/admin-users/admin-user-panels";
+import {
+  filterAdminUsers,
+  summarizeAccessCodes,
+  summarizeAdminUsers,
+  type UserFilter,
+} from "@/lib/admin-users-view";
+import {
   clearCreatorMembershipPlan,
   createPwaAccessCode,
   grantPwaEntitlement,
@@ -23,44 +33,12 @@ import {
 import { getSupabaseClient } from "@/lib/supabase";
 
 type LoadState = "loading" | "ready" | "error";
-type UserFilter = "all" | PwaAdminUser["status"];
-
-const USER_FILTERS: Array<{ value: UserFilter; label: string }> = [
-  { value: "all", label: "すべて" },
-  { value: "pending", label: "承認待ち" },
-  { value: "active", label: "利用中" },
-  { value: "suspended", label: "停止中" },
-  { value: "disabled", label: "無効" },
-];
-
-const STATUS_LABELS: Record<PwaAdminUser["status"], string> = {
-  pending: "承認待ち",
-  active: "利用中",
-  suspended: "停止中",
-  disabled: "無効",
-};
-
-function formatDate(value: string | null): string {
-  if (!value) return "無期限";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function statusClass(status: PwaAdminUser["status"]): string {
-  return `status-chip status-${status}`;
-}
 
 export function PwaAdminUsersPage() {
   const [state, setState] = useState<LoadState>("loading");
   const [users, setUsers] = useState<PwaAdminUser[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const selectedIdRef = useRef("");
   const [entitlements, setEntitlements] = useState<PwaAdminEntitlement[]>([]);
   const [membershipEntitlements, setMembershipEntitlements] = useState<PwaAdminEntitlement[]>([]);
   const [codes, setCodes] = useState<PwaAdminInvite[]>([]);
@@ -85,25 +63,12 @@ export function PwaAdminUsersPage() {
     () => users.find((user) => user.id === selectedId) ?? null,
     [users, selectedId],
   );
-
-  const userStats = useMemo(() => ({
-    pending: users.filter((user) => user.status === "pending").length,
-    active: users.filter((user) => user.status === "active").length,
-  }), [users]);
-
-  const codeStats = useMemo(() => ({
-    active: codes.filter((code) => code.status === "active").length,
-    used: codes.reduce((sum, code) => sum + code.useCount, 0),
-  }), [codes]);
-
-  const filteredUsers = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return users.filter((user) => {
-      if (userFilter !== "all" && user.status !== userFilter) return false;
-      if (!query) return true;
-      return `${user.aasUserId} ${user.displayName ?? ""}`.toLowerCase().includes(query);
-    });
-  }, [search, userFilter, users]);
+  const userStats = useMemo(() => summarizeAdminUsers(users), [users]);
+  const codeStats = useMemo(() => summarizeAccessCodes(codes), [codes]);
+  const filteredUsers = useMemo(
+    () => filterAdminUsers(users, search, userFilter),
+    [search, userFilter, users],
+  );
 
   const refreshSelectedEntitlements = useCallback(async (userId: string) => {
     if (!userId) {
@@ -111,6 +76,7 @@ export function PwaAdminUsersPage() {
       setMembershipEntitlements([]);
       return;
     }
+
     const client = getSupabaseClient();
     const [nextPwa, nextMembership] = await Promise.all([
       listPwaEntitlements(client, userId),
@@ -128,12 +94,15 @@ export function PwaAdminUsersPage() {
     ]);
     setUsers(nextUsers);
     setCodes(nextCodes);
-    const nextSelected = nextUsers.some((user) => user.id === selectedId)
-      ? selectedId
+
+    const currentSelectedId = selectedIdRef.current;
+    const nextSelectedId = nextUsers.some((user) => user.id === currentSelectedId)
+      ? currentSelectedId
       : nextUsers[0]?.id ?? "";
-    setSelectedId(nextSelected);
-    await refreshSelectedEntitlements(nextSelected);
-  }, [refreshSelectedEntitlements, selectedId]);
+    selectedIdRef.current = nextSelectedId;
+    setSelectedId(nextSelectedId);
+    await refreshSelectedEntitlements(nextSelectedId);
+  }, [refreshSelectedEntitlements]);
 
   useEffect(() => {
     let active = true;
@@ -154,6 +123,7 @@ export function PwaAdminUsersPage() {
   }, [refresh]);
 
   const selectUser = async (user: PwaAdminUser) => {
+    selectedIdRef.current = user.id;
     setSelectedId(user.id);
     setMessage("");
     try {
@@ -163,7 +133,7 @@ export function PwaAdminUsersPage() {
     }
   };
 
-  const run = async (action: () => Promise<void>, success: string) => {
+  const runMutation = async (action: () => Promise<void>, success: string) => {
     if (busy) return;
     setBusy(true);
     setMessage("");
@@ -178,23 +148,78 @@ export function PwaAdminUsersPage() {
     }
   };
 
+  const refreshNow = async () => {
+    if (busy) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await refresh();
+      setMessage("最新状態へ更新しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "更新に失敗しました。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setSelectedStatus = async (status: "active" | "suspended") => {
+    if (!selected) return;
+    const success = selected.status === "pending"
+      ? "アカウントを承認しました。"
+      : status === "suspended"
+        ? "アカウントを停止しました。"
+        : "アカウントを再開しました。";
+    await runMutation(
+      () => setPwaAdminUserStatus(getSupabaseClient(), selected.id, status),
+      success,
+    );
+  };
+
   const grantSimplePwaAccess = async () => {
     if (!selected) return;
-    await run(
+    await runMutation(
       () => grantPwaEntitlement(getSupabaseClient(), selected.id, { salesChannel: "admin-pwa" }),
       "PWA利用権を付与しました。PC・スマホ・タブレットで共通して利用できます。",
     );
   };
 
+  const grantDetailedPwaAccess = async () => {
+    if (!selected) return;
+    await runMutation(
+      () => grantPwaEntitlement(getSupabaseClient(), selected.id, {
+        salesChannel: grantChannel,
+        externalReference: grantReference,
+        expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined,
+      }),
+      "指定した条件でPWA利用権を付与しました。PC・スマホ・タブレット共通で利用できます。",
+    );
+  };
+
+  const revokeSelectedPwaAccess = async () => {
+    if (!selected) return;
+    await runMutation(
+      () => revokePwaEntitlement(getSupabaseClient(), selected.id),
+      "PWA利用権を取り消しました。",
+    );
+  };
+
   const saveMembership = async () => {
     if (!selected) return;
-    await run(
+    await runMutation(
       () => setCreatorMembershipPlan(getSupabaseClient(), selected.id, {
         planCode: membershipPlan,
         expiresAt: membershipExpiry ? new Date(membershipExpiry).toISOString() : undefined,
         externalReference: membershipReference,
       }),
       "Creator Club特典を設定しました。",
+    );
+  };
+
+  const clearMembership = async () => {
+    if (!selected) return;
+    await runMutation(
+      () => clearCreatorMembershipPlan(getSupabaseClient(), selected.id),
+      "Creator Club特典を解除しました。",
     );
   };
 
@@ -212,7 +237,7 @@ export function PwaAdminUsersPage() {
   };
 
   const createCode = async () => {
-    await run(async () => {
+    await runMutation(async () => {
       const created = await createPwaAccessCode(getSupabaseClient(), {
         label: codeLabel,
         salesChannel: codeChannel,
@@ -227,6 +252,13 @@ export function PwaAdminUsersPage() {
       setCodeExpiry("");
       setAccessExpiry("");
     }, "PWA利用コードを作成しました。可能な場合はクリップボードにもコピーしています。");
+  };
+
+  const revokeCode = async (codeId: string) => {
+    await runMutation(
+      () => revokePwaAccessCode(getSupabaseClient(), codeId),
+      "PWA利用コードを無効化しました。",
+    );
   };
 
   if (state === "loading") {
@@ -261,256 +293,67 @@ export function PwaAdminUsersPage() {
 
       {state === "ready" && (
         <>
-          <section className="admin-card admin-accounts-card">
-            <div className="admin-section-head">
-              <div>
-                <span className="admin-step-number">1</span>
-                <h2>ユーザーを選ぶ</h2>
-                <p>まず操作したいユーザーを選択します。</p>
-              </div>
-              <button type="button" disabled={busy} onClick={() => void run(refresh, "最新状態へ更新しました。")}>更新</button>
-            </div>
-
-            <label className="route-field full admin-search-field">
-              <span>検索</span>
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="AAS ID または表示名" />
-            </label>
-
-            <div className="admin-filter-row" role="group" aria-label="ユーザー状態で絞り込み">
-              {USER_FILTERS.map((filter) => (
-                <button
-                  type="button"
-                  key={filter.value}
-                  className={userFilter === filter.value ? "active" : ""}
-                  aria-pressed={userFilter === filter.value}
-                  onClick={() => setUserFilter(filter.value)}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="admin-user-list">
-              {filteredUsers.length ? filteredUsers.map((user) => (
-                <button
-                  type="button"
-                  key={user.id}
-                  className={selectedId === user.id ? "selected" : ""}
-                  onClick={() => void selectUser(user)}
-                >
-                  <span className="admin-user-id-line">
-                    <strong>{user.aasUserId}</strong>
-                    <span className={statusClass(user.status)}>{STATUS_LABELS[user.status]}</span>
-                  </span>
-                  <span className="admin-user-name">{user.displayName || "表示名なし"}</span>
-                </button>
-              )) : (
-                <div className="admin-empty-state">
-                  <strong>該当するユーザーはいません</strong>
-                  <span>検索条件を変更してください。</span>
-                  <button type="button" onClick={() => { setSearch(""); setUserFilter("all"); }}>絞り込みを解除</button>
-                </div>
-              )}
-            </div>
-          </section>
+          <AdminUserSelectionPanel
+            users={filteredUsers}
+            selectedId={selectedId}
+            search={search}
+            userFilter={userFilter}
+            busy={busy}
+            onSearchChange={setSearch}
+            onFilterChange={setUserFilter}
+            onSelect={(user) => void selectUser(user)}
+            onClearFilters={() => { setSearch(""); setUserFilter("all"); }}
+            onRefresh={() => void refreshNow()}
+          />
 
           {selected && (
-            <section className="admin-card admin-selected-card">
-              <div className="admin-selected-head">
-                <div>
-                  <span className="admin-step-number">2</span>
-                  <h2>{selected.aasUserId}</h2>
-                  <p className="admin-selected-name">{selected.displayName || "表示名なし"}</p>
-                </div>
-                <div className="admin-selected-badges">
-                  <span className={statusClass(selected.status)}>{STATUS_LABELS[selected.status]}</span>
-                  <span className="role-chip">{selected.role === "admin" ? "管理者" : "一般ユーザー"}</span>
-                </div>
-              </div>
-
-              <p className="admin-next-guide">通常の管理は「アカウント」「PWA利用権」「Creator Club特典」の3項目だけです。</p>
-
-              {selected.role === "admin" ? (
-                <div className="admin-notice-panel">
-                  <strong>管理者アカウントです</strong>
-                  <span>管理者はPC・スマホ・タブレットからPWAを利用できます。一般ユーザー向けの利用権操作は不要です。</span>
-                </div>
-              ) : (
-                <div className="admin-simple-actions">
-                  <article className="admin-action-card">
-                    <div className="admin-action-card-head">
-                      <div>
-                        <span className="admin-action-index">1</span>
-                        <h3>アカウント</h3>
-                      </div>
-                      <span className={statusClass(selected.status)}>{STATUS_LABELS[selected.status]}</span>
-                    </div>
-                    <p>{selected.status === "pending" ? "登録直後のユーザーです。利用を許可する場合は承認してください。" : selected.status === "active" ? "現在ログインして利用できる状態です。" : selected.status === "suspended" ? "現在は利用を停止しています。" : "無効状態のアカウントです。"}</p>
-                    {selected.status === "pending" && (
-                      <button type="button" disabled={busy} onClick={() => void run(
-                        () => setPwaAdminUserStatus(getSupabaseClient(), selected.id, "active"),
-                        "アカウントを承認しました。",
-                      )}>承認する</button>
-                    )}
-                    {selected.status === "active" && (
-                      <button type="button" className="secondary-action" disabled={busy} onClick={() => void run(
-                        () => setPwaAdminUserStatus(getSupabaseClient(), selected.id, "suspended"),
-                        "アカウントを停止しました。",
-                      )}>利用を停止する</button>
-                    )}
-                    {selected.status === "suspended" && (
-                      <button type="button" disabled={busy} onClick={() => void run(
-                        () => setPwaAdminUserStatus(getSupabaseClient(), selected.id, "active"),
-                        "アカウントを再開しました。",
-                      )}>利用を再開する</button>
-                    )}
-                  </article>
-
-                  <article className="admin-action-card">
-                    <div className="admin-action-card-head">
-                      <div>
-                        <span className="admin-action-index">2</span>
-                        <h3>PWA利用権</h3>
-                      </div>
-                      <span className={entitlements.length ? "availability-badge active" : "availability-badge"}>
-                        {entitlements.length ? "全端末で利用可能" : "未付与"}
-                      </span>
-                    </div>
-                    <p>{entitlements.length ? "PC・スマホ・タブレットすべてでPWA版を利用できます。端末ごとの追加承認は不要です。" : "PWA利用権を1つ付与すると、PC・スマホ・タブレットすべてで利用できます。"}</p>
-                    {entitlements.length ? (
-                      <button type="button" className="secondary-action" disabled={busy} onClick={() => void run(
-                        () => revokePwaEntitlement(getSupabaseClient(), selected.id),
-                        "PWA利用権を取り消しました。",
-                      )}>PWA利用権を取り消す</button>
-                    ) : (
-                      <button type="button" disabled={busy} onClick={() => void grantSimplePwaAccess()}>PWA利用権を付与する</button>
-                    )}
-                    <details className="admin-advanced-details">
-                      <summary>期限や付与元を指定する</summary>
-                      <div className="admin-form-grid admin-advanced-body">
-                        <label className="route-field"><span>付与元</span><input value={grantChannel} onChange={(event) => setGrantChannel(event.target.value)} /></label>
-                        <label className="route-field"><span>利用期限（任意）</span><input type="datetime-local" value={grantExpiry} onChange={(event) => setGrantExpiry(event.target.value)} /></label>
-                        <label className="route-field full"><span>外部参照（任意）</span><input value={grantReference} onChange={(event) => setGrantReference(event.target.value)} /></label>
-                      </div>
-                      <button type="button" disabled={busy || entitlements.length > 0} onClick={() => void run(
-                        () => grantPwaEntitlement(getSupabaseClient(), selected.id, {
-                          salesChannel: grantChannel,
-                          externalReference: grantReference,
-                          expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined,
-                        }),
-                        "指定した条件でPWA利用権を付与しました。PC・スマホ・タブレット共通で利用できます。",
-                      )}>詳細条件で付与する</button>
-                      {entitlements.length > 0 && <p className="admin-detail-note">現在利用権があるため、再付与する場合は一度取り消してください。</p>}
-                    </details>
-                  </article>
-
-                  <article className="admin-action-card">
-                    <div className="admin-action-card-head">
-                      <div>
-                        <span className="admin-action-index">3</span>
-                        <h3>Creator Club特典</h3>
-                      </div>
-                      <span className={membershipEntitlements.length ? "availability-badge active" : "availability-badge"}>
-                        {membershipEntitlements.length ? "特典有効" : "未登録"}
-                      </span>
-                    </div>
-                    <p>note側で加入を確認できたユーザーだけ、該当プランを選んで設定します。</p>
-                    <label className="route-field full admin-plan-field">
-                      <span>特典プラン</span>
-                      <select value={membershipPlan} onChange={(event) => setMembershipPlan(event.target.value as CreatorMembershipPlanCode)}>
-                        {CREATOR_MEMBERSHIP_PLANS.map((plan) => <option key={plan.code} value={plan.code}>{plan.label}</option>)}
-                      </select>
-                    </label>
-                    <div className="admin-actions">
-                      <button type="button" aria-label="Creator Clubを登録・変更" disabled={busy} onClick={() => void saveMembership()}>{membershipEntitlements.length ? "プランを変更する" : "特典を設定する"}</button>
-                      {membershipEntitlements.length > 0 && (
-                        <button type="button" aria-label="Creator Clubを解除" className="secondary-action" disabled={busy} onClick={() => void run(
-                          () => clearCreatorMembershipPlan(getSupabaseClient(), selected.id),
-                          "Creator Club特典を解除しました。",
-                        )}>特典を解除する</button>
-                      )}
-                    </div>
-                    <details className="admin-advanced-details">
-                      <summary>期限・確認メモを設定する</summary>
-                      <div className="admin-form-grid admin-advanced-body">
-                        <label className="route-field"><span>特典期限（任意）</span><input type="datetime-local" value={membershipExpiry} onChange={(event) => setMembershipExpiry(event.target.value)} /></label>
-                        <label className="route-field full"><span>note確認メモ（任意）</span><input value={membershipReference} onChange={(event) => setMembershipReference(event.target.value)} placeholder="例: 2026-09 note確認" /></label>
-                      </div>
-                    </details>
-                    <p className="admin-detail-note">note購入状態の自動取得は行わず、確認済みのメンバーシップだけを設定してください。</p>
-                  </article>
-                </div>
-              )}
-
-              <details className="admin-user-details-drawer">
-                <summary>このユーザーの詳細情報を見る</summary>
-                <div className="admin-user-meta-grid">
-                  <article><span>登録日時</span><strong>{formatDate(selected.createdAt)}</strong></article>
-                  <article><span>PWA利用権（全端末共通）</span><strong>{entitlements.length ? "利用可能" : "なし"}</strong></article>
-                  <article><span>Creator Club</span><strong>{membershipEntitlements[0]?.productName ?? "未登録"}</strong></article>
-                </div>
-                {entitlements.length > 0 && (
-                  <div className="admin-entitlement-list">
-                    {entitlements.map((item) => (
-                      <article key={item.id}>
-                        <strong>{item.productName}</strong>
-                        <span>{item.status}</span>
-                        <small>期限: {formatDate(item.expiresAt)} / {item.salesChannel}</small>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </details>
-            </section>
+            <AdminSelectedUserPanel
+              selected={selected}
+              entitlements={entitlements}
+              membershipEntitlements={membershipEntitlements}
+              busy={busy}
+              grantChannel={grantChannel}
+              grantReference={grantReference}
+              grantExpiry={grantExpiry}
+              membershipPlan={membershipPlan}
+              membershipReference={membershipReference}
+              membershipExpiry={membershipExpiry}
+              onGrantChannelChange={setGrantChannel}
+              onGrantReferenceChange={setGrantReference}
+              onGrantExpiryChange={setGrantExpiry}
+              onMembershipPlanChange={setMembershipPlan}
+              onMembershipReferenceChange={setMembershipReference}
+              onMembershipExpiryChange={setMembershipExpiry}
+              onSetStatus={(status) => void setSelectedStatus(status)}
+              onGrantSimplePwaAccess={() => void grantSimplePwaAccess()}
+              onRevokePwaAccess={() => void revokeSelectedPwaAccess()}
+              onGrantDetailedPwaAccess={() => void grantDetailedPwaAccess()}
+              onSaveMembership={() => void saveMembership()}
+              onClearMembership={() => void clearMembership()}
+            />
           )}
 
-          <section className="admin-card admin-code-card">
-            <details className="admin-tools-drawer">
-              <summary>
-                <span>
-                  <strong>販売用PWA利用コード</strong>
-                  <small>外部販売や個別案内で必要な場合だけ使います。</small>
-                </span>
-                <span className="admin-code-summary"><strong>{codeStats.active}</strong> 有効 / {codeStats.used} 利用済み</span>
-              </summary>
-
-              <div className="admin-tools-body">
-                <p className="admin-tools-guide">通常のユーザー管理では、この機能を操作する必要はありません。発行したコードで付与されるPWA利用権もPC・スマホ・タブレット共通です。</p>
-                <div className="admin-form-grid">
-                  <label className="route-field"><span>ラベル</span><input value={codeLabel} onChange={(event) => setCodeLabel(event.target.value)} placeholder="例: note購入者 9月" /></label>
-                  <label className="route-field"><span>販売チャネル</span><input value={codeChannel} onChange={(event) => setCodeChannel(event.target.value)} /></label>
-                  <label className="route-field full"><span>外部参照（任意）</span><input value={codeReference} onChange={(event) => setCodeReference(event.target.value)} /></label>
-                  <label className="route-field"><span>コード有効期限（任意）</span><input type="datetime-local" value={codeExpiry} onChange={(event) => setCodeExpiry(event.target.value)} /></label>
-                  <label className="route-field"><span>付与する利用権期限（任意）</span><input type="datetime-local" value={accessExpiry} onChange={(event) => setAccessExpiry(event.target.value)} /></label>
-                  <label className="route-field"><span>最大利用回数</span><input type="number" min={1} max={1000} value={maxUses} onChange={(event) => setMaxUses(Math.max(1, Number(event.target.value) || 1))} /></label>
-                </div>
-                <button type="button" disabled={busy} onClick={() => void createCode()}>利用コードを作成する</button>
-
-                <div className="admin-invite-list">
-                  {codes.length ? codes.map((code) => (
-                    <article key={code.id}>
-                      <div className="admin-code-title">
-                        <strong>{code.label || "ラベルなし"}</strong>
-                        <small>{code.salesChannel}</small>
-                      </div>
-                      <code>{code.code}</code>
-                      <span>{code.status} / {code.useCount}/{code.maxUses}</span>
-                      <small>コード期限: {formatDate(code.expiresAt)} / 利用権期限: {formatDate(code.entitlementExpiresAt)}</small>
-                      <div className="admin-code-actions">
-                        <button type="button" onClick={() => void copyAccessCode(code.code)}>コピー</button>
-                        {code.status === "active" && (
-                          <button type="button" className="secondary-action" disabled={busy} onClick={() => void run(
-                            () => revokePwaAccessCode(getSupabaseClient(), code.id),
-                            "PWA利用コードを無効化しました。",
-                          )}>無効化</button>
-                        )}
-                      </div>
-                    </article>
-                  )) : <p className="admin-empty-copy">発行済みのPWA利用コードはありません。</p>}
-                </div>
-              </div>
-            </details>
-          </section>
+          <AdminAccessCodePanel
+            codes={codes}
+            activeCount={codeStats.active}
+            usedCount={codeStats.used}
+            busy={busy}
+            codeLabel={codeLabel}
+            codeChannel={codeChannel}
+            codeReference={codeReference}
+            codeExpiry={codeExpiry}
+            accessExpiry={accessExpiry}
+            maxUses={maxUses}
+            onCodeLabelChange={setCodeLabel}
+            onCodeChannelChange={setCodeChannel}
+            onCodeReferenceChange={setCodeReference}
+            onCodeExpiryChange={setCodeExpiry}
+            onAccessExpiryChange={setAccessExpiry}
+            onMaxUsesChange={setMaxUses}
+            onCreate={() => void createCode()}
+            onCopy={(code) => void copyAccessCode(code)}
+            onRevoke={(codeId) => void revokeCode(codeId)}
+          />
         </>
       )}
     </main>

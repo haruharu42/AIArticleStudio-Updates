@@ -81,7 +81,9 @@ test("generation credits are stored as rewards without changing the existing usa
 test("admin can atomically register one verified Creator Club plan without touching PWA access", async () => {
   const migration = await readRepo("supabase/migrations/20260917202200_creator_membership_admin_management.sql");
   const client = await readPwa("lib/pwa-admin-users.ts");
-  const page = await readPwa("components/pwa-admin-users-page.tsx");
+  const controller = await readPwa("components/pwa-admin-users-page.tsx");
+  const panels = await readPwa("components/admin-users/admin-user-panels.tsx");
+  const activeAdminUi = `${controller}\n${panels}`;
 
   assert.match(migration, /admin_set_creator_membership_plan/);
   assert.match(migration, /admin_clear_creator_membership_plan/);
@@ -92,9 +94,10 @@ test("admin can atomically register one verified Creator Club plan without touch
   assert.match(client, /CREATOR_MEMBERSHIP_PLANS/);
   assert.match(client, /admin_set_creator_membership_plan/);
   assert.match(client, /admin_clear_creator_membership_plan/);
-  assert.match(page, /note購入状態の自動取得は行わず/);
-  assert.match(page, /Creator Clubを登録・変更/);
-  assert.match(page, /Creator Clubを解除/);
+  assert.match(activeAdminUi, /note購入状態の自動取得は行わず/);
+  assert.match(activeAdminUi, /Creator Clubを登録・変更/);
+  assert.match(activeAdminUi, /Creator Clubを解除/);
+  assert.doesNotMatch(activeAdminUi, /AAS-WIN-BETA|Windowsアプリ版/);
 });
 
 test("admin access panels show only currently usable PWA and Creator Club entitlements", async () => {
