@@ -4,7 +4,7 @@
 
 @media (min-width: 980px) {
   .polish :global(.admin-dashboard) {
-    grid-template-columns: minmax(330px, 0.82fr) minmax(0, 1.5fr);
+    grid-template-columns: minmax(310px, 0.78fr) minmax(0, 1.55fr);
   }
 
   .polish :global(.admin-dashboard > .admin-card:first-child),
@@ -18,28 +18,24 @@
     max-height: calc(100dvh - 132px);
     overflow: auto;
   }
-
-  .polish :global(.admin-dashboard > .admin-card:nth-child(3)) {
-    min-height: 100%;
-  }
 }
 
 .polish :global(.admin-hero-card) {
   position: relative;
   overflow: hidden;
-  border-color: #cfe0f6;
+  border-color: #d6e5f8;
   background:
-    radial-gradient(circle at 88% 0%, rgba(59, 130, 246, 0.13), transparent 24rem),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.99), rgba(239, 246, 255, 0.98));
+    radial-gradient(circle at 92% 0%, rgba(59, 130, 246, 0.11), transparent 23rem),
+    linear-gradient(135deg, #ffffff, #f5f9ff);
 }
 
 .polish :global(.admin-hero-card)::after {
-  content: "ADMIN";
+  content: "ACCESS";
   position: absolute;
-  right: 22px;
+  right: 24px;
   top: 8px;
-  color: rgba(37, 99, 235, 0.055);
-  font-size: clamp(3rem, 7vw, 6.5rem);
+  color: rgba(37, 99, 235, 0.045);
+  font-size: clamp(3rem, 7vw, 6rem);
   font-weight: 900;
   letter-spacing: 0.08em;
   pointer-events: none;
@@ -51,45 +47,60 @@
   max-width: 760px;
 }
 
-.polish :global(.admin-kpi-grid) {
+.polish :global(.admin-simple-stats) {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
 }
 
-.polish :global(.admin-kpi-grid article) {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-  padding: 15px 16px;
+.polish :global(.admin-simple-stats span) {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 8px 12px;
   border: 1px solid #d9e7f8;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.82);
-  box-shadow: 0 8px 24px rgba(30, 64, 175, 0.055);
-}
-
-.polish :global(.admin-kpi-grid span) {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
   color: #64748b;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 750;
 }
 
-.polish :global(.admin-kpi-grid strong) {
-  color: #10213b;
-  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
-  line-height: 1;
+.polish :global(.admin-simple-stats strong) {
+  color: #1d4ed8;
+  font-size: 1rem;
 }
 
-.polish :global(.admin-kpi-grid small) {
-  color: #94a3b8;
-  font-size: 0.72rem;
+.polish :global(.admin-step-number) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 8px;
+  border-radius: 9px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 900;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.16);
+}
+
+.polish :global(.admin-section-head > div:first-child),
+.polish :global(.admin-selected-head > div:first-child) {
+  min-width: 0;
+}
+
+.polish :global(.admin-section-head h2),
+.polish :global(.admin-selected-head h2) {
+  margin-top: 0;
 }
 
 .polish :global(.admin-user-list) {
-  max-height: min(54dvh, 620px);
+  max-height: min(56dvh, 640px);
   overflow: auto;
   padding-right: 3px;
   scrollbar-width: thin;
@@ -100,7 +111,9 @@
 }
 
 .polish :global(.admin-user-list button.selected) {
-  box-shadow: inset 4px 0 0 #2563eb, 0 8px 24px rgba(37, 99, 235, 0.1);
+  border-color: #93c5fd;
+  background: #eff6ff;
+  box-shadow: inset 4px 0 0 #2563eb, 0 8px 24px rgba(37, 99, 235, 0.08);
 }
 
 .polish :global(.admin-user-id-line) {
@@ -151,7 +164,7 @@
 }
 
 .polish :global(.status-suspended) {
-  border-color: #fecaca;
+  border-color: #fed7aa;
   background: #fff7ed;
   color: #9a3412;
 }
@@ -188,7 +201,7 @@
   border-color: #2563eb;
   background: #2563eb;
   color: #fff;
-  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.16);
 }
 
 .polish :global(.admin-search-field input) {
@@ -211,9 +224,11 @@
 }
 
 .polish :global(.admin-empty-state span),
-.polish :global(.admin-empty-copy) {
+.polish :global(.admin-empty-copy),
+.polish :global(.admin-detail-note) {
   color: #64748b;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
 }
 
 .polish :global(.admin-empty-state button) {
@@ -226,16 +241,12 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 16px;
-}
-
-.polish :global(.admin-selected-head h2) {
-  margin-bottom: 4px;
+  margin-bottom: 10px;
 }
 
 .polish :global(.admin-selected-name) {
   margin-bottom: 0 !important;
-  color: #334155 !important;
+  color: #475569 !important;
   font-weight: 700;
 }
 
@@ -247,26 +258,177 @@
   gap: 7px;
 }
 
+.polish :global(.admin-next-guide) {
+  margin: 0 0 16px !important;
+  padding: 11px 13px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #1e40af !important;
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.polish :global(.admin-simple-actions) {
+  display: grid;
+  gap: 12px;
+}
+
+.polish :global(.admin-action-card) {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dfe8f2;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.035);
+}
+
+.polish :global(.admin-action-card-head) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.polish :global(.admin-action-card-head > div) {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.polish :global(.admin-action-index) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.polish :global(.admin-action-card h3) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: #14213d;
+  font-size: 1rem;
+}
+
+.polish :global(.admin-action-card h3)::before {
+  display: none;
+}
+
+.polish :global(.admin-action-card p) {
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.polish :global(.admin-action-card > button),
+.polish :global(.admin-action-card .admin-actions button) {
+  min-height: 42px;
+}
+
+.polish :global(.secondary-action) {
+  border-color: #d6dee9 !important;
+  background: #fff !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+}
+
+.polish :global(.secondary-action:hover:not(:disabled)) {
+  border-color: #f0a6a6 !important;
+  background: #fff7f7 !important;
+  color: #991b1b !important;
+}
+
+.polish :global(.admin-plan-field) {
+  margin-top: 2px;
+}
+
+.polish :global(.admin-advanced-details),
+.polish :global(.admin-user-details-drawer),
+.polish :global(.admin-tools-drawer) {
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  background: #f8fafc;
+}
+
+.polish :global(.admin-advanced-details) {
+  margin-top: 2px;
+}
+
+.polish :global(.admin-advanced-details summary),
+.polish :global(.admin-user-details-drawer summary) {
+  cursor: pointer;
+  list-style: none;
+  padding: 11px 13px;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.polish :global(.admin-advanced-details summary::-webkit-details-marker),
+.polish :global(.admin-user-details-drawer summary::-webkit-details-marker),
+.polish :global(.admin-tools-drawer summary::-webkit-details-marker) {
+  display: none;
+}
+
+.polish :global(.admin-advanced-details summary::after),
+.polish :global(.admin-user-details-drawer summary::after) {
+  content: "+";
+  float: right;
+  color: #94a3b8;
+  font-size: 1rem;
+}
+
+.polish :global(.admin-advanced-details[open] summary::after),
+.polish :global(.admin-user-details-drawer[open] summary::after) {
+  content: "−";
+}
+
+.polish :global(.admin-advanced-body) {
+  padding: 0 12px 10px;
+}
+
+.polish :global(.admin-advanced-details > button) {
+  margin: 0 12px 12px;
+}
+
+.polish :global(.admin-advanced-details .admin-detail-note) {
+  margin: 0 12px 12px !important;
+}
+
+.polish :global(.admin-user-details-drawer) {
+  margin-top: 16px;
+}
+
 .polish :global(.admin-user-meta-grid) {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin: 10px 0 20px;
+  gap: 9px;
+  padding: 0 12px 12px;
 }
 
 .polish :global(.admin-user-meta-grid article) {
   min-width: 0;
   display: grid;
   gap: 5px;
-  padding: 12px;
+  padding: 11px;
   border: 1px solid #e2e8f0;
-  border-radius: 13px;
-  background: #f8fafc;
+  border-radius: 12px;
+  background: #fff;
 }
 
 .polish :global(.admin-user-meta-grid span) {
   color: #64748b;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 750;
 }
 
@@ -274,14 +436,21 @@
   min-width: 0;
   overflow-wrap: anywhere;
   color: #1e293b;
-  font-size: 0.86rem;
-  line-height: 1.4;
+  font-size: 0.84rem;
+}
+
+.polish :global(.admin-user-details-drawer .admin-entitlement-list) {
+  padding: 0 12px 12px;
+}
+
+.polish :global(.admin-entitlement-list article) {
+  border-left: 4px solid #60a5fa;
 }
 
 .polish :global(.admin-notice-panel) {
   display: grid;
-  gap: 4px;
-  padding: 14px 15px;
+  gap: 5px;
+  padding: 15px;
   border: 1px solid #c7d2fe;
   border-radius: 14px;
   background: #f5f7ff;
@@ -296,79 +465,36 @@
   font-size: 0.82rem;
 }
 
-.polish :global(.admin-status-actions) {
-  margin-bottom: 22px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid #e6eef8;
+.polish :global(.admin-tools-drawer) {
+  background: #fff;
+  overflow: hidden;
 }
 
-.polish :global(.admin-subsection-head) {
+.polish :global(.admin-tools-drawer > summary) {
+  cursor: pointer;
+  list-style: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 20px;
+  gap: 16px;
+  padding: 16px;
 }
 
-.polish :global(.admin-subsection-head h3) {
-  margin: 0 0 4px;
-  padding: 0;
-  border: 0;
+.polish :global(.admin-tools-drawer > summary > span:first-child) {
+  display: grid;
+  gap: 3px;
 }
 
-.polish :global(.admin-subsection-head h3)::before {
-  display: none;
+.polish :global(.admin-tools-drawer > summary strong) {
+  color: #1e293b;
 }
 
-.polish :global(.admin-subsection-head p) {
-  margin: 0 !important;
-  font-size: 0.82rem;
-}
-
-.polish :global(.admin-entitlement-list article) {
-  border-left: 4px solid #60a5fa;
-}
-
-.polish :global(.admin-invite-list article) {
-  border-left: 4px solid #94a3b8;
-}
-
-.polish :global(.admin-card h3) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 9px;
-  border-bottom: 1px solid #e6eef8;
-}
-
-.polish :global(.admin-card h3)::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #3b82f6;
-  box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.1);
-}
-
-.polish :global(.admin-actions button:last-child:not(:first-child)) {
-  border-color: #d7dee8;
-  background: #fff;
-}
-
-.polish :global(.admin-actions button:last-child:not(:first-child):hover:not(:disabled)) {
-  border-color: #f0a6a6;
-  background: #fff7f7;
-  color: #991b1b;
+.polish :global(.admin-tools-drawer > summary small) {
+  color: #64748b;
+  font-size: 0.8rem;
 }
 
 .polish :global(.admin-code-summary) {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 7px;
-}
-
-.polish :global(.admin-code-summary span) {
   display: inline-flex;
   align-items: baseline;
   gap: 4px;
@@ -377,13 +503,34 @@
   border-radius: 999px;
   background: #f8fafc;
   color: #64748b;
-  font-size: 0.76rem;
-  font-weight: 700;
+  font-size: 0.75rem;
+  font-weight: 750;
+  white-space: nowrap;
 }
 
 .polish :global(.admin-code-summary strong) {
-  color: #1d4ed8;
+  color: #1d4ed8 !important;
   font-size: 0.95rem;
+}
+
+.polish :global(.admin-tools-body) {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+  border-top: 1px solid #edf2f7;
+}
+
+.polish :global(.admin-tools-guide) {
+  margin: 14px 0 0 !important;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b !important;
+  font-size: 0.8rem;
+}
+
+.polish :global(.admin-invite-list article) {
+  border-left: 4px solid #94a3b8;
 }
 
 .polish :global(.admin-code-title) {
@@ -435,10 +582,6 @@
 }
 
 @media (max-width: 900px) {
-  .polish :global(.admin-kpi-grid) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .polish :global(.admin-user-meta-grid) {
     grid-template-columns: 1fr;
   }
@@ -449,14 +592,15 @@
     display: none;
   }
 
-  .polish :global(.admin-kpi-grid) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+  .polish :global(.admin-simple-stats) {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .polish :global(.admin-kpi-grid article) {
-    padding: 12px;
-    border-radius: 13px;
+  .polish :global(.admin-simple-stats span) {
+    justify-content: center;
+    padding: 8px;
+    text-align: center;
   }
 
   .polish :global(.admin-user-list) {
@@ -477,14 +621,28 @@
   }
 
   .polish :global(.admin-selected-head),
-  .polish :global(.admin-subsection-head) {
+  .polish :global(.admin-action-card-head),
+  .polish :global(.admin-tools-drawer > summary) {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .polish :global(.admin-selected-badges),
-  .polish :global(.admin-code-summary) {
+  .polish :global(.admin-selected-badges) {
     justify-content: flex-start;
+  }
+
+  .polish :global(.admin-action-card) {
+    padding: 14px;
+  }
+
+  .polish :global(.admin-action-card > button),
+  .polish :global(.admin-action-card .admin-actions button),
+  .polish :global(.admin-advanced-details > button) {
+    width: 100%;
+  }
+
+  .polish :global(.admin-code-summary) {
+    white-space: normal;
   }
 
   .polish :global(.admin-code-actions) {
