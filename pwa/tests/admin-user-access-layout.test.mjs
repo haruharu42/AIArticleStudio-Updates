@@ -53,7 +53,7 @@ test("admin user access page keeps its scoped simplified workflow", async () => 
   assert.match(component, /期限や付与元を指定する/);
   assert.match(component, /期限・確認メモを設定する/);
   assert.match(component, /通常のユーザー管理では、この機能を操作する必要はありません/);
-  assert.match(component, /note購入状態の自動取得は行いません/);
+  assert.match(component, /note購入状態の自動取得は行わず/);
   assert.match(component, /利用コードをコピーしました/);
 
   assert.match(baseCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
