@@ -1,4 +1,5 @@
 import { noteMagazineFromWorkspace } from "@/lib/article-library-v2";
+import { markdownToNoteHtml, markdownToPlainText } from "@/lib/note-rich-text";
 import type { ArticleDetail } from "@/lib/phase7-articles";
 
 export type ArticleExportFile = {
@@ -33,7 +34,8 @@ export function articleExportMarkdown(detail: ArticleDetail): string {
 }
 
 export function articleExportText(detail: ArticleDetail): string {
-  return articleExportMarkdown(detail);
+  const body = markdownToPlainText(articleExportBody(detail));
+  return body ? `${body}\n` : "";
 }
 
 function escapeHtml(value: string): string {
@@ -47,8 +49,8 @@ function escapeHtml(value: string): string {
 
 export function articleExportHtml(detail: ArticleDetail): string {
   const title = escapeHtml(detail.title || "無題の記事");
-  const body = escapeHtml(articleExportBody(detail));
-  return `<!doctype html>\n<html lang="ja">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${title}</title>\n</head>\n<body>\n<article>\n<h1>${title}</h1>\n<pre style="white-space:pre-wrap;font:inherit">${body}</pre>\n</article>\n</body>\n</html>\n`;
+  const body = markdownToNoteHtml(articleExportBody(detail));
+  return `<!doctype html>\n<html lang="ja">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${title}</title>\n<style>body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.8;max-width:760px;margin:40px auto;padding:0 24px;color:#222}h1,h2,h3{line-height:1.4;margin:1.6em 0 .7em}p,ul,ol,blockquote,pre{margin:1em 0}blockquote{border-left:4px solid #bbb;padding-left:1em;color:#555}pre{white-space:pre-wrap;background:#f6f6f6;padding:1em;border-radius:8px}code{font-family:ui-monospace,monospace}hr{border:0;border-top:1px solid #ddd;margin:2em 0}a{color:inherit;text-decoration:underline}</style>\n</head>\n<body>\n<article>\n<h1>${title}</h1>\n${body}\n</article>\n</body>\n</html>\n`;
 }
 
 export function articleExportJson(detail: ArticleDetail): string {
