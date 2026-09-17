@@ -46,8 +46,6 @@ export default function CreatorRankingPage() {
   const [error, setError] = useState("");
 
   const load = useCallback(async (rankingKey: RankingKey) => {
-    setLoading(true);
-    setError("");
     try {
       const client = getSupabaseClient();
       const [nextDashboard, nextRows] = await Promise.all([
@@ -64,6 +62,13 @@ export default function CreatorRankingPage() {
   }, []);
 
   useEffect(() => { void load(key); }, [key, load]);
+
+  function chooseRanking(nextKey: RankingKey) {
+    if (nextKey === key) return;
+    setLoading(true);
+    setError("");
+    setKey(nextKey);
+  }
 
   const updatedAt = useMemo(() => rows[0]?.generatedAt || dashboard?.rankingLastGeneratedAt || "", [dashboard, rows]);
 
@@ -88,7 +93,7 @@ export default function CreatorRankingPage() {
                 role="tab"
                 aria-selected={key === tab.key}
                 className={`${styles.rankTab} ${key === tab.key ? styles.rankTabActive : ""}`}
-                onClick={() => setKey(tab.key)}
+                onClick={() => chooseRanking(tab.key)}
               >
                 {tab.label}
               </button>
