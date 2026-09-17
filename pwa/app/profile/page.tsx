@@ -165,15 +165,19 @@ export default function CreatorProfilePage() {
                 <div className={styles.miniStat}><small>TOTAL XP</small><strong>{dashboard.totalXp}</strong></div>
                 <div className={styles.miniStat}><small>完成記事</small><strong>{dashboard.completedArticles}</strong></div>
                 <div className={styles.miniStat}><small>今週XP</small><strong>{dashboard.weeklyXp}</strong></div>
-                <div className={styles.miniStat}><small>連続制作</small><strong>{dashboard.currentStreak}日</strong></div>
-                <div className={styles.miniStat}><small>BEST</small><strong>{dashboard.bestStreak}日</strong></div>
+                <div className={styles.miniStat}><small>記事ストック加算</small><strong>+{dashboard.creatorArticleQuotaBonus}</strong></div>
+                <div className={styles.miniStat}><small>報酬待ち</small><strong>{dashboard.claimableMissions}</strong></div>
               </div>
               <div className={styles.notice}>
                 {dashboard.noteMember
-                  ? `Creator Club特典：Fresh Knowledge（${dashboard.knowledgeRefreshHours}時間周期）`
-                  : `通常利用：Stable Knowledge（${Math.round(dashboard.knowledgeRefreshHours / 24)}日周期）`}
+                  ? `${dashboard.membershipPlanName}：Fresh Knowledge（${dashboard.knowledgeRefreshHours}時間周期）／完成記事XP ×${dashboard.articleXpMultiplier.toFixed(1)}／メンバー記事枠 +${dashboard.membershipArticleQuotaBonus}`
+                  : `通常利用：Stable Knowledge（${Math.round(dashboard.knowledgeRefreshHours / 24)}日周期）。Creator Levelを上げると記事ストック上限も段階的に増えます。`}
               </div>
-              <Link className={styles.actionLink} href="/ranking">🏆 ランキングを見る</Link>
+              <div className={styles.hudActions}>
+                <Link className={styles.actionLink} href="/missions">🎯 ミッション</Link>
+                <Link className={styles.actionLink} href="/ranking">🏆 ランキング</Link>
+                <Link className={styles.actionLink} href="/membership">◆ Creator Club特典</Link>
+              </div>
             </aside>
           </div>
         ) : !error ? <div className={styles.notice}>プロフィールを読み込んでいます…</div> : null}
