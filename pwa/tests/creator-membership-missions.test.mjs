@@ -96,3 +96,13 @@ test("admin can atomically register one verified Creator Club plan without touch
   assert.match(page, /Creator Clubを登録・変更/);
   assert.match(page, /Creator Clubを解除/);
 });
+
+test("admin access panels show only currently usable PWA and Creator Club entitlements", async () => {
+  const client = await readPwa("lib/pwa-admin-users.ts");
+
+  assert.match(client, /function isCurrentEntitlement/);
+  assert.match(client, /item\.status !== "active"/);
+  assert.match(client, /expiresAt > Date\.now\(\)/);
+  assert.match(client, /item\.productCode === PWA_PRODUCT && isCurrentEntitlement\(item\)/);
+  assert.match(client, /CREATOR_MEMBERSHIP_PRODUCTS\.has\(item\.productCode\) && isCurrentEntitlement\(item\)/);
+});

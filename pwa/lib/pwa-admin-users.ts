@@ -87,6 +87,13 @@ function parseEntitlement(row: Record<string, unknown>): PwaAdminEntitlement {
   };
 }
 
+function isCurrentEntitlement(item: PwaAdminEntitlement): boolean {
+  if (item.status !== "active") return false;
+  if (!item.expiresAt) return true;
+  const expiresAt = new Date(item.expiresAt).getTime();
+  return Number.isFinite(expiresAt) && expiresAt > Date.now();
+}
+
 function adminError(error: unknown, fallback: string): Error {
   const source = error && typeof error === "object" ? (error as Record<string, unknown>) : {};
   const message = typeof source.message === "string" ? source.message.toLowerCase() : "";
@@ -144,14 +151,18 @@ export async function listPwaEntitlements(
   client: SupabaseClient,
   userId: string,
 ): Promise<PwaAdminEntitlement[]> {
-  return (await listAllUserEntitlements(client, userId)).filter((item) => item.productCode === PWA_PRODUCT);
+  return (await listAllUserEntitlements(client, userId)).filter(
+    (item) => item.productCode === PWA_PRODUCT && isCurrentEntitlement(item),
+  );
 }
 
 export async function listCreatorMembershipEntitlements(
   client: SupabaseClient,
   userId: string,
 ): Promise<PwaAdminEntitlement[]> {
-  return (await listAllUserEntitlements(client, userId)).filter((item) => CREATOR_MEMBERSHIP_PRODUCTS.has(item.productCode));
+  return (await listAllUserEntitlements(client, userId)).filter(
+    (item) => CREATOR_MEMBERSHIP_PRODUCTS.has(item.productCode) && isCurrentEntitlement(item),
+  );
 }
 
 export async function grantPwaEntitlement(
