@@ -26,6 +26,6 @@ AI Article Studio PWA keeps responsibilities separated so UI changes, business l
 6. Presentation panels receive data and callbacks; they do not own Supabase mutation clients.
 7. Refresh and loading orchestration stays in the controller so selection changes do not accidentally trigger duplicate full-page fetches.
 8. Database/RLS/RPC changes remain separate from UI-only refactors unless a behavior change explicitly requires them.
-9. New boundaries must be protected by regression tests before old code is removed.
+10. New boundaries must be protected by regression tests before old code is removed.
 
 This document describes the active PWA code organization only; it does not change database contracts or release infrastructure.
