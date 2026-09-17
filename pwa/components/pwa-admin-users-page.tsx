@@ -422,9 +422,9 @@ export function PwaAdminUsersPage() {
                       </select>
                     </label>
                     <div className="admin-actions">
-                      <button type="button" disabled={busy} onClick={() => void saveMembership()}>{membershipEntitlements.length ? "プランを変更する" : "特典を設定する"}</button>
+                      <button type="button" aria-label="Creator Clubを登録・変更" disabled={busy} onClick={() => void saveMembership()}>{membershipEntitlements.length ? "プランを変更する" : "特典を設定する"}</button>
                       {membershipEntitlements.length > 0 && (
-                        <button type="button" className="secondary-action" disabled={busy} onClick={() => void run(
+                        <button type="button" aria-label="Creator Clubを解除" className="secondary-action" disabled={busy} onClick={() => void run(
                           () => clearCreatorMembershipPlan(getSupabaseClient(), selected.id),
                           "Creator Club特典を解除しました。",
                         )}>特典を解除する</button>
