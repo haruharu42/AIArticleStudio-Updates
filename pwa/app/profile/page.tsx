@@ -40,17 +40,29 @@ export default function CreatorProfilePage() {
 
   useEffect(() => {
     let active = true;
-    const client = getSupabaseClient();
-    void getMyCreatorDashboard(client).then(
-      (next) => {
-        if (!active) return;
-        setDashboard(next);
-        setForm(toForm(next));
-      },
-      (reason: unknown) => {
-        if (active) setError(reason instanceof Error ? reason.message : "プロフィールを読み込めませんでした。");
-      },
-    );
+    let client: ReturnType<typeof getSupabaseClient>;
+    try {
+      client = getSupabaseClient();
+    } catch {
+      queueMicrotask(() => {
+        if (active) setError("プロフィールを読み込めませんでした。");
+      });
+      return () => { active = false; };
+    }
+
+    queueMicrotask(() => {
+      if (!active) return;
+      void getMyCreatorDashboard(client).then(
+        (next) => {
+          if (!active) return;
+          setDashboard(next);
+          setForm(toForm(next));
+        },
+        (reason: unknown) => {
+          if (active) setError(reason instanceof Error ? reason.message : "プロフィールを読み込めませんでした。");
+        },
+      );
+    });
     return () => { active = false; };
   }, []);
 
