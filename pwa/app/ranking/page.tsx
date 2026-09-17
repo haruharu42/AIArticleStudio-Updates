@@ -61,7 +61,13 @@ export default function CreatorRankingPage() {
     }
   }, []);
 
-  useEffect(() => { void load(key); }, [key, load]);
+  useEffect(() => {
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void load(key);
+    });
+    return () => { active = false; };
+  }, [key, load]);
 
   function chooseRanking(nextKey: RankingKey) {
     if (nextKey === key) return;
