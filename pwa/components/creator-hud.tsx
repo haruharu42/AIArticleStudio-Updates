@@ -22,10 +22,13 @@ export function CreatorHud() {
     } catch {
       return;
     }
-    void getMyCreatorDashboard(client).then(
-      (next) => { if (active) setDashboard(next); },
-      () => { if (active) setDashboard(null); },
-    );
+    queueMicrotask(() => {
+      if (!active) return;
+      void getMyCreatorDashboard(client).then(
+        (next) => { if (active) setDashboard(next); },
+        () => { if (active) setDashboard(null); },
+      );
+    });
     return () => { active = false; };
   }, []);
 
