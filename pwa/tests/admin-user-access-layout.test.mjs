@@ -50,8 +50,7 @@ test("admin user access page keeps its scoped simplified workflow", async () => 
   assert.match(component, /PWAユーザー利用管理/);
   assert.match(component, /PWA利用権はPC・スマホ・タブレット共通です/);
   assert.match(component, /端末ごとの承認や追加の利用権付与は必要ありません/);
-  assert.match(component, /Windowsアプリ版は現在凍結中です/);
-  assert.match(component, /既存Windows機能・利用権は変更しません/);
+  assert.doesNotMatch(component, /Windowsアプリ版|既存Windows機能|AAS-WIN-BETA/);
   assert.match(component, /まず操作したいユーザーを選択します/);
   assert.match(component, /通常の管理は「アカウント」「PWA利用権」「Creator Club特典」の3項目だけです/);
   assert.match(component, /PWA利用権を付与する/);
