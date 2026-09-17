@@ -77,3 +77,22 @@ test("generation credits are stored as rewards without changing the existing usa
   assert.doesNotMatch(migration, /create or replace function public\.consume_free_trial_usage/i);
   assert.match(freeTrial, /consume_free_trial_usage/);
 });
+
+test("admin can atomically register one verified Creator Club plan without touching PWA access", async () => {
+  const migration = await readRepo("supabase/migrations/20260917202200_creator_membership_admin_management.sql");
+  const client = await readPwa("lib/pwa-admin-users.ts");
+  const page = await readPwa("components/pwa-admin-users-page.tsx");
+
+  assert.match(migration, /admin_set_creator_membership_plan/);
+  assert.match(migration, /admin_clear_creator_membership_plan/);
+  assert.match(migration, /set status = 'revoked'/);
+  assert.match(migration, /creator_membership_plans/);
+  assert.doesNotMatch(migration, /AAS-PWA-BETA/);
+
+  assert.match(client, /CREATOR_MEMBERSHIP_PLANS/);
+  assert.match(client, /admin_set_creator_membership_plan/);
+  assert.match(client, /admin_clear_creator_membership_plan/);
+  assert.match(page, /note購入状態の自動取得は行わず/);
+  assert.match(page, /Creator Clubを登録・変更/);
+  assert.match(page, /Creator Clubを解除/);
+});
