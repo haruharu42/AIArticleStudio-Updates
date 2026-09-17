@@ -18,6 +18,7 @@ import {
   safeArticleBaseName,
   type ArticleExportFile,
 } from "@/lib/article-export";
+import { copyNoteRichText } from "@/lib/note-rich-text";
 import {
   getCloudArticleDetail,
   type ArticleDetail,
@@ -142,10 +143,28 @@ export function ArticleExportPage() {
     finally { setBusy(false); }
   };
 
-  const copy = async () => {
+  const copyMarkdown = async () => {
     if (!body) return;
-    try { await navigator.clipboard.writeText(body); setMessage("掲載用本文をコピーしました。"); }
-    catch { setMessage("自動コピーできません。本文欄からコピーしてください。"); }
+    try { await navigator.clipboard.writeText(body); setMessage("Markdown形式の掲載用本文をコピーしました。"); }
+    catch { setMessage("自動コピーできません。本文欄から手動でコピーしてください。"); }
+  };
+
+  const copyPlain = async () => {
+    if (!detail) return;
+    const plain = articleExportText(detail).trimEnd();
+    if (!plain) return;
+    try { await navigator.clipboard.writeText(plain); setMessage("装飾記号を外したプレーンテキストをコピーしました。"); }
+    catch { setMessage("プレーンテキストを自動コピーできませんでした。"); }
+  };
+
+  const copyForNote = async () => {
+    if (!detail || detail.publicationTarget !== "note" || !body) return;
+    try {
+      await copyNoteRichText(body);
+      setMessage("note用の装飾付き本文をコピーしました。note本文欄へCtrl+Vしてください。noteが対応する装飾のみ反映されます。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "note用の装飾付きコピーに失敗しました。");
+    }
   };
 
   const downloadCurrent = (format: "md" | "txt" | "html" | "json") => {
@@ -215,18 +234,24 @@ export function ArticleExportPage() {
   return (
     <main className="creator-page">
       <header className="creator-head">
-        <div><p className="eyebrow">ARTICLE OUTPUT</p><h1>記事をPCへ保存</h1><p>{gate.aasId} / Markdown・TXT・HTML・JSON・ZIP</p></div>
+        <div><p className="eyebrow">ARTICLE OUTPUT</p><h1>記事をコピー・PC保存</h1><p>{gate.aasId} / note装飾コピー・Markdown・TXT・HTML・JSON・ZIP</p></div>
         <a className="route-back" href="/tools">← 機能一覧</a>
       </header>
       <section className="creator-card">
-        {!desktop && <div className="route-notice">ファイル保存・ZIP一括バックアップはPC版Chrome / Edge等から利用してください。スマホでは本文コピーを利用できます。</div>}
+        {!desktop && <div className="route-notice">ファイル保存・ZIP一括バックアップはPC版Chrome / Edge等から利用してください。スマホではテキストコピーを利用できます。</div>}
         {totalCount > articles.length && <div className="route-notice">現在の一括保存画面は先頭100記事までを対象にします。記事ライブラリ側では50件単位のページングで全記事を閲覧できます。</div>}
 
         <label className="route-field"><span>記事</span><select defaultValue="" disabled={busy || bulkBusy} onChange={(event) => void choose(event.target.value)}><option value="">選択してください</option>{articles.map((article) => <option key={article.id} value={article.id}>{article.title} / {STATUS_LABELS[article.status]}</option>)}</select></label>
         {detail && <>
           <dl className="route-meta"><div><dt>タイトル</dt><dd>{detail.title}</dd></div><div><dt>掲載先</dt><dd>{detail.publicationTarget}</dd></div><div><dt>revision</dt><dd>{detail.revision}</dd></div><div><dt>標準ファイル名</dt><dd>{filename}</dd></div></dl>
           <label className="route-field"><span>掲載用本文</span><textarea className="body-area" readOnly value={body} /></label>
-          <div className="wizard-actions"><button className="secondary-action" type="button" disabled={!body} onClick={() => void copy()}>本文をコピー</button>{desktop && <><button className="secondary-action" type="button" onClick={() => downloadCurrent("md")}>Markdown</button><button className="secondary-action" type="button" onClick={() => downloadCurrent("txt")}>TXT</button><button className="secondary-action" type="button" onClick={() => downloadCurrent("html")}>HTML</button><button className="secondary-action" type="button" onClick={() => downloadCurrent("json")}>JSONバックアップ</button><button className="primary-action" type="button" onClick={downloadCurrentZip}>記事一式ZIP</button></>}</div>
+          {detail.publicationTarget === "note" && desktop && <div className="route-notice" role="note">「note用・装飾付きコピー」は見出し・太字・リスト・引用・リンク・区切り・コード等をリッチテキストとしてコピーします。note側が対応する装飾だけが貼り付け時に反映されます。</div>}
+          <div className="wizard-actions">
+            {detail.publicationTarget === "note" && desktop && <button className="primary-action" type="button" disabled={!body} onClick={() => void copyForNote()}>note用・装飾付きコピー</button>}
+            <button className="secondary-action" type="button" disabled={!body} onClick={() => void copyMarkdown()}>Markdownをコピー</button>
+            <button className="secondary-action" type="button" disabled={!body} onClick={() => void copyPlain()}>プレーンをコピー</button>
+            {desktop && <><button className="secondary-action" type="button" onClick={() => downloadCurrent("md")}>Markdown保存</button><button className="secondary-action" type="button" onClick={() => downloadCurrent("txt")}>TXT保存</button><button className="secondary-action" type="button" onClick={() => downloadCurrent("html")}>装飾HTML保存</button><button className="secondary-action" type="button" onClick={() => downloadCurrent("json")}>JSONバックアップ</button><button className="primary-action" type="button" onClick={downloadCurrentZip}>記事一式ZIP</button></>}
+          </div>
         </>}
 
         <hr />
@@ -239,7 +264,7 @@ export function ArticleExportPage() {
         <div className="wizard-actions"><span>{bulkCandidates.length}記事</span><button className="primary-action" type="button" disabled={!desktop || bulkBusy || !bulkCandidates.length} onClick={() => void downloadBulkZip()}>{bulkBusy ? "記事を取得中…" : "条件一致の記事をZIP保存"}</button></div>
 
         {message && <div className="route-notice">{message}</div>}
-        <p className="panel-muted">外部サービスへの自動投稿は行いません。JSONバックアップには自分の記事・Workspace・noteマガジン管理情報が含まれます。画像本体は端末保存方式のためZIPには含めません。</p>
+        <p className="panel-muted">外部サービスへの自動投稿は行いません。装飾付きコピーはクリップボード内だけで処理し、noteへ自動送信しません。JSONバックアップには自分の記事・Workspace・noteマガジン管理情報が含まれます。画像本体は端末保存方式のためZIPには含めません。</p>
       </section>
     </main>
   );
