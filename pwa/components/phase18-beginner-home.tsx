@@ -232,7 +232,7 @@ export function Phase18BeginnerHome() {
   }, [quickSetup]);
 
   const creatorXp = useMemo(
-    () => dashboard ? xpProgress(dashboard.totalXp, dashboard.level) : { current: 0, needed: 500, percent: 0 },
+    () => dashboard ? xpProgress(dashboard.totalXp, dashboard.level) : null,
     [dashboard],
   );
   const myRank = useMemo(() => ranking.find((row) => row.isMe) ?? null, [ranking]);
@@ -298,18 +298,22 @@ export function Phase18BeginnerHome() {
           <div className="reference-creator-main">
             <div className="reference-name-row">
               <strong>{displayName}</strong>
-              <span className="reference-level-pill">♛ Creator Lv.{dashboard?.level ?? 1}</span>
+              <span className="reference-level-pill">♛ Creator {dashboard ? `Lv.${dashboard.level}` : "—"}</span>
             </div>
-            <div className="reference-xp-row">
-              <div className="reference-xp-track" aria-label={`レベル進捗 ${creatorXp.percent}%`}>
-                <span style={{ width: `${creatorXp.percent}%` }} />
-              </div>
-              <b>{creatorXp.current} / {creatorXp.needed} XP</b>
-            </div>
-            <small className="reference-xp-note">あと {Math.max(0, creatorXp.needed - creatorXp.current)} XPで次のレベルです。</small>
+            {creatorXp ? (
+              <>
+                <div className="reference-xp-row">
+                  <div className="reference-xp-track" aria-label={`レベル進捗 ${creatorXp.percent}%`}>
+                    <span style={{ width: `${creatorXp.percent}%` }} />
+                  </div>
+                  <b>{creatorXp.current} / {creatorXp.needed} XP</b>
+                </div>
+                <small className="reference-xp-note">あと {Math.max(0, creatorXp.needed - creatorXp.current)} XPで次のレベルです。</small>
+              </>
+            ) : <small className="reference-xp-note">Creatorデータを取得できませんでした。</small>}
           </div>
           <div className="reference-streak">
-            <strong>🔥 {dashboard?.currentStreak ?? 0}日連続</strong>
+            <strong>🔥 {dashboard ? `${dashboard.currentStreak}日連続` : "—"}</strong>
             <small>継続は力なり！</small>
           </div>
         </section>
@@ -415,10 +419,10 @@ export function Phase18BeginnerHome() {
           <div className="reference-rank-summary">
             <span aria-hidden="true">🏆</span>
             <div>
-              <strong>{dashboard?.rankingOptIn ? "あなたの現在の順位" : "ランキングは現在非参加"}</strong>
+              <strong>{dashboard ? (dashboard.rankingOptIn ? "あなたの現在の順位" : "ランキングは現在非参加") : "ランキング情報を取得できません"}</strong>
               <b>{myRank ? `第 ${myRank.rankPosition} 位` : dashboard?.rankingOptIn ? "更新待ち" : "—"}</b>
             </div>
-            <a href="/profile">{dashboard?.rankingOptIn ? "公開設定 ›" : "参加設定 ›"}</a>
+            <a href="/profile">{dashboard?.rankingOptIn ? "公開設定 ›" : "プロフィール設定 ›"}</a>
           </div>
         </section>
       </main>
