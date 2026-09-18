@@ -141,3 +141,21 @@ test("admin access panels show only currently usable PWA and Creator Club entitl
   assert.match(client, /item\.productCode === PWA_PRODUCT && isCurrentEntitlement\(item\)/);
   assert.match(client, /CREATOR_MEMBERSHIP_PRODUCTS\.has\(item\.productCode\) && isCurrentEntitlement\(item\)/);
 });
+
+
+test("reference UI v2 keeps ranking metrics inline and profile/home cards readable at iPhone widths", async () => {
+  const ranking = await readPwa("app/ranking/page.tsx");
+  const profile = await readPwa("app/profile/page.tsx");
+  const moduleCss = await readPwa("components/creator-system.module.css");
+  const referenceCss = await readPwa("app/phase33-reference-ui.css");
+
+  assert.match(ranking, /reference-page-inner reference-ranking-page/);
+  assert.match(profile, /reference-page-inner reference-profile-page/);
+  assert.match(moduleCss, /Ranking and profile UI v2: readable mobile density without changing RPC-backed data/);
+  assert.match(moduleCss, /@media \(max-width: 640px\)[\s\S]*?\.referenceRankRow \{[\s\S]*?grid-template-columns: 30px 36px minmax\(0, 1fr\) auto/);
+  assert.match(moduleCss, /@media \(max-width: 640px\)[\s\S]*?\.referenceToggleGrid \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(moduleCss, /@media \(max-width: 640px\)[\s\S]*?\.referenceDataGrid \{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(referenceCss, /Home\/ranking\/profile UI v2: readable reference-scale cards on phone, tablet, and desktop/);
+  assert.match(referenceCss, /\.reference-mission-row strong \{[\s\S]*?font-size: 12px/);
+  assert.match(referenceCss, /\.reference-quick-step strong \{[\s\S]*?font-size: 10\.5px/);
+});
