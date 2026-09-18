@@ -13,6 +13,10 @@ test("PWA structure guide records the enforced runtime boundaries", async () => 
   assert.match(guide, /legacy dashboards/);
   assert.match(guide, /lib\/access-control\.ts/);
   assert.match(guide, /lib\/article-create-draft\.ts/);
+  assert.match(guide, /components\/article-create\/magazine-planner\.tsx/);
+  assert.match(guide, /components\/aas-reference-shell\.tsx/);
+  assert.match(guide, /lib\/magazine-planner\.ts/);
+  assert.match(guide, /existing article Workspace contract/);
   assert.match(guide, /components\/article-library\//);
   assert.match(guide, /components\/phase7-library\.tsx/);
   assert.match(guide, /lib\/article-library-view\.ts/);
