@@ -196,12 +196,15 @@ export function Phase18BeginnerHome() {
   useEffect(() => {
     if (state.kind !== "ready" || !client) return;
     let active = true;
-    setRecentArticlesError(false);
-    setDashboardError(false);
-    setMissionsLoaded(false);
-    setMissionsError(false);
-    setRankingLoaded(false);
-    setRankingError(false);
+    queueMicrotask(() => {
+      if (!active) return;
+      setRecentArticlesError(false);
+      setDashboardError(false);
+      setMissionsLoaded(false);
+      setMissionsError(false);
+      setRankingLoaded(false);
+      setRankingError(false);
+    });
     void listCloudArticles(client, state.profile.id, 3).then(
       (articles) => {
         if (!active) return;
