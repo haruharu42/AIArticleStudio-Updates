@@ -52,17 +52,39 @@ test("magazine creation is dropdown-first, validated and persisted without a new
   }
   assert.match(planner, /suggestMagazinePlans/);
   assert.match(planner, /parseMagazinePlanDraft/);
+  assert.match(planner, /MAGAZINE_PURPOSE_OPTIONS/);
+  assert.match(planner, /customAudience/);
+  assert.match(planner, /customDirection/);
+  assert.match(planner, /customPublishingStyle/);
+  assert.match(planner, /customMonetizationLevel/);
+  assert.match(planner, /customOrderStrategy/);
   assert.match(plannerUi, /マガジン名と記事タイトルを生成する/);
   assert.match(plannerUi, /このマガジンを使用する/);
+  assert.match(plannerUi, /その他（自由入力）/);
+  assert.match(plannerUi, /その他のジャンル/);
+  assert.match(plannerUi, /その他のサブジャンル/);
+  assert.match(plannerUi, /その他のテーマ・キーワード/);
+  assert.match(plannerUi, /その他の対象読者/);
+  assert.match(plannerUi, /その他のマガジンの方向性/);
+  assert.match(plannerUi, /その他の記事数/);
+  assert.match(plannerUi, /その他の公開スタイル/);
+  assert.match(plannerUi, /その他の収益化レベル/);
+  assert.match(plannerUi, /その他の記事の並び方/);
+  assert.match(plannerUi, /その他の補足・目的/);
   assert.match(plannerUi, /条件が変更されました。マガジン構成をもう一度生成してください。/);
   for (const label of ["種類の選択", "条件の入力", "タイトルの選択", "記事の生成"]) {
     assert.match(page, new RegExp(label));
   }
   assert.match(page, /displayStepForInternalStep/);
-  assert.match(steps, /マガジン記事を作成/);
+  assert.match(steps, /マガジンモード/);
   assert.match(steps, /disabled=\{draft\.magazineEnabled\}/);
   assert.match(page, /magazinePlan\.name\.trim\(\)/);
   assert.match(api, /pwa_magazine_plan/);
+  assert.match(api, /custom_audience/);
+  assert.match(api, /custom_direction/);
+  assert.match(api, /custom_publishing_style/);
+  assert.match(api, /custom_monetization_level/);
+  assert.match(api, /custom_order_strategy/);
   assert.match(api, /withNoteMagazineWorkspace/);
   assert.match(api, /マガジン構成案を選択してから記事を保存してください/);
   assert.match(progress, /parseMagazinePlanDraft/);
