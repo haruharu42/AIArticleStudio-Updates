@@ -1,4 +1,5 @@
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
+import { buildUserPromptContext, getRuntimeWritingProfile } from "@/lib/user-personalization";
 
 export type AdminProductFacts = {
   productName: string;
@@ -92,6 +93,7 @@ export function buildAdminArticlePromotionPrompt(
     audience: input.audience || facts.targetAudience,
     purpose: input.purpose,
   }).promptBlock;
+  const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
   return `あなたは日本語のプロダクトマーケティング編集者です。
 AI Article Studioを紹介・販売するための完成記事を作成してください。
 
@@ -134,6 +136,7 @@ export function buildAdminSocialPromotionPrompt(
     audience: `${input.audience || facts.targetAudience || "要確認"} / SNS: ${input.platform}`,
     purpose: input.purpose,
   }).promptBlock;
+  const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
 
   return `あなたはSNSプロモーション担当者です。
 AI Article Studioを紹介するSNS販促素材を作成してください。
@@ -171,6 +174,7 @@ export function buildAdminCampaignPrompt(
     audience: input.audience || facts.targetAudience,
     purpose: input.goal,
   }).promptBlock;
+  const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
   return `あなたはAI Article Studioの販売キャンペーン設計担当者です。
 単発投稿ではなく、記事とSNSを連動させた販売・紹介キャンペーンを設計してください。
 
