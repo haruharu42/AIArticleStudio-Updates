@@ -224,6 +224,23 @@ export function applyMagazineSuggestion(
   };
 }
 
+export function magazinePlanMatchesCurrentInputs(
+  draft: Pick<ArticleCreationDraft, "theme" | "genre" | "subgenre" | "ageGroup">,
+  plan: MagazinePlanDraft,
+): boolean {
+  const name = plan.name.trim();
+  const titles = plan.articleTitles.map((title) => title.trim());
+  if (!name || titles.length !== plan.articleCount || titles.some((title) => !title)) return false;
+
+  const selected = suggestMagazinePlans(draft, plan).find(
+    (suggestion) => suggestion.id === plan.selectedSuggestion,
+  );
+  if (!selected || selected.name !== name || selected.articleTitles.length !== titles.length) {
+    return false;
+  }
+  return selected.articleTitles.every((title, index) => title === titles[index]);
+}
+
 function isOneOf<T extends string>(value: unknown, options: readonly { value: T }[]): value is T {
   return typeof value === "string" && options.some((option) => option.value === value);
 }
@@ -248,16 +265,28 @@ export function parseMagazinePlanDraft(value: unknown): MagazinePlanDraft | null
     || row.articleTitles.some((title) => typeof title !== "string")
   ) return null;
 
+  const articleCount = row.articleCount as MagazineArticleCount;
+  const name = row.name.slice(0, 200).trim();
+  const articleTitles = (row.articleTitles as string[])
+    .slice(0, 10)
+    .map((title) => title.slice(0, 500).trim());
+
+  if (name) {
+    if (articleTitles.length !== articleCount || articleTitles.some((title) => !title)) return null;
+  } else if (articleTitles.length > 0) {
+    return null;
+  }
+
   return {
     audience: row.audience,
-    articleCount: row.articleCount as MagazineArticleCount,
+    articleCount,
     direction: row.direction,
     publishingStyle: row.publishingStyle,
     monetizationLevel: row.monetizationLevel,
     orderStrategy: row.orderStrategy,
     purpose: row.purpose.slice(0, 500),
     selectedSuggestion: row.selectedSuggestion,
-    name: row.name.slice(0, 200),
-    articleTitles: (row.articleTitles as string[]).slice(0, 10).map((title) => title.slice(0, 500)),
+    name,
+    articleTitles,
   };
 }
