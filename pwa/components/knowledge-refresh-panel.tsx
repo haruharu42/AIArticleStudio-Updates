@@ -52,9 +52,22 @@ export function KnowledgeRefreshPanel() {
   };
 
   useEffect(() => {
-    void reload().catch((error) => {
-      setMessage(error instanceof Error ? error.message : "更新キューを読み込めませんでした。");
-    });
+    let active = true;
+    const boot = async () => {
+      try {
+        const next = await adminListKnowledgeRefreshRequests(getSupabaseClient(), null, 30);
+        if (!active) return;
+        setRequests(next);
+        const firstActive = next.find((request) => request.status === "processing" || request.status === "pending");
+        if (firstActive) setSelectedId(firstActive.id);
+      } catch (error) {
+        if (active) {
+          setMessage(error instanceof Error ? error.message : "更新キューを読み込めませんでした。");
+        }
+      }
+    };
+    void boot();
+    return () => { active = false; };
   }, []);
 
   const enqueue = async (channel: "fresh" | "stable") => {
