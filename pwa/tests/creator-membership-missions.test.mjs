@@ -18,7 +18,7 @@ test("reference home owns creator presentation without duplicating global banner
   assert.doesNotMatch(homeRoute, /FreeTrialBanner/);
   assert.match(home, /getMyCreatorDashboard/);
   assert.match(home, /今日のミッション/);
-  assert.match(home, /noteマガジン・最近の記事/);
+  assert.match(home, /記事ライブラリ \/ noteマガジン/);
   assert.match(shell, /ホーム/);
   assert.match(shell, /ランキング/);
   assert.match(shell, /プロフィール/);
