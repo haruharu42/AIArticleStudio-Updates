@@ -8,6 +8,7 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 const publicFeatureFiles = [
+  "components/phase6-app.tsx",
   "components/phase-tools-page.tsx",
   "components/phase9-invite-page.tsx",
   "components/phase10-admin-page.tsx",
@@ -25,6 +26,21 @@ test("public feature surfaces do not expose development phase numbers", async ()
   for (const source of sources) {
     assert.doesNotMatch(source, /PHASE\s+\d/i);
   }
+});
+
+test("active PWA access shell avoids frozen Windows and hands successful login back to the current home", async () => {
+  const accessShell = await read("components/phase6-app.tsx");
+  const home = await read("components/phase18-beginner-home.tsx");
+
+  assert.doesNotMatch(accessShell, /Windows版/);
+  assert.doesNotMatch(accessShell, /PWA ARTICLE LIBRARY · PHASE|<p className="eyebrow">PHASE\s+\d/);
+  assert.match(accessShell, /PWA ACCESS/);
+  assert.match(accessShell, /onAccessReady/);
+  assert.match(accessShell, /ホームを準備しています/);
+  assert.match(accessShell, /navigateRoute\("\/create"\)/);
+  assert.match(home, /<Phase7App onAccessReady=\{handleAccessReady\} \/>/);
+  assert.match(home, /const activeClient = nextClient \?\? getSupabaseClient\(\)/);
+  assert.match(home, /const refresh = useCallback[\s\S]*?\}, \[\]\);/);
 });
 
 test("feature hub uses user-facing categories instead of phase badges", async () => {

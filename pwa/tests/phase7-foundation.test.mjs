@@ -26,7 +26,7 @@ test("pins patched framework versions, current release metadata, and PWA cache g
   assert.doesNotMatch(worker, /aas-pwa-phase8-v1/);
 });
 
-test("keeps article creation deferred, owned image assets in articles, and routes image planning to /images", async () => {
+test("keeps article library boundaries and routes article and image creation to active PWA flows", async () => {
   const app = await read("components/phase6-app.tsx");
   const library = await read("components/phase7-library.tsx");
   const listView = await read("components/article-library/article-library-list.tsx");
@@ -36,7 +36,8 @@ test("keeps article creation deferred, owned image assets in articles, and route
 
   assert.match(app, /Phase7Library/);
   assert.match(app, /navigate\("library"\)/);
-  assert.match(app, /記事を作る<small>準備中<\/small>/);
+  assert.match(app, /記事を作る<small>利用可能<\/small>/);
+  assert.equal((app.match(/navigateRoute\("\/create"\)/g) || []).length, 2);
   assert.match(app, /const navigateRoute = \(path: string\) => \{ if \(mayLeave\(\)\) window\.location\.assign\(path\); \};/);
   assert.match(app, /記事の画像<small>画像計画<\/small>/);
   assert.equal((app.match(/navigateRoute\("\/images"\)/g) || []).length, 2);

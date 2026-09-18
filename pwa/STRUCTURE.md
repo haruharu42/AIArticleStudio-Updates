@@ -6,6 +6,8 @@ AI Article Studio PWA keeps responsibilities separated so UI changes, business l
 
 - `app/`: route entry points and route-level composition only.
 - `components/`: interactive UI and presentation components.
+- `components/phase6-app.tsx`: authentication/access shell; when access becomes ready inside the current home flow, it hands control back instead of rendering the legacy dashboard.
+- `components/phase18-beginner-home.tsx`: current PWA home; owns the ready dashboard and stable auth-state refresh subscription.
 - `components/article-create/`: article-creation step UI; no direct profile or entitlement queries.
 - `components/article-library/`: article-library list, detail, and editor presentation; receives data and callbacks without owning Supabase operations.
 - `components/phase7-library.tsx`: article-library controller; owns paging, detail loading, mutation orchestration, async request ordering, and image/tool composition.
@@ -29,7 +31,8 @@ AI Article Studio PWA keeps responsibilities separated so UI changes, business l
 6. Presentation panels receive data and callbacks; they do not own Supabase mutation clients.
 7. Refresh and loading orchestration stays in the controller so selection changes do not accidentally trigger duplicate full-page fetches.
 8. Async list/detail controllers must ignore stale responses when a newer request supersedes them.
-9. Database/RLS/RPC changes remain separate from UI-only refactors unless a behavior change explicitly requires them.
-10. New boundaries must be protected by regression tests before old code is removed.
+9. Authentication shells must hand successful access back to the current product surface instead of exposing retired or legacy dashboards.
+10. Database/RLS/RPC changes remain separate from UI-only refactors unless a behavior change explicitly requires them.
+11. New boundaries must be protected by regression tests before old code is removed.
 
 This document describes the active PWA code organization only; it does not change database contracts or release infrastructure.
