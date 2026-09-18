@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
 import {
   ArticleConditionsStep,
   BodyStep,
@@ -12,6 +13,7 @@ import {
   TitleStep,
 } from "@/components/article-create/article-create-steps";
 import { loadCoreAccessState } from "@/lib/access-control";
+import { DEFAULT_MAGAZINE_PLAN, type MagazinePlanDraft } from "@/lib/magazine-planner";
 import {
   ARTICLE_CREATE_STEPS,
   initialDraftFromLocation,
@@ -48,6 +50,7 @@ export function Phase11CreatePage() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ArticleCreationDraft>(() => initialDraftFromLocation());
   const [tagsText, setTagsText] = useState("");
+  const [magazinePlan, setMagazinePlan] = useState<MagazinePlanDraft>(() => ({ ...DEFAULT_MAGAZINE_PLAN, articleTitles: [] }));
   const [message, setMessage] = useState(() => initialMessageFromLocation());
   const [busy, setBusy] = useState(false);
   const [titleBusy, setTitleBusy] = useState(false);
@@ -84,6 +87,7 @@ export function Phase11CreatePage() {
         if (saved) {
           setStep(saved.step);
           setDraft(saved.draft);
+          setMagazinePlan(saved.magazinePlan);
           setTagsText(saved.tagsText);
           setMessage("前回の作業内容を復元しました。");
         }
@@ -104,13 +108,13 @@ export function Phase11CreatePage() {
 
   useEffect(() => {
     if (gate.kind !== "ready" || progressOwnerIdRef.current !== gate.ownerId || createdId) return;
-    saveArticleWizardProgress(gate.ownerId, { step, draft, tagsText });
-  }, [gate, step, draft, tagsText, createdId]);
+    saveArticleWizardProgress(gate.ownerId, { step, draft, magazinePlan, tagsText });
+  }, [gate, step, draft, magazinePlan, tagsText, createdId]);
 
   const articleDraft = useMemo(() => withArticleTags(draft, tagsText), [draft, tagsText]);
   const localTitles = useMemo(() => suggestLocalTitles(draft), [draft]);
-  const titlePrompt = useMemo(() => buildTitlePrompt(articleDraft), [articleDraft]);
-  const articlePrompt = useMemo(() => buildArticlePrompt(articleDraft), [articleDraft]);
+  const titlePrompt = useMemo(() => buildTitlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined), [articleDraft, draft.magazineEnabled, magazinePlan]);
+  const articlePrompt = useMemo(() => buildArticlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined), [articleDraft, draft.magazineEnabled, magazinePlan]);
   const titleCandidatesReady = titlePromptAuthorized === titlePrompt;
   const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
@@ -225,6 +229,7 @@ export function Phase11CreatePage() {
         getSupabaseClient(),
         gate.ownerId,
         articleDraft,
+        draft.magazineEnabled ? magazinePlan : undefined,
       );
       clearArticleWizardProgress(gate.ownerId);
       setCreatedId(result.id);
@@ -250,14 +255,15 @@ export function Phase11CreatePage() {
   }
 
   return (
-    <main className="creator-page beginner-creator-page">
+    <main className="creator-page beginner-creator-page reference-create-shell">
+      <AasReferenceHeader />
       <header className="creator-head">
         <div>
           <p className="eyebrow">ARTICLE CREATOR</p>
-          <h1>記事を作る</h1>
-          <p>上から順番に選ぶだけで、記事条件・画像計画・タイトル・本文をまとめて保存できます。</p>
+          <h1>✎ 記事を作成</h1>
+          <p>目的に合わせて、通常記事またはマガジン記事の作成方法を選択してください。</p>
         </div>
-        <a className="route-back" href="/">← ホーム</a>
+        <a className="reference-help-link" href="/manual">? ヘルプ</a>
       </header>
 
       <ol className="wizard-steps">
@@ -265,7 +271,7 @@ export function Phase11CreatePage() {
       </ol>
 
       <section className="creator-card">
-        {step === 0 && <GenerationMethodStep draft={draft} patch={patch} />}
+        {step === 0 && <GenerationMethodStep draft={draft} patch={patch} magazinePlan={magazinePlan} onMagazinePlanChange={setMagazinePlan} setGenre={setGenre} setSubgenre={setSubgenre} />}
         {step === 1 && <ImagePlanStep draft={draft} patch={patch} />}
         {step === 2 && (
           <ArticleConditionsStep
@@ -313,6 +319,7 @@ export function Phase11CreatePage() {
           {createdId && <a className="primary-action" href="/">ホームへ戻る</a>}
         </footer>
       </section>
+      <AasReferenceBottomNav active="create" />
     </main>
   );
 }
