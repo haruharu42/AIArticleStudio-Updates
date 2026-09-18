@@ -124,22 +124,22 @@ function cleanTheme(draft: Pick<ArticleCreationDraft, "theme" | "genre" | "subge
 }
 
 function audiencePhrase(plan: MagazinePlanDraft, draft: Pick<ArticleCreationDraft, "ageGroup">): string {
-  if (plan.audience === "auto") return draft.ageGroup && draft.ageGroup !== "AIおまかせ" ? \`${draft.ageGroup}の読者\` : "初心者";
+  if (plan.audience === "auto") return draft.ageGroup && draft.ageGroup !== "AIおまかせ" ? `${draft.ageGroup}の読者` : "初心者";
   return magazineAudienceLabel(plan.audience);
 }
 
 function baseTitles(theme: string, audience: string): string[] {
   return [
-    \`${theme}とは？${audience}が最初に知っておきたい基本\`,
-    \`${theme}を始める前に整えたい準備と考え方\`,
-    \`${theme}を実際に進めるための手順とコツ\`,
-    \`${theme}で迷いやすいポイントと失敗を減らす判断基準\`,
-    \`${theme}を続けるための振り返り・改善チェックリスト\`,
-    \`${theme}の選択肢を比較するときの見方\`,
-    \`${theme}を一段深く活用する実践アイデア\`,
-    \`${theme}を継続するときに確認したい運用ルール\`,
-    \`${theme}のよくある疑問をまとめて解消\`,
-    \`${theme}の次の一歩を決めるロードマップ\`,
+    `${theme}とは？${audience}が最初に知っておきたい基本`,
+    `${theme}を始める前に整えたい準備と考え方`,
+    `${theme}を実際に進めるための手順とコツ`,
+    `${theme}で迷いやすいポイントと失敗を減らす判断基準`,
+    `${theme}を続けるための振り返り・改善チェックリスト`,
+    `${theme}の選択肢を比較するときの見方`,
+    `${theme}を一段深く活用する実践アイデア`,
+    `${theme}を継続するときに確認したい運用ルール`,
+    `${theme}のよくある疑問をまとめて解消`,
+    `${theme}の次の一歩を決めるロードマップ`,
   ];
 }
 
@@ -147,25 +147,25 @@ function orderedTitles(theme: string, audience: string, plan: MagazinePlanDraft)
   const base = baseTitles(theme, audience);
   if (plan.orderStrategy === "problem_solution") {
     return [
-      \`${theme}で${audience}がつまずきやすい3つのポイント\`,
-      \`${theme}の悩みを整理するためのチェックリスト\`,
-      \`${theme}の基本から解決手順までを順番に解説\`,
+      `${theme}で${audience}がつまずきやすい3つのポイント`,
+      `${theme}の悩みを整理するためのチェックリスト`,
+      `${theme}の基本から解決手順までを順番に解説`,
       ...base.slice(3),
     ];
   }
   if (plan.orderStrategy === "quick_win") {
     return [
-      \`今日から試せる${theme}の小さな一歩\`,
-      \`${theme}で最初に設定しておきたいこと\`,
-      \`${theme}を無理なく続けるための基本\`,
+      `今日から試せる${theme}の小さな一歩`,
+      `${theme}で最初に設定しておきたいこと`,
+      `${theme}を無理なく続けるための基本`,
       ...base.slice(3),
     ];
   }
   if (plan.orderStrategy === "free_to_paid") {
     return [
-      \`${theme}入門｜まず知っておきたい全体像\`,
-      \`${theme}を始めるための無料チェックリスト\`,
-      \`${theme}の実践手順｜ここから深く取り組む\`,
+      `${theme}入門｜まず知っておきたい全体像`,
+      `${theme}を始めるための無料チェックリスト`,
+      `${theme}の実践手順｜ここから深く取り組む`,
       ...base.slice(3),
     ];
   }
@@ -193,21 +193,21 @@ export function suggestMagazinePlans(
   return [
     {
       id: 0,
-      name: \`ゼロから始める${theme}｜${suffix}\`,
-      description: \`${audience}が、${theme}を基礎から順番に進められる${plan.articleCount}記事構成です。\`,
+      name: `ゼロから始める${theme}｜${suffix}`,
+      description: `${audience}が、${theme}を基礎から順番に進められる${plan.articleCount}記事構成です。`,
       articleTitles: titles,
     },
     {
       id: 1,
-      name: \`${genre}のための${theme}実践ガイド\`,
-      description: \`知識だけで終わらず、実際に行動へ移せる流れを重視した${plan.articleCount}記事構成です。\`,
+      name: `${genre}のための${theme}実践ガイド`,
+      description: `知識だけで終わらず、実際に行動へ移せる流れを重視した${plan.articleCount}記事構成です。`,
       articleTitles: [...titles.slice(1), titles[0]].slice(0, plan.articleCount),
     },
     {
       id: 2,
-      name: \`${audience}向け ${theme}やさしい入門\`,
-      description: \`専門用語を抑え、読み進める順番が分かりやすい${plan.articleCount}記事構成です。\`,
-      articleTitles: titles.map((title, index) => index === 0 ? \`${theme}入門｜${audience}向けに基本から解説\` : title),
+      name: `${audience}向け ${theme}やさしい入門`,
+      description: `専門用語を抑え、読み進める順番が分かりやすい${plan.articleCount}記事構成です。`,
+      articleTitles: titles.map((title, index) => index === 0 ? `${theme}入門｜${audience}向けに基本から解説` : title),
     },
   ];
 }
