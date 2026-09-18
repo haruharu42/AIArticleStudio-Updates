@@ -61,7 +61,7 @@ test("beginner home and article wizard use the shared AI app launcher", async ()
   assert.match(home, /iPhone \/ iPadでは「アプリを開く」と「Web版を開く」を選べます/);
   assert.match(home, /Google Play/);
   assert.doesNotMatch(home, /iPhone は App Store/);
-  assert.match(creatorSteps, /AIを使って作る/);
+  assert.match(creatorSteps, /AI用プロンプトを作る/);
   assert.match(creatorSteps, /key: "chatgpt", label: "ChatGPT"/);
   assert.match(creatorSteps, /key: "claude", label: "Claude"/);
   assert.match(creatorSteps, /key: "gemini", label: "Gemini"/);

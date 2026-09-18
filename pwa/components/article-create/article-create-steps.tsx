@@ -1,4 +1,6 @@
 import { launchAiApp } from "@/lib/ai-app-links";
+import { MagazinePlannerPanel } from "@/components/article-create/magazine-planner";
+import type { MagazinePlanDraft } from "@/lib/magazine-planner";
 import type {
   ArticleCreationDraft,
   ArticleType,
@@ -42,17 +44,79 @@ function copyText(value: string, setMessage: MessageSetter) {
 export function GenerationMethodStep({
   draft,
   patch,
+  magazinePlan,
+  onMagazinePlanChange,
+  setGenre,
+  setSubgenre,
 }: {
   draft: ArticleCreationDraft;
   patch: ArticleDraftPatch;
+  magazinePlan: MagazinePlanDraft;
+  onMagazinePlanChange: (value: MagazinePlanDraft) => void;
+  setGenre: (value: string) => void;
+  setSubgenre: (value: string) => void;
 }) {
+  const chooseSingle = () => patch("magazineEnabled", false);
+  const chooseMagazine = () => {
+    patch("magazineEnabled", true);
+    if (draft.publicationTarget !== "note") patch("publicationTarget", "note");
+  };
+
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 1</p><h2>どの方法で記事を作りますか？</h2>
-      <label className="choice-card"><input type="radio" checked={draft.generationMode === "prompt_export"} onChange={() => patch("generationMode", "prompt_export")} /><span><strong>AIを使って作る</strong><small>ChatGPT・Claude・Geminiで使えるタイトル・本文プロンプトを作成します。生成結果を貼り付けて保存できます。</small></span></label>
-      <label className="choice-card"><input type="radio" checked={draft.generationMode === "manual"} onChange={() => patch("generationMode", "manual")} /><span><strong>自分で本文を書く</strong><small>タイトルと本文を直接入力して共通記事ライブラリへ保存します。</small></span></label>
-      <label className="route-field"><span>記事テーマ</span><textarea value={draft.theme} onChange={(event) => patch("theme", event.target.value)} placeholder="例: 30代初心者向けのAI副業の始め方" /></label>
-      <p className="beginner-help">迷った場合は「誰向けに・何を解決する記事か」を1文で入力してください。</p>
+      <p className="eyebrow">STEP 1 · 種類の選択</p>
+      <h2>何を作成しますか？</h2>
+
+      <div className="article-kind-grid">
+        <label className={`article-kind-card ${!draft.magazineEnabled ? "selected" : ""}`}>
+          <input type="radio" checked={!draft.magazineEnabled} onChange={chooseSingle} />
+          <span className="article-kind-icon" aria-hidden="true">▧</span>
+          <span>
+            <strong>通常記事を作成</strong>
+            <small>1つの記事をこれまでと同じ作成フローで仕上げます。</small>
+          </span>
+        </label>
+        <label className={`article-kind-card ${draft.magazineEnabled ? "selected" : ""}`}>
+          <input type="radio" checked={draft.magazineEnabled} onChange={chooseMagazine} />
+          <span className="article-kind-icon" aria-hidden="true">▤</span>
+          <span>
+            <strong>マガジンモード</strong>
+            <small>マガジン全体の構成を先に設計してから、各記事を順番に作成します。</small>
+          </span>
+        </label>
+      </div>
+
+      <div className="generation-select-row">
+        <label className="reference-field">
+          <span>本文の作り方</span>
+          <select
+            value={draft.generationMode}
+            onChange={(event) => patch("generationMode", event.target.value as ArticleCreationDraft["generationMode"])}
+          >
+            <option value="prompt_export">AI用プロンプトを作る</option>
+            <option value="manual">自分で本文を書く</option>
+          </select>
+        </label>
+        {!draft.magazineEnabled && (
+          <label className="reference-field">
+            <span>記事テーマ</span>
+            <input value={draft.theme} onChange={(event) => patch("theme", event.target.value)} placeholder="例：30代初心者向けのAI副業の始め方" />
+          </label>
+        )}
+      </div>
+
+      {draft.magazineEnabled ? (
+        <MagazinePlannerPanel
+          draft={draft}
+          plan={magazinePlan}
+          patch={patch}
+          setGenre={setGenre}
+          setSubgenre={setSubgenre}
+          onPlanChange={onMagazinePlanChange}
+        />
+      ) : (
+        <p className="beginner-help">迷った場合は「誰向けに・何を解決する記事か」を1文で入力してください。</p>
+      )}
     </div>
   );
 }
@@ -102,7 +166,7 @@ export function ArticleConditionsStep({
       <p className="eyebrow">STEP 3</p><h2>記事の基本条件を選んでください</h2>
       <p className="beginner-help">年齢・ジャンル・サブジャンルなどの選択条件をAAS Knowledge Compilerが組み合わせ、タイトル・本文・画像・SNS向けの指示へ反映します。</p>
       <div className="creator-form-grid">
-        <label className="route-field"><span>掲載先</span><select value={draft.publicationTarget} onChange={(event) => patch("publicationTarget", event.target.value as PublicationTarget)}><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></select></label>
+        <label className="route-field"><span>掲載先</span><select value={draft.publicationTarget} disabled={draft.magazineEnabled} onChange={(event) => patch("publicationTarget", event.target.value as PublicationTarget)}>{draft.magazineEnabled ? <option value="note">note（マガジン）</option> : <><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></>}</select></label>
         <label className="route-field"><span>記事タイプ</span><select value={draft.articleType} onChange={(event) => setArticleType(event.target.value as ArticleType)}><option value="free">無料記事</option><option value="paid">有料記事</option></select></label>
         <label className="route-field"><span>ジャンル</span><select value={genreSelectValue} onChange={(event) => setGenre(event.target.value)}>{GENRE_OPTIONS.map((genre) => <option key={genre} value={genre}>{genre}</option>)}</select>{genreSelectValue === "その他" && <input className="taxonomy-custom-input" value={draft.genre === "その他" ? "" : draft.genre} onChange={(event) => setCustomGenre(event.target.value)} placeholder="例: 観葉植物、ペット防災、AI英会話" maxLength={120} />}</label>
         <label className="route-field"><span>サブジャンル</span><select value={subgenreSelectValue} onChange={(event) => setSubgenre(event.target.value)}>{subgenreOptions.map((subgenre) => <option key={subgenre} value={subgenre}>{subgenre}</option>)}</select>{subgenreSelectValue === "その他" && <input className="taxonomy-custom-input" value={draft.subgenre === "その他" ? "" : draft.subgenre} onChange={(event) => patch("subgenre", event.target.value.slice(0, 120))} placeholder="サブジャンルを具体的に入力" maxLength={120} />}</label>
@@ -111,7 +175,7 @@ export function ArticleConditionsStep({
         <label className="route-field"><span>文字数の目安</span><select value={draft.targetLength} onChange={(event) => patch("targetLength", Number(event.target.value))}>{TARGET_LENGTH_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
         {draft.articleType === "paid" && <label className="route-field"><span>価格（円）</span><input type="number" min={1} value={draft.price ?? 1} onChange={(event) => patch("price", Math.max(1, Number(event.target.value) || 1))} /></label>}
         <label className="choice-card compact"><input type="checkbox" checked={draft.affiliateEnabled} onChange={(event) => patch("affiliateEnabled", event.target.checked)} /><span><strong>アフィリエイトを使う</strong><small>商品・サービス紹介を含む記事の場合にON</small></span></label>
-        <label className="choice-card compact"><input type="checkbox" checked={draft.magazineEnabled} onChange={(event) => patch("magazineEnabled", event.target.checked)} /><span><strong>マガジンに入れる</strong><small>note等でシリーズ管理する場合にON</small></span></label>
+        {draft.magazineEnabled && <div className="magazine-inline-status"><strong>▤ マガジン作成モード</strong><small>STEP 1で選んだマガジン設計を保存時に引き継ぎます。</small></div>}
         <label className="route-field full"><span>タグ（任意）</span><input value={tagsText} onChange={(event) => setTagsText(event.target.value)} placeholder="AI副業, 初心者, ChatGPT" /></label>
       </div>
       {(genreSelectValue === "その他" || subgenreSelectValue === "その他") && <p className="knowledge-learning-note">自由入力したジャンル・サブジャンルは、記事本文とは分離して候補名と利用回数だけを集計します。管理者は個人を特定せず集計候補を確認し、必要なものだけ正式ナレッジへ承認できます。</p>}

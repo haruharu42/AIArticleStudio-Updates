@@ -1,6 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { recordKnowledgeCandidate } from "@/lib/knowledge-catalog";
+import { withNoteMagazineWorkspace, type NoteMagazineSettings } from "@/lib/article-library-v2";
+import {
+  magazineAudienceLabel,
+  magazineDirectionLabel,
+  magazineMonetizationLabel,
+  magazineOrderLabel,
+  magazinePublishingStyleLabel,
+  type MagazinePlanDraft,
+} from "@/lib/magazine-planner";
 import { PWA_PRODUCT_CODE } from "@/lib/phase6-access";
 import { getPromptSpecialization } from "@/lib/phase12-prompt-profiles";
 import { buildImagePromptPlan } from "@/lib/phase13-image-prompts";
@@ -75,6 +84,25 @@ function specializationFor(draft: ArticleCreationDraft, task: "title" | "article
   }, task);
 }
 
+function magazinePromptContext(plan?: MagazinePlanDraft): string {
+  if (!plan?.name) return "";
+  const titles = plan.articleTitles.length
+    ? plan.articleTitles.map((title, index) => `${index + 1}. ${title}`).join("\n")
+    : "未確定";
+  return `\n\n【MAGAZINE CONTEXT】
+マガジン名: ${plan.name}
+想定読者: ${magazineAudienceLabel(plan.audience, plan.customAudience)}
+方向性: ${magazineDirectionLabel(plan.direction, plan.customDirection)}
+記事数: ${plan.articleCount}記事
+公開スタイル: ${magazinePublishingStyleLabel(plan.publishingStyle, plan.customPublishingStyle)}
+収益化レベル: ${magazineMonetizationLabel(plan.monetizationLevel, plan.customMonetizationLevel)}
+記事の並び方: ${magazineOrderLabel(plan.orderStrategy, plan.customOrderStrategy)}
+補足・目的: ${plan.purpose || "未指定"}
+構成案:
+${titles}
+現在の記事がマガジン全体の中で重複しない役割になるようにしてください。`;
+}
+
 export function suggestLocalTitles(
   draft: Pick<
     ArticleCreationDraft,
@@ -94,17 +122,17 @@ export function suggestLocalTitles(
   ];
 }
 
-export function buildTitlePrompt(draft: ArticleCreationDraft): string {
+export function buildTitlePrompt(draft: ArticleCreationDraft, magazinePlan?: MagazinePlanDraft): string {
   const specialization = specializationFor(draft, "title");
-  return `あなたは日本語の編集者です。次の条件で記事タイトル候補を10個作成してください。\n\n【絶対ルール】\n- 実体験・実績・レビューを創作しない。\n- 未確認の価格・在庫・評価・ランキング・統計を断定しない。\n- 競合記事のコピーや近似模倣をしない。\n- 根拠のない成果保証や過度な煽りを使わない。${promptContextBlock()}\n\n【条件】\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\nテーマ: ${draft.theme || "記事テーマから提案"}\n\n${specialization}\n\n一目で内容が分かり、誇張せず、読者がクリック後の内容を想像できるタイトルにしてください。タイトルだけを番号付きで出力してください。`;
+  return `あなたは日本語の編集者です。次の条件で記事タイトル候補を10個作成してください。\n\n【絶対ルール】\n- 実体験・実績・レビューを創作しない。\n- 未確認の価格・在庫・評価・ランキング・統計を断定しない。\n- 競合記事のコピーや近似模倣をしない。\n- 根拠のない成果保証や過度な煽りを使わない。${promptContextBlock()}\n\n【条件】\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\nテーマ: ${draft.theme || "記事テーマから提案"}\n\n${specialization}${magazinePromptContext(magazinePlan)}\n\n一目で内容が分かり、誇張せず、読者がクリック後の内容を想像できるタイトルにしてください。タイトルだけを番号付きで出力してください。`;
 }
 
-export function buildArticlePrompt(draft: ArticleCreationDraft): string {
+export function buildArticlePrompt(draft: ArticleCreationDraft, magazinePlan?: MagazinePlanDraft): string {
   const imageRule = draft.coverEnabled || draft.inlineEnabled
     ? `画像計画: アイキャッチ=${draft.coverEnabled ? "あり" : "なし"}、挿絵=${draft.inlineEnabled ? `${draft.inlineCount}枚` : "なし"}。本文中で挿絵が有効な場合は「<!-- IMAGE:01 -->」のような差し込み候補位置を自然な区切りに置いてください。`
     : "画像計画: なし。";
   const specialization = specializationFor(draft, "article");
-  return `あなたは日本語の編集者兼記事ライターです。\n目的は、指定された掲載先へそのまま掲載できる、具体的で読みやすく、読者が行動できる完成記事を作ることです。\n\n【絶対ルール】\n- ユーザーが入力していない実体験・実績・レビュー・購入経験・使用経験を事実として作らない。\n- 価格、在庫、評価、キャンペーン、統計、販売数、ランキング、最新仕様など変動する情報を未確認のまま断定しない。\n- 競合記事の文章をコピー・近似模倣しない。\n- 根拠のない成果保証、過度な煽り、架空の権威づけをしない。\n- 架空例を使う場合は「例」「想定」と明示する。\n- 文字数を水増しせず、手順・判断基準・具体例・チェックリスト等で価値を作る。\n\n【出力】\n- 日本語。\n- Markdown見出しで明確に構造化する。\n- 余計な前置き、メタ説明、生成方針の説明は付けない。\n- 完成記事本文だけを返す。${promptContextBlock()}\n\n【ARTICLE BRIEF】\nタイトル: ${draft.title || "タイトル候補から選択"}\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\nテーマ: ${draft.theme || "タイトルから推定"}\n文字数目安: 約${draft.targetLength}文字\n価格: ${draft.articleType === "paid" && draft.price !== null ? `${draft.price}円` : "設定なし"}\nアフィリエイト: ${draft.affiliateEnabled ? "ON" : "OFF"}\nマガジン: ${draft.magazineEnabled ? "ON" : "OFF"}\n${imageRule}\n\n${specialization}\n\n掲載先と無料/有料の性質に合わせ、導入、見出し構成、具体例、手順、注意点、必要に応じたCTAを自然に最適化してください。`;
+  return `あなたは日本語の編集者兼記事ライターです。\n目的は、指定された掲載先へそのまま掲載できる、具体的で読みやすく、読者が行動できる完成記事を作ることです。\n\n【絶対ルール】\n- ユーザーが入力していない実体験・実績・レビュー・購入経験・使用経験を事実として作らない。\n- 価格、在庫、評価、キャンペーン、統計、販売数、ランキング、最新仕様など変動する情報を未確認のまま断定しない。\n- 競合記事の文章をコピー・近似模倣しない。\n- 根拠のない成果保証、過度な煽り、架空の権威づけをしない。\n- 架空例を使う場合は「例」「想定」と明示する。\n- 文字数を水増しせず、手順・判断基準・具体例・チェックリスト等で価値を作る。\n\n【出力】\n- 日本語。\n- Markdown見出しで明確に構造化する。\n- 余計な前置き、メタ説明、生成方針の説明は付けない。\n- 完成記事本文だけを返す。${promptContextBlock()}\n\n【ARTICLE BRIEF】\nタイトル: ${draft.title || "タイトル候補から選択"}\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\nテーマ: ${draft.theme || "タイトルから推定"}\n文字数目安: 約${draft.targetLength}文字\n価格: ${draft.articleType === "paid" && draft.price !== null ? `${draft.price}円` : "設定なし"}\nアフィリエイト: ${draft.affiliateEnabled ? "ON" : "OFF"}\nマガジン: ${draft.magazineEnabled ? "ON" : "OFF"}\n${imageRule}\n\n${specialization}${magazinePromptContext(magazinePlan)}\n\n掲載先と無料/有料の性質に合わせ、導入、見出し構成、具体例、手順、注意点、必要に応じたCTAを自然に最適化してください。`;
 }
 
 async function requireAccess(
@@ -181,8 +209,30 @@ export async function createArticleFromWizard(
   client: SupabaseClient,
   ownerId: string,
   input: ArticleCreationDraft,
+  magazinePlan?: MagazinePlanDraft,
 ): Promise<CreatedArticle> {
   const draft = validateCreationDraft(input);
+  if (draft.magazineEnabled) {
+    if (draft.publicationTarget !== "note") {
+      throw new Error("マガジン作成モードはnote向けに設定してください。");
+    }
+    if (!magazinePlan?.name.trim() || magazinePlan.articleTitles.length < 1) {
+      throw new Error("マガジン構成案を選択してから記事を保存してください。");
+    }
+    if (draft.theme === "その他") {
+      throw new Error("「その他」を選んだ場合はテーマ・キーワードを入力してください。");
+    }
+    const missingCustomMagazineField =
+      (magazinePlan.audience === "other" && !magazinePlan.customAudience.trim())
+      || (magazinePlan.direction === "other" && !magazinePlan.customDirection.trim())
+      || (magazinePlan.publishingStyle === "other" && !magazinePlan.customPublishingStyle.trim())
+      || (magazinePlan.monetizationLevel === "other" && !magazinePlan.customMonetizationLevel.trim())
+      || (magazinePlan.orderStrategy === "other" && !magazinePlan.customOrderStrategy.trim())
+      || magazinePlan.purpose === "その他";
+    if (missingCustomMagazineField) {
+      throw new Error("マガジンモードで「その他」を選んだ項目は内容を入力してください。");
+    }
+  }
   await requireAccess(client, ownerId);
   const writingProfile = getRuntimeWritingProfile();
   const customGenre = isCustomGenre(draft.genre);
@@ -211,6 +261,56 @@ export async function createArticleFromWizard(
     inlineEnabled: draft.inlineEnabled,
     inlineCount: draft.inlineCount,
   });
+  let workspaceJson: Record<string, unknown> = {
+    wizard_version: 11,
+    prompt_profile_version: 12,
+    image_prompt_version: 13,
+    knowledge_engine_version: 1,
+    user_personalization_version: 1,
+    personalization_enabled: writingProfile?.personalizationEnabled ?? false,
+    selected_title: draft.title,
+    generation_method: draft.generationMode,
+    local_status: draft.saveStatus === "ready" ? "完成" : draft.saveStatus,
+    local_updated_at: null,
+  };
+
+  if (draft.magazineEnabled && magazinePlan?.name) {
+    workspaceJson = {
+      ...workspaceJson,
+      pwa_magazine_plan: {
+        name: magazinePlan.name,
+        audience: magazinePlan.audience,
+        custom_audience: magazinePlan.customAudience || null,
+        article_count: magazinePlan.articleCount,
+        direction: magazinePlan.direction,
+        custom_direction: magazinePlan.customDirection || null,
+        publishing_style: magazinePlan.publishingStyle,
+        custom_publishing_style: magazinePlan.customPublishingStyle || null,
+        monetization_level: magazinePlan.monetizationLevel,
+        custom_monetization_level: magazinePlan.customMonetizationLevel || null,
+        order_strategy: magazinePlan.orderStrategy,
+        custom_order_strategy: magazinePlan.customOrderStrategy || null,
+        purpose: magazinePlan.purpose,
+        article_titles: magazinePlan.articleTitles,
+      },
+    };
+    if (draft.publicationTarget === "note") {
+      const noteMagazine: NoteMagazineSettings = {
+        enabled: true,
+        name: magazinePlan.name,
+        type: magazinePlan.monetizationLevel === "sales"
+          ? "paid"
+          : magazinePlan.monetizationLevel === "balanced"
+            ? "mixed"
+            : "free",
+        seriesName: magazinePlan.name,
+        order: 1,
+        role: "intro",
+      };
+      workspaceJson = withNoteMagazineWorkspace(workspaceJson, noteMagazine);
+    }
+  }
+
   const workspace = {
     request_json: {
       platform: targetName[draft.publicationTarget],
@@ -225,24 +325,19 @@ export async function createArticleFromWizard(
       price_jpy: draft.price,
       affiliate_enabled: draft.affiliateEnabled,
       magazine_enabled: draft.magazineEnabled,
+      magazine_name: draft.magazineEnabled ? magazinePlan?.name || null : null,
+      magazine_article_count: draft.magazineEnabled ? magazinePlan?.articleCount ?? null : null,
+      magazine_direction: draft.magazineEnabled ? magazinePlan?.direction ?? null : null,
+      magazine_custom_direction: draft.magazineEnabled ? magazinePlan?.customDirection || null : null,
+      magazine_audience: draft.magazineEnabled ? magazinePlan?.audience ?? null : null,
+      magazine_custom_audience: draft.magazineEnabled ? magazinePlan?.customAudience || null : null,
       theme: draft.theme,
       tags: draft.tags,
       generation_method: draft.generationMode,
       ai_provider: writingProfile?.preferredAi ?? null,
       ai_plan: writingProfile?.preferredPlan ?? null,
     },
-    workspace_json: {
-      wizard_version: 11,
-      prompt_profile_version: 12,
-      image_prompt_version: 13,
-      knowledge_engine_version: 1,
-      user_personalization_version: 1,
-      personalization_enabled: writingProfile?.personalizationEnabled ?? false,
-      selected_title: draft.title,
-      generation_method: draft.generationMode,
-      local_status: draft.saveStatus === "ready" ? "完成" : draft.saveStatus,
-      local_updated_at: null,
-    },
+    workspace_json: workspaceJson,
     image_plan_json: {
       enabled: draft.coverEnabled || draft.inlineEnabled,
       cover: {

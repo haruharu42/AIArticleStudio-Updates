@@ -9,6 +9,33 @@ const repoRoot = path.resolve(root, "..");
 const readPwa = (relative) => readFile(path.join(root, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
+test("reference home owns creator presentation without duplicating global banners", async () => {
+  const homeRoute = await readPwa("app/page.tsx");
+  const home = await readPwa("components/phase18-beginner-home.tsx");
+  const shell = await readPwa("components/aas-reference-shell.tsx");
+
+  assert.doesNotMatch(homeRoute, /CreatorHud/);
+  assert.doesNotMatch(homeRoute, /FreeTrialBanner/);
+  assert.match(home, /getMyCreatorDashboard/);
+  assert.match(home, /今日のミッション/);
+  assert.match(home, /記事ライブラリ \/ noteマガジン/);
+  assert.match(home, /hasUnreadNotifications=\{Boolean\(dashboard\?\.claimableMissions\)\}/);
+  assert.match(home, /ranking\.length \? "圏外" : "未集計"/);
+  assert.match(shell, /ホーム/);
+  assert.match(shell, /ランキング/);
+  assert.match(shell, /プロフィール/);
+  assert.match(shell, /hasUnreadNotifications/);
+});
+
+test("reference home mission rows keep the text column unconstrained on mobile", async () => {
+  const css = await readPwa("app/phase33-reference-ui.css");
+
+  assert.match(css, /\.reference-mission-row > span:first-child\s*\{/);
+  assert.match(css, /\.reference-mission-row > span:nth-child\(2\)\s*\{[^}]*min-width:\s*0/s);
+  assert.match(css, /\.reference-mission-row\.done > span:first-child\s*\{/);
+  assert.doesNotMatch(css, /\.reference-mission-row > span\s*\{/);
+});
+
 test("creator client uses v2 dashboard with a legacy compatibility fallback", async () => {
   const source = await readPwa("lib/creator-system.ts");
   assert.match(source, /client\.rpc\("get_my_creator_dashboard_v2"\)/);
@@ -33,9 +60,14 @@ test("creator pages keep membership, missions and ranking separate and beginner-
   assert.match(membership, /note購入状態の自動取得は別の連携機能/);
   assert.match(membership, /creator-quests\.module\.css/);
 
-  assert.match(ranking, /12時間ごとのスナップショット/);
-  assert.match(ranking, /最初の1回だけ加算/);
+  assert.match(ranking, /getCreatorRanking/);
+  assert.match(ranking, /完成記事数/);
+  assert.match(ranking, /最初に条件を満たした時だけ集計/);
+  assert.match(ranking, /referenceRankTabs/);
   assert.match(ranking, /queueMicrotask/);
+  assert.match(ranking, /requestIdRef/);
+  assert.match(ranking, /requestId !== requestIdRef\.current/);
+  assert.match(ranking, /rows\.length \? "圏外" : "未集計"/);
 });
 
 test("membership migration is additive, tier-aware and preserves article RPC names", async () => {
@@ -108,4 +140,71 @@ test("admin access panels show only currently usable PWA and Creator Club entitl
   assert.match(client, /expiresAt > Date\.now\(\)/);
   assert.match(client, /item\.productCode === PWA_PRODUCT && isCurrentEntitlement\(item\)/);
   assert.match(client, /CREATOR_MEMBERSHIP_PRODUCTS\.has\(item\.productCode\) && isCurrentEntitlement\(item\)/);
+});
+
+
+test("reference UI v2 keeps ranking metrics inline and profile/home cards readable at iPhone widths", async () => {
+  const ranking = await readPwa("app/ranking/page.tsx");
+  const profile = await readPwa("app/profile/page.tsx");
+  const moduleCss = await readPwa("components/creator-system.module.css");
+  const referenceCss = await readPwa("app/phase33-reference-ui.css");
+
+  assert.match(ranking, /reference-page-inner reference-ranking-page/);
+  assert.match(profile, /reference-page-inner reference-profile-page/);
+  assert.match(moduleCss, /Ranking and profile UI v2: readable mobile density without changing RPC-backed data/);
+  assert.match(moduleCss, /@media \(max-width: 640px\)[\s\S]*?\.referenceRankRow \{[\s\S]*?grid-template-columns: 30px 36px minmax\(0, 1fr\) auto/);
+  assert.match(moduleCss, /@media \(max-width: 640px\)[\s\S]*?\.referenceToggleGrid \{[\s\S]*?grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(moduleCss, /@media \(max-width: 640px\)[\s\S]*?\.referenceDataGrid \{[\s\S]*?grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(referenceCss, /Home\/ranking\/profile UI v2: readable reference-scale cards on phone, tablet, and desktop/);
+  assert.match(referenceCss, /\.reference-mission-row strong \{[\s\S]*?font-size: 12px/);
+  assert.match(referenceCss, /\.reference-quick-step strong \{[\s\S]*?font-size: 10\.5px/);
+});
+
+
+test("profile avatars use one compressed WebP object per user instead of a URL input", async () => {
+  const profile = await readPwa("app/profile/page.tsx");
+  const helper = await readPwa("lib/profile-avatar.ts");
+  const creator = await readPwa("lib/creator-system.ts");
+  const css = await readPwa("components/creator-system.module.css");
+  const migration = await readRepo("supabase/migrations/20260918064500_profile_avatar_storage.sql");
+
+  assert.match(profile, /プロフィール画像/);
+  assert.match(profile, /画像を選択/);
+  assert.match(profile, /image\/jpeg,image\/png,image\/webp/);
+  assert.match(profile, /prepareProfileAvatar/);
+  assert.match(profile, /uploadProfileAvatar/);
+  assert.doesNotMatch(profile, /プロフィール画像URL/);
+  assert.doesNotMatch(profile, /placeholder="https:\/\/\.\.\."/);
+
+  assert.match(helper, /PROFILE_AVATAR_MAX_STORED_BYTES = 500 \* 1024/);
+  assert.match(helper, /PROFILE_AVATAR_MAX_EDGE = 512/);
+  assert.match(helper, /canvas\.toBlob/);
+  assert.match(helper, /"image\/webp"/);
+  assert.match(helper, /\$\{user\.id\}\/avatar\.webp/);
+  assert.match(helper, /upsert: true/);
+  assert.match(creator, /resolveProfileAvatarUrl/);
+
+  assert.match(migration, /'profile-avatars'/);
+  assert.match(migration, /public,\s*file_size_limit,\s*allowed_mime_types/s);
+  assert.match(migration, /true,\s*512000,\s*array\['image\/webp'\]/s);
+  assert.match(migration, /name = \(select auth\.uid\(\)\)::text \|\| '\/avatar\.webp'/);
+  assert.match(migration, /for insert\s+to authenticated/s);
+  assert.match(migration, /for update\s+to authenticated/s);
+  assert.match(migration, /for delete\s+to authenticated/s);
+
+  assert.match(css, /Profile avatar upload: local preview, client-side compression, one stored image per user/);
+  assert.doesNotMatch(`${profile}\n${helper}`, /service[_-]?role|sb_secret_/i);
+});
+
+
+test("profile ranking privacy cards keep checkboxes above text at phone widths", async () => {
+  const profile = await readPwa("app/profile/page.tsx");
+  const css = await readPwa("components/creator-system.module.css");
+
+  assert.match(profile, /referenceSwitchCard[\s\S]*?<input type="checkbox"[\s\S]*?<span><strong>ランキングに参加する/);
+  assert.match(profile, /referenceSwitchCard[\s\S]*?<input type="checkbox"[\s\S]*?<span><strong>記事数を公開/);
+  assert.match(profile, /referenceSwitchCard[\s\S]*?<input type="checkbox"[\s\S]*?<span><strong>レベルを公開/);
+  assert.match(css, /\.referenceSwitchCard \{[\s\S]*?flex-direction: column;[\s\S]*?align-items: stretch;/);
+  assert.match(css, /\.referenceSwitchCard > span \{[\s\S]*?width: 100%;/);
+  assert.match(css, /\.referenceSwitchCard input \{[\s\S]*?align-self: center;/);
 });

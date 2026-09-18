@@ -39,6 +39,59 @@ test("paid article pricing stays compatible with positive-price validation", asy
   assert.match(migration, /price is not null and price > 0/);
 });
 
+test("magazine creation is dropdown-first, validated and persisted without a new database contract", async () => {
+  const planner = await read("lib/magazine-planner.ts");
+  const plannerUi = await read("components/article-create/magazine-planner.tsx");
+  const page = await read("components/phase11-create-page.tsx");
+  const steps = await read("components/article-create/article-create-steps.tsx");
+  const api = await read("lib/phase11-create.ts");
+  const progress = await read("lib/phase11-wizard-progress.ts");
+
+  for (const label of ["対象読者", "記事数（目安）", "マガジンの方向性", "公開スタイル", "収益化レベル", "記事の並び方"]) {
+    assert.match(plannerUi, new RegExp(label));
+  }
+  assert.match(planner, /suggestMagazinePlans/);
+  assert.match(planner, /parseMagazinePlanDraft/);
+  assert.match(planner, /MAGAZINE_PURPOSE_OPTIONS/);
+  assert.match(planner, /customAudience/);
+  assert.match(planner, /customDirection/);
+  assert.match(planner, /customPublishingStyle/);
+  assert.match(planner, /customMonetizationLevel/);
+  assert.match(planner, /customOrderStrategy/);
+  assert.match(plannerUi, /マガジン名と記事タイトルを生成する/);
+  assert.match(plannerUi, /このマガジンを使用する/);
+  assert.match(plannerUi, /その他（自由入力）/);
+  assert.match(plannerUi, /その他のジャンル/);
+  assert.match(plannerUi, /その他のサブジャンル/);
+  assert.match(plannerUi, /その他のテーマ・キーワード/);
+  assert.match(plannerUi, /その他の対象読者/);
+  assert.match(plannerUi, /その他のマガジンの方向性/);
+  assert.match(plannerUi, /その他の記事数/);
+  assert.match(plannerUi, /その他の公開スタイル/);
+  assert.match(plannerUi, /その他の収益化レベル/);
+  assert.match(plannerUi, /その他の記事の並び方/);
+  assert.match(plannerUi, /その他の補足・目的/);
+  assert.match(plannerUi, /条件が変更されました。マガジン構成をもう一度生成してください。/);
+  for (const label of ["種類の選択", "条件の入力", "タイトルの選択", "記事の生成"]) {
+    assert.match(page, new RegExp(label));
+  }
+  assert.match(page, /displayStepForInternalStep/);
+  assert.match(steps, /マガジンモード/);
+  assert.match(steps, /disabled=\{draft\.magazineEnabled\}/);
+  assert.match(page, /magazinePlan\.name\.trim\(\)/);
+  assert.match(api, /pwa_magazine_plan/);
+  assert.match(api, /custom_audience/);
+  assert.match(api, /custom_direction/);
+  assert.match(api, /custom_publishing_style/);
+  assert.match(api, /custom_monetization_level/);
+  assert.match(api, /custom_order_strategy/);
+  assert.match(api, /withNoteMagazineWorkspace/);
+  assert.match(api, /マガジン構成案を選択してから記事を保存してください/);
+  assert.match(progress, /parseMagazinePlanDraft/);
+  assert.match(progress, /magazinePlan/);
+  assert.doesNotMatch(`${planner}\n${plannerUi}`, /service[_-]?role|sb_secret_|create table|alter table/i);
+});
+
 test("SNS launch planning covers account setup, content pillars, monetization and improvement without invented results", async () => {
   const api = await read("lib/phase15-sns-plan.ts");
   const page = await read("components/phase15-sns-plan-page.tsx");
@@ -83,4 +136,16 @@ test("tools hub exposes output and SNS planning with public-facing categories", 
   assert.match(tools, /SNSアカウント設計/);
   assert.doesNotMatch(tools, /Phase 11 出力/);
   assert.match(packageJson.scripts.test, /phase11-15-utilities\.test\.mjs/);
+});
+
+
+test("article creator UI v2 keeps the four-step rail readable and preserves two-column mobile planning", async () => {
+  const css = await read("app/phase33-reference-ui.css");
+  const plannerUi = await read("components/article-create/magazine-planner.tsx");
+
+  assert.match(plannerUi, /マガジンタイトル一括生成/);
+  assert.match(css, /Article creator UI v2: reference density, readable type, and 390-430px two-column layout/);
+  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: 1fr/);
 });
