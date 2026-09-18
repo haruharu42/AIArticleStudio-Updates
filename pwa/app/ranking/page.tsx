@@ -1,16 +1,23 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getCreatorRanking, getMyCreatorDashboard, type CreatorDashboard, type RankingKey, type RankingRow } from "@/lib/creator-system";
+import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import {
+  getCreatorRanking,
+  getMyCreatorDashboard,
+  xpProgress,
+  type CreatorDashboard,
+  type RankingKey,
+  type RankingRow,
+} from "@/lib/creator-system";
 import { getSupabaseClient } from "@/lib/supabase";
 import styles from "@/components/creator-system.module.css";
 
-const TABS: Array<{ key: RankingKey; label: string }> = [
-  { key: "level", label: "Creator Level" },
-  { key: "completed_articles", label: "完成記事数" },
-  { key: "weekly_xp", label: "今週XP" },
+const TABS: Array<{ key: RankingKey; label: string; icon: string }> = [
+  { key: "level", label: "レベル", icon: "♛" },
+  { key: "completed_articles", label: "完成記事数", icon: "▧" },
+  { key: "weekly_xp", label: "今週XP", icon: "✦" },
 ];
 
 function displayTime(value: string): string {
@@ -29,13 +36,20 @@ function nextRefresh(value: string, hours: number): string {
 }
 
 function metricLabel(row: RankingRow, key: RankingKey): string {
-  if (key === "level") return `Lv.${row.metricValue}`;
-  if (key === "completed_articles") return `${row.metricValue}記事`;
-  return `${row.metricValue} XP`;
+  if (key === "level") return \`Lv.${row.metricValue}\`;
+  if (key === "completed_articles") return \`${row.metricValue} 記事\`;
+  return \`${row.metricValue} XP\`;
 }
 
 function avatarLetter(name: string): string {
   return (name.trim().charAt(0) || "C").toUpperCase();
+}
+
+function podiumClass(position: number): string {
+  if (position === 1) return styles.rankGold;
+  if (position === 2) return styles.rankSilver;
+  if (position === 3) return styles.rankBronze;
+  return "";
 }
 
 export default function CreatorRankingPage() {
@@ -77,79 +91,138 @@ export default function CreatorRankingPage() {
   }
 
   const updatedAt = useMemo(() => rows[0]?.generatedAt || dashboard?.rankingLastGeneratedAt || "", [dashboard, rows]);
+  const me = useMemo(() => rows.find((row) => row.isMe) ?? null, [rows]);
+  const xp = useMemo(() => dashboard ? xpProgress(dashboard.totalXp, dashboard.level) : null, [dashboard]);
 
   return (
-    <main className={styles.page}>
-      <div className={styles.pageInner}>
-        <header className={styles.pageHeader}>
+    <div className="reference-page">
+      <AasReferenceHeader />
+      <main className="reference-page-inner">
+        <div className="reference-title-row">
           <div>
-            <p className={styles.eyebrow}>CREATOR RANKING</p>
-            <h1>ランキング</h1>
-            <p>ランキングは12時間ごとのスナップショットです。記事完成数やXPは自分のプロフィールにはすぐ反映されます。</p>
+            <a className="reference-back" href="/" aria-label="ホームへ戻る">‹</a>
+            <div>
+              <h1>♛ ランキング</h1>
+              <p>みんなの頑張りを、次の記事づくりのモチベーションに。</p>
+            </div>
           </div>
-          <Link className={styles.backLink} href="/">← ホームへ</Link>
-        </header>
+        </div>
 
-        <section className={styles.panel}>
-          <div className={styles.rankTabs} role="tablist" aria-label="ランキング種別">
+        {dashboard && (
+          <section className="reference-status-card">
+            <span className="reference-avatar" aria-hidden="true">
+              {dashboard.avatarUrl ? <img src={dashboard.avatarUrl} alt="" /> : avatarLetter(dashboard.publicName || "Creator")}
+            </span>
+            <div className="reference-creator-main">
+              <div className="reference-name-row">
+                <strong>{dashboard.publicName || "Creator"}</strong>
+                <span className="reference-level-pill">♛ Creator Lv.{dashboard.level}</span>
+              </div>
+              {xp && (
+                <>
+                  <div className="reference-xp-row">
+                    <div className="reference-xp-track"><span style={{ width: \`${xp.percent}%\` }} /></div>
+                    <b>{xp.current} / {xp.needed} XP</b>
+                  </div>
+                  <small className="reference-xp-note">完成記事だけが実績へ加算されます。</small>
+                </>
+              )}
+            </div>
+            <div className="reference-rank-box">
+              <small>あなたの順位</small>
+              <strong>{me ? \`${me.rankPosition}位\` : dashboard.rankingOptIn ? "更新待ち" : "非参加"}</strong>
+              <em>{dashboard.rankingOptIn ? "公開設定ON" : "プロフィールから参加できます"}</em>
+            </div>
+          </section>
+        )}
+
+        <section className={\`${styles.panel} ${styles.referenceRankingPanel}\`}>
+          <div className={styles.referenceRankTabs} role="tablist" aria-label="ランキング種別">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
                 type="button"
                 role="tab"
                 aria-selected={key === tab.key}
-                className={`${styles.rankTab} ${key === tab.key ? styles.rankTabActive : ""}`}
+                className={key === tab.key ? styles.referenceRankTabActive : ""}
                 onClick={() => chooseRanking(tab.key)}
               >
-                {tab.label}
+                <span aria-hidden="true">{tab.icon}</span>{tab.label}
               </button>
             ))}
           </div>
 
-          {dashboard ? (
-            <div className={styles.notice}>
-              最終更新：{displayTime(updatedAt)} ／ 次回目安：{nextRefresh(updatedAt, dashboard.rankingRefreshHours)}
-              {!dashboard.rankingOptIn ? "　あなたは現在ランキング非参加です。プロフィール設定からいつでも参加できます。" : ""}
-            </div>
-          ) : null}
+          <p className={styles.referenceRankGuide}>
+            ※ 完成数は「完成・公開待ち・公開済み」の記事が最初に条件を満たした時だけ集計されます。
+          </p>
 
-          {loading ? <div className={styles.empty}>ランキングを読み込んでいます…</div> : null}
-          {error ? <div className={styles.error}>{error}</div> : null}
+          {loading && <div className={styles.empty}>ランキングを読み込んでいます…</div>}
+          {error && <div className={styles.error}>{error}</div>}
 
-          {!loading && !error && rows.length > 0 ? (
-            <div className={styles.rankList}>
+          {!loading && !error && rows.length > 0 && (
+            <div className={styles.referenceRankList}>
               {rows.map((row) => (
-                <article key={`${row.rankingKey}-${row.rankPosition}-${row.publicName}`} className={`${styles.rankCard} ${row.isMe ? styles.rankMe : ""}`}>
-                  <span className={styles.rankPosition}>#{row.rankPosition}</span>
+                <article
+                  key={\`${row.rankingKey}-${row.rankPosition}-${row.publicName}\`}
+                  className={\`${styles.referenceRankRow} ${podiumClass(row.rankPosition)} ${row.isMe ? styles.rankMe : ""}\`}
+                >
+                  <span className={styles.referenceRankPosition}>
+                    {row.rankPosition <= 3 ? <b>♛</b> : null}
+                    {row.rankPosition}
+                  </span>
                   <span className={styles.rankAvatar} aria-hidden="true">
                     {row.avatarUrl ? <img src={row.avatarUrl} alt="" /> : avatarLetter(row.publicName)}
                   </span>
                   <div className={styles.rankName}>
                     <strong>{row.publicName}{row.isMe ? "（あなた）" : ""}</strong>
                     <small>
-                      {row.level !== null ? `Lv.${row.level}` : "Lv.非公開"}
-                      {row.completedArticles !== null ? ` · 完成 ${row.completedArticles}記事` : " · 記事数非公開"}
+                      {row.level !== null ? \`Creator Lv.${row.level}\` : "レベル非公開"}
+                      {row.completedArticles !== null ? \` · 完成 ${row.completedArticles}記事\` : " · 記事数非公開"}
                     </small>
                   </div>
-                  <span className={styles.rankMetric}>{metricLabel(row, key)}</span>
+                  <div className={styles.referenceRankMetric}>
+                    <small>{key === "level" ? "レベル" : key === "completed_articles" ? "完成記事数" : "今週XP"}</small>
+                    <strong>{metricLabel(row, key)}</strong>
+                  </div>
                 </article>
               ))}
             </div>
-          ) : null}
+          )}
 
-          {!loading && !error && rows.length === 0 ? (
+          {!loading && !error && rows.length === 0 && (
             <div className={styles.empty}>
               まだこのランキングに参加者がいません。<br />
-              公開名を設定してランキング参加をONにすると、次回の12時間更新から反映されます。
+              公開名を設定してランキング参加をONにすると、次回更新から反映されます。
             </div>
-          ) : null}
-
-          <div className={styles.notice}>
-            完成記事数は、タイトルと本文があり記事ステータスが「完成・公開待ち・公開済み」になった最初の1回だけ加算します。再編集やステータスの往復では二重加算しません。
-          </div>
-          <Link className={styles.actionLink} href="/profile">⚙ プロフィール・公開設定を変更</Link>
+          )}
         </section>
-      </div>
-    </main>
+
+        {dashboard && (
+          <section className={styles.referenceActivityCard}>
+            <span aria-hidden="true">🎁</span>
+            <div>
+              <strong>今週のがんばり</strong>
+              <small>今週獲得したXPと、ランキングの次回更新目安を確認できます。</small>
+            </div>
+            <div>
+              <small>今週XP</small>
+              <strong>+{dashboard.weeklyXp} XP</strong>
+            </div>
+          </section>
+        )}
+
+        {dashboard && (
+          <section className={styles.referenceInfoCard}>
+            <span aria-hidden="true">🔥</span>
+            <div>
+              <strong>ランキングの集計について</strong>
+              <small>最終更新：{displayTime(updatedAt)} ／ 次回目安：{nextRefresh(updatedAt, dashboard.rankingRefreshHours)}</small>
+            </div>
+            <a href="/profile">公開設定 ›</a>
+          </section>
+        )}
+      </main>
+      <AasReferenceBottomNav active="ranking" />
+    </div>
   );
 }
