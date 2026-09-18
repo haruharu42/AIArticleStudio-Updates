@@ -48,7 +48,7 @@ function Achievement({
   achieved: boolean;
 }) {
   return (
-    <article className={\`${styles.referenceAchievement} ${achieved ? styles.referenceAchievementDone : ""}\`}>
+    <article className={`${styles.referenceAchievement} ${achieved ? styles.referenceAchievementDone : ""}`}>
       <span aria-hidden="true">{icon}</span>
       <strong>{title}</strong>
       <small>{achieved ? description : "まだ未達成です"}</small>
@@ -147,7 +147,7 @@ export default function CreatorProfilePage() {
                   <span className="reference-level-pill">♛ Creator Lv.{dashboard.level}</span>
                 </div>
                 <div className="reference-xp-row">
-                  <div className="reference-xp-track"><span style={{ width: \`${xp.percent}%\` }} /></div>
+                  <div className="reference-xp-track"><span style={{ width: `${xp.percent}%` }} /></div>
                   <b>{xp.current} / {xp.needed} XP</b>
                 </div>
                 <small className="reference-xp-note">あと {Math.max(0, xp.needed - xp.current)} XPで次のレベルです。</small>
@@ -155,7 +155,7 @@ export default function CreatorProfilePage() {
               <div className={styles.referenceMemberBox}>
                 <span aria-hidden="true">♛</span>
                 <strong>{dashboard.noteMember ? dashboard.membershipBadgeLabel || dashboard.membershipPlanName || "Creator Club" : "通常利用"}</strong>
-                <small>{dashboard.noteMember ? \`記事XP ×${dashboard.articleXpMultiplier.toFixed(1)}\` : "Creator Level特典を利用中"}</small>
+                <small>{dashboard.noteMember ? `記事XP ×${dashboard.articleXpMultiplier.toFixed(1)}` : "Creator Level特典を利用中"}</small>
               </div>
             </section>
 
@@ -187,7 +187,7 @@ export default function CreatorProfilePage() {
                 <input maxLength={200} value={form.creatorGoal} onChange={(event) => setForm({ ...form, creatorGoal: event.target.value })} placeholder="例：今月はマガジンを1冊完成させる" />
               </label>
 
-              <label className={\`${styles.referenceProfileTile} ${styles.referenceProfileTileWide}\`}>
+              <label className={`${styles.referenceProfileTile} ${styles.referenceProfileTileWide}`}>
                 <span className={styles.referenceTileIcon}>◉</span>
                 <span><strong>プロフィール画像URL</strong><small>未設定の場合は公開名の頭文字を表示</small></span>
                 <input maxLength={2048} value={form.avatarUrl} onChange={(event) => setForm({ ...form, avatarUrl: event.target.value })} placeholder="https://..." inputMode="url" />
