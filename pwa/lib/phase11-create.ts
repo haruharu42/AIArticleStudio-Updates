@@ -11,6 +11,7 @@ import {
   type MagazinePlanDraft,
 } from "@/lib/magazine-planner";
 import { PWA_PRODUCT_CODE } from "@/lib/phase6-access";
+import { getRuntimeKnowledgeState } from "@/lib/prompt-optimization";
 import { getPromptSpecialization } from "@/lib/phase12-prompt-profiles";
 import { buildImagePromptPlan } from "@/lib/phase13-image-prompts";
 import { isCustomGenre, isCustomSubgenre } from "@/lib/phase18-content-options";
@@ -261,11 +262,15 @@ export async function createArticleFromWizard(
     inlineEnabled: draft.inlineEnabled,
     inlineCount: draft.inlineCount,
   });
+  const knowledgeRuntime = getRuntimeKnowledgeState();
   let workspaceJson: Record<string, unknown> = {
     wizard_version: 11,
-    prompt_profile_version: 12,
-    image_prompt_version: 13,
-    knowledge_engine_version: 1,
+    prompt_profile_version: 13,
+    image_prompt_version: 14,
+    knowledge_engine_version: 2,
+    cloud_knowledge_channel: knowledgeRuntime.channel,
+    cloud_knowledge_version: knowledgeRuntime.effectiveVersion,
+    prompt_optimization_version: knowledgeRuntime.effectiveVersion,
     user_personalization_version: 1,
     personalization_enabled: writingProfile?.personalizationEnabled ?? false,
     selected_title: draft.title,
