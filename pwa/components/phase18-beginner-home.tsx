@@ -343,7 +343,7 @@ export function Phase18BeginnerHome() {
 
         <section className="reference-home-section">
           <div className="reference-section-heading">
-            <h2>▤ noteマガジン・最近の記事</h2>
+            <h2>▤ 記事ライブラリ / noteマガジン</h2>
             <button type="button" className="reference-link-button" onClick={() => openSection("library")}>ライブラリを開く ›</button>
           </div>
           {dashboard && (
@@ -410,6 +410,11 @@ export function Phase18BeginnerHome() {
         <section className="reference-home-section">
           <div className="reference-section-heading"><h2>🔗 AIアプリを開く</h2><a href="/tools">すべての機能 ›</a></div>
           <div className="beginner-ai-grid"><AiLaunchCard appKey="chatgpt" /><AiLaunchCard appKey="claude" /><AiLaunchCard appKey="gemini" /></div>
+          <p className="reference-ai-note">iPhone / iPadでは「アプリを開く」と「Web版を開く」を選べます。Androidはアプリを優先し、開けない場合はGoogle Playの公式ページへ移動します。PCではWeb版を開きます。</p>
+          <div className="reference-feature-links">
+            <a href="/images"><span>▧</span><strong>画像作成</strong><small>アイキャッチ・挿絵を準備</small></a>
+            <a href="/sns"><span>↗</span><strong>SNS投稿</strong><small>記事から投稿文を作成</small></a>
+          </div>
         </section>
 
         <section className="reference-home-section">
