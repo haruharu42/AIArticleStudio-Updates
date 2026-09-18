@@ -43,12 +43,14 @@ export function MagazinePlannerPanel({
 }) {
   const [generated, setGenerated] = useState(Boolean(plan.name || plan.articleTitles.length));
   const [tab, setTab] = useState(Math.min(2, Math.max(0, plan.selectedSuggestion)));
+  const [selectionInvalidated, setSelectionInvalidated] = useState(false);
   const suggestions = useMemo(() => suggestMagazinePlans(draft, plan), [draft, plan]);
   const genreSelectValue = genreSelectionValue(draft.genre);
   const subgenreSelectValue = subgenreSelectionValue(draft.genre, draft.subgenre);
   const subgenres = subgenreOptionsFor(draft.genre);
 
   const updatePlan = <K extends keyof MagazinePlanDraft>(key: K, value: MagazinePlanDraft[K]) => {
+    const hadSelectedPlan = Boolean(plan.name.trim() || plan.articleTitles.length);
     onPlanChange({
       ...plan,
       [key]: value,
@@ -56,6 +58,7 @@ export function MagazinePlannerPanel({
       articleTitles: [],
     });
     setGenerated(false);
+    if (hadSelectedPlan) setSelectionInvalidated(true);
   };
 
   const invalidateSelectedPlan = () => {
@@ -66,6 +69,7 @@ export function MagazinePlannerPanel({
       articleTitles: [],
     });
     setGenerated(false);
+    setSelectionInvalidated(true);
   };
 
   const updateTheme = (value: string) => {
@@ -86,6 +90,7 @@ export function MagazinePlannerPanel({
   const generate = () => {
     setTab(0);
     setGenerated(true);
+    setSelectionInvalidated(false);
   };
 
   const useSuggestion = () => {
@@ -94,6 +99,7 @@ export function MagazinePlannerPanel({
     onPlanChange(applyMagazineSuggestion(plan, suggestion));
     patch("title", suggestion.articleTitles[0] ?? draft.title);
     patch("magazineEnabled", true);
+    setSelectionInvalidated(false);
   };
 
   const active = suggestions[tab];
@@ -199,6 +205,12 @@ export function MagazinePlannerPanel({
           <small>{plan.purpose.length}/500</small>
         </label>
       </div>
+
+      {selectionInvalidated && (
+        <div className="route-notice" role="alert">
+          条件が変更されました。マガジン構成をもう一度生成してください。
+        </div>
+      )}
 
       <button className="magazine-generate-action" type="button" onClick={generate}>
         <span aria-hidden="true">✦</span>
