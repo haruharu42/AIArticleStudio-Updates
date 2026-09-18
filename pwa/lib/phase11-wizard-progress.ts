@@ -1,4 +1,9 @@
 import { parseStoredArticleDraft } from "@/lib/article-create-draft";
+import {
+  DEFAULT_MAGAZINE_PLAN,
+  parseMagazinePlanDraft,
+  type MagazinePlanDraft,
+} from "@/lib/magazine-planner";
 import type { ArticleCreationDraft } from "@/lib/phase11-create";
 
 const STORAGE_VERSION = 1;
@@ -7,6 +12,7 @@ const STORAGE_PREFIX = "aas:pwa:article-wizard-progress:v1:";
 export type ArticleWizardProgress = {
   step: number;
   draft: ArticleCreationDraft;
+  magazinePlan: MagazinePlanDraft;
   tagsText: string;
   updatedAt: string;
 };
@@ -21,6 +27,13 @@ function storageKey(ownerId: string): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function freshMagazinePlan(): MagazinePlanDraft {
+  return {
+    ...DEFAULT_MAGAZINE_PLAN,
+    articleTitles: [...DEFAULT_MAGAZINE_PLAN.articleTitles],
+  };
 }
 
 export function loadArticleWizardProgress(ownerId: string): ArticleWizardProgress | null {
@@ -48,9 +61,18 @@ export function loadArticleWizardProgress(ownerId: string): ArticleWizardProgres
       return null;
     }
 
+    const magazinePlan = parsed.magazinePlan === undefined
+      ? freshMagazinePlan()
+      : parseMagazinePlanDraft(parsed.magazinePlan);
+    if (!magazinePlan) {
+      window.localStorage.removeItem(storageKey(ownerId));
+      return null;
+    }
+
     return {
       step: parsed.step as number,
       draft,
+      magazinePlan,
       tagsText: parsed.tagsText,
       updatedAt: parsed.updatedAt,
     };
