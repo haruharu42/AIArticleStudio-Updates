@@ -68,8 +68,8 @@ function compactTags(tags: string[]): string[] {
   return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))].slice(0, 50);
 }
 
-function promptContextBlock(): string {
-  const value = buildUserPromptContext(getRuntimeWritingProfile());
+function promptContextBlock(task: "title" | "article"): string {
+  const value = buildUserPromptContext(getRuntimeWritingProfile(), task);
   return value ? `\n\n${value}` : "";
 }
 
@@ -124,7 +124,7 @@ export function suggestLocalTitles(
 
 export function buildTitlePrompt(draft: ArticleCreationDraft, magazinePlan?: MagazinePlanDraft): string {
   const specialization = specializationFor(draft, "title");
-  return `あなたは日本語の編集者です。次の条件で記事タイトル候補を10個作成してください。\n\n【絶対ルール】\n- 実体験・実績・レビューを創作しない。\n- 未確認の価格・在庫・評価・ランキング・統計を断定しない。\n- 競合記事のコピーや近似模倣をしない。\n- 根拠のない成果保証や過度な煽りを使わない。${promptContextBlock()}\n\n【条件】\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\nテーマ: ${draft.theme || "記事テーマから提案"}\n\n${specialization}${magazinePromptContext(magazinePlan)}\n\n一目で内容が分かり、誇張せず、読者がクリック後の内容を想像できるタイトルにしてください。タイトルだけを番号付きで出力してください。`;
+  return `あなたは日本語の編集者です。次の条件で記事タイトル候補を10個作成してください。\n\n【絶対ルール】\n- 実体験・実績・レビューを創作しない。\n- 未確認の価格・在庫・評価・ランキング・統計を断定しない。\n- 競合記事のコピーや近似模倣をしない。\n- 根拠のない成果保証や過度な煽りを使わない。${promptContextBlock("title")}\n\n【条件】\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\nテーマ: ${draft.theme || "記事テーマから提案"}\n\n${specialization}${magazinePromptContext(magazinePlan)}\n\n一目で内容が分かり、誇張せず、読者がクリック後の内容を想像できるタイトルにしてください。タイトルだけを番号付きで出力してください。`;
 }
 
 export function buildArticlePrompt(draft: ArticleCreationDraft, magazinePlan?: MagazinePlanDraft): string {
@@ -132,7 +132,7 @@ export function buildArticlePrompt(draft: ArticleCreationDraft, magazinePlan?: M
     ? `画像計画: アイキャッチ=${draft.coverEnabled ? "あり" : "なし"}、挿絵=${draft.inlineEnabled ? `${draft.inlineCount}枚` : "なし"}。本文中で挿絵が有効な場合は「<!-- IMAGE:01 -->」のような差し込み候補位置を自然な区切りに置いてください。`
     : "画像計画: なし。";
   const specialization = specializationFor(draft, "article");
-  return `あなたは日本語の編集者兼記事ライターです。\n目的は、指定された掲載先へそのまま掲載できる、具体的で読みやすく、読者が行動できる完成記事を作ることです。\n\n【絶対ルール】\n- ユーザーが入力していない実体験・実績・レビュー・購入経験・使用経験を事実として作らない。\n- 価格、在庫、評価、キャンペーン、統計、販売数、ランキング、最新仕様など変動する情報を未確認のまま断定しない。\n- 競合記事の文章をコピー・近似模倣しない。\n- 根拠のない成果保証、過度な煽り、架空の権威づけをしない。\n- 架空例を使う場合は「例」「想定」と明示する。\n- 文字数を水増しせず、手順・判断基準・具体例・チェックリスト等で価値を作る。\n\n【出力】\n- 日本語。\n- Markdown見出しで明確に構造化する。\n- 余計な前置き、メタ説明、生成方針の説明は付けない。\n- 完成記事本文だけを返す。${promptContextBlock()}\n\n【ARTICLE BRIEF】\nタイトル: ${draft.title || "タイトル候補から選択"}\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\nテーマ: ${draft.theme || "タイトルから推定"}\n文字数目安: 約${draft.targetLength}文字\n価格: ${draft.articleType === "paid" && draft.price !== null ? `${draft.price}円` : "設定なし"}\nアフィリエイト: ${draft.affiliateEnabled ? "ON" : "OFF"}\nマガジン: ${draft.magazineEnabled ? "ON" : "OFF"}\n${imageRule}\n\n${specialization}${magazinePromptContext(magazinePlan)}\n\n掲載先と無料/有料の性質に合わせ、導入、見出し構成、具体例、手順、注意点、必要に応じたCTAを自然に最適化してください。`;
+  return `あなたは日本語の編集者兼記事ライターです。\n目的は、指定された掲載先へそのまま掲載できる、具体的で読みやすく、読者が行動できる完成記事を作ることです。\n\n【絶対ルール】\n- ユーザーが入力していない実体験・実績・レビュー・購入経験・使用経験を事実として作らない。\n- 価格、在庫、評価、キャンペーン、統計、販売数、ランキング、最新仕様など変動する情報を未確認のまま断定しない。\n- 競合記事の文章をコピー・近似模倣しない。\n- 根拠のない成果保証、過度な煽り、架空の権威づけをしない。\n- 架空例を使う場合は「例」「想定」と明示する。\n- 文字数を水増しせず、手順・判断基準・具体例・チェックリスト等で価値を作る。\n\n【出力】\n- 日本語。\n- Markdown見出しで明確に構造化する。\n- 余計な前置き、メタ説明、生成方針の説明は付けない。\n- 完成記事本文だけを返す。${promptContextBlock("article")}\n\n【ARTICLE BRIEF】\nタイトル: ${draft.title || "タイトル候補から選択"}\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\nテーマ: ${draft.theme || "タイトルから推定"}\n文字数目安: 約${draft.targetLength}文字\n価格: ${draft.articleType === "paid" && draft.price !== null ? `${draft.price}円` : "設定なし"}\nアフィリエイト: ${draft.affiliateEnabled ? "ON" : "OFF"}\nマガジン: ${draft.magazineEnabled ? "ON" : "OFF"}\n${imageRule}\n\n${specialization}${magazinePromptContext(magazinePlan)}\n\n掲載先と無料/有料の性質に合わせ、導入、見出し構成、具体例、手順、注意点、必要に応じたCTAを自然に最適化してください。`;
 }
 
 async function requireAccess(
