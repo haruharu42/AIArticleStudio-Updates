@@ -17,6 +17,7 @@ import {
 import { getSupabaseClient } from "@/lib/supabase";
 
 const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms"];
+const REFERENCE_SHELL_ROUTES = new Set(["/", "/create", "/ranking", "/profile"]);
 
 function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -96,7 +97,8 @@ export function PersistentMobileNav() {
   }, []);
 
   const hiddenRoute = HIDDEN_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));
-  const visible = signedIn && !hiddenRoute && (alwaysShow || pathname === "/" || pathname === "/settings");
+  const referenceShellRoute = REFERENCE_SHELL_ROUTES.has(pathname);
+  const visible = signedIn && !hiddenRoute && !referenceShellRoute && (alwaysShow || pathname === "/" || pathname === "/settings");
   const activeKey = useMemo(() => {
     if (pathname === "/") return "home";
     if (matchesPrefix(pathname, "/admin")) return "admin";
