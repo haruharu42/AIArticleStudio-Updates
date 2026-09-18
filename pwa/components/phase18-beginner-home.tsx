@@ -62,11 +62,6 @@ const QUICK_SETUP_INITIAL: QuickSetup = {
   inlineCount: 2,
 };
 
-function initialSection(): Section {
-  if (typeof window === "undefined") return "home";
-  return new URLSearchParams(window.location.search).get("section") === "library" ? "library" : "home";
-}
-
 function avatarLetter(value: string): string {
   return (value.trim().charAt(0) || "A").toUpperCase();
 }
@@ -145,7 +140,7 @@ function MissionRows({ missions }: { missions: CreatorMission[] }) {
 export function Phase18BeginnerHome() {
   const [state, setState] = useState<HomeState>({ kind: "loading" });
   const [client, setClient] = useState<SupabaseClient | null>(null);
-  const [section, setSection] = useState<Section>(() => initialSection());
+  const [section, setSection] = useState<Section>("home");
   const [imageUnsaved, setImageUnsaved] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
   const [recentArticles, setRecentArticles] = useState<ArticleSummary[] | null>(null);
@@ -161,6 +156,12 @@ export function Phase18BeginnerHome() {
       setState(await loadAccessState(activeClient));
     } catch {
       setState({ kind: "unavailable" });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("section") === "library") {
+      setSection("library");
     }
   }, []);
 
@@ -379,6 +380,10 @@ export function Phase18BeginnerHome() {
             <a className="reference-quick-step" href="/create"><span>1</span><b>▧</b><strong>条件を選ぶ</strong><small>掲載先やジャンルをプルダウンで選択</small></a>
             <a className="reference-quick-step" href="/create"><span>2</span><b>✎</b><strong>記事を作る</strong><small>AI用プロンプトまたは手入力で作成</small></a>
             <button className="reference-quick-step" type="button" onClick={() => openSection("library")}><span>3</span><b>✓</b><strong>保存して管理</strong><small>ライブラリで編集・画像管理</small></button>
+          </div>
+          <div className="reference-help-links">
+            <a className="secondary" href="/manual">使い方を見る</a>
+            <a href="/faq">Q&A・よくある質問</a>
           </div>
         </section>
 
