@@ -105,7 +105,7 @@ export default function CreatorRankingPage() {
   return (
     <div className="reference-page">
       <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
-      <main className="reference-page-inner">
+      <main className="reference-page-inner reference-ranking-page">
         <div className="reference-title-row">
           <div>
             <Link className="reference-back" href="/" aria-label="ホームへ戻る">‹</Link>
