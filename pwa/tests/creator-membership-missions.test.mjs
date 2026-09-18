@@ -9,6 +9,21 @@ const repoRoot = path.resolve(root, "..");
 const readPwa = (relative) => readFile(path.join(root, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
+test("reference home owns creator presentation without duplicating global banners", async () => {
+  const homeRoute = await readPwa("app/page.tsx");
+  const home = await readPwa("components/phase18-beginner-home.tsx");
+  const shell = await readPwa("components/aas-reference-shell.tsx");
+
+  assert.doesNotMatch(homeRoute, /CreatorHud/);
+  assert.doesNotMatch(homeRoute, /FreeTrialBanner/);
+  assert.match(home, /getMyCreatorDashboard/);
+  assert.match(home, /今日のミッション/);
+  assert.match(home, /noteマガジン・最近の記事/);
+  assert.match(shell, /ホーム/);
+  assert.match(shell, /ランキング/);
+  assert.match(shell, /プロフィール/);
+});
+
 test("creator client uses v2 dashboard with a legacy compatibility fallback", async () => {
   const source = await readPwa("lib/creator-system.ts");
   assert.match(source, /client\.rpc\("get_my_creator_dashboard_v2"\)/);
