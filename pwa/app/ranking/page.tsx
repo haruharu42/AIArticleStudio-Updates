@@ -104,7 +104,7 @@ export default function CreatorRankingPage() {
 
   return (
     <div className="reference-page">
-      <AasReferenceHeader />
+      <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
       <main className="reference-page-inner">
         <div className="reference-title-row">
           <div>
@@ -138,7 +138,7 @@ export default function CreatorRankingPage() {
             </div>
             <div className="reference-rank-box">
               <small>あなたの順位</small>
-              <strong>{me ? `${me.rankPosition}位` : dashboard.rankingOptIn ? "更新待ち" : "非参加"}</strong>
+              <strong>{me ? `${me.rankPosition}位` : !dashboard.rankingOptIn ? "非参加" : loading ? "読込中" : rows.length ? "圏外" : "未集計"}</strong>
               <em>{dashboard.rankingOptIn ? "公開設定ON" : "プロフィールから参加できます"}</em>
             </div>
           </section>
