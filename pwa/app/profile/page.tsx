@@ -287,16 +287,16 @@ export default function CreatorProfilePage() {
               <div className={styles.referenceSectionTitle}><span>▥</span><div><h2>ランキング公開設定</h2><p>公開する情報は自分で選べます。</p></div></div>
               <div className={styles.referenceToggleGrid}>
                 <label className={styles.referenceSwitchCard}>
-                  <span><strong>ランキングに参加する</strong><small>OFFでも自分のXP・レベルは利用できます。</small></span>
                   <input type="checkbox" checked={form.rankingOptIn} onChange={(event) => setForm({ ...form, rankingOptIn: event.target.checked })} />
+                  <span><strong>ランキングに参加する</strong><small>OFFでも自分のXP・レベルは利用できます。</small></span>
                 </label>
                 <label className={styles.referenceSwitchCard}>
-                  <span><strong>記事数を公開</strong><small>完成した記事数だけを表示</small></span>
                   <input type="checkbox" checked={form.showCompletedArticles} onChange={(event) => setForm({ ...form, showCompletedArticles: event.target.checked })} />
+                  <span><strong>記事数を公開</strong><small>完成した記事数だけを表示</small></span>
                 </label>
                 <label className={styles.referenceSwitchCard}>
-                  <span><strong>レベルを公開</strong><small>Creator Levelをランキングに表示</small></span>
                   <input type="checkbox" checked={form.showLevel} onChange={(event) => setForm({ ...form, showLevel: event.target.checked })} />
+                  <span><strong>レベルを公開</strong><small>Creator Levelをランキングに表示</small></span>
                 </label>
               </div>
             </section>
