@@ -33,8 +33,10 @@ test("creator pages keep membership, missions and ranking separate and beginner-
   assert.match(membership, /note購入状態の自動取得は別の連携機能/);
   assert.match(membership, /creator-quests\.module\.css/);
 
-  assert.match(ranking, /12時間ごとのスナップショット/);
-  assert.match(ranking, /最初の1回だけ加算/);
+  assert.match(ranking, /getCreatorRanking/);
+  assert.match(ranking, /完成記事数/);
+  assert.match(ranking, /最初に条件を満たした時だけ集計/);
+  assert.match(ranking, /referenceRankTabs/);
   assert.match(ranking, /queueMicrotask/);
 });
 
