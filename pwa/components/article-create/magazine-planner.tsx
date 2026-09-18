@@ -92,15 +92,8 @@ export function MagazinePlannerPanel({
       <div className="magazine-dropdown-grid">
         <label className="reference-field">
           <span>掲載先</span>
-          <select value={draft.publicationTarget} onChange={(event) => {
-            const value = event.target.value as ArticleCreationDraft["publicationTarget"];
-            patch("publicationTarget", value);
-            if (value !== "note") patch("magazineEnabled", false);
-          }}>
+          <select value="note" onChange={() => patch("publicationTarget", "note")}>
             <option value="note">note</option>
-            <option value="tips">Tips（シリーズ用途）</option>
-            <option value="brain">Brain（シリーズ用途）</option>
-            <option value="blog">ブログ（シリーズ用途）</option>
           </select>
         </label>
 
@@ -219,7 +212,7 @@ export function MagazinePlannerPanel({
             <p>{active.description}</p>
             <ol>
               {active.articleTitles.map((title, index) => (
-                <li key={\`${index}-${title}\`}>
+                <li key={`${index}-${title}`}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
                   <strong>{title}</strong>
                 </li>
