@@ -54,6 +54,11 @@ test("magazine creation is dropdown-first, validated and persisted without a new
   assert.match(planner, /parseMagazinePlanDraft/);
   assert.match(plannerUi, /マガジン名と記事タイトルを生成する/);
   assert.match(plannerUi, /このマガジンを使用する/);
+  assert.match(plannerUi, /条件が変更されました。マガジン構成をもう一度生成してください。/);
+  for (const label of ["種類の選択", "条件の入力", "タイトルの選択", "記事の生成"]) {
+    assert.match(page, new RegExp(label));
+  }
+  assert.match(page, /displayStepForInternalStep/);
   assert.match(steps, /マガジン記事を作成/);
   assert.match(steps, /disabled=\{draft\.magazineEnabled\}/);
   assert.match(page, /magazinePlan\.name\.trim\(\)/);
