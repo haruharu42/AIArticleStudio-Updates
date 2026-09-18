@@ -207,6 +207,10 @@ export function Phase11CreatePage() {
 
   const next = () => {
     setMessage("");
+    if (step === 0 && draft.magazineEnabled && !magazinePlan.name.trim()) {
+      setMessage("マガジン構成案を生成し、「このマガジンを使用する」を選んでから次へ進んでください。");
+      return;
+    }
     const validationMessage = validateArticleCreateStep(step, draft);
     if (validationMessage) {
       setMessage(validationMessage);
