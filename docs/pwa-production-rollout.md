@@ -125,6 +125,24 @@ Preview URL確定後にSupabase Auth設定を確認する。
 
 テストデータは完了後にexact-IDで清掃する。
 
+## Gate PWA-MEMBER-BETA: noteメンバー限定のworkers.dev本番
+
+独自ドメイン取得前に、noteメンバーシップ参加者へ限定してPWAを提供する場合は、Preview Workerとは別のProduction Workerを使う。
+
+- Preview Worker: `ai-article-studio-pwa-preview`
+- Member Beta Worker: `ai-article-studio-pwa`
+- Member Betaは通常の `workers.dev` routeを有効化する。
+- Preview側は引き続き `workers_dev: false` / `preview_urls: true` を維持する。
+- Member Beta側は `workers_dev: true` / `preview_urls: false` とし、custom domain / DNSは設定しない。
+- Member Beta deployは `.github/workflows/pwa-member-beta-deploy.yml` から手動実行し、mainのexact SHAと `DEPLOY_MEMBER_BETA` の確認文字列を必須とする。
+- Supabaseのservice role、`sb_secret_*`、ユーザーJWT、Windows DPAPI session等はWorkerへ渡さない。
+- note等の外部販売ページと利用コードによる利用権付与を前提とし、AAS内Stripe LIVE販売は別ゲートのままとする。
+- OAuth/Supabase Authのredirect allow-listへMember Beta originを追加し、Email/PasswordとGoogle OAuthを実機確認してから参加者へ案内する。
+- Member Beta URLはURLを知る第三者からも到達可能なため、利用権ゲート・認証・RLSを公開境界として扱う。
+- 将来custom domainへ移行する際は、Member Beta Workerの安定版を基準に別ゲートで切り替える。
+
+Member Betaは一般向け正式販売とは分離して扱う。利用規約、プライバシーポリシー、特定商取引法表示、問い合わせ窓口、外部販売ページの購入条件が現在の販売方式と整合していることを確認してから案内する。
+
 ## Gate PWA-PROD-5: production release decision
 
 以下が揃って初めて正式公開可とする。
