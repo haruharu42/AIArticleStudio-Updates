@@ -6,10 +6,11 @@ export type MagazineDirection =
   | "step_by_step"
   | "practical_series"
   | "comparison"
-  | "deep_dive";
-export type MagazinePublishingStyle = "gentle" | "practical" | "concise" | "professional";
-export type MagazineMonetizationLevel = "intro" | "balanced" | "sales";
-export type MagazineOrderStrategy = "foundation" | "problem_solution" | "quick_win" | "free_to_paid";
+  | "deep_dive"
+  | "other";
+export type MagazinePublishingStyle = "gentle" | "practical" | "concise" | "professional" | "other";
+export type MagazineMonetizationLevel = "intro" | "balanced" | "sales" | "other";
+export type MagazineOrderStrategy = "foundation" | "problem_solution" | "quick_win" | "free_to_paid" | "other";
 export type MagazineAudience =
   | "auto"
   | "beginner"
@@ -17,15 +18,21 @@ export type MagazineAudience =
   | "homemaker"
   | "student"
   | "self_employed"
-  | "senior";
+  | "senior"
+  | "other";
 
 export type MagazinePlanDraft = {
   audience: MagazineAudience;
-  articleCount: MagazineArticleCount;
+  customAudience: string;
+  articleCount: number;
   direction: MagazineDirection;
+  customDirection: string;
   publishingStyle: MagazinePublishingStyle;
+  customPublishingStyle: string;
   monetizationLevel: MagazineMonetizationLevel;
+  customMonetizationLevel: string;
   orderStrategy: MagazineOrderStrategy;
+  customOrderStrategy: string;
   purpose: string;
   selectedSuggestion: number;
   name: string;
@@ -47,6 +54,7 @@ export const MAGAZINE_AUDIENCE_OPTIONS = [
   { value: "student", label: "学生" },
   { value: "self_employed", label: "個人事業主・フリーランス" },
   { value: "senior", label: "シニア・学び直し" },
+  { value: "other", label: "その他（自由入力）" },
 ] as const;
 
 export const MAGAZINE_DIRECTION_OPTIONS = [
@@ -55,6 +63,7 @@ export const MAGAZINE_DIRECTION_OPTIONS = [
   { value: "practical_series", label: "実践・手順中心" },
   { value: "comparison", label: "比較・選び方中心" },
   { value: "deep_dive", label: "テーマ深掘り" },
+  { value: "other", label: "その他（自由入力）" },
 ] as const;
 
 export const MAGAZINE_STYLE_OPTIONS = [
@@ -62,12 +71,14 @@ export const MAGAZINE_STYLE_OPTIONS = [
   { value: "practical", label: "実践的・具体的" },
   { value: "concise", label: "短く分かりやすく" },
   { value: "professional", label: "専門的・落ち着いた文体" },
+  { value: "other", label: "その他（自由入力）" },
 ] as const;
 
 export const MAGAZINE_MONETIZATION_OPTIONS = [
   { value: "intro", label: "入門（信頼形成を優先）" },
   { value: "balanced", label: "標準（無料・有料の導線を両立）" },
   { value: "sales", label: "販売導線重視" },
+  { value: "other", label: "その他（自由入力）" },
 ] as const;
 
 export const MAGAZINE_ORDER_OPTIONS = [
@@ -75,17 +86,32 @@ export const MAGAZINE_ORDER_OPTIONS = [
   { value: "problem_solution", label: "悩み → 解決の順番" },
   { value: "quick_win", label: "すぐ試せる内容から" },
   { value: "free_to_paid", label: "無料導入 → 有料深掘り" },
+  { value: "other", label: "その他（自由入力）" },
 ] as const;
 
 export const MAGAZINE_ARTICLE_COUNT_OPTIONS: readonly MagazineArticleCount[] = [3, 5, 7, 10];
 
+export const MAGAZINE_PURPOSE_OPTIONS = [
+  { value: "", label: "AIおまかせ" },
+  { value: "初心者が基礎から順番に理解できる構成にする", label: "初心者向けの学習導線" },
+  { value: "読者が実際に行動できる手順中心の構成にする", label: "実践・行動につなげる" },
+  { value: "無料記事から有料記事へ自然につながる構成にする", label: "無料から有料への導線" },
+  { value: "比較や選び方を整理して読者の判断を助ける構成にする", label: "比較・選び方を重視" },
+  { value: "other", label: "その他（自由入力）" },
+] as const;
+
 export const DEFAULT_MAGAZINE_PLAN: MagazinePlanDraft = {
   audience: "beginner",
+  customAudience: "",
   articleCount: 5,
   direction: "beginner_roadmap",
+  customDirection: "",
   publishingStyle: "gentle",
+  customPublishingStyle: "",
   monetizationLevel: "intro",
+  customMonetizationLevel: "",
   orderStrategy: "foundation",
+  customOrderStrategy: "",
   purpose: "",
   selectedSuggestion: 0,
   name: "",
@@ -99,24 +125,33 @@ function labelFor<T extends string>(
   return options.find((option) => option.value === value)?.label ?? value;
 }
 
-export function magazineAudienceLabel(value: MagazineAudience): string {
-  return labelFor(MAGAZINE_AUDIENCE_OPTIONS, value);
+function labelWithCustom<T extends string>(
+  options: readonly { value: T; label: string }[],
+  value: T,
+  customValue = "",
+): string {
+  if (value === "other") return customValue.trim() || "その他";
+  return labelFor(options, value);
 }
 
-export function magazineDirectionLabel(value: MagazineDirection): string {
-  return labelFor(MAGAZINE_DIRECTION_OPTIONS, value);
+export function magazineAudienceLabel(value: MagazineAudience, customValue = ""): string {
+  return labelWithCustom(MAGAZINE_AUDIENCE_OPTIONS, value, customValue);
 }
 
-export function magazinePublishingStyleLabel(value: MagazinePublishingStyle): string {
-  return labelFor(MAGAZINE_STYLE_OPTIONS, value);
+export function magazineDirectionLabel(value: MagazineDirection, customValue = ""): string {
+  return labelWithCustom(MAGAZINE_DIRECTION_OPTIONS, value, customValue);
 }
 
-export function magazineMonetizationLabel(value: MagazineMonetizationLevel): string {
-  return labelFor(MAGAZINE_MONETIZATION_OPTIONS, value);
+export function magazinePublishingStyleLabel(value: MagazinePublishingStyle, customValue = ""): string {
+  return labelWithCustom(MAGAZINE_STYLE_OPTIONS, value, customValue);
 }
 
-export function magazineOrderLabel(value: MagazineOrderStrategy): string {
-  return labelFor(MAGAZINE_ORDER_OPTIONS, value);
+export function magazineMonetizationLabel(value: MagazineMonetizationLevel, customValue = ""): string {
+  return labelWithCustom(MAGAZINE_MONETIZATION_OPTIONS, value, customValue);
+}
+
+export function magazineOrderLabel(value: MagazineOrderStrategy, customValue = ""): string {
+  return labelWithCustom(MAGAZINE_ORDER_OPTIONS, value, customValue);
 }
 
 function cleanTheme(draft: Pick<ArticleCreationDraft, "theme" | "genre" | "subgenre">): string {
@@ -125,7 +160,7 @@ function cleanTheme(draft: Pick<ArticleCreationDraft, "theme" | "genre" | "subge
 
 function audiencePhrase(plan: MagazinePlanDraft, draft: Pick<ArticleCreationDraft, "ageGroup">): string {
   if (plan.audience === "auto") return draft.ageGroup && draft.ageGroup !== "AIおまかせ" ? `${draft.ageGroup}の読者` : "初心者";
-  return magazineAudienceLabel(plan.audience);
+  return magazineAudienceLabel(plan.audience, plan.customAudience);
 }
 
 function baseTitles(theme: string, audience: string): string[] {
@@ -177,6 +212,7 @@ function directionSuffix(plan: MagazinePlanDraft): string {
   if (plan.direction === "practical_series") return "実践シリーズ";
   if (plan.direction === "comparison") return "選び方ガイド";
   if (plan.direction === "deep_dive") return "深掘りノート";
+  if (plan.direction === "other") return plan.customDirection.trim() || "オリジナル構成";
   return "ロードマップ";
 }
 
@@ -250,11 +286,19 @@ export function parseMagazinePlanDraft(value: unknown): MagazinePlanDraft | null
   const row = value as Record<string, unknown>;
   if (
     !isOneOf(row.audience, MAGAZINE_AUDIENCE_OPTIONS)
-    || !MAGAZINE_ARTICLE_COUNT_OPTIONS.includes(row.articleCount as MagazineArticleCount)
+    || typeof row.articleCount !== "number"
+    || !Number.isSafeInteger(row.articleCount)
+    || row.articleCount < 1
+    || row.articleCount > 10
     || !isOneOf(row.direction, MAGAZINE_DIRECTION_OPTIONS)
     || !isOneOf(row.publishingStyle, MAGAZINE_STYLE_OPTIONS)
     || !isOneOf(row.monetizationLevel, MAGAZINE_MONETIZATION_OPTIONS)
     || !isOneOf(row.orderStrategy, MAGAZINE_ORDER_OPTIONS)
+    || (row.customAudience !== undefined && typeof row.customAudience !== "string")
+    || (row.customDirection !== undefined && typeof row.customDirection !== "string")
+    || (row.customPublishingStyle !== undefined && typeof row.customPublishingStyle !== "string")
+    || (row.customMonetizationLevel !== undefined && typeof row.customMonetizationLevel !== "string")
+    || (row.customOrderStrategy !== undefined && typeof row.customOrderStrategy !== "string")
     || typeof row.purpose !== "string"
     || typeof row.selectedSuggestion !== "number"
     || !Number.isInteger(row.selectedSuggestion)
@@ -265,7 +309,7 @@ export function parseMagazinePlanDraft(value: unknown): MagazinePlanDraft | null
     || row.articleTitles.some((title) => typeof title !== "string")
   ) return null;
 
-  const articleCount = row.articleCount as MagazineArticleCount;
+  const articleCount = row.articleCount;
   const name = row.name.slice(0, 200).trim();
   const articleTitles = (row.articleTitles as string[])
     .slice(0, 10)
@@ -279,11 +323,16 @@ export function parseMagazinePlanDraft(value: unknown): MagazinePlanDraft | null
 
   return {
     audience: row.audience,
+    customAudience: typeof row.customAudience === "string" ? row.customAudience.slice(0, 120) : "",
     articleCount,
     direction: row.direction,
+    customDirection: typeof row.customDirection === "string" ? row.customDirection.slice(0, 120) : "",
     publishingStyle: row.publishingStyle,
+    customPublishingStyle: typeof row.customPublishingStyle === "string" ? row.customPublishingStyle.slice(0, 120) : "",
     monetizationLevel: row.monetizationLevel,
+    customMonetizationLevel: typeof row.customMonetizationLevel === "string" ? row.customMonetizationLevel.slice(0, 120) : "",
     orderStrategy: row.orderStrategy,
+    customOrderStrategy: typeof row.customOrderStrategy === "string" ? row.customOrderStrategy.slice(0, 120) : "",
     purpose: row.purpose.slice(0, 500),
     selectedSuggestion: row.selectedSuggestion,
     name,
