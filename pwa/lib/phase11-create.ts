@@ -212,6 +212,14 @@ export async function createArticleFromWizard(
   magazinePlan?: MagazinePlanDraft,
 ): Promise<CreatedArticle> {
   const draft = validateCreationDraft(input);
+  if (draft.magazineEnabled) {
+    if (draft.publicationTarget !== "note") {
+      throw new Error("マガジン作成モードはnote向けに設定してください。");
+    }
+    if (!magazinePlan?.name.trim() || magazinePlan.articleTitles.length < 1) {
+      throw new Error("マガジン構成案を選択してから記事を保存してください。");
+    }
+  }
   await requireAccess(client, ownerId);
   const writingProfile = getRuntimeWritingProfile();
   const customGenre = isCustomGenre(draft.genre);
