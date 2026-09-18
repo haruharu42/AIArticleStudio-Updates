@@ -91,12 +91,12 @@ function magazinePromptContext(plan?: MagazinePlanDraft): string {
     : "未確定";
   return `\n\n【MAGAZINE CONTEXT】
 マガジン名: ${plan.name}
-想定読者: ${magazineAudienceLabel(plan.audience)}
-方向性: ${magazineDirectionLabel(plan.direction)}
+想定読者: ${magazineAudienceLabel(plan.audience, plan.customAudience)}
+方向性: ${magazineDirectionLabel(plan.direction, plan.customDirection)}
 記事数: ${plan.articleCount}記事
-公開スタイル: ${magazinePublishingStyleLabel(plan.publishingStyle)}
-収益化レベル: ${magazineMonetizationLabel(plan.monetizationLevel)}
-記事の並び方: ${magazineOrderLabel(plan.orderStrategy)}
+公開スタイル: ${magazinePublishingStyleLabel(plan.publishingStyle, plan.customPublishingStyle)}
+収益化レベル: ${magazineMonetizationLabel(plan.monetizationLevel, plan.customMonetizationLevel)}
+記事の並び方: ${magazineOrderLabel(plan.orderStrategy, plan.customOrderStrategy)}
 補足・目的: ${plan.purpose || "未指定"}
 構成案:
 ${titles}
@@ -219,6 +219,19 @@ export async function createArticleFromWizard(
     if (!magazinePlan?.name.trim() || magazinePlan.articleTitles.length < 1) {
       throw new Error("マガジン構成案を選択してから記事を保存してください。");
     }
+    if (draft.theme === "その他") {
+      throw new Error("「その他」を選んだ場合はテーマ・キーワードを入力してください。");
+    }
+    const missingCustomMagazineField =
+      (magazinePlan.audience === "other" && !magazinePlan.customAudience.trim())
+      || (magazinePlan.direction === "other" && !magazinePlan.customDirection.trim())
+      || (magazinePlan.publishingStyle === "other" && !magazinePlan.customPublishingStyle.trim())
+      || (magazinePlan.monetizationLevel === "other" && !magazinePlan.customMonetizationLevel.trim())
+      || (magazinePlan.orderStrategy === "other" && !magazinePlan.customOrderStrategy.trim())
+      || magazinePlan.purpose === "その他";
+    if (missingCustomMagazineField) {
+      throw new Error("マガジンモードで「その他」を選んだ項目は内容を入力してください。");
+    }
   }
   await requireAccess(client, ownerId);
   const writingProfile = getRuntimeWritingProfile();
@@ -267,11 +280,16 @@ export async function createArticleFromWizard(
       pwa_magazine_plan: {
         name: magazinePlan.name,
         audience: magazinePlan.audience,
+        custom_audience: magazinePlan.customAudience || null,
         article_count: magazinePlan.articleCount,
         direction: magazinePlan.direction,
+        custom_direction: magazinePlan.customDirection || null,
         publishing_style: magazinePlan.publishingStyle,
+        custom_publishing_style: magazinePlan.customPublishingStyle || null,
         monetization_level: magazinePlan.monetizationLevel,
+        custom_monetization_level: magazinePlan.customMonetizationLevel || null,
         order_strategy: magazinePlan.orderStrategy,
+        custom_order_strategy: magazinePlan.customOrderStrategy || null,
         purpose: magazinePlan.purpose,
         article_titles: magazinePlan.articleTitles,
       },
@@ -310,6 +328,9 @@ export async function createArticleFromWizard(
       magazine_name: draft.magazineEnabled ? magazinePlan?.name || null : null,
       magazine_article_count: draft.magazineEnabled ? magazinePlan?.articleCount ?? null : null,
       magazine_direction: draft.magazineEnabled ? magazinePlan?.direction ?? null : null,
+      magazine_custom_direction: draft.magazineEnabled ? magazinePlan?.customDirection || null : null,
+      magazine_audience: draft.magazineEnabled ? magazinePlan?.audience ?? null : null,
+      magazine_custom_audience: draft.magazineEnabled ? magazinePlan?.customAudience || null : null,
       theme: draft.theme,
       tags: draft.tags,
       generation_method: draft.generationMode,
