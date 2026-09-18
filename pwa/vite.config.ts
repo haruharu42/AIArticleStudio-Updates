@@ -7,6 +7,8 @@ const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
 const DEFAULT_WORKER_NAME = "ai-article-studio-pwa-preview";
 const CLOUDFLARE_COMPATIBILITY_DATE = "2026-09-11";
+const productionWorkersDevEnabled =
+  process.env.AAS_CLOUDFLARE_PUBLIC_WORKERS_DEV === "true";
 
 const { d1, r2 } = hostingConfig;
 
@@ -18,10 +20,10 @@ const workerBindingConfig = {
   main: "./worker/index.ts",
   compatibility_date: CLOUDFLARE_COMPATIBILITY_DATE,
   compatibility_flags: ["nodejs_compat"],
-  // Preview versions should be testable without creating a production
-  // workers.dev route. Production routing is a separate release decision.
-  workers_dev: false,
-  preview_urls: true,
+  // Default to Preview-only routing. A separately guarded member-beta release
+  // may opt in to the production workers.dev route explicitly.
+  workers_dev: productionWorkersDevEnabled,
+  preview_urls: !productionWorkersDevEnabled,
   // The Worker entry uses both bindings directly. Keep them explicit so the
   // generated Wrangler deployment config matches local Miniflare behavior.
   assets: {
