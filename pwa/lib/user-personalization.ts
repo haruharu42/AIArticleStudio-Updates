@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { KnowledgeTask } from "@/lib/knowledge-engine";
+import { compilePromptOptimizationContext } from "@/lib/prompt-optimization";
+
 export type AiProvider = "chatgpt" | "claude" | "gemini";
 export type AiPlan = "free" | "paid";
 export type WritingTone = "balanced" | "friendly" | "professional" | "casual";
@@ -260,7 +263,10 @@ const ctaRule: Record<CtaStyle, string> = {
   direct: "CTAは次に取る行動が明確に分かる直接的な表現にする",
 };
 
-export function buildUserPromptContext(profile: UserWritingProfile | null): string {
+export function buildUserPromptContext(
+  profile: UserWritingProfile | null,
+  task: KnowledgeTask = "article",
+): string {
   if (!profile) return "";
   const lines = [
     "【使用AI向けAAS最適化】",
@@ -269,6 +275,15 @@ export function buildUserPromptContext(profile: UserWritingProfile | null): stri
     ...providerRules[profile.preferredAi].map((rule) => `- ${rule}`),
     ...planRules[profile.preferredPlan].map((rule) => `- ${rule}`),
   ];
+
+  const cloudOptimization = compilePromptOptimizationContext(
+    profile.preferredAi,
+    profile.preferredPlan,
+    task,
+  );
+  if (cloudOptimization) {
+    lines.push("", cloudOptimization);
+  }
 
   if (profile.personalizationEnabled) {
     lines.push(
