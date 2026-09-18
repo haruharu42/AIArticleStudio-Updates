@@ -19,6 +19,8 @@ test("reference home owns creator presentation without duplicating global banner
   assert.match(home, /getMyCreatorDashboard/);
   assert.match(home, /今日のミッション/);
   assert.match(home, /記事ライブラリ \/ noteマガジン/);
+  assert.match(home, /hasUnreadNotifications=\{Boolean\(dashboard\?\.claimableMissions\)\}/);
+  assert.match(home, /ranking\.length \? "圏外" : "未集計"/);
   assert.match(shell, /ホーム/);
   assert.match(shell, /ランキング/);
   assert.match(shell, /プロフィール/);
@@ -56,6 +58,7 @@ test("creator pages keep membership, missions and ranking separate and beginner-
   assert.match(ranking, /queueMicrotask/);
   assert.match(ranking, /requestIdRef/);
   assert.match(ranking, /requestId !== requestIdRef\.current/);
+  assert.match(ranking, /rows\.length \? "圏外" : "未集計"/);
 });
 
 test("membership migration is additive, tier-aware and preserves article RPC names", async () => {
