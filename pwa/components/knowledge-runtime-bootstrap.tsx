@@ -21,9 +21,9 @@ export function KnowledgeRuntimeBootstrap() {
         const { data: { user } } = await client.auth.getUser();
         if (!active || !user) {
           if (active) {
-          setRuntimeKnowledgeCatalog([]);
-          setRuntimePromptOptimizations([]);
-        }
+            setRuntimeKnowledgeCatalog([]);
+            setRuntimePromptOptimizations([]);
+          }
           return;
         }
         const [rules, promptRules, runtimeState] = await Promise.all([
@@ -37,7 +37,10 @@ export function KnowledgeRuntimeBootstrap() {
           setRuntimeKnowledgeState(runtimeState);
         }
       } catch {
-        if (active) setRuntimeKnowledgeCatalog([]);
+        if (active) {
+          setRuntimeKnowledgeCatalog([]);
+          setRuntimePromptOptimizations([]);
+        }
       }
     };
     void boot();
