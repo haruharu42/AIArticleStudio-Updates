@@ -1,5 +1,6 @@
 import { buildSuggestedImageFilename } from "@/lib/image-file-names";
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
+import { buildUserPromptContext, getRuntimeWritingProfile } from "@/lib/user-personalization";
 
 export type ImagePromptPlanInput = {
   title: string;
@@ -49,7 +50,8 @@ function common(input: ImagePromptPlanInput): string {
     ageGroup: input.ageGroup,
     audience: input.gender && input.gender !== "AIおまかせ" ? `対象性別: ${input.gender}` : "",
   }).promptBlock;
-  return `記事タイトル: ${input.title || "未定"}\n掲載先: ${input.publicationTarget}\nジャンル: ${input.genre || "未指定"}\nサブジャンル: ${input.subgenre || "AIおまかせ"}\n対象読者: ${input.ageGroup || "AIおまかせ"} / ${input.gender || "AIおまかせ"}\n記事テーマ: ${input.theme || "タイトルから推定"}\n画風: ${style}。\n禁止・回避: ${avoid}\n\n${knowledge}`;
+  const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "image");
+  return `記事タイトル: ${input.title || "未定"}\n掲載先: ${input.publicationTarget}\nジャンル: ${input.genre || "未指定"}\nサブジャンル: ${input.subgenre || "AIおまかせ"}\n対象読者: ${input.ageGroup || "AIおまかせ"} / ${input.gender || "AIおまかせ"}\n記事テーマ: ${input.theme || "タイトルから推定"}\n画風: ${style}。\n禁止・回避: ${avoid}\n\n${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}`;
 }
 
 export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptItem[] {
