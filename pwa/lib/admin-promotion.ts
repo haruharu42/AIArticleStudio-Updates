@@ -106,7 +106,7 @@ ${FACT_SAFETY}
 特に紹介したい内容: ${input.focus || "製品全体"}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
 
-${knowledge}
+${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
 【確認済み製品情報】
 ${factsBlock(facts)}
@@ -152,7 +152,7 @@ CTA: ${input.cta || facts.salesUrl || "要確認"}
 作成数: ${Math.max(1, Math.min(10, input.variants))}案
 媒体ルール: ${platformRule[input.platform]}
 
-${knowledge}
+${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
 【確認済み製品情報】
 ${factsBlock(facts)}
@@ -188,7 +188,7 @@ ${FACT_SAFETY}
 販売条件・オファー: ${input.offer || facts.priceText || "要確認"}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
 
-${knowledge}
+${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
 【確認済み製品情報】
 ${factsBlock(facts)}
