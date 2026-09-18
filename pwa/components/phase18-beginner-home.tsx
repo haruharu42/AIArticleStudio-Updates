@@ -89,7 +89,7 @@ function AiLaunchCard({ appKey }: { appKey: AiAppKey }) {
   const app = AI_APP_LINKS[appKey];
   const mark = appKey === "chatgpt" ? "◎" : appKey === "claude" ? "✳" : "✦";
   return (
-    <button className={\`beginner-ai-card ${appKey}\`} type="button" onClick={() => launchAiApp(appKey)}>
+    <button className={`beginner-ai-card ${appKey}`} type="button" onClick={() => launchAiApp(appKey)}>
       <span aria-hidden="true">{mark}</span>
       <strong>{app.name}</strong>
       <small>{app.description}</small>
@@ -124,7 +124,7 @@ function MissionRows({ missions }: { missions: CreatorMission[] }) {
   return (
     <div className="reference-mission-list">
       {visible.map((mission) => (
-        <a className={\`reference-mission-row ${mission.completed ? "done" : ""}\`} href="/missions" key={mission.missionCode}>
+        <a className={`reference-mission-row ${mission.completed ? "done" : ""}`} href="/missions" key={mission.missionCode}>
           <span aria-hidden="true">{mission.completed ? "✓" : "○"}</span>
           <span>
             <strong>{mission.title}</strong>
@@ -228,7 +228,7 @@ export function Phase18BeginnerHome() {
       inlineCount: String(quickSetup.inlineCount),
       from: "home-quick-setup",
     });
-    return \`/create?${params.toString()}\`;
+    return `/create?${params.toString()}`;
   }, [quickSetup]);
 
   const creatorXp = useMemo(
@@ -301,8 +301,8 @@ export function Phase18BeginnerHome() {
               <span className="reference-level-pill">♛ Creator Lv.{dashboard?.level ?? 1}</span>
             </div>
             <div className="reference-xp-row">
-              <div className="reference-xp-track" aria-label={\`レベル進捗 ${creatorXp.percent}%\`}>
-                <span style={{ width: \`${creatorXp.percent}%\` }} />
+              <div className="reference-xp-track" aria-label={`レベル進捗 ${creatorXp.percent}%`}>
+                <span style={{ width: `${creatorXp.percent}%` }} />
               </div>
               <b>{creatorXp.current} / {creatorXp.needed} XP</b>
             </div>
@@ -330,8 +330,8 @@ export function Phase18BeginnerHome() {
                 <strong>{dashboard.noteMember ? dashboard.membershipPlanName || "Creator Club" : "Creator Level 特典"}</strong>
                 <small>
                   {dashboard.noteMember
-                    ? \`記事XP ×${dashboard.articleXpMultiplier.toFixed(1)}・記事枠 +${dashboard.membershipArticleQuotaBonus}\`
-                    : \`レベルに応じて記事ストック上限が増えます。現在 +${dashboard.creatorArticleQuotaBonus}\`}
+                    ? `記事XP ×${dashboard.articleXpMultiplier.toFixed(1)}・記事枠 +${dashboard.membershipArticleQuotaBonus}`
+                    : `レベルに応じて記事ストック上限が増えます。現在 +${dashboard.creatorArticleQuotaBonus}`}
                 </small>
               </div>
               <a href="/membership">特典を見る ›</a>
@@ -416,7 +416,7 @@ export function Phase18BeginnerHome() {
             <span aria-hidden="true">🏆</span>
             <div>
               <strong>{dashboard?.rankingOptIn ? "あなたの現在の順位" : "ランキングは現在非参加"}</strong>
-              <b>{myRank ? \`第 ${myRank.rankPosition} 位\` : dashboard?.rankingOptIn ? "更新待ち" : "—"}</b>
+              <b>{myRank ? `第 ${myRank.rankPosition} 位` : dashboard?.rankingOptIn ? "更新待ち" : "—"}</b>
             </div>
             <a href="/profile">{dashboard?.rankingOptIn ? "公開設定 ›" : "参加設定 ›"}</a>
           </div>
