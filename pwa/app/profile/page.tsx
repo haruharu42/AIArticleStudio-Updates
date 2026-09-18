@@ -1,11 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
-import { getMyCreatorDashboard, updateMyCreatorProfile, xpProgress, type CreatorDashboard } from "@/lib/creator-system";
+import {
+  getMyCreatorDashboard,
+  updateMyCreatorProfile,
+  xpProgress,
+  type CreatorDashboard,
+  type CreatorProfilePatch,
+} from "@/lib/creator-system";
 import { GENRE_OPTIONS } from "@/lib/phase18-content-options";
+import {
+  prepareProfileAvatar,
+  removeProfileAvatar,
+  uploadProfileAvatar,
+} from "@/lib/profile-avatar";
 import { getSupabaseClient } from "@/lib/supabase";
 import styles from "@/components/creator-system.module.css";
 
@@ -37,18 +48,6 @@ function avatarLetter(name: string): string {
   return (name.trim().charAt(0) || "C").toUpperCase();
 }
 
-function avatarUrlValidationMessage(value: string): string {
-  const candidate = value.trim();
-  if (!candidate) return "";
-  try {
-    const url = new URL(candidate);
-    if (url.protocol === "https:" || url.protocol === "http:") return "";
-  } catch {
-    // Handled by the common validation message below.
-  }
-  return "プロフィール画像URLは http:// または https:// で始まる正しいURLを入力してください。";
-}
-
 function Achievement({
   icon,
   title,
@@ -75,6 +74,9 @@ export default function CreatorProfilePage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [avatarBlob, setAvatarBlob] = useState<Blob | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState("");
+  const [removeAvatarRequested, setRemoveAvatarRequested] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -104,6 +106,35 @@ export default function CreatorProfilePage() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => () => {
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+  }, [avatarPreview]);
+
+  async function chooseAvatar(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setMessage("");
+    setError("");
+    try {
+      const prepared = await prepareProfileAvatar(file);
+      const preview = URL.createObjectURL(prepared.blob);
+      setAvatarBlob(prepared.blob);
+      setAvatarPreview(preview);
+      setRemoveAvatarRequested(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "プロフィール画像を準備できませんでした。");
+    }
+  }
+
+  function requestAvatarRemoval() {
+    setAvatarBlob(null);
+    setAvatarPreview("");
+    setRemoveAvatarRequested(true);
+    setMessage("");
+    setError("");
+  }
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!form || busy) return;
@@ -113,28 +144,42 @@ export default function CreatorProfilePage() {
       setError("ランキングへ参加するには表示名を入力してください。");
       return;
     }
-    const avatarUrlError = avatarUrlValidationMessage(form.avatarUrl);
-    if (avatarUrlError) {
-      setError(avatarUrlError);
-      return;
-    }
     setBusy(true);
     try {
       const client = getSupabaseClient();
-      await updateMyCreatorProfile(client, {
+      const patch: CreatorProfilePatch = {
         public_name: form.publicName,
         bio: form.bio,
-        avatar_url: form.avatarUrl,
         favorite_genre: form.favoriteGenre,
         creator_goal: form.creatorGoal,
         ranking_opt_in: form.rankingOptIn,
         show_level: form.showLevel,
         show_completed_articles: form.showCompletedArticles,
-      });
+      };
+
+      if (avatarBlob) {
+        patch.avatar_url = await uploadProfileAvatar(client, avatarBlob);
+      } else if (removeAvatarRequested) {
+        patch.avatar_url = "";
+      }
+
+      await updateMyCreatorProfile(client, patch);
+
+      let cleanupWarning = "";
+      if (removeAvatarRequested) {
+        try {
+          await removeProfileAvatar(client);
+        } catch {
+          cleanupWarning = " 旧プロフィール画像の削除は次回再試行できます。";
+        }
+      }
       const next = await getMyCreatorDashboard(client);
       setDashboard(next);
       setForm(toForm(next));
-      setMessage("プロフィールを保存しました。ランキング設定は次回の更新から反映されます。");
+      setAvatarBlob(null);
+      setAvatarPreview("");
+      setRemoveAvatarRequested(false);
+      setMessage(`プロフィールを保存しました。ランキング設定は次回の更新から反映されます。${cleanupWarning}`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "プロフィールを保存できませんでした。");
     } finally {
@@ -209,11 +254,33 @@ export default function CreatorProfilePage() {
                 <input maxLength={200} value={form.creatorGoal} onChange={(event) => setForm({ ...form, creatorGoal: event.target.value })} placeholder="例：今月はマガジンを1冊完成させる" />
               </label>
 
-              <label className={`${styles.referenceProfileTile} ${styles.referenceProfileTileWide}`}>
+              <section className={`${styles.referenceProfileTile} ${styles.referenceProfileTileWide} ${styles.referenceAvatarTile}`}>
                 <span className={styles.referenceTileIcon}>◉</span>
-                <span><strong>プロフィール画像URL</strong><small>未設定の場合は公開名の頭文字を表示</small></span>
-                <input maxLength={2048} value={form.avatarUrl} onChange={(event) => setForm({ ...form, avatarUrl: event.target.value })} placeholder="https://..." inputMode="url" />
-              </label>
+                <span><strong>プロフィール画像</strong><small>選んだ画像は自動で正方形に整え、WebPへ圧縮して保存します。</small></span>
+                <div className={styles.referenceAvatarEditor}>
+                  <span className={styles.referenceAvatarPreview} aria-hidden="true">
+                    {avatarPreview || (!removeAvatarRequested && dashboard.avatarUrl)
+                      ? <img src={avatarPreview || dashboard.avatarUrl} alt="" />
+                      : avatarLetter(form.publicName || "Creator")}
+                  </span>
+                  <div className={styles.referenceAvatarActions}>
+                    <label className={styles.referenceAvatarChoose}>
+                      画像を選択
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={(event) => void chooseAvatar(event)}
+                      />
+                    </label>
+                    {(avatarPreview || (!removeAvatarRequested && dashboard.avatarUrl)) && (
+                      <button type="button" className={styles.referenceAvatarRemove} onClick={requestAvatarRemoval}>
+                        画像を削除
+                      </button>
+                    )}
+                    <small>JPEG / PNG / WebP・元画像10MBまで。保存時に最大512×512、500KB以下のWebPへ自動圧縮します。</small>
+                  </div>
+                </div>
+              </section>
             </section>
 
             <section className={styles.referenceProfileSection}>
