@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { KnowledgeRefreshPanel } from "@/components/knowledge-refresh-panel";
+
 import {
   adminListKnowledgeCandidates,
   adminReviewKnowledgeCandidate,
@@ -172,6 +174,8 @@ export function AdminKnowledgePage() {
         <article><span>却下</span><strong>{stats.rejected}</strong></article>
         <article><span>有効なクラウドKnowledge</span><strong>{stats.activeCatalog}</strong></article>
       </section>
+
+      <KnowledgeRefreshPanel />
 
       <section className="knowledge-admin-panel">
         <div className="knowledge-panel-head"><div><p className="eyebrow">CANDIDATE REVIEW</p><h2>自由入力から見つかった候補</h2></div><button type="button" onClick={() => void reload()}>再読込</button></div>
