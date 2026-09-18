@@ -27,6 +27,15 @@ test("reference home owns creator presentation without duplicating global banner
   assert.match(shell, /hasUnreadNotifications/);
 });
 
+test("reference home mission rows keep the text column unconstrained on mobile", async () => {
+  const css = await readPwa("app/phase33-reference-ui.css");
+
+  assert.match(css, /\.reference-mission-row > span:first-child\s*\{/);
+  assert.match(css, /\.reference-mission-row > span:nth-child\(2\)\s*\{[^}]*min-width:\s*0/s);
+  assert.match(css, /\.reference-mission-row\.done > span:first-child\s*\{/);
+  assert.doesNotMatch(css, /\.reference-mission-row > span\s*\{/);
+});
+
 test("creator client uses v2 dashboard with a legacy compatibility fallback", async () => {
   const source = await readPwa("lib/creator-system.ts");
   assert.match(source, /client\.rpc\("get_my_creator_dashboard_v2"\)/);
