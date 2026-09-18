@@ -38,6 +38,20 @@ import {
 import { subgenreOptionsFor } from "@/lib/phase18-content-options";
 import { getSupabaseClient } from "@/lib/supabase";
 
+const ARTICLE_CREATE_UI_STEPS = [
+  "種類の選択",
+  "条件の入力",
+  "タイトルの選択",
+  "記事の生成",
+] as const;
+
+function displayStepForInternalStep(step: number): number {
+  if (step <= 0) return 0;
+  if (step <= 2) return 1;
+  if (step === 3) return 2;
+  return 3;
+}
+
 type Gate =
   | { kind: "loading" }
   | { kind: "signed_out" }
@@ -111,6 +125,7 @@ export function Phase11CreatePage() {
     saveArticleWizardProgress(gate.ownerId, { step, draft, magazinePlan, tagsText });
   }, [gate, step, draft, magazinePlan, tagsText, createdId]);
 
+  const displayStep = displayStepForInternalStep(step);
   const articleDraft = useMemo(() => withArticleTags(draft, tagsText), [draft, tagsText]);
   const localTitles = useMemo(() => suggestLocalTitles(draft), [draft]);
   const titlePrompt = useMemo(() => buildTitlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined), [articleDraft, draft.magazineEnabled, magazinePlan]);
@@ -270,8 +285,16 @@ export function Phase11CreatePage() {
         <a className="reference-help-link" href="/manual">? ヘルプ</a>
       </header>
 
-      <ol className="wizard-steps">
-        {ARTICLE_CREATE_STEPS.map((label, index) => <li key={label} className={index === step ? "active" : index < step ? "done" : ""}><span>{index + 1}</span>{label}</li>)}
+      <ol className="wizard-steps" aria-label="記事作成の進行状況">
+        {ARTICLE_CREATE_UI_STEPS.map((label, index) => (
+          <li
+            key={label}
+            className={index === displayStep ? "active" : index < displayStep ? "done" : ""}
+            aria-current={index === displayStep ? "step" : undefined}
+          >
+            <span>{index + 1}</span>{label}
+          </li>
+        ))}
       </ol>
 
       <section className="creator-card">
@@ -315,7 +338,7 @@ export function Phase11CreatePage() {
         {step === 5 && <PreviewStep draft={draft} />}
         {step === 6 && <SaveStep draft={draft} patch={patch} busy={busy} createdId={createdId} onSave={save} />}
 
-        {message && <div className="route-notice">{message}</div>}
+        {message && <div className="route-notice" role="status" aria-live="polite">{message}</div>}
 
         <footer className="wizard-actions">
           <button className="secondary-action" type="button" disabled={step === 0 || busy || titleBusy || articleBusy} onClick={back}>戻る</button>
