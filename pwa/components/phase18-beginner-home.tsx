@@ -101,7 +101,7 @@ function AiLaunchCard({ appKey }: { appKey: AiAppKey }) {
 function BeginnerAccessFallback({ unavailable = false }: { unavailable?: boolean }) {
   return (
     <div className="reference-home">
-      <AasReferenceHeader />
+      <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
       <main className="reference-home-main">
         <section className="beginner-recommend" role={unavailable ? "alert" : "status"} aria-live="polite">
           <div>
@@ -311,7 +311,7 @@ export function Phase18BeginnerHome() {
   if (section === "library") {
     return (
       <div className="reference-home">
-        <AasReferenceHeader />
+        <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
         <main className="reference-home-main beginner-library-main">
           <div className="beginner-library-toolbar">
             <button type="button" onClick={() => openSection("home")}>← ホーム</button>
@@ -480,7 +480,7 @@ export function Phase18BeginnerHome() {
             <span aria-hidden="true">🏆</span>
             <div>
               <strong>{rankingError || dashboardError ? "ランキング情報を取得できません" : dashboard ? (dashboard.rankingOptIn ? "あなたの現在の順位" : "ランキングは現在非参加") : "ランキングを読み込んでいます…"}</strong>
-              <b>{myRank ? `第 ${myRank.rankPosition} 位` : rankingLoaded && dashboard?.rankingOptIn ? "更新待ち" : "—"}</b>
+              <b>{myRank ? `第 ${myRank.rankPosition} 位` : rankingLoaded && dashboard?.rankingOptIn ? (ranking.length ? "圏外" : "未集計") : "—"}</b>
             </div>
             <a href="/profile">{dashboard?.rankingOptIn ? "公開設定 ›" : "プロフィール設定 ›"}</a>
           </div>
