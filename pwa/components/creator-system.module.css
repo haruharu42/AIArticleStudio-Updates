@@ -1170,3 +1170,256 @@
     font-size: 6.5px;
   }
 }
+
+
+/* Ranking and profile UI v2: readable mobile density without changing RPC-backed data. */
+.referenceRankingPanel {
+  border-radius: 17px;
+  padding: 15px;
+}
+
+.referenceRankTabs button {
+  min-height: 48px;
+  padding: 9px 8px;
+  font-size: 12px;
+}
+
+.referenceRankGuide {
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.referenceRankRow {
+  min-height: 64px;
+  padding: 9px 10px;
+}
+
+.rankName strong {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.rankName small {
+  margin-top: 3px;
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.referenceRankMetric small {
+  font-size: 9px;
+}
+
+.referenceRankMetric strong {
+  font-size: 13.5px;
+}
+
+.referenceActivityCard strong,
+.referenceInfoCard strong {
+  font-size: 12px;
+}
+
+.referenceActivityCard small,
+.referenceInfoCard small {
+  font-size: 9.5px;
+  line-height: 1.55;
+}
+
+.referenceInfoCard a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+}
+
+.referenceProfileForm {
+  gap: 14px;
+}
+
+.referenceMemberBox strong {
+  font-size: 11px;
+}
+
+.referenceMemberBox small {
+  font-size: 8.5px;
+  line-height: 1.4;
+}
+
+.referenceProfileTile {
+  min-width: 0;
+  padding: 13px;
+}
+
+.referenceProfileTile > span:nth-child(2) strong {
+  font-size: 12px;
+}
+
+.referenceProfileTile > span:nth-child(2) small {
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.referenceProfileTile input,
+.referenceProfileTile select,
+.referenceProfileTile textarea {
+  min-height: 44px;
+  font-size: 12px;
+}
+
+.referenceProfileTile textarea {
+  min-height: 76px;
+}
+
+.referenceSectionTitle h2 {
+  font-size: 14px;
+}
+
+.referenceSectionTitle p {
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+
+.referenceSwitchCard {
+  min-height: 76px;
+  padding: 10px;
+}
+
+.referenceSwitchCard strong {
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.referenceSwitchCard small {
+  font-size: 8.5px;
+  line-height: 1.45;
+}
+
+.referenceAchievement {
+  min-height: 122px;
+}
+
+.referenceAchievement strong {
+  font-size: 10.5px;
+}
+
+.referenceAchievement small {
+  font-size: 8.5px;
+  line-height: 1.45;
+}
+
+.referenceDataGrid small {
+  font-size: 9px;
+}
+
+.referenceDataGrid strong {
+  font-size: 19px;
+}
+
+.referenceDataGrid em {
+  font-size: 8.5px;
+}
+
+.referenceSaveButton {
+  min-height: 48px;
+  font-size: 12.5px;
+}
+
+@media (max-width: 640px) {
+  .referenceRankTabs button {
+    padding: 8px 5px;
+    font-size: 10.5px;
+  }
+
+  .referenceRankRow {
+    grid-template-columns: 30px 36px minmax(0, 1fr) auto;
+    gap: 7px;
+  }
+
+  .referenceRankMetric {
+    grid-column: auto;
+    min-width: 66px;
+    text-align: right;
+  }
+
+  .referenceProfileGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .referenceProfileTileWide {
+    grid-column: 1 / -1;
+  }
+
+  .referenceToggleGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .referenceDataGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .referenceMemberBox {
+    grid-column: auto;
+    min-width: 88px;
+    justify-self: stretch;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .referenceProfileGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .referenceProfileTileWide {
+    grid-column: 1 / -1;
+  }
+
+  .referenceAchievement {
+    min-height: 112px;
+    padding: 8px 6px;
+  }
+
+  .referenceAchievement strong {
+    font-size: 9.5px;
+  }
+
+  .referenceAchievement small {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .referenceRankRow {
+    grid-template-columns: 28px 34px minmax(0, 1fr);
+  }
+
+  .referenceRankMetric {
+    grid-column: 3;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .referenceProfileGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .referenceProfileTileWide {
+    grid-column: auto;
+  }
+
+  .referenceToggleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .referenceDataGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .referenceMemberBox {
+    grid-column: 1 / -1;
+    grid-template-columns: auto auto 1fr;
+    justify-items: start;
+    text-align: left;
+  }
+}
