@@ -22,6 +22,7 @@ test("reference home owns creator presentation without duplicating global banner
   assert.match(shell, /ホーム/);
   assert.match(shell, /ランキング/);
   assert.match(shell, /プロフィール/);
+  assert.match(shell, /hasUnreadNotifications/);
 });
 
 test("creator client uses v2 dashboard with a legacy compatibility fallback", async () => {
@@ -53,6 +54,8 @@ test("creator pages keep membership, missions and ranking separate and beginner-
   assert.match(ranking, /最初に条件を満たした時だけ集計/);
   assert.match(ranking, /referenceRankTabs/);
   assert.match(ranking, /queueMicrotask/);
+  assert.match(ranking, /requestIdRef/);
+  assert.match(ranking, /requestId !== requestIdRef\.current/);
 });
 
 test("membership migration is additive, tier-aware and preserves article RPC names", async () => {
