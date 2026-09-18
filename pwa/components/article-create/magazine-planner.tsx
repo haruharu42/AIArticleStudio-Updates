@@ -58,6 +58,31 @@ export function MagazinePlannerPanel({
     setGenerated(false);
   };
 
+  const invalidateSelectedPlan = () => {
+    if (!plan.name && plan.articleTitles.length === 0) return;
+    onPlanChange({
+      ...plan,
+      name: "",
+      articleTitles: [],
+    });
+    setGenerated(false);
+  };
+
+  const updateTheme = (value: string) => {
+    invalidateSelectedPlan();
+    patch("theme", value);
+  };
+
+  const updateGenre = (value: string) => {
+    invalidateSelectedPlan();
+    setGenre(value);
+  };
+
+  const updateSubgenre = (value: string) => {
+    invalidateSelectedPlan();
+    setSubgenre(value);
+  };
+
   const generate = () => {
     setTab(0);
     setGenerated(true);
@@ -99,7 +124,7 @@ export function MagazinePlannerPanel({
 
         <label className="reference-field">
           <span>ジャンル</span>
-          <select value={genreSelectValue} onChange={(event) => setGenre(event.target.value)}>
+          <select value={genreSelectValue} onChange={(event) => updateGenre(event.target.value)}>
             {GENRE_OPTIONS.map((genre) => <option key={genre} value={genre}>{genre}</option>)}
           </select>
         </label>
@@ -108,7 +133,7 @@ export function MagazinePlannerPanel({
           <span>テーマ・キーワード</span>
           <input
             value={draft.theme}
-            onChange={(event) => patch("theme", event.target.value)}
+            onChange={(event) => updateTheme(event.target.value)}
             placeholder="例：AI副業 初心者 note"
             maxLength={240}
           />
@@ -116,7 +141,7 @@ export function MagazinePlannerPanel({
 
         <label className="reference-field">
           <span>サブジャンル</span>
-          <select value={subgenreSelectValue} onChange={(event) => setSubgenre(event.target.value)}>
+          <select value={subgenreSelectValue} onChange={(event) => updateSubgenre(event.target.value)}>
             {subgenres.map((subgenre) => <option key={subgenre} value={subgenre}>{subgenre}</option>)}
           </select>
         </label>
