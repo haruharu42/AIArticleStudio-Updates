@@ -4,7 +4,11 @@ import Link from "next/link";
 
 export type ReferenceNavKey = "home" | "create" | "library" | "ranking" | "profile";
 
-export function AasReferenceHeader() {
+export function AasReferenceHeader({
+  hasUnreadNotifications = false,
+}: {
+  hasUnreadNotifications?: boolean;
+} = {}) {
   return (
     <header className="aas-reference-header">
       <Link className="aas-reference-brand" href="/" aria-label="AI Article Studio ホーム">
@@ -15,7 +19,7 @@ export function AasReferenceHeader() {
         </span>
       </Link>
       <nav className="aas-reference-header-actions" aria-label="クイックメニュー">
-        <Link href="/missions" aria-label="ミッション・お知らせ"><span aria-hidden="true">♧</span><i /></Link>
+        <Link href="/missions" aria-label="ミッション・お知らせ"><span aria-hidden="true">♧</span>{hasUnreadNotifications ? <i aria-hidden="true" /> : null}</Link>
         <Link href="/settings" aria-label="メニュー"><span aria-hidden="true">☰</span></Link>
       </nav>
     </header>
