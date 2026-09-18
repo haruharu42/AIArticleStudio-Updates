@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
@@ -128,7 +129,7 @@ export default function CreatorProfilePage() {
       <main className="reference-page-inner">
         <div className="reference-title-row">
           <div>
-            <a className="reference-back" href="/" aria-label="ホームへ戻る">‹</a>
+            <Link className="reference-back" href="/" aria-label="ホームへ戻る">‹</Link>
             <div><h1>プロフィール</h1><p>公開プロフィールとランキングの表示範囲を設定できます。</p></div>
           </div>
         </div>
