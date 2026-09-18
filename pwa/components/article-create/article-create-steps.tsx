@@ -80,8 +80,8 @@ export function GenerationMethodStep({
           <input type="radio" checked={draft.magazineEnabled} onChange={chooseMagazine} />
           <span className="article-kind-icon" aria-hidden="true">▤</span>
           <span>
-            <strong>マガジン記事を作成</strong>
-            <small>複数記事のまとまりを先に設計し、順番に記事を作成します。</small>
+            <strong>マガジンモード</strong>
+            <small>マガジン全体の構成を先に設計してから、各記事を順番に作成します。</small>
           </span>
         </label>
       </div>
