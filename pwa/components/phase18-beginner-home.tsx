@@ -148,14 +148,14 @@ export function Phase18BeginnerHome() {
 
   const refresh = useCallback(async (nextClient?: SupabaseClient) => {
     try {
-      const activeClient = nextClient ?? client ?? getSupabaseClient();
+      const activeClient = nextClient ?? getSupabaseClient();
       setClient(activeClient);
       const next = await loadAccessState(activeClient);
       setState(next);
     } catch {
       setState({ kind: "unavailable" });
     }
-  }, [client]);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -190,6 +190,10 @@ export function Phase18BeginnerHome() {
     return () => { active = false; };
   }, [client, state]);
 
+  const handleAccessReady = useCallback(() => {
+    void refresh();
+  }, [refresh]);
+
   const quickSubgenres = useMemo(() => subgenreOptionsFor(quickSetup.genre), [quickSetup.genre]);
   const quickCreateHref = useMemo(() => {
     const params = new URLSearchParams({
@@ -208,7 +212,7 @@ export function Phase18BeginnerHome() {
 
   if (state.kind === "loading") return <BeginnerAccessFallback />;
   if (state.kind === "unavailable") return <BeginnerAccessFallback unavailable />;
-  if (state.kind !== "ready") return <Phase7App />;
+  if (state.kind !== "ready") return <Phase7App onAccessReady={handleAccessReady} />;
   if (!client) return <BeginnerAccessFallback />;
 
   const profile = state.profile;
