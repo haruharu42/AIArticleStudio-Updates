@@ -195,3 +195,16 @@ test("profile avatars use one compressed WebP object per user instead of a URL i
   assert.match(css, /Profile avatar upload: local preview, client-side compression, one stored image per user/);
   assert.doesNotMatch(`${profile}\n${helper}`, /service[_-]?role|sb_secret_/i);
 });
+
+
+test("profile ranking privacy cards keep checkboxes above text at phone widths", async () => {
+  const profile = await readPwa("app/profile/page.tsx");
+  const css = await readPwa("components/creator-system.module.css");
+
+  assert.match(profile, /referenceSwitchCard[\s\S]*?<input type="checkbox"[\s\S]*?<span><strong>ランキングに参加する/);
+  assert.match(profile, /referenceSwitchCard[\s\S]*?<input type="checkbox"[\s\S]*?<span><strong>記事数を公開/);
+  assert.match(profile, /referenceSwitchCard[\s\S]*?<input type="checkbox"[\s\S]*?<span><strong>レベルを公開/);
+  assert.match(css, /\.referenceSwitchCard \{[\s\S]*?flex-direction: column;[\s\S]*?align-items: stretch;/);
+  assert.match(css, /\.referenceSwitchCard > span \{[\s\S]*?width: 100%;/);
+  assert.match(css, /\.referenceSwitchCard input \{[\s\S]*?align-self: center;/);
+});
