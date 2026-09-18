@@ -144,9 +144,15 @@ export function Phase18BeginnerHome() {
   const [imageUnsaved, setImageUnsaved] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
   const [recentArticles, setRecentArticles] = useState<ArticleSummary[] | null>(null);
+  const [recentArticlesError, setRecentArticlesError] = useState(false);
   const [dashboard, setDashboard] = useState<CreatorDashboard | null>(null);
+  const [dashboardError, setDashboardError] = useState(false);
   const [missions, setMissions] = useState<CreatorMission[]>([]);
+  const [missionsLoaded, setMissionsLoaded] = useState(false);
+  const [missionsError, setMissionsError] = useState(false);
   const [ranking, setRanking] = useState<RankingRow[]>([]);
+  const [rankingLoaded, setRankingLoaded] = useState(false);
+  const [rankingError, setRankingError] = useState(false);
   const [quickSetup, setQuickSetup] = useState<QuickSetup>(QUICK_SETUP_INITIAL);
 
   const refresh = useCallback(async (nextClient?: SupabaseClient) => {
@@ -190,21 +196,61 @@ export function Phase18BeginnerHome() {
   useEffect(() => {
     if (state.kind !== "ready" || !client) return;
     let active = true;
+    setRecentArticlesError(false);
+    setDashboardError(false);
+    setMissionsLoaded(false);
+    setMissionsError(false);
+    setRankingLoaded(false);
+    setRankingError(false);
     void listCloudArticles(client, state.profile.id, 3).then(
-      (articles) => { if (active) setRecentArticles(articles); },
-      () => { if (active) setRecentArticles([]); },
+      (articles) => {
+        if (!active) return;
+        setRecentArticles(articles);
+        setRecentArticlesError(false);
+      },
+      () => {
+        if (!active) return;
+        setRecentArticles([]);
+        setRecentArticlesError(true);
+      },
     );
     void getMyCreatorDashboard(client).then(
-      (value) => { if (active) setDashboard(value); },
-      () => { if (active) setDashboard(null); },
+      (value) => {
+        if (!active) return;
+        setDashboard(value);
+        setDashboardError(false);
+      },
+      () => {
+        if (!active) return;
+        setDashboard(null);
+        setDashboardError(true);
+      },
     );
     void getMyCreatorMissions(client).then(
-      (value) => { if (active) setMissions(value); },
-      () => { if (active) setMissions([]); },
+      (value) => {
+        if (!active) return;
+        setMissions(value);
+        setMissionsLoaded(true);
+      },
+      () => {
+        if (!active) return;
+        setMissions([]);
+        setMissionsLoaded(true);
+        setMissionsError(true);
+      },
     );
     void getCreatorRanking(client, "level", 50).then(
-      (value) => { if (active) setRanking(value); },
-      () => { if (active) setRanking([]); },
+      (value) => {
+        if (!active) return;
+        setRanking(value);
+        setRankingLoaded(true);
+      },
+      () => {
+        if (!active) return;
+        setRanking([]);
+        setRankingLoaded(true);
+        setRankingError(true);
+      },
     );
     return () => { active = false; };
   }, [client, state]);
@@ -321,7 +367,13 @@ export function Phase18BeginnerHome() {
             <h2>🎯 今日のミッション</h2>
             <a href="/missions">すべて見る ›</a>
           </div>
-          <MissionRows missions={missions.filter((mission) => mission.cadence === "daily").length ? missions.filter((mission) => mission.cadence === "daily") : missions} />
+          {missionsError ? (
+            <p className="beginner-right-muted" role="alert">ミッションを取得できませんでした。再読み込みしてお試しください。</p>
+          ) : !missionsLoaded ? (
+            <p className="beginner-right-muted" role="status" aria-live="polite">ミッションを読み込んでいます…</p>
+          ) : (
+            <MissionRows missions={missions.filter((mission) => mission.cadence === "daily").length ? missions.filter((mission) => mission.cadence === "daily") : missions} />
+          )}
         </section>
 
         {dashboard && (
@@ -353,8 +405,10 @@ export function Phase18BeginnerHome() {
               <div><small>今週XP</small><strong>{dashboard.weeklyXp}</strong></div>
             </div>
           )}
-          {recentArticles === null ? (
-            <p className="beginner-right-muted">最近の記事を読み込んでいます…</p>
+          {recentArticlesError ? (
+            <p className="beginner-right-muted" role="alert">最近の記事を取得できませんでした。再読み込みしてお試しください。</p>
+          ) : recentArticles === null ? (
+            <p className="beginner-right-muted" role="status" aria-live="polite">最近の記事を読み込んでいます…</p>
           ) : recentArticles.length ? (
             <div className="reference-recent-list">
               {recentArticles.map((article) => (
@@ -422,8 +476,8 @@ export function Phase18BeginnerHome() {
           <div className="reference-rank-summary">
             <span aria-hidden="true">🏆</span>
             <div>
-              <strong>{dashboard ? (dashboard.rankingOptIn ? "あなたの現在の順位" : "ランキングは現在非参加") : "ランキング情報を取得できません"}</strong>
-              <b>{myRank ? `第 ${myRank.rankPosition} 位` : dashboard?.rankingOptIn ? "更新待ち" : "—"}</b>
+              <strong>{rankingError || dashboardError ? "ランキング情報を取得できません" : dashboard ? (dashboard.rankingOptIn ? "あなたの現在の順位" : "ランキングは現在非参加") : "ランキングを読み込んでいます…"}</strong>
+              <b>{myRank ? `第 ${myRank.rankPosition} 位` : rankingLoaded && dashboard?.rankingOptIn ? "更新待ち" : "—"}</b>
             </div>
             <a href="/profile">{dashboard?.rankingOptIn ? "公開設定 ›" : "プロフィール設定 ›"}</a>
           </div>
