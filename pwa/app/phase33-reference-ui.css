@@ -1442,3 +1442,314 @@
   background: #fff8e8;
   color: #8a5a00;
 }
+
+
+/* Article creator UI v2: reference density, readable type, and 390-430px two-column layout. */
+.reference-create-shell .creator-head {
+  width: min(100%, 900px);
+  padding-top: 16px;
+}
+
+.reference-create-shell .creator-head h1 {
+  font-size: clamp(23px, 4.8vw, 30px);
+  line-height: 1.25;
+}
+
+.reference-create-shell .creator-head p:last-child {
+  max-width: 620px;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.reference-create-shell .wizard-steps {
+  width: min(100%, 900px);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow-x: visible;
+}
+
+.reference-create-shell .wizard-steps li {
+  min-width: 0;
+  font-size: 10px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.reference-create-shell .wizard-steps li:not(:last-child)::after {
+  left: calc(50% + 18px);
+  right: calc(-50% + 18px);
+}
+
+.reference-create-shell .creator-card {
+  width: min(calc(100% - 24px), 860px);
+  border-radius: 18px;
+  padding: clamp(16px, 3vw, 22px);
+}
+
+.reference-create-shell .wizard-pane > .eyebrow {
+  margin-bottom: 5px;
+  font-size: 9px;
+  letter-spacing: .08em;
+}
+
+.reference-create-shell .wizard-pane > h2 {
+  margin-top: 0;
+  font-size: clamp(19px, 4vw, 24px);
+  line-height: 1.35;
+}
+
+.reference-create-shell .article-kind-grid {
+  gap: 10px;
+  margin: 14px 0 18px;
+}
+
+.reference-create-shell .article-kind-card {
+  min-width: 0;
+  min-height: 104px;
+  border-radius: 15px;
+  padding: 15px;
+}
+
+.reference-create-shell .article-kind-card strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.reference-create-shell .article-kind-card small {
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+
+.reference-create-shell .article-kind-card.selected {
+  border-color: var(--aas-blue);
+  box-shadow: inset 0 0 0 1px var(--aas-blue), 0 8px 20px rgb(20 120 245 / 8%);
+}
+
+.reference-create-shell .generation-select-row {
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.reference-create-shell .magazine-planner {
+  margin-top: 18px;
+  border-radius: 16px;
+  background: #fff;
+  padding: clamp(15px, 3vw, 20px);
+}
+
+.reference-create-shell .magazine-planner-head {
+  margin-bottom: 16px;
+}
+
+.reference-create-shell .magazine-title-row h3 {
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.reference-create-shell .magazine-planner-head p {
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.reference-create-shell .magazine-new-badge,
+.reference-create-shell .magazine-local-badge {
+  font-size: 9px;
+}
+
+.reference-create-shell .reference-field > span {
+  font-size: 11px;
+}
+
+.reference-create-shell .reference-field input,
+.reference-create-shell .reference-field select,
+.reference-create-shell .reference-field textarea {
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 10px 11px;
+  font-size: 12.5px;
+}
+
+.reference-create-shell .reference-field textarea {
+  min-height: 86px;
+}
+
+.reference-create-shell .reference-field small {
+  font-size: 9px;
+}
+
+.reference-create-shell .magazine-generate-action,
+.reference-create-shell .magazine-use-action {
+  min-height: 48px;
+  border-radius: 11px;
+  font-size: 12.5px;
+}
+
+.reference-create-shell .magazine-results h4 {
+  font-size: 15px;
+}
+
+.reference-create-shell .magazine-results header p {
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.reference-create-shell .magazine-result-tabs button {
+  min-height: 44px;
+  padding: 10px 8px;
+  font-size: 11px;
+}
+
+.reference-create-shell .magazine-result-card {
+  padding: 16px;
+}
+
+.reference-create-shell .magazine-result-card h5 {
+  font-size: 17px;
+}
+
+.reference-create-shell .magazine-result-card > p,
+.reference-create-shell .magazine-result-card li strong {
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.reference-create-shell .magazine-result-card li {
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 9px;
+}
+
+.reference-create-shell .magazine-result-card li > span {
+  min-height: 26px;
+  font-size: 9px;
+}
+
+.reference-create-shell .magazine-selected-note,
+.reference-create-shell .magazine-info-note p {
+  font-size: 10px !important;
+  line-height: 1.6;
+}
+
+.reference-create-shell .magazine-info-note {
+  padding: 11px;
+}
+
+@media (max-width: 720px) {
+  .reference-create-shell .creator-head {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .reference-create-shell .creator-head h1 {
+    font-size: 22px;
+  }
+
+  .reference-create-shell .wizard-steps {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .reference-create-shell .creator-card {
+    width: calc(100% - 22px);
+    padding: 15px;
+  }
+
+  .reference-create-shell .article-kind-grid,
+  .reference-create-shell .magazine-dropdown-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reference-create-shell .generation-select-row {
+    grid-template-columns: 1fr;
+  }
+
+  .reference-create-shell .article-kind-card {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 8px;
+    min-height: 112px;
+    padding: 13px 44px 13px 12px;
+  }
+
+  .reference-create-shell .article-kind-card .article-kind-icon {
+    position: absolute;
+    top: 12px;
+    right: 11px;
+    width: 29px;
+    height: 29px;
+    border-radius: 9px;
+    font-size: 15px;
+  }
+
+  .reference-create-shell .article-kind-card input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+  }
+
+  .reference-create-shell .article-kind-card strong {
+    font-size: 12.5px;
+  }
+
+  .reference-create-shell .article-kind-card small {
+    font-size: 9.5px;
+  }
+
+  .reference-create-shell .magazine-purpose {
+    grid-column: 1 / -1;
+  }
+
+  .reference-create-shell .magazine-local-badge {
+    padding: 5px 7px;
+  }
+}
+
+@media (max-width: 430px) {
+  .reference-create-shell .reference-help-link {
+    padding: 8px 9px;
+    font-size: 9px;
+  }
+
+  .reference-create-shell .wizard-steps li {
+    font-size: 8.5px;
+  }
+
+  .reference-create-shell .wizard-steps li span {
+    width: 29px;
+    height: 29px;
+  }
+
+  .reference-create-shell .wizard-steps li:not(:last-child)::after {
+    top: 16px;
+    left: calc(50% + 17px);
+    right: calc(-50% + 17px);
+  }
+
+  .reference-create-shell .magazine-planner-head {
+    gap: 8px;
+  }
+
+  .reference-create-shell .magazine-spark {
+    font-size: 19px;
+  }
+
+  .reference-create-shell .magazine-title-row {
+    gap: 6px;
+  }
+
+  .reference-create-shell .magazine-title-row h3 {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .reference-create-shell .article-kind-grid,
+  .reference-create-shell .magazine-dropdown-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reference-create-shell .magazine-purpose {
+    grid-column: auto;
+  }
+
+  .reference-create-shell .wizard-steps li {
+    font-size: 7.5px;
+  }
+}
