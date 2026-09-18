@@ -1423,3 +1423,120 @@
     text-align: left;
   }
 }
+
+
+/* Profile avatar upload: local preview, client-side compression, one stored image per user. */
+.referenceAvatarTile {
+  align-items: center;
+}
+
+.referenceAvatarEditor {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #e0e8f2;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 12px;
+}
+
+.referenceAvatarPreview {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid #d6e8fb;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #5bb9ff, #2d7df2);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.referenceAvatarPreview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.referenceAvatarActions {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.referenceAvatarActions > small {
+  flex-basis: 100%;
+  color: #7b8fa9;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.referenceAvatarChoose,
+.referenceAvatarRemove {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.referenceAvatarChoose {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #85b8f6;
+  background: #eef7ff;
+  color: #146ed7;
+}
+
+.referenceAvatarChoose input {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  margin: -1px !important;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  border: 0 !important;
+  padding: 0 !important;
+  white-space: nowrap;
+}
+
+.referenceAvatarRemove {
+  border: 1px solid #e1c7cb;
+  background: #fff;
+  color: #a64b59;
+}
+
+@media (max-width: 420px) {
+  .referenceAvatarEditor {
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .referenceAvatarPreview {
+    width: 62px;
+    height: 62px;
+    font-size: 21px;
+  }
+
+  .referenceAvatarChoose,
+  .referenceAvatarRemove {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+}
