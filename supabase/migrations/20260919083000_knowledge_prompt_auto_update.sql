@@ -390,6 +390,48 @@ begin
 end;
 $function$;
 
+create or replace function public.admin_request_knowledge_refresh(p_channel text)
+returns bigint
+language plpgsql
+security definer
+set search_path to ''
+as $function$
+declare
+    channel_value text := lower(trim(coalesce(p_channel, '')));
+    request_id bigint;
+begin
+    if (select auth.uid()) is null or not (select private.is_active_admin()) then
+        raise exception 'active admin required' using errcode = '42501';
+    end if;
+    if channel_value not in ('stable', 'fresh') then
+        raise exception 'invalid knowledge refresh channel' using errcode = '22023';
+    end if;
+
+    select request.id
+    into request_id
+    from public.knowledge_refresh_requests as request
+    where request.channel = channel_value
+      and request.status in ('pending', 'processing')
+    order by request.requested_at desc
+    limit 1;
+
+    if request_id is null then
+        insert into public.knowledge_refresh_requests (channel)
+        values (channel_value)
+        returning id into request_id;
+    end if;
+
+    update public.knowledge_refresh_channels as refresh_channel
+    set
+        last_refresh_requested_at = now(),
+        next_refresh_due_at = now() + make_interval(hours => refresh_channel.refresh_hours),
+        updated_at = now()
+    where refresh_channel.channel = channel_value;
+
+    return request_id;
+end;
+$function$;
+
 create or replace function public.admin_start_knowledge_refresh(p_request_id bigint)
 returns void
 language plpgsql
@@ -727,6 +769,7 @@ revoke all on function public.list_my_active_knowledge_catalog_v2() from public,
 revoke all on function public.list_my_active_prompt_optimizations() from public, anon;
 revoke all on function public.get_my_knowledge_runtime_state() from public, anon;
 revoke all on function public.admin_list_knowledge_refresh_requests(text, integer) from public, anon;
+revoke all on function public.admin_request_knowledge_refresh(text) from public, anon;
 revoke all on function public.admin_start_knowledge_refresh(bigint) from public, anon;
 revoke all on function public.admin_fail_knowledge_refresh(bigint, text) from public, anon;
 revoke all on function public.admin_publish_knowledge_refresh_bundle(bigint, jsonb) from public, anon;
@@ -735,6 +778,7 @@ grant execute on function public.list_my_active_knowledge_catalog_v2() to authen
 grant execute on function public.list_my_active_prompt_optimizations() to authenticated;
 grant execute on function public.get_my_knowledge_runtime_state() to authenticated;
 grant execute on function public.admin_list_knowledge_refresh_requests(text, integer) to authenticated;
+grant execute on function public.admin_request_knowledge_refresh(text) to authenticated;
 grant execute on function public.admin_start_knowledge_refresh(bigint) to authenticated;
 grant execute on function public.admin_fail_knowledge_refresh(bigint, text) to authenticated;
 grant execute on function public.admin_publish_knowledge_refresh_bundle(bigint, jsonb) to authenticated;
