@@ -64,6 +64,17 @@ export async function adminListKnowledgeRefreshRequests(
   return (data ?? []).map((row: Record<string, unknown>) => parseRequest(row));
 }
 
+export async function adminRequestKnowledgeRefresh(
+  client: SupabaseClient,
+  channel: "stable" | "fresh",
+): Promise<number> {
+  const { data, error } = await client.rpc("admin_request_knowledge_refresh", { p_channel: channel });
+  if (error) throw new Error("ナレッジ更新をキューへ追加できませんでした。");
+  const value = typeof data === "number" ? data : Number(data);
+  if (!Number.isFinite(value) || value < 1) throw new Error("ナレッジ更新IDを確認できませんでした。");
+  return value;
+}
+
 export async function adminStartKnowledgeRefresh(client: SupabaseClient, requestId: number): Promise<void> {
   const { error } = await client.rpc("admin_start_knowledge_refresh", { p_request_id: requestId });
   if (error) throw new Error("ナレッジ更新を開始できませんでした。");
