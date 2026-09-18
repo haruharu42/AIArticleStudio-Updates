@@ -146,7 +146,7 @@ export default function CreatorProfilePage() {
 
   return (
     <div className="reference-page">
-      <AasReferenceHeader />
+      <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
       <main className="reference-page-inner">
         <div className="reference-title-row">
           <div>
@@ -224,12 +224,12 @@ export default function CreatorProfilePage() {
                   <input type="checkbox" checked={form.rankingOptIn} onChange={(event) => setForm({ ...form, rankingOptIn: event.target.checked })} />
                 </label>
                 <label className={styles.referenceSwitchCard}>
-                  <span><strong>レベルを公開</strong><small>Creator Levelをランキングに表示</small></span>
-                  <input type="checkbox" checked={form.showLevel} onChange={(event) => setForm({ ...form, showLevel: event.target.checked })} />
-                </label>
-                <label className={styles.referenceSwitchCard}>
                   <span><strong>記事数を公開</strong><small>完成した記事数だけを表示</small></span>
                   <input type="checkbox" checked={form.showCompletedArticles} onChange={(event) => setForm({ ...form, showCompletedArticles: event.target.checked })} />
+                </label>
+                <label className={styles.referenceSwitchCard}>
+                  <span><strong>レベルを公開</strong><small>Creator Levelをランキングに表示</small></span>
+                  <input type="checkbox" checked={form.showLevel} onChange={(event) => setForm({ ...form, showLevel: event.target.checked })} />
                 </label>
               </div>
             </section>
