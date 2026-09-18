@@ -36,9 +36,9 @@ function nextRefresh(value: string, hours: number): string {
 }
 
 function metricLabel(row: RankingRow, key: RankingKey): string {
-  if (key === "level") return \`Lv.${row.metricValue}\`;
-  if (key === "completed_articles") return \`${row.metricValue} 記事\`;
-  return \`${row.metricValue} XP\`;
+  if (key === "level") return `Lv.${row.metricValue}`;
+  if (key === "completed_articles") return `${row.metricValue} 記事`;
+  return `${row.metricValue} XP`;
 }
 
 function avatarLetter(name: string): string {
@@ -121,7 +121,7 @@ export default function CreatorRankingPage() {
               {xp && (
                 <>
                   <div className="reference-xp-row">
-                    <div className="reference-xp-track"><span style={{ width: \`${xp.percent}%\` }} /></div>
+                    <div className="reference-xp-track"><span style={{ width: `${xp.percent}%` }} /></div>
                     <b>{xp.current} / {xp.needed} XP</b>
                   </div>
                   <small className="reference-xp-note">完成記事だけが実績へ加算されます。</small>
@@ -130,13 +130,13 @@ export default function CreatorRankingPage() {
             </div>
             <div className="reference-rank-box">
               <small>あなたの順位</small>
-              <strong>{me ? \`${me.rankPosition}位\` : dashboard.rankingOptIn ? "更新待ち" : "非参加"}</strong>
+              <strong>{me ? `${me.rankPosition}位` : dashboard.rankingOptIn ? "更新待ち" : "非参加"}</strong>
               <em>{dashboard.rankingOptIn ? "公開設定ON" : "プロフィールから参加できます"}</em>
             </div>
           </section>
         )}
 
-        <section className={\`${styles.panel} ${styles.referenceRankingPanel}\`}>
+        <section className={`${styles.panel} ${styles.referenceRankingPanel}`}>
           <div className={styles.referenceRankTabs} role="tablist" aria-label="ランキング種別">
             {TABS.map((tab) => (
               <button
@@ -163,8 +163,8 @@ export default function CreatorRankingPage() {
             <div className={styles.referenceRankList}>
               {rows.map((row) => (
                 <article
-                  key={\`${row.rankingKey}-${row.rankPosition}-${row.publicName}\`}
-                  className={\`${styles.referenceRankRow} ${podiumClass(row.rankPosition)} ${row.isMe ? styles.rankMe : ""}\`}
+                  key={`${row.rankingKey}-${row.rankPosition}-${row.publicName}`}
+                  className={`${styles.referenceRankRow} ${podiumClass(row.rankPosition)} ${row.isMe ? styles.rankMe : ""}`}
                 >
                   <span className={styles.referenceRankPosition}>
                     {row.rankPosition <= 3 ? <b>♛</b> : null}
@@ -176,8 +176,8 @@ export default function CreatorRankingPage() {
                   <div className={styles.rankName}>
                     <strong>{row.publicName}{row.isMe ? "（あなた）" : ""}</strong>
                     <small>
-                      {row.level !== null ? \`Creator Lv.${row.level}\` : "レベル非公開"}
-                      {row.completedArticles !== null ? \` · 完成 ${row.completedArticles}記事\` : " · 記事数非公開"}
+                      {row.level !== null ? `Creator Lv.${row.level}` : "レベル非公開"}
+                      {row.completedArticles !== null ? ` · 完成 ${row.completedArticles}記事` : " · 記事数非公開"}
                     </small>
                   </div>
                   <div className={styles.referenceRankMetric}>
