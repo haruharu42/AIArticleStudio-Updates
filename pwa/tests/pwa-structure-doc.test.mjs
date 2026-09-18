@@ -8,6 +8,9 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 
 test("PWA structure guide records the enforced runtime boundaries", async () => {
   const guide = await readFile(path.join(root, "STRUCTURE.md"), "utf8");
+  assert.match(guide, /components\/phase6-app\.tsx/);
+  assert.match(guide, /components\/phase18-beginner-home\.tsx/);
+  assert.match(guide, /legacy dashboards/);
   assert.match(guide, /lib\/access-control\.ts/);
   assert.match(guide, /lib\/article-create-draft\.ts/);
   assert.match(guide, /components\/article-library\//);
