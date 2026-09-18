@@ -159,3 +159,39 @@ test("reference UI v2 keeps ranking metrics inline and profile/home cards readab
   assert.match(referenceCss, /\.reference-mission-row strong \{[\s\S]*?font-size: 12px/);
   assert.match(referenceCss, /\.reference-quick-step strong \{[\s\S]*?font-size: 10\.5px/);
 });
+
+
+test("profile avatars use one compressed WebP object per user instead of a URL input", async () => {
+  const profile = await readPwa("app/profile/page.tsx");
+  const helper = await readPwa("lib/profile-avatar.ts");
+  const creator = await readPwa("lib/creator-system.ts");
+  const css = await readPwa("components/creator-system.module.css");
+  const migration = await readRepo("supabase/migrations/20260918064500_profile_avatar_storage.sql");
+
+  assert.match(profile, /プロフィール画像/);
+  assert.match(profile, /画像を選択/);
+  assert.match(profile, /image\/jpeg,image\/png,image\/webp/);
+  assert.match(profile, /prepareProfileAvatar/);
+  assert.match(profile, /uploadProfileAvatar/);
+  assert.doesNotMatch(profile, /プロフィール画像URL/);
+  assert.doesNotMatch(profile, /placeholder="https:\/\/\.\.\."/);
+
+  assert.match(helper, /PROFILE_AVATAR_MAX_STORED_BYTES = 500 \* 1024/);
+  assert.match(helper, /PROFILE_AVATAR_MAX_EDGE = 512/);
+  assert.match(helper, /canvas\.toBlob/);
+  assert.match(helper, /"image\/webp"/);
+  assert.match(helper, /\$\{user\.id\}\/avatar\.webp/);
+  assert.match(helper, /upsert: true/);
+  assert.match(creator, /resolveProfileAvatarUrl/);
+
+  assert.match(migration, /'profile-avatars'/);
+  assert.match(migration, /public,\s*file_size_limit,\s*allowed_mime_types/s);
+  assert.match(migration, /true,\s*512000,\s*array\['image\/webp'\]/s);
+  assert.match(migration, /name = \(select auth\.uid\(\)\)::text \|\| '\/avatar\.webp'/);
+  assert.match(migration, /for insert\s+to authenticated/s);
+  assert.match(migration, /for update\s+to authenticated/s);
+  assert.match(migration, /for delete\s+to authenticated/s);
+
+  assert.match(css, /Profile avatar upload: local preview, client-side compression, one stored image per user/);
+  assert.doesNotMatch(`${profile}\n${helper}`, /service[_-]?role|sb_secret_/i);
+});
