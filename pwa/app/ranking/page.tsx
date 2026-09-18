@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
 import {
@@ -59,20 +59,24 @@ export default function CreatorRankingPage() {
   const [rows, setRows] = useState<RankingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const requestIdRef = useRef(0);
 
   const load = useCallback(async (rankingKey: RankingKey) => {
+    const requestId = ++requestIdRef.current;
     try {
       const client = getSupabaseClient();
       const [nextDashboard, nextRows] = await Promise.all([
         getMyCreatorDashboard(client),
         getCreatorRanking(client, rankingKey, 50),
       ]);
+      if (requestId !== requestIdRef.current) return;
       setDashboard(nextDashboard);
       setRows(nextRows);
     } catch (reason) {
+      if (requestId !== requestIdRef.current) return;
       setError(reason instanceof Error ? reason.message : "ランキングを読み込めませんでした。");
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   }, []);
 
@@ -81,7 +85,10 @@ export default function CreatorRankingPage() {
     queueMicrotask(() => {
       if (active) void load(key);
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+      requestIdRef.current += 1;
+    };
   }, [key, load]);
 
   function chooseRanking(nextKey: RankingKey) {
@@ -157,8 +164,8 @@ export default function CreatorRankingPage() {
             ※ 完成数は「完成・公開待ち・公開済み」の記事が最初に条件を満たした時だけ集計されます。
           </p>
 
-          {loading && <div className={styles.empty}>ランキングを読み込んでいます…</div>}
-          {error && <div className={styles.error}>{error}</div>}
+          {loading && <div className={styles.empty} role="status" aria-live="polite">ランキングを読み込んでいます…</div>}
+          {error && <div className={styles.error} role="alert">{error}</div>}
 
           {!loading && !error && rows.length > 0 && (
             <div className={styles.referenceRankList}>
