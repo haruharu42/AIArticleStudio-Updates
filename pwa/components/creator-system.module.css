@@ -945,13 +945,19 @@
 .referenceSwitchCard {
   min-width: 0;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  justify-content: flex-start;
   gap: 8px;
-  align-items: center;
+  align-items: stretch;
   border: 1px solid #e0e8f2;
   border-radius: 11px;
   background: #fbfdff;
   padding: 10px;
+}
+
+.referenceSwitchCard > span {
+  min-width: 0;
+  width: 100%;
 }
 
 .referenceSwitchCard strong,
@@ -975,6 +981,8 @@
   width: 34px;
   height: 20px;
   flex: 0 0 auto;
+  align-self: center;
+  margin: 0;
   accent-color: #1478f5;
 }
 
@@ -1279,8 +1287,9 @@
 }
 
 .referenceSwitchCard {
-  min-height: 76px;
+  min-height: 104px;
   padding: 10px;
+  text-align: center;
 }
 
 .referenceSwitchCard strong {
