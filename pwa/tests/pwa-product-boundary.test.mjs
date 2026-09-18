@@ -80,3 +80,13 @@ test("PWA runtime does not depend on frozen Windows local implementation", async
     }
   }
 });
+
+
+test("Cloudflare production workers.dev routing stays explicit and Preview remains the default", async () => {
+  const vite = await readFile(path.join(pwaRoot, "vite.config.ts"), "utf8");
+
+  assert.match(vite, /AAS_CLOUDFLARE_PUBLIC_WORKERS_DEV === "true"/);
+  assert.match(vite, /workers_dev:\s*productionWorkersDevEnabled/);
+  assert.match(vite, /preview_urls:\s*!productionWorkersDevEnabled/);
+  assert.match(vite, /DEFAULT_WORKER_NAME = "ai-article-studio-pwa-preview"/);
+});
