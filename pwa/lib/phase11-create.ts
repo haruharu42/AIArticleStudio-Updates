@@ -265,9 +265,9 @@ export async function createArticleFromWizard(
   const knowledgeRuntime = getRuntimeKnowledgeState();
   let workspaceJson: Record<string, unknown> = {
     wizard_version: 11,
-    prompt_profile_version: 13,
-    image_prompt_version: 14,
-    knowledge_engine_version: 2,
+    prompt_profile_version: 12,
+    image_prompt_version: 13,
+    knowledge_engine_version: 1,
     cloud_knowledge_channel: knowledgeRuntime.channel,
     cloud_knowledge_version: knowledgeRuntime.effectiveVersion,
     prompt_optimization_version: knowledgeRuntime.effectiveVersion,
