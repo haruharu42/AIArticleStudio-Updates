@@ -53,6 +53,8 @@ test("mobile navigation can be selected reordered and persisted without exposing
   assert.match(nav, /readMobileNavItems/);
   assert.match(nav, /customItems\.map/);
   assert.match(nav, /mobileNavItemFor\(key\)/);
+  assert.match(nav, /REFERENCE_SHELL_ROUTES/);
+  assert.match(nav, /!referenceShellRoute/);
   assert.match(css, /\.nav-customizer/);
   assert.doesNotMatch(`${prefs}\n${customizer}\n${nav}`, /sb_secret_|service[_-]?role|sk_(?:live|test)_|whsec_/i);
 });
