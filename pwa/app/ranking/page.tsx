@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
@@ -100,7 +101,7 @@ export default function CreatorRankingPage() {
       <main className="reference-page-inner">
         <div className="reference-title-row">
           <div>
-            <a className="reference-back" href="/" aria-label="ホームへ戻る">‹</a>
+            <Link className="reference-back" href="/" aria-label="ホームへ戻る">‹</Link>
             <div>
               <h1>♛ ランキング</h1>
               <p>みんなの頑張りを、次の記事づくりのモチベーションに。</p>
