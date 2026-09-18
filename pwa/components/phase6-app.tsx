@@ -239,11 +239,11 @@ function AuthScreen({
     <main className="auth-page">
       <section className="auth-intro">
         <Brand />
-        <p className="eyebrow">PWA ARTICLE LIBRARY · PHASE 7</p>
+        <p className="eyebrow">PWA ACCESS</p>
         <h1>記事づくりを、<br />どこからでも。</h1>
         <p className="lead">
-          Windows版と同じアカウント・利用権を使うPWA基盤です。
-          安全なログインに加え、クラウド記事をどの端末からでも確認できます。
+          AI Article Studio PWAへ安全にログインし、
+          PC・スマホ・タブレットからクラウド記事を確認・編集できます。
         </p>
         <div className="trust-row">
           <span>Supabase Auth</span>
@@ -372,7 +372,7 @@ function AccessIssue({
     pending: ["承認待ちです", "登録は完了しています。管理者の承認後にもう一度確認してください。"],
     suspended: ["アカウントは停止中です", "管理者へお問い合わせください。ローカルの記事には影響しません。"],
     disabled: ["アカウントを利用できません", "このアカウントは無効です。管理者へお問い合わせください。"],
-    entitlement_denied: ["PWA利用権がありません", "Windows版の利用権とは別です。PWA用利用権が付与されるまでお待ちください。"],
+    entitlement_denied: ["PWA利用権がありません", "PWA用利用権が必要です。購入・利用コード・管理者からの付与後にもう一度確認してください。"],
   }[value.kind];
 
   return (
@@ -440,7 +440,7 @@ function Dashboard({
         <nav aria-label="メインナビゲーション">
           <button className={section === "home" ? "active" : ""} type="button" onClick={() => navigate("home")}><span>⌂</span>ホーム</button>
           <button className={section === "library" ? "active" : ""} type="button" onClick={() => navigate("library")}><span>▤</span>記事ライブラリ<small>利用可能</small></button>
-          <button type="button" disabled><span>✦</span>記事を作る<small>準備中</small></button>
+          <button type="button" onClick={() => navigateRoute("/create")}><span>✦</span>記事を作る<small>利用可能</small></button>
           <button type="button" onClick={() => navigateRoute("/images")}><span>◫</span>記事の画像<small>画像計画</small></button>
         </nav>
         <div className="account-block">
@@ -468,7 +468,7 @@ function Dashboard({
           <div>
             <span className="hero-icon">✦</span>
             <p className="eyebrow">ARTICLE LIBRARY READY</p>
-            <h2>Windows版の記事をPWAでも確認できます</h2>
+            <h2>クラウド記事をどの端末でも確認できます</h2>
             <p>記事の閲覧・編集から、アイキャッチや挿絵の追加まで。記事を開いて、続きから作業できます。</p>
           </div>
           <div className="hero-actions">
@@ -487,12 +487,12 @@ function Dashboard({
         <section className="coming-section">
           <div className="section-title">
             <div><p className="eyebrow">YOUR WORKSPACE</p><h2>記事制作のワークスペース</h2></div>
-            <span>順次機能を追加</span>
+            <span>利用できる主な機能</span>
           </div>
           <div className="feature-grid">
-            <FeatureCard number="07" title="共通記事ライブラリ" description="クラウド記事の一覧・閲覧・編集・削除" ready />
-            <FeatureCard number="08" title="画像管理と同期" description="アイキャッチ・挿絵の追加と差し替え" ready />
-            <FeatureCard number="11" title="記事制作フロー" description="モバイルから記事の新規作成" />
+            <FeatureCard mark="▤" title="記事ライブラリ" description="クラウド記事の一覧・閲覧・編集・削除" ready />
+            <FeatureCard mark="▧" title="画像管理" description="アイキャッチ・挿絵の追加と差し替え" ready />
+            <FeatureCard mark="✎" title="記事制作フロー" description="PC・スマホ・タブレットから記事を新規作成" ready />
           </div>
         </section>
           </>
@@ -502,7 +502,7 @@ function Dashboard({
       <nav className="bottom-nav" aria-label="モバイルナビゲーション">
         <button className={section === "home" ? "active" : ""} type="button" onClick={() => navigate("home")}><span>⌂</span>ホーム</button>
         <button className={section === "library" ? "active" : ""} type="button" onClick={() => navigate("library")}><span>▤</span>記事</button>
-        <button type="button" disabled><span className="create-dot">✦</span>作成</button>
+        <button type="button" onClick={() => navigateRoute("/create")}><span className="create-dot">✦</span>作成</button>
         <button type="button" onClick={() => navigateRoute("/images")}><span>◫</span>画像</button>
       </nav>
     </div>
@@ -513,8 +513,8 @@ function StatusTile({ label, value, detail }: { label: string; value: string; de
   return <article className="status-tile"><span>{label}</span><strong><i>●</i>{value}</strong><small>{detail}</small></article>;
 }
 
-function FeatureCard({ number, title, description, ready = false }: { number: string; title: string; description: string; ready?: boolean }) {
-  return <article className={ready ? "feature-card ready" : "feature-card"}><span>{number}</span><div><h3>{title}</h3><p>{description}</p></div><b>{ready ? "利用可能" : "準備中"}</b></article>;
+function FeatureCard({ mark, title, description, ready = false }: { mark: string; title: string; description: string; ready?: boolean }) {
+  return <article className={ready ? "feature-card ready" : "feature-card"}><span>{mark}</span><div><h3>{title}</h3><p>{description}</p></div><b>{ready ? "利用可能" : "準備中"}</b></article>;
 }
 
 async function resolveAccess(
@@ -531,7 +531,7 @@ async function resolveAccess(
   }
 }
 
-export function Phase7App() {
+export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Promise<void> }) {
   const recoveryRef = useRef(false);
   const [client, setClient] = useState<SupabaseClient | null>(null);
   const [screen, setScreen] = useState<Screen>({ kind: "loading" });
@@ -609,6 +609,12 @@ export function Phase7App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (screen.kind === "access" && screen.value.kind === "ready" && onAccessReady) {
+      void onAccessReady();
+    }
+  }, [onAccessReady, screen]);
+
   if (screen.kind === "loading") return <Spinner label="アカウントと利用権を確認しています…" />;
 
   if (screen.kind === "configuration_error" || screen.kind === "error") {
@@ -617,7 +623,7 @@ export function Phase7App() {
         <section className="status-card">
           <Brand compact />
           <span className="status-symbol">!</span>
-          <p className="eyebrow">PHASE 7</p>
+          <p className="eyebrow">PWA ACCESS</p>
           <h1>{screen.kind === "configuration_error" ? "公開設定が必要です" : "接続を確認できません"}</h1>
           <p>{screen.message}</p>
           {screen.kind === "error" && <button className="primary-action" type="button" onClick={() => void refresh()}>再試行</button>}
@@ -635,6 +641,8 @@ export function Phase7App() {
   if (screen.value.kind !== "ready") {
     return <AccessIssue value={screen.value} onRetry={refresh} onLogout={logout} />;
   }
+
+  if (onAccessReady) return <Spinner label="ホームを準備しています…" />;
 
   return <Dashboard client={client} profile={screen.value.profile} onRetry={refresh} onLogout={logout} />;
 }
