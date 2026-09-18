@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { resolveProfileAvatarUrl } from "@/lib/profile-avatar";
+
 export type KnowledgeTier = "stable" | "fresh";
 export type RankingKey = "level" | "completed_articles" | "weekly_xp";
 
@@ -167,7 +169,8 @@ export async function getMyCreatorDashboard(client: SupabaseClient): Promise<Cre
   if (!v2.error) {
     const row = firstRow(v2.data);
     if (!row) throw new Error("クリエイターステータスが見つかりません。");
-    return parseDashboard(row);
+    const parsed = parseDashboard(row);
+    return { ...parsed, avatarUrl: resolveProfileAvatarUrl(client, parsed.avatarUrl) };
   }
 
   // Compatibility fallback keeps Preview environments safe while migrations roll out.
@@ -175,7 +178,8 @@ export async function getMyCreatorDashboard(client: SupabaseClient): Promise<Cre
   if (legacy.error) throw new Error("クリエイターステータスを読み込めませんでした。");
   const row = firstRow(legacy.data);
   if (!row) throw new Error("クリエイターステータスが見つかりません。");
-  return parseDashboard(row);
+  const parsed = parseDashboard(row);
+  return { ...parsed, avatarUrl: resolveProfileAvatarUrl(client, parsed.avatarUrl) };
 }
 
 export async function updateMyCreatorProfile(
@@ -204,11 +208,12 @@ export async function getCreatorRanking(
   if (!Array.isArray(data)) return [];
   return data.map((raw) => {
     const row = (raw ?? {}) as Record<string, unknown>;
+    const avatarReference = asString(row.avatar_url);
     return {
       rankingKey: row.ranking_key === "completed_articles" || row.ranking_key === "weekly_xp" ? row.ranking_key : "level",
       rankPosition: Math.max(1, asNumber(row.rank_position, 1)),
       publicName: asString(row.public_name) || "Creator",
-      avatarUrl: asString(row.avatar_url),
+      avatarUrl: resolveProfileAvatarUrl(client, avatarReference),
       level: row.level === null ? null : Math.max(1, asNumber(row.level, 1)),
       completedArticles: row.completed_articles === null ? null : Math.max(0, asNumber(row.completed_articles)),
       weeklyXp: Math.max(0, asNumber(row.weekly_xp)),
