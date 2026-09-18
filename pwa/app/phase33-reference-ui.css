@@ -1380,3 +1380,47 @@
     font-size: 15px;
   }
 }
+
+
+.reference-ai-note {
+  margin: 9px 0 0;
+  color: #7b8fa9;
+  font-size: 7.5px;
+  line-height: 1.6;
+}
+
+.reference-feature-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.reference-feature-links a {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  align-items: center;
+  border: 1px solid #dce7f3;
+  border-radius: 11px;
+  background: #f8fbff;
+  color: #264564;
+  padding: 10px;
+  text-decoration: none;
+}
+
+.reference-feature-links a > span {
+  grid-row: 1 / span 2;
+  color: #1478f5;
+  font-size: 20px;
+}
+
+.reference-feature-links strong {
+  font-size: 9px;
+}
+
+.reference-feature-links small {
+  color: #8294ab;
+  font-size: 7px;
+}
