@@ -37,6 +37,18 @@ function avatarLetter(name: string): string {
   return (name.trim().charAt(0) || "C").toUpperCase();
 }
 
+function avatarUrlValidationMessage(value: string): string {
+  const candidate = value.trim();
+  if (!candidate) return "";
+  try {
+    const url = new URL(candidate);
+    if (url.protocol === "https:" || url.protocol === "http:") return "";
+  } catch {
+    // Handled by the common validation message below.
+  }
+  return "プロフィール画像URLは http:// または https:// で始まる正しいURLを入力してください。";
+}
+
 function Achievement({
   icon,
   title,
@@ -95,9 +107,18 @@ export default function CreatorProfilePage() {
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!form || busy) return;
-    setBusy(true);
     setMessage("");
     setError("");
+    if (form.rankingOptIn && !form.publicName.trim()) {
+      setError("ランキングへ参加するには表示名を入力してください。");
+      return;
+    }
+    const avatarUrlError = avatarUrlValidationMessage(form.avatarUrl);
+    if (avatarUrlError) {
+      setError(avatarUrlError);
+      return;
+    }
+    setBusy(true);
     try {
       const client = getSupabaseClient();
       await updateMyCreatorProfile(client, {
@@ -134,7 +155,7 @@ export default function CreatorProfilePage() {
           </div>
         </div>
 
-        {error && !form ? <div className={styles.error}>{error}</div> : null}
+        {error && !form ? <div className={styles.error} role="alert">{error}</div> : null}
 
         {form && dashboard && xp ? (
           <form onSubmit={save} className={styles.referenceProfileForm}>
@@ -233,10 +254,10 @@ export default function CreatorProfilePage() {
             </section>
 
             <button className={styles.referenceSaveButton} type="submit" disabled={busy}>✦ {busy ? "保存中…" : "プロフィールを保存"}</button>
-            {message && <div className={styles.success}>{message}</div>}
-            {error && <div className={styles.error}>{error}</div>}
+            {message && <div className={styles.success} role="status" aria-live="polite">{message}</div>}
+            {error && <div className={styles.error} role="alert">{error}</div>}
           </form>
-        ) : !error ? <div className={styles.notice}>プロフィールを読み込んでいます…</div> : null}
+        ) : !error ? <div className={styles.notice} role="status" aria-live="polite">プロフィールを読み込んでいます…</div> : null}
       </main>
       <AasReferenceBottomNav active="profile" />
     </div>
