@@ -160,9 +160,8 @@ export function Phase18BeginnerHome() {
   }, []);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("section") === "library") {
-      setSection("library");
-    }
+    if (new URLSearchParams(window.location.search).get("section") !== "library") return;
+    queueMicrotask(() => setSection("library"));
   }, []);
 
   useEffect(() => {
@@ -191,7 +190,6 @@ export function Phase18BeginnerHome() {
   useEffect(() => {
     if (state.kind !== "ready" || !client) return;
     let active = true;
-    setRecentArticles(null);
     void listCloudArticles(client, state.profile.id, 3).then(
       (articles) => { if (active) setRecentArticles(articles); },
       () => { if (active) setRecentArticles([]); },
