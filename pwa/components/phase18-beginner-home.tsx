@@ -101,7 +101,7 @@ function AiLaunchCard({ appKey }: { appKey: AiAppKey }) {
 function BeginnerAccessFallback({ unavailable = false }: { unavailable?: boolean }) {
   return (
     <div className="reference-home">
-      <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
+      <AasReferenceHeader />
       <main className="reference-home-main">
         <section className="beginner-recommend" role={unavailable ? "alert" : "status"} aria-live="polite">
           <div>
@@ -331,7 +331,7 @@ export function Phase18BeginnerHome() {
 
   return (
     <div className="reference-home">
-      <AasReferenceHeader />
+      <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
       <main className="reference-home-main">
         <div className="reference-home-heading">
           <h1>⌂ ホーム</h1>
