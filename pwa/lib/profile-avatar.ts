@@ -141,12 +141,12 @@ export async function uploadProfileAvatar(
   return `${PROFILE_AVATAR_REFERENCE_PREFIX}${path}?v=${Date.now()}`;
 }
 
-export async function removeProfileAvatar(
-  client: SupabaseClient,
-  reference: string,
-): Promise<void> {
-  const path = pathFromStorageReference(reference);
-  if (!path) return;
-  const { error } = await client.storage.from(PROFILE_AVATAR_BUCKET).remove([path]);
+export async function removeProfileAvatar(client: SupabaseClient): Promise<void> {
+  const { data: { user }, error: userError } = await client.auth.getUser();
+  if (userError || !user) throw new Error("ログイン状態を確認できません。");
+
+  const { error } = await client.storage
+    .from(PROFILE_AVATAR_BUCKET)
+    .remove([`${user.id}/avatar.webp`]);
   if (error) throw new Error("プロフィール画像を削除できませんでした。");
 }
