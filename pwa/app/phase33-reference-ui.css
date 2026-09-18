@@ -1753,3 +1753,292 @@
     font-size: 7.5px;
   }
 }
+
+
+/* Home/ranking/profile UI v2: readable reference-scale cards on phone, tablet, and desktop. */
+.reference-home-main,
+.reference-ranking-page,
+.reference-profile-page {
+  width: min(100%, 900px);
+}
+
+.reference-home-heading h1 {
+  font-size: 22px;
+  line-height: 1.3;
+}
+
+.reference-home-heading p {
+  font-size: 10.5px;
+}
+
+.reference-section-heading h2 {
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.reference-section-heading a,
+.reference-link-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+}
+
+.reference-creator-card,
+.reference-status-card,
+.reference-home-section {
+  border-radius: 16px;
+}
+
+.reference-name-row strong {
+  font-size: 16px;
+}
+
+.reference-level-pill {
+  font-size: 9.5px;
+}
+
+.reference-xp-row b,
+.reference-xp-note {
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+.reference-mission-row {
+  min-height: 58px;
+  padding: 10px;
+}
+
+.reference-mission-row strong {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.reference-mission-row small {
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.reference-mission-row b {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.reference-member-banner strong {
+  font-size: 12px;
+}
+
+.reference-member-banner small {
+  font-size: 9.5px;
+  line-height: 1.5;
+}
+
+.reference-member-banner a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+}
+
+.reference-magazine-summary small {
+  font-size: 9px;
+}
+
+.reference-magazine-summary strong {
+  font-size: 18px;
+}
+
+.reference-recent-list button {
+  min-height: 52px;
+  padding: 10px;
+}
+
+.reference-recent-list strong {
+  font-size: 11px;
+}
+
+.reference-recent-list small {
+  font-size: 9px;
+}
+
+.reference-empty-inline strong {
+  font-size: 10.5px;
+}
+
+.reference-empty-inline a,
+.reference-help-links a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+}
+
+.reference-quick-step {
+  min-height: 118px;
+  padding: 12px 8px;
+}
+
+.reference-quick-step strong {
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.reference-quick-step small {
+  font-size: 8.5px;
+  line-height: 1.45;
+}
+
+.reference-rank-summary strong {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.reference-rank-summary a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+}
+
+.reference-ai-note {
+  font-size: 9px;
+}
+
+.reference-feature-links strong {
+  font-size: 10.5px;
+}
+
+.reference-feature-links small {
+  font-size: 8.5px;
+  line-height: 1.45;
+}
+
+.reference-ranking-page .reference-status-card,
+.reference-profile-page .reference-status-card {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.reference-ranking-page .reference-rank-box {
+  min-width: 88px;
+}
+
+.reference-ranking-page .reference-rank-box small,
+.reference-ranking-page .reference-rank-box em {
+  font-size: 9px;
+}
+
+.reference-ranking-page .reference-rank-box strong {
+  font-size: 19px;
+}
+
+@media (max-width: 720px) {
+  .reference-home-main,
+  .reference-ranking-page,
+  .reference-profile-page {
+    padding-left: 11px;
+    padding-right: 11px;
+  }
+
+  .reference-ranking-page .reference-status-card,
+  .reference-profile-page .reference-status-card {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .reference-ranking-page .reference-rank-box {
+    grid-column: auto;
+    min-width: 82px;
+    justify-self: stretch;
+    display: block;
+    text-align: center;
+  }
+
+  .reference-home .reference-creator-card {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .reference-home .reference-streak {
+    grid-column: auto;
+    min-width: 82px;
+    justify-self: stretch;
+    display: grid;
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+}
+
+@media (max-width: 430px) {
+  .reference-home-heading {
+    margin-bottom: 11px;
+  }
+
+  .reference-home-heading h1 {
+    font-size: 20px;
+  }
+
+  .reference-home-section {
+    margin-top: 12px;
+    padding: 13px;
+  }
+
+  .reference-home .reference-avatar,
+  .reference-ranking-page .reference-avatar,
+  .reference-profile-page .reference-avatar {
+    width: 54px;
+    height: 54px;
+  }
+
+  .reference-home .reference-creator-card,
+  .reference-ranking-page .reference-status-card,
+  .reference-profile-page .reference-status-card {
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .reference-home .reference-streak {
+    min-width: 72px;
+    padding: 8px 6px;
+  }
+
+  .reference-home .reference-streak strong {
+    font-size: 10px;
+  }
+
+  .reference-home .reference-streak small {
+    font-size: 8px;
+  }
+
+  .reference-ranking-page .reference-rank-box {
+    min-width: 76px;
+    padding: 8px 6px;
+  }
+
+  .reference-ranking-page .reference-rank-box strong {
+    font-size: 17px;
+  }
+
+  .reference-quick-step {
+    min-height: 112px;
+    padding: 10px 6px;
+  }
+
+  .reference-quick-step strong {
+    font-size: 10px;
+  }
+
+  .reference-quick-step small {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .reference-home .reference-creator-card,
+  .reference-ranking-page .reference-status-card,
+  .reference-profile-page .reference-status-card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .reference-home .reference-streak,
+  .reference-ranking-page .reference-rank-box {
+    grid-column: 1 / -1;
+  }
+}
