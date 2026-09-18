@@ -1,4 +1,5 @@
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
+import { buildUserPromptContext, getRuntimeWritingProfile } from "@/lib/user-personalization";
 
 export type AdminProductFacts = {
   productName: string;
@@ -92,6 +93,7 @@ export function buildAdminArticlePromotionPrompt(
     audience: input.audience || facts.targetAudience,
     purpose: input.purpose,
   }).promptBlock;
+  const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
   return `あなたは日本語のプロダクトマーケティング編集者です。
 AI Article Studioを紹介・販売するための完成記事を作成してください。
 
@@ -104,7 +106,7 @@ ${FACT_SAFETY}
 特に紹介したい内容: ${input.focus || "製品全体"}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
 
-${knowledge}
+${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
 【確認済み製品情報】
 ${factsBlock(facts)}
@@ -134,6 +136,7 @@ export function buildAdminSocialPromotionPrompt(
     audience: `${input.audience || facts.targetAudience || "要確認"} / SNS: ${input.platform}`,
     purpose: input.purpose,
   }).promptBlock;
+  const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
 
   return `あなたはSNSプロモーション担当者です。
 AI Article Studioを紹介するSNS販促素材を作成してください。
@@ -149,7 +152,7 @@ CTA: ${input.cta || facts.salesUrl || "要確認"}
 作成数: ${Math.max(1, Math.min(10, input.variants))}案
 媒体ルール: ${platformRule[input.platform]}
 
-${knowledge}
+${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
 【確認済み製品情報】
 ${factsBlock(facts)}
@@ -171,6 +174,7 @@ export function buildAdminCampaignPrompt(
     audience: input.audience || facts.targetAudience,
     purpose: input.goal,
   }).promptBlock;
+  const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
   return `あなたはAI Article Studioの販売キャンペーン設計担当者です。
 単発投稿ではなく、記事とSNSを連動させた販売・紹介キャンペーンを設計してください。
 
@@ -184,7 +188,7 @@ ${FACT_SAFETY}
 販売条件・オファー: ${input.offer || facts.priceText || "要確認"}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
 
-${knowledge}
+${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
 【確認済み製品情報】
 ${factsBlock(facts)}

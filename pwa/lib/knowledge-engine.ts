@@ -13,6 +13,10 @@ export type KnowledgeRule = {
   tasks?: KnowledgeTask[];
   priority: number;
   source: "seed" | "cloud";
+  catalogVersion?: number;
+  sourceUrls?: string[];
+  sourceSummary?: string;
+  sourceCheckedAt?: string | null;
 };
 
 export type KnowledgeCompileInput = {
