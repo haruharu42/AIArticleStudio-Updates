@@ -610,3 +610,563 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+/* Reference-image ranking and profile surfaces. */
+.referenceRankingPanel {
+  margin-top: 14px;
+  border: 1px solid #dce7f3;
+  background: #fff;
+  box-shadow: 0 12px 34px rgb(30 78 145 / 8%);
+}
+
+.referenceRankTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 1px solid #dce6f2;
+  border-radius: 11px;
+  background: #f3f7fb;
+}
+
+.referenceRankTabs button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 0;
+  border-right: 1px solid #dce6f2;
+  background: transparent;
+  color: #405979;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.referenceRankTabs button:last-child {
+  border-right: 0;
+}
+
+.referenceRankTabs button > span {
+  font-size: 17px;
+}
+
+.referenceRankTabActive {
+  background: linear-gradient(135deg, #1a83ff, #176cf2) !important;
+  color: #fff !important;
+}
+
+.referenceRankGuide {
+  margin: 8px 0 12px;
+  color: #7b8ea8;
+  font-size: 9px;
+  text-align: center;
+}
+
+.referenceRankList {
+  display: grid;
+  gap: 7px;
+}
+
+.referenceRankRow {
+  display: grid;
+  grid-template-columns: 38px 42px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 58px;
+  border: 1px solid #e0e8f2;
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.referenceRankPosition {
+  display: grid;
+  justify-items: center;
+  color: #1d3557;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.referenceRankPosition b {
+  color: #f4b718;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.referenceRankMetric {
+  min-width: 86px;
+  text-align: right;
+}
+
+.referenceRankMetric small {
+  display: block;
+  color: #7d8da5;
+  font-size: 7px;
+}
+
+.referenceRankMetric strong {
+  display: block;
+  margin-top: 2px;
+  color: #142c4e;
+  font-size: 13px;
+}
+
+.rankGold {
+  border-color: #f6d98a;
+  background: linear-gradient(90deg, #fff9e9, #fff);
+}
+
+.rankSilver {
+  border-color: #d8e1ec;
+  background: linear-gradient(90deg, #f5f8fc, #fff);
+}
+
+.rankSilver .referenceRankPosition b {
+  color: #9eb0c5;
+}
+
+.rankBronze {
+  border-color: #eccaa7;
+  background: linear-gradient(90deg, #fff5ec, #fff);
+}
+
+.rankBronze .referenceRankPosition b {
+  color: #c8854e;
+}
+
+.referenceActivityCard,
+.referenceInfoCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  margin-top: 13px;
+  border: 1px solid #dce7f3;
+  border-radius: 15px;
+  background: #fff;
+  padding: 13px;
+  box-shadow: 0 10px 28px rgb(30 78 145 / 6%);
+}
+
+.referenceActivityCard {
+  background: linear-gradient(135deg, #eef8ff, #f8fbff);
+}
+
+.referenceActivityCard > span,
+.referenceInfoCard > span {
+  font-size: 25px;
+}
+
+.referenceActivityCard strong,
+.referenceInfoCard strong {
+  display: block;
+  color: #234165;
+  font-size: 11px;
+}
+
+.referenceActivityCard small,
+.referenceInfoCard small {
+  display: block;
+  margin-top: 3px;
+  color: #7890ae;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.referenceActivityCard > div:last-child {
+  border-radius: 11px;
+  background: #fff;
+  padding: 8px 11px;
+  text-align: center;
+}
+
+.referenceActivityCard > div:last-child strong {
+  color: #125fca;
+  font-size: 16px;
+}
+
+.referenceInfoCard a {
+  color: #1473df;
+  font-size: 9px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.referenceProfileForm {
+  display: grid;
+  gap: 13px;
+}
+
+.referenceMemberBox {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 110px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #eef7ff, #f3f7ff);
+  color: #174d94;
+  padding: 9px;
+  text-align: center;
+}
+
+.referenceMemberBox > span {
+  color: #1b79f0;
+  font-size: 22px;
+}
+
+.referenceMemberBox strong {
+  font-size: 10px;
+}
+
+.referenceMemberBox small {
+  color: #7189a8;
+  font-size: 7px;
+}
+
+.referenceProfileGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.referenceProfileTile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px 10px;
+  align-items: start;
+  border: 1px solid #dce7f3;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+  box-shadow: 0 8px 26px rgb(30 78 145 / 5%);
+}
+
+.referenceProfileTileWide {
+  grid-column: 1 / -1;
+}
+
+.referenceTileIcon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  background: #edf6ff;
+  color: #1478f5;
+  font-size: 17px;
+}
+
+.referenceProfileTile > span:nth-child(2) strong,
+.referenceProfileTile > span:nth-child(2) small {
+  display: block;
+}
+
+.referenceProfileTile > span:nth-child(2) strong {
+  color: #1b355a;
+  font-size: 11px;
+}
+
+.referenceProfileTile > span:nth-child(2) small {
+  margin-top: 2px;
+  color: #8293aa;
+  font-size: 7px;
+}
+
+.referenceProfileTile input,
+.referenceProfileTile select,
+.referenceProfileTile textarea {
+  grid-column: 1 / -1;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d4dfec;
+  border-radius: 9px;
+  background: #fbfdff;
+  color: #173052;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 11px;
+  outline: none;
+}
+
+.referenceProfileTile textarea {
+  min-height: 68px;
+  resize: vertical;
+}
+
+.referenceProfileTile input:focus,
+.referenceProfileTile select:focus,
+.referenceProfileTile textarea:focus {
+  border-color: #67a8ff;
+  box-shadow: 0 0 0 3px rgb(20 120 245 / 8%);
+}
+
+.referenceProfileSection {
+  border: 1px solid #dce7f3;
+  border-radius: 16px;
+  background: #fff;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgb(30 78 145 / 6%);
+}
+
+.referenceSectionTitle {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.referenceSectionTitle > span {
+  color: #1478f5;
+  font-size: 20px;
+}
+
+.referenceSectionTitle h2 {
+  margin: 0;
+  color: #18365d;
+  font-size: 13px;
+}
+
+.referenceSectionTitle p {
+  margin: 2px 0 0;
+  color: #8091aa;
+  font-size: 8px;
+}
+
+.referenceToggleGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.referenceSwitchCard {
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid #e0e8f2;
+  border-radius: 11px;
+  background: #fbfdff;
+  padding: 10px;
+}
+
+.referenceSwitchCard strong,
+.referenceSwitchCard small {
+  display: block;
+}
+
+.referenceSwitchCard strong {
+  color: #284464;
+  font-size: 9px;
+}
+
+.referenceSwitchCard small {
+  margin-top: 2px;
+  color: #8496ad;
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+.referenceSwitchCard input {
+  width: 34px;
+  height: 20px;
+  flex: 0 0 auto;
+  accent-color: #1478f5;
+}
+
+.referenceAchievementGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.referenceAchievement {
+  min-height: 118px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+  border: 1px solid #e1e8f2;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 10px;
+  opacity: .58;
+  text-align: center;
+}
+
+.referenceAchievementDone {
+  opacity: 1;
+  background: linear-gradient(180deg, #f8fbff, #eef7ff);
+}
+
+.referenceAchievement > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 14px;
+  background: #eaf4ff;
+  color: #1577ef;
+  font-size: 24px;
+}
+
+.referenceAchievementDone:nth-child(2) > span {
+  background: #fff1e8;
+  color: #f17436;
+}
+
+.referenceAchievementDone:nth-child(3) > span {
+  background: #f4edff;
+  color: #8b55e8;
+}
+
+.referenceAchievement strong {
+  color: #234263;
+  font-size: 9px;
+}
+
+.referenceAchievement small {
+  color: #8090a5;
+  font-size: 7px;
+  line-height: 1.4;
+}
+
+.referenceDataGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.referenceDataGrid > div {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  border: 1px solid #e0e8f2;
+  border-radius: 11px;
+  background: #f8fbff;
+  padding: 10px 6px;
+  text-align: center;
+}
+
+.referenceDataGrid > div > span {
+  color: #1478f5;
+  font-size: 18px;
+}
+
+.referenceDataGrid small {
+  color: #7186a3;
+  font-size: 7px;
+}
+
+.referenceDataGrid strong {
+  color: #125fc8;
+  font-size: 18px;
+}
+
+.referenceDataGrid em {
+  margin-left: 2px;
+  color: #637b9a;
+  font-size: 7px;
+  font-style: normal;
+}
+
+.referenceSaveButton {
+  width: 100%;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #1381ff, #0b68e9);
+  color: #fff;
+  padding: 13px 16px;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgb(20 119 243 / 20%);
+}
+
+.referenceSaveButton:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+@media (max-width: 640px) {
+  .referenceRankTabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .referenceRankTabs button {
+    padding: 8px 4px;
+    font-size: 9px;
+  }
+
+  .referenceRankRow {
+    grid-template-columns: 30px 38px minmax(0, 1fr);
+  }
+
+  .referenceRankMetric {
+    grid-column: 3;
+    text-align: left;
+  }
+
+  .referenceProfileGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .referenceProfileTileWide {
+    grid-column: 1 / -1;
+  }
+
+  .referenceToggleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .referenceAchievementGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .referenceDataGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .referenceMemberBox {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+    justify-items: start;
+    text-align: left;
+  }
+}
+
+@media (max-width: 420px) {
+  .referenceProfileGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .referenceProfileTileWide {
+    grid-column: auto;
+  }
+
+  .referenceAchievement {
+    min-height: 105px;
+    padding: 7px;
+  }
+
+  .referenceAchievement > span {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+  }
+
+  .referenceAchievement strong {
+    font-size: 8px;
+  }
+
+  .referenceAchievement small {
+    font-size: 6.5px;
+  }
+}
