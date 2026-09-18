@@ -105,6 +105,7 @@ test("tools hub and beginner-first root expose all functional routes with SNS in
   const tools = await read("components/phase-tools-page.tsx");
   const toolsRoute = await read("app/tools/page.tsx");
   const shell = await read("components/phase18-beginner-home.tsx");
+  const referenceShell = await read("components/aas-reference-shell.tsx");
   const rootPage = await read("app/page.tsx");
   const layout = await read("app/layout.tsx");
   const css = await read("app/phase12-17.css");
@@ -125,11 +126,11 @@ test("tools hub and beginner-first root expose all functional routes with SNS in
   assert.match(shell, /href="\/tools"/);
   assert.match(shell, /href="\/images"/);
   assert.match(shell, /href="\/sns"/);
-  assert.match(shell, />作成<\/button>/);
-  assert.match(shell, />ライブラリ<\/button>/);
-  assert.match(shell, />SNS<\/button>/);
-  assert.match(shell, />設定<\/button>/);
-  assert.doesNotMatch(shell, />画像<\/button>/);
+  for (const label of ["ホーム", "作成", "ライブラリ", "ランキング", "プロフィール"]) {
+    assert.match(referenceShell, new RegExp(label));
+  }
+  assert.match(referenceShell, /href="\/settings"/);
+  assert.doesNotMatch(referenceShell, />SNS<\/button>/);
   assert.match(layout, /phase12-17\.css/);
   assert.match(layout, /phase18-beginner\.css/);
   assert.match(layout, /phase19-dashboard\.css/);
