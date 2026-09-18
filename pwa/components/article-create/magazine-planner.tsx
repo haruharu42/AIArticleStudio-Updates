@@ -111,10 +111,10 @@ export function MagazinePlannerPanel({
           <span className="magazine-spark" aria-hidden="true">✦</span>
           <div>
             <div className="magazine-title-row">
-              <h3 id="magazine-planner-title">マガジン設定</h3>
+              <h3 id="magazine-planner-title">マガジンタイトル一括生成</h3>
               <span className="magazine-new-badge">NEW</span>
             </div>
-            <p>条件をプルダウンで選ぶと、マガジン名と記事タイトルの構成案をまとめて作れます。</p>
+            <p>テーマや条件から、マガジン名と記事タイトルの構成案を3案まとめて作成します。</p>
           </div>
         </div>
         <span className="magazine-local-badge">回数消費なし</span>
