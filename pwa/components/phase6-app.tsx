@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { signOutCurrentBrowser } from "@/lib/auth-session";
 import {
   authMessage,
   loadAccessState,
@@ -545,7 +546,7 @@ export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Prom
 
   const logout = useCallback(async () => {
     if (!client) return;
-    await client.auth.signOut({ scope: "local" });
+    await signOutCurrentBrowser(client);
     setAuthMode("login");
     setScreen({ kind: "auth" });
   }, [client]);
