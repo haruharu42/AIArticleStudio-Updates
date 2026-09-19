@@ -26,7 +26,7 @@ export type MobileNavItem = {
 const FALLBACK_MOBILE_NAV_ITEM: MobileNavItem = { key: "create", label: "作成", icon: "✎", href: "/create" };
 
 export const MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
-  FALLBACK_MOBILE_NAV_ITEM,
+  FALLBACK_MOBILE_NAV_ITEM,\n  { key: "noteOps", label: "note運営", icon: "▣", href: "/note-operations" },
   { key: "images", label: "画像", icon: "▧", href: "/images" },
   { key: "tools", label: "機能", icon: "▦", href: "/tools" },
   { key: "sns", label: "SNS", icon: "↗", href: "/sns" },
