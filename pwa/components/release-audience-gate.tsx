@@ -9,6 +9,7 @@ import {
   loadMyAppReleaseState,
   type AppReleaseState,
 } from "@/lib/app-release";
+import { signOutCurrentBrowser } from "@/lib/auth-session";
 import { getSupabaseClient } from "@/lib/supabase";
 
 const ALWAYS_PUBLIC_PREVIEW_PATHS = ["/auth/callback", "/terms", "/privacy", "/ai-terms"];
@@ -29,6 +30,8 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const audience = appDeploymentAudience();
   const [gate, setGate] = useState<GateState>(() => audience === "public" ? { kind: "public" } : { kind: "loading" });
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
 
   useEffect(() => {
     if (audience === "public") return;
@@ -65,6 +68,19 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
     };
   }, [audience]);
 
+  const signOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    setSignOutError("");
+    try {
+      await signOutCurrentBrowser(getSupabaseClient());
+      window.location.replace("/");
+    } catch {
+      setSignOutError("ログアウトできませんでした。通信状態を確認してもう一度お試しください。");
+      setSigningOut(false);
+    }
+  };
+
   if (audience === "public" || gate.kind === "public" || alwaysPublicPreviewPath(pathname) || gate.kind === "allowed") return <>{children}</>;
 
   if (gate.kind === "signed_out" && pathname === "/") return <>{children}</>;
@@ -83,10 +99,16 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
         <p className="eyebrow">PRE-RELEASE ACCESS</p>
         <h1>アップデート確認専用</h1>
         <p className={gate.kind === "error" ? "route-notice error" : "route-notice"}>{message}</p>
+        {signOutError && <p className="route-notice error" role="alert">{signOutError}</p>}
         {gate.kind === "signed_out" ? (
           <Link className="primary-action" href="/">ログイン画面へ</Link>
         ) : (
-          <Link className="route-back" href="/">← ホームへ戻る</Link>
+          <div className="status-actions">
+            <button className="primary-action" type="button" disabled={signingOut} onClick={() => void signOut()}>
+              {signingOut ? "ログアウト中…" : "ログアウトして別のアカウントでログイン"}
+            </button>
+            <Link className="route-back" href="/">← ホームへ戻る</Link>
+          </div>
         )}
       </section>
     </main>
