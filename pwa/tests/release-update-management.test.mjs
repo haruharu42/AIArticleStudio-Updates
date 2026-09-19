@@ -172,9 +172,15 @@ test("account switching stays available on prerelease denial and clears cached r
 
   assert.match(gate, /ログアウトして別のアカウントでログイン/);
   assert.match(gate, /signOutCurrentBrowser/);
+  assert.match(gate, /auth\.getSession\(\)/);
+  assert.match(gate, /sessionError \|\| !session/);
+  assert.match(gate, /clearEffectiveRelease\(\)/);
   assert.match(gate, /window\.location\.replace\("\/"\)/);
 
   assert.match(session, /auth\.signOut\(\{ scope: "local" \}\)/);
+  assert.match(session, /finally/);
+  assert.match(session, /AUTH_STORAGE_PREFIX = "aas-pwa-auth"/);
+  assert.match(session, /localStorage\.removeItem\(key\)/);
   assert.match(session, /clearEffectiveRelease\(\)/);
   assert.match(session, /aas-pwa-google-consent/);
 
@@ -184,6 +190,8 @@ test("account switching stays available on prerelease denial and clears cached r
   assert.match(release, /aasReleaseBuild/);
 
   assert.match(settings, /signOutCurrentBrowser/);
+  assert.match(settings, /window\.location\.replace\("\/"\)/);
   assert.match(settings, />ログアウト</);
   assert.match(access, /signOutCurrentBrowser/);
+  assert.match(access, /window\.location\.replace\("\/"\)/);
 });
