@@ -6,8 +6,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   adminCreateAppRelease,
   adminListAppReleases,
+  adminPromoteAppReleaseToTesters,
   adminPublishAppRelease,
   adminRollbackAppRelease,
+  adminSetAppReleaseTester,
   type AdminAppRelease,
   type AdminReleaseSnapshot,
 } from "@/lib/app-release";
@@ -46,6 +48,7 @@ export function AdminReleasePage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [testerAasId, setTesterAasId] = useState("AAS-000002");
 
   const reload = async () => {
     const next = await adminListAppReleases(getSupabaseClient());
@@ -103,9 +106,43 @@ export function AdminReleasePage() {
     }
   };
 
+  const promoteToTesters = async (release: AdminAppRelease) => {
+    if (busy) return;
+    if (!window.confirm("v" + release.version + " を指定した一般ユーザーテスターへ反映しますか？\n他の一般ユーザーにはまだ公開されません。")) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const next = await adminPromoteAppReleaseToTesters(getSupabaseClient(), release.id);
+      setSnapshot(next);
+      setMessage("第2段階へ進めました。指定テスターだけが候補版を確認できます。");
+    } catch {
+      setError("テスター確認段階へ進められませんでした。テスター設定と候補版の状態を確認してください。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setTester = async (aasUserId: string, enabled: boolean) => {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const next = await adminSetAppReleaseTester(getSupabaseClient(), aasUserId, enabled);
+      setSnapshot(next);
+      if (enabled) setTesterAasId("");
+      setMessage(enabled ? aasUserId + " を一般ユーザーテスターに設定しました。" : aasUserId + " のテスター指定を解除しました。");
+    } catch {
+      setError("テスター設定を更新できませんでした。activeな一般ユーザーのAAS IDを確認してください。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const publish = async (release: AdminAppRelease) => {
     if (busy) return;
-    if (!window.confirm("v" + release.version + " を一般ユーザー向けアップデートとして公開しますか？\nユーザー側には更新通知が表示され、更新ボタンを押した人から反映されます。")) return;
+    if (!window.confirm("第1段階・第2段階の確認済みとして、v" + release.version + " を全一般ユーザー向けに公開承認しますか？\nこの操作後に一般ユーザー向け安定版へ同じexact SHAをデプロイする運用です。")) return;
 
     setBusy(true);
     setError("");
@@ -145,7 +182,7 @@ export function AdminReleasePage() {
         <div>
           <p className="eyebrow">RELEASE CONTROL</p>
           <h1>アップデート管理</h1>
-          <p>変更はまず管理者テスト版として確認し、問題がなければユーザーへ更新通知を公開します。</p>
+          <p>①管理者確認 → ②指定した一般ユーザーテスター確認 → ③全一般ユーザー公開の3段階で進めます。</p>
         </div>
         <nav>
           <Link href="/admin">管理ダッシュボード</Link>
@@ -163,9 +200,9 @@ export function AdminReleasePage() {
           <small>{current?.title ?? "未設定"}</small>
         </article>
         <article>
-          <span>管理者テスト版</span>
+          <span>候補版の確認段階</span>
           <strong>{candidate ? "v" + candidate.version : "なし"}</strong>
-          <small>{candidate ? candidate.title : "候補版を登録すると管理者だけで確認できます。"}</small>
+          <small>{candidate ? (snapshot?.channel.candidate_stage === "tester" ? "第2段階：指定テスター確認中" : "第1段階：管理者確認中") : "候補版を登録すると管理者だけで確認できます。"}</small>
         </article>
         <article>
           <span>更新方式</span>
@@ -182,7 +219,7 @@ export function AdminReleasePage() {
           </div>
         </div>
         <p className="trial-admin-note">
-          登録した時点では一般ユーザーへは反映されません。管理者アカウントでは候補版が有効になり、確認後に「アップデートを公開」を押します。
+          登録した時点では一般ユーザーへは反映されません。まず管理者だけで確認し、問題がなければ第2段階として指定テスターへ反映します。第2段階を通過するまで全体公開はDB側でも禁止します。
         </p>
 
         <div className="release-admin-form">
@@ -230,11 +267,41 @@ export function AdminReleasePage() {
         </button>
       </section>
 
+      <section className="release-admin-panel">
+        <div className="admin-panel-heading">
+          <div>
+            <p className="eyebrow">TEST USERS</p>
+            <h2>一般ユーザーテスター</h2>
+          </div>
+        </div>
+        <p className="trial-admin-note">管理者権限へ変更せず、一般ユーザーのまま候補版を確認するアカウントです。現在の既定テスターは AAS-000002 です。</p>
+        <div className="release-admin-form">
+          <label className="editor-field">
+            <span>AASユーザーID</span>
+            <input value={testerAasId} onChange={(event) => setTesterAasId(event.target.value)} placeholder="AAS-000002" />
+          </label>
+        </div>
+        <button type="button" disabled={busy || !testerAasId.trim()} onClick={() => void setTester(testerAasId.trim(), true)}>テスターに追加</button>
+        <div className="release-history-list">
+          {(snapshot?.testers ?? []).filter((tester) => tester.enabled).map((tester) => (
+            <article key={tester.aas_user_id}>
+              <div className="release-history-version"><strong>{tester.aas_user_id}</strong><span>一般ユーザー</span></div>
+              <div><strong>候補版テスター</strong><small>指定更新: {formatDate(tester.updated_at)}</small></div>
+              <div className="release-history-actions"><button type="button" disabled={busy} onClick={() => void setTester(tester.aas_user_id, false)}>指定解除</button></div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       {candidate && (
         <section className="release-admin-panel candidate">
           <div>
-            <p className="eyebrow">ADMIN PREVIEW</p>
-            <h2>v{candidate.version} を管理者確認中</h2>
+            <p className="eyebrow">{snapshot?.channel.candidate_stage === "tester" ? "USER TEST PREVIEW" : "ADMIN PREVIEW"}</p>
+            <h2>
+              {snapshot?.channel.candidate_stage === "tester"
+                ? `v${candidate.version} を指定テスター確認中`
+                : `v${candidate.version} を管理者確認中`}
+            </h2>
             <p>{candidate.title}</p>
             {candidate.notes && <pre>{candidate.notes}</pre>}
           </div>
@@ -242,9 +309,15 @@ export function AdminReleasePage() {
             <span className={candidate.update_kind === "required" ? "required" : ""}>
               {candidate.update_kind === "required" ? "必須アップデート" : "任意アップデート"}
             </span>
-            <button className="primary-action" type="button" disabled={busy} onClick={() => void publish(candidate)}>
-              アップデートを公開
-            </button>
+            {snapshot?.channel.candidate_stage === "tester" ? (
+              <button className="primary-action" type="button" disabled={busy} onClick={() => void publish(candidate)}>
+                第3段階：全一般ユーザーへ公開承認
+              </button>
+            ) : (
+              <button className="primary-action" type="button" disabled={busy || !(snapshot?.testers ?? []).some((tester) => tester.enabled)} onClick={() => void promoteToTesters(candidate)}>
+                第2段階：指定テスターへ反映
+              </button>
+            )}
           </div>
         </section>
       )}
