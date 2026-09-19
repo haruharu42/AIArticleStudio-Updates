@@ -104,9 +104,12 @@ test("article presets save reusable note settings with self-only RLS and no arti
   assert.match(api, /deleteArticlePreset/);
   assert.match(api, /最大30件/);
 
-  for (const label of ["いつものnote設定", "現在の設定を保存", "既定にする", "あなた向け最適化がON"]) {
+  for (const label of ["いつものnote設定", "プリセットを選択", "選択中のプリセットを削除", "現在の設定を保存", "既定にする", "あなた向け最適化がON"]) {
     assert.match(panel, new RegExp(label));
   }
+  assert.match(panel, /<select/);
+  assert.match(panel, /article-preset-picker-actions/);
+  assert.match(panel, /article-preset-delete/);
   assert.match(page, /ArticlePresetPanel/);
   assert.match(page, /activePresetId/);
   assert.match(page, /applyArticlePreset/);
