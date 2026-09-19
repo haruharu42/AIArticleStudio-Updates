@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
@@ -30,7 +29,6 @@ import {
 type SettingsState = AccessState | { kind: "loading" } | { kind: "unavailable" };
 
 export function PwaSettingsPage() {
-  const router = useRouter();
   const [state, setState] = useState<SettingsState>({ kind: "loading" });
   const [alwaysShowNav, setAlwaysShowNav] = useState(true);
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
@@ -141,11 +139,9 @@ export function PwaSettingsPage() {
 
   const logout = async () => {
     try {
-      const client = getSupabaseClient();
-      await signOutCurrentBrowser(client);
+      await signOutCurrentBrowser(getSupabaseClient());
     } finally {
-      router.push("/");
-      router.refresh();
+      window.location.replace("/");
     }
   };
 
