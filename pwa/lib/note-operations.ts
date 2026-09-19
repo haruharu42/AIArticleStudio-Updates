@@ -751,7 +751,7 @@ export function buildNoteScheduleResearchPrompt(
   aiProvider: AiProvider,
   targetMonth: string,
   currentDate = todayJstDateKey(),
-  previousPerformance: NoteSchedulePerformanceSnapshot | null = null,
+  previousPerformance?: NoteSchedulePerformanceSnapshot | null,
 ): string {
   const { start, end } = noteMonthBounds(targetMonth);
   const selected = noteProfileSelectionLabels(profile);
@@ -762,7 +762,17 @@ export function buildNoteScheduleResearchPrompt(
   const currentMonth = currentDate.slice(0, 7);
   const firstAllowedDate = targetMonth === currentMonth ? currentDate : start;
   const previousMonth = previousJstMonth(targetMonth);
-  const performanceContext = formatSchedulePerformanceForPrompt(previousPerformance, previousMonth);
+  const performanceSection = previousPerformance === undefined
+    ? ""
+    : `
+【前月のAAS運用実績（構造化データのみ）】
+${formatSchedulePerformanceForPrompt(previousPerformance, previousMonth)}
+- この実績は「回数を増やす/減らす」の機械的な命令ではない。完了しやすかった曜日・時刻・実際に継続できた頻度を参考に、翌月の負荷を調整する。
+- 前月の完了率が低い場合は、未完了分を翌月へ単純に上乗せせず、まず継続可能な頻度へ落とすことを優先する。
+- 完了率が高くても自動的に投稿数を増やさず、最新リサーチと品質維持の余力を合わせて判断する。
+- AASから渡していない本文、PV、売上、購入率、フォロワー増減、読者属性、成功要因を推測して実績として扱わない。
+- 記事タイトルや本文そのものは前月実績として渡していない。ここでは予定種別・状態・曜日・時刻の集計だけを使う。
+`;
 
   return `あなたは日本のnote運営に詳しい編集者・コンテンツ戦略担当です。
 目的は、ユーザーに投稿回数を手入力させるのではなく、${targetMonth}の1か月について、最新情報を調査したうえで「無理なく継続でき、無料noteと有料noteの役割が分かれた運用スケジュール」を設計し、AASが読み込めるJSONで返すことです。
@@ -798,15 +808,7 @@ export function buildNoteScheduleResearchPrompt(
 - アカウント作成済み: ${profile.accountReady ? "はい" : "いいえ"}
 - プロフィール準備済み: ${profile.profileReady ? "はい" : "いいえ"}
 - ユーザーが事実として入力した経験・資格・背景: ${factualBackground}
-
-【前月のAAS運用実績（構造化データのみ）】
-${performanceContext}
-- この実績は「回数を増やす/減らす」の機械的な命令ではない。完了しやすかった曜日・時刻・実際に継続できた頻度を参考に、翌月の負荷を調整する。
-- 前月の完了率が低い場合は、未完了分を翌月へ単純に上乗せせず、まず継続可能な頻度へ落とすことを優先する。
-- 完了率が高くても自動的に投稿数を増やさず、最新リサーチと品質維持の余力を合わせて判断する。
-- AASから渡していない本文、PV、売上、購入率、フォロワー増減、読者属性、成功要因を推測して実績として扱わない。
-- 記事タイトルや本文そのものは前月実績として渡していない。ここでは予定種別・状態・曜日・時刻の集計だけを使う。
-
+${performanceSection}
 【スケジュール設計】
 - あなた自身が、平均の週投稿数・有料noteの週平均・1日の最大投稿数・無料/有料の本数を決定する。
 - free_note / paid_note には、実際に記事作成へ進める具体的なテーマとタイトルを入れる。
