@@ -304,7 +304,7 @@ export function NoteOperationsPage() {
               <article><b>3</b><div><strong>プロフィール文と自己紹介記事を準備</strong><p>noteでは投稿した記事をプロフィールとして表示できる仕組みがあります。AASでは入力した事実だけから下書きを作ります。</p><a href={NOTE_PROFILE_OFFICIAL} target="_blank" rel="noreferrer">note公式のプロフィール案内 ↗</a></div></article>
               <article><b>4</b><div><strong>無料noteで読者の入口を作る</strong><p>AASおすすめとして、最初は無料記事を軸に投稿習慣とテーマの反応を確認します。これは成果を保証するものではありません。</p></div></article>
               <article><b>5</b><div><strong>必要に応じて有料noteを組み合わせる</strong><p>有料記事は価格と無料で読める範囲をnote側で設定します。</p><a href={NOTE_PAID_OFFICIAL} target="_blank" rel="noreferrer">note公式の有料記事案内 ↗</a></div></article>
-              <article><b>6</b><div><strong>AASカレンダーで継続する</strong><p>投稿日時・無料/有料・週次振り返りをAASに保存します。note側の予約投稿を使う場合は対象プランを確認してください。</p><a href={NOTE_RESERVATION_OFFICIAL} target="_blank" rel="noreferrer">note公式の予約投稿案内 ↗</a></div></article>
+              <article><b>6</b><div><strong>AASカレンダーで継続する</strong><p>投稿日時・無料/有料・週次振り返りをAASに保存します。AASカレンダー自体はプランを問わず使えます。note側の予約投稿はnoteプレミアム / note pro向け機能として案内されています。</p><a href={NOTE_RESERVATION_OFFICIAL} target="_blank" rel="noreferrer">note公式の予約投稿案内 ↗</a></div></article>
             </div>
             <div className="note-ready-checks">
               <label><input type="checkbox" checked={profile.accountReady} onChange={(event) => setProfile({ ...profile, accountReady: event.target.checked })} /> noteアカウントの作成が完了した</label>
