@@ -4,9 +4,16 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { launchAiApp } from "@/lib/ai-app-links";
 import {
+  NOTE_ACCOUNT_GENRES,
+  NOTE_ACCOUNT_STYLES,
+  NOTE_AUDIENCE_PRESETS,
+  NOTE_MONETIZATION_STYLES,
   NOTE_OPERATION_GOALS,
   NOTE_SCHEDULE_TYPE_LABELS,
+  NOTE_TONE_PRESETS,
+  buildNoteAccountResearchPrompt,
   buildNoteProfileDraft,
   defaultNoteOperationProfile,
   exportNoteOperationsJson,
@@ -23,6 +30,13 @@ import {
   type NoteScheduleItem,
 } from "@/lib/note-operations";
 import { getSupabaseClient } from "@/lib/supabase";
+import {
+  AI_PROVIDER_LABELS,
+  loadWritingProfile,
+  saveWritingProfile,
+  type AiProvider,
+  type UserWritingProfile,
+} from "@/lib/user-personalization";
 
 type Gate =
   | { kind: "loading" }
@@ -115,15 +129,21 @@ export function NoteOperationsPage() {
   const [startDate, setStartDate] = useState(todayJstDateKey());
   const [calendarMonth, setCalendarMonth] = useState(todayJstDateKey().slice(0, 7));
   const [dirtySchedule, setDirtySchedule] = useState(false);
+  const [selectedAi, setSelectedAi] = useState<AiProvider>("chatgpt");
+  const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
+  const [accountPrompt, setAccountPrompt] = useState("");
 
   const reload = async (userId: string) => {
     const client = getSupabaseClient();
-    const [nextProfile, nextSchedule] = await Promise.all([
+    const [nextProfile, nextSchedule, nextWritingProfile] = await Promise.all([
       loadNoteOperationProfile(client, userId),
       listNoteSchedule(client, userId),
+      loadWritingProfile(client, userId),
     ]);
     setProfile(nextProfile);
     setSchedule(nextSchedule);
+    setWritingProfile(nextWritingProfile);
+    setSelectedAi(nextWritingProfile.preferredAi);
     setDirtySchedule(false);
   };
 
@@ -182,6 +202,32 @@ export function NoteOperationsPage() {
       setMessage("note運営設定を保存しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openAccountBuilderAi = async () => {
+    if (gate.kind !== "ready" || !profile) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await saveNoteOperationProfile(getSupabaseClient(), profile);
+      if (writingProfile && writingProfile.preferredAi !== selectedAi) {
+        const saved = await saveWritingProfile(getSupabaseClient(), { ...writingProfile, preferredAi: selectedAi });
+        setWritingProfile(saved);
+      }
+      const prompt = buildNoteAccountResearchPrompt(profile, selectedAi);
+      setAccountPrompt(prompt);
+      try {
+        await navigator.clipboard.writeText(prompt);
+        setMessage(`${AI_PROVIDER_LABELS[selectedAi]}用の最新調査プロンプトをコピーしました。AI側で貼り付けて実行してください。`);
+      } catch {
+        setMessage("クリップボードへコピーできなかったため、下のプロンプト欄からコピーしてください。");
+      }
+      launchAiApp(selectedAi);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "AI用アカウント構成プロンプトを作成できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -316,18 +362,58 @@ export function NoteOperationsPage() {
 
         {tab === "profile" && (
           <section className="note-ops-panel">
-            <div className="note-ops-section-head"><div><span>PROFILE BUILDER</span><h2>プロフィールを作る</h2></div></div>
-            <p className="note-ops-hint">実績・資格・経験は、実際に事実として書ける内容だけ入力してください。AASが架空の経歴を追加することはありません。</p>
-            <div className="note-profile-grid">
-              <label><span>表示名</span><input value={profile.noteDisplayName} maxLength={120} onChange={(event) => setProfile({ ...profile, noteDisplayName: event.target.value })} placeholder="noteで使う表示名" /></label>
-              <label><span>届けたい読者</span><input value={profile.targetReader} maxLength={600} onChange={(event) => setProfile({ ...profile, targetReader: event.target.value })} placeholder="例：AIをこれから使い始める30代の会社員" /></label>
-              <label className="full"><span>主な発信テーマ（改行またはカンマ区切り）</span><textarea value={profile.mainTopics.join("\n")} onChange={(event) => setProfile({ ...profile, mainTopics: event.target.value.split(/[\n,、]/).map((value) => value.trim()).filter(Boolean).slice(0, 12) })} placeholder={"AI副業\nChatGPT活用\n初心者向け手順"} /></label>
-              <label className="full"><span>事実として書ける経験・資格・背景（任意）</span><textarea value={profile.experienceNote} maxLength={1200} onChange={(event) => setProfile({ ...profile, experienceNote: event.target.value })} placeholder="入力した内容だけプロフィール案に使用します" /></label>
-              <label className="full"><span>プロフィール文の下書き</span><textarea value={profile.bioDraft} maxLength={1200} onChange={(event) => setProfile({ ...profile, bioDraft: event.target.value })} /></label>
+            <div className="note-ops-section-head"><div><span>PROFILE BUILDER</span><h2>初心者向け・選ぶだけプロフィール設計</h2></div></div>
+            <p className="note-ops-hint">まずプルダウンで近いものを選ぶだけで大丈夫です。「その他」を選んだ場合だけ自由入力できます。経験・資格・実績は、実際に事実として書ける内容だけ使用します。</p>
+
+            <div className="note-profile-choice-grid">
+              <label><span>① どのジャンルで運営したい？</span><select value={profile.accountGenre} onChange={(event) => setProfile({ ...profile, accountGenre: event.target.value as NoteOperationProfile["accountGenre"] })}>{NOTE_ACCOUNT_GENRES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountGenre === "other" && <input value={profile.customGenre} maxLength={120} onChange={(event) => setProfile({ ...profile, customGenre: event.target.value })} placeholder="運営したいジャンルを入力" />}</label>
+              <label><span>② どんなアカウントにしたい？</span><select value={profile.accountStyle} onChange={(event) => setProfile({ ...profile, accountStyle: event.target.value as NoteOperationProfile["accountStyle"] })}>{NOTE_ACCOUNT_STYLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountStyle === "other" && <input value={profile.customAccountStyle} maxLength={180} onChange={(event) => setProfile({ ...profile, customAccountStyle: event.target.value })} placeholder="例：失敗談も含めて一緒に学ぶアカウント" />}</label>
+              <label><span>③ 主に誰に届けたい？</span><select value={profile.audiencePreset} onChange={(event) => setProfile({ ...profile, audiencePreset: event.target.value as NoteOperationProfile["audiencePreset"] })}>{NOTE_AUDIENCE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.audiencePreset === "other" && <input value={profile.customAudience} maxLength={300} onChange={(event) => setProfile({ ...profile, customAudience: event.target.value })} placeholder="届けたい読者を入力" />}</label>
+              <label><span>④ 文章の雰囲気は？</span><select value={profile.tonePreset} onChange={(event) => setProfile({ ...profile, tonePreset: event.target.value as NoteOperationProfile["tonePreset"] })}>{NOTE_TONE_PRESETS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.tonePreset === "other" && <input value={profile.customTone} maxLength={120} onChange={(event) => setProfile({ ...profile, customTone: event.target.value })} placeholder="希望する雰囲気を入力" />}</label>
+              <label><span>⑤ 収益化はどうしたい？</span><select value={profile.monetizationStyle} onChange={(event) => setProfile({ ...profile, monetizationStyle: event.target.value as NoteOperationProfile["monetizationStyle"] })}>{NOTE_MONETIZATION_STYLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.monetizationStyle === "other" && <input value={profile.customMonetizationStyle} maxLength={180} onChange={(event) => setProfile({ ...profile, customMonetizationStyle: event.target.value })} placeholder="希望する収益化方針を入力" />}</label>
+              <label><span>⑥ 運営の目的は？</span><select value={profile.operationGoal} onChange={(event) => setProfile({ ...profile, operationGoal: event.target.value as NoteOperationProfile["operationGoal"] })}>{NOTE_OPERATION_GOALS.map((goal) => <option key={goal.value} value={goal.value}>{goal.label}</option>)}</select></label>
             </div>
-            <div className="note-profile-actions">
-              <button type="button" onClick={() => setProfile({ ...profile, bioDraft: buildNoteProfileDraft(profile) })}>入力内容からプロフィール案を作る</button>
-              <button className="primary-action" type="button" disabled={busy} onClick={() => void saveProfile()}>プロフィール案を保存</button>
+
+            <details className="note-profile-advanced">
+              <summary>必要な人だけ：自由入力で詳しく設定</summary>
+              <div className="note-profile-grid">
+                <label><span>希望する表示名（任意）</span><input value={profile.noteDisplayName} maxLength={120} onChange={(event) => setProfile({ ...profile, noteDisplayName: event.target.value })} placeholder="未定でもOK" /></label>
+                <label><span>読者の補足（任意）</span><input value={profile.targetReader} maxLength={600} onChange={(event) => setProfile({ ...profile, targetReader: event.target.value })} placeholder="例：AIをこれから使う30代の会社員" /></label>
+                <label className="full"><span>扱いたいテーマ・キーワード（任意）</span><textarea value={profile.mainTopics.join("\n")} onChange={(event) => setProfile({ ...profile, mainTopics: event.target.value.split(/[\n,、]/).map((value) => value.trim()).filter(Boolean).slice(0, 12) })} placeholder={"例：ChatGPT活用\nAI副業\n初心者向け手順"} /></label>
+                <label className="full"><span>事実として書ける経験・資格・背景（任意）</span><textarea value={profile.experienceNote} maxLength={1200} onChange={(event) => setProfile({ ...profile, experienceNote: event.target.value })} placeholder="未入力でもOK。AIが架空の経歴を追加することはありません。" /></label>
+              </div>
+            </details>
+
+            <div className="note-ai-account-builder">
+              <div className="note-ai-builder-head">
+                <div><span>AI ACCOUNT DESIGN</span><h3>よく使うAIでアカウント構成候補を作る</h3><p>選んだ条件をもとに、実行時点のnote公式情報と直近トレンドをWeb検索してから3つの構成案を作るプロンプトです。</p></div>
+              </div>
+              <div className="note-ai-provider-grid">
+                {(["chatgpt","gemini","claude"] as AiProvider[]).map((provider) => (
+                  <button type="button" key={provider} className={selectedAi === provider ? "active" : ""} onClick={() => setSelectedAi(provider)}>
+                    <strong>{AI_PROVIDER_LABELS[provider]}</strong>
+                    <small>{writingProfile?.preferredAi === provider ? "現在のよく使うAI" : "選択する"}</small>
+                  </button>
+                ))}
+              </div>
+              <div className="note-ai-research-note">
+                <strong>毎回、最新情報を調査</strong>
+                <span>note公式の最新変更・創作カレンダー・開催中/直近の企画・選択ジャンルの直近90日/12か月トレンドを確認し、出典URLと日付を付けるよう指示します。検索できない場合は最新情報を作らないルールです。</span>
+              </div>
+              <button className="primary-action note-ai-build-button" type="button" disabled={busy} onClick={() => void openAccountBuilderAi()}>
+                {busy ? "準備中…" : `${AI_PROVIDER_LABELS[selectedAi]}で最新情報から構成候補を作る`}
+              </button>
+              <p className="note-data-note">プロンプトをクリップボードへコピーして選択したAIを開きます。AASからAIサービスへAPIキーやnoteログイン情報は送信しません。</p>
+              {accountPrompt && <details className="note-account-prompt"><summary>AIへ渡すプロンプトを確認・コピー</summary><textarea readOnly value={accountPrompt} rows={18} onFocus={(event) => event.currentTarget.select()} /></details>}
+            </div>
+
+            <div className="note-local-profile-draft">
+              <strong>AIを使わない簡易プロフィール案</strong>
+              <div className="note-profile-actions">
+                <button type="button" onClick={() => setProfile({ ...profile, bioDraft: buildNoteProfileDraft(profile) })}>入力内容だけで下書きを作る</button>
+                <button className="primary-action" type="button" disabled={busy} onClick={() => void saveProfile()}>設定をAASに保存</button>
+              </div>
+              {profile.bioDraft && <label className="note-profile-draft-field"><span>プロフィール文の下書き</span><textarea value={profile.bioDraft} maxLength={1200} onChange={(event) => setProfile({ ...profile, bioDraft: event.target.value })} /></label>}
             </div>
           </section>
         )}
