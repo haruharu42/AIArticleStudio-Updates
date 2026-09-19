@@ -17,6 +17,8 @@ import {
   buildNoteProfileDraft,
   buildNoteScheduleResearchPrompt,
   currentJstMonth,
+  previousJstMonth,
+  summarizeNoteSchedulePerformance,
   exportNoteOperationsJson,
   exportNoteScheduleCsv,
   listNoteSchedule,
@@ -169,6 +171,12 @@ export function NoteOperationsPage() {
     return () => { active = false; };
   }, []);
 
+  const previousMonth = useMemo(() => previousJstMonth(targetMonth), [targetMonth]);
+  const previousPerformance = useMemo(
+    () => summarizeNoteSchedulePerformance(schedule, previousMonth),
+    [schedule, previousMonth],
+  );
+
   const groupedByDate = useMemo(() => {
     const map = new Map<string, NoteScheduleItem[]>();
     for (const item of schedule) {
@@ -229,7 +237,13 @@ export function NoteOperationsPage() {
         const saved = await saveWritingProfile(getSupabaseClient(), { ...writingProfile, preferredAi: selectedAi });
         setWritingProfile(saved);
       }
-      const prompt = buildNoteScheduleResearchPrompt(profile, selectedAi, targetMonth);
+      const prompt = buildNoteScheduleResearchPrompt(
+        profile,
+        selectedAi,
+        targetMonth,
+        todayJstDateKey(),
+        previousPerformance,
+      );
       setSchedulePrompt(prompt);
       setScheduleResponse("");
       setSchedulePreview(null);
@@ -495,12 +509,23 @@ export function NoteOperationsPage() {
                 <span>週に何回投稿するか</span><span>1日に何回まで投稿するか</span><span>無料note / 有料noteの比率</span>
                 <span>有料noteを週何回にするか</span><span>投稿する曜日・時間帯</span><span>その月の記事テーマ</span>
                 <span>トレンド記事と長期記事の配分</span><span>SNS告知・週次振り返り</span>
+                <span>前月の継続実績に合わせた負荷調整</span>
               </div>
             </div>
 
             <div className="note-ai-research-note">
               <strong>最新情報を毎回調査</strong>
               <span>note公式、創作カレンダー、現在の企画・お題、カテゴリ/おすすめの仕組み、選択ジャンルの直近30日・90日・12か月を確認し、出典URLと日付をJSONへ入れるよう指示します。検索できない場合は最新情報を作らないルールです。</span>
+            </div>
+
+            <div className="note-ai-research-note">
+              <strong>前月のAAS実績も使って、無理のない頻度へ調整</strong>
+              <span>
+                {previousPerformance
+                  ? `${previousMonth.replace("-", "年")}月は記事予定${previousPerformance.scheduledPosts}件、完了${previousPerformance.donePosts}件、スキップ${previousPerformance.skippedPosts}件、未完了${previousPerformance.remainingPlannedPosts}件（完了率${previousPerformance.adherenceRate}%）でした。曜日・時刻別の集計もAIへ渡します。`
+                  : `${previousMonth.replace("-", "年")}月のfree_note / paid_note実績はAAS内にありません。前月実績を推測せず、最新調査と継続しやすさから計画します。`}
+                本文・PV・売上・購入率などは前月実績としてAIへ渡しません。
+              </span>
             </div>
 
             <button type="button" className="primary-action note-ai-build-button" disabled={busy} onClick={() => void openScheduleBuilderAi()}>
@@ -547,7 +572,7 @@ export function NoteOperationsPage() {
                 <button type="button" className="primary-action note-ai-apply-button" disabled={busy} onClick={() => void applyAiSchedule()}>
                   この月のAASスケジュールに反映
                 </button>
-                <p className="note-data-note">対象月だけを入れ替えます。他の月の予定は残ります。今月を途中で再計画する場合も、過去の予定と完了済み履歴は残します。AIの調査概要と根拠もAASへ保存するため、後から「なぜこの頻度にしたか」を確認できます。</p>
+                <p className="note-data-note">対象月だけを入れ替えます。他の月の予定は残ります。今月を途中で再計画する場合も、過去の予定と完了済み履歴は残します。AIの調査概要と根拠もAASへ保存するため、後から「なぜこの頻度にしたか」を確認できます。翌月計画では、前月の予定種別・状態・曜日・時刻の集計だけを継続性の参考にし、本文や売上を自動学習しません。</p>
               </div>
             )}
 
