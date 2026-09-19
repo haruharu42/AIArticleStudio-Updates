@@ -28,6 +28,7 @@ import "./phase32-sales-settings.css";
 import "./phase33-reference-ui.css";
 import "./phase34-article-presets.css";
 import "./phase35-device-layout.css";
+import "./phase36-desktop-nav.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
