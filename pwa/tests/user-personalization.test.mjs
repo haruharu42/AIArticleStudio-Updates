@@ -151,7 +151,8 @@ test("mobile and desktop reference UIs use distinct responsive layouts", async (
   assert.match(css, /reference-home-main/);
   assert.match(css, /reference-ranking-page/);
   assert.match(css, /reference-profile-page/);
-  assert.match(css, /width: min\(calc\(100% - 48px\), 1080px\)/);
+  assert.match(css, /max-width: none;/);
+  assert.match(css, /\.reference-create-shell \.creator-card \{[\s\S]*?width: 100%;[\s\S]*?border-radius: 0;/);
   assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
   assert.match(css, /grid-template-columns: 1fr;/);
 });
