@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { ArticlePresetPanel } from "@/components/article-create/article-preset-panel";
 import {
   ArticleConditionsStep,
   BodyStep,
@@ -14,6 +15,7 @@ import {
 } from "@/components/article-create/article-create-steps";
 import { loadCoreAccessState } from "@/lib/access-control";
 import { DEFAULT_MAGAZINE_PLAN, type MagazinePlanDraft } from "@/lib/magazine-planner";
+import { applyArticlePreset, type ArticlePreset } from "@/lib/article-presets";
 import {
   ARTICLE_CREATE_STEPS,
   initialDraftFromLocation,
@@ -72,6 +74,8 @@ export function Phase11CreatePage() {
   const [titlePromptAuthorized, setTitlePromptAuthorized] = useState("");
   const [articlePromptAuthorized, setArticlePromptAuthorized] = useState("");
   const [createdId, setCreatedId] = useState("");
+  const [activePresetId, setActivePresetId] = useState<string | null>(null);
+  const [wizardRestored, setWizardRestored] = useState<boolean | null>(null);
   const progressOwnerIdRef = useRef("");
   const titleQuotaInFlightRef = useRef(false);
   const articleQuotaInFlightRef = useRef(false);
@@ -103,7 +107,11 @@ export function Phase11CreatePage() {
           setDraft(saved.draft);
           setMagazinePlan(saved.magazinePlan);
           setTagsText(saved.tagsText);
+          setActivePresetId(saved.activePresetId);
+          setWizardRestored(true);
           setMessage("前回の作業内容を復元しました。");
+        } else {
+          setWizardRestored(false);
         }
         progressOwnerIdRef.current = ownerId;
         setGate({ kind: "ready", ownerId });
@@ -122,8 +130,8 @@ export function Phase11CreatePage() {
 
   useEffect(() => {
     if (gate.kind !== "ready" || progressOwnerIdRef.current !== gate.ownerId || createdId) return;
-    saveArticleWizardProgress(gate.ownerId, { step, draft, magazinePlan, tagsText });
-  }, [gate, step, draft, magazinePlan, tagsText, createdId]);
+    saveArticleWizardProgress(gate.ownerId, { step, draft, magazinePlan, tagsText, activePresetId });
+  }, [gate, step, draft, magazinePlan, tagsText, activePresetId, createdId]);
 
   const displayStep = displayStepForInternalStep(step);
   const articleDraft = useMemo(() => withArticleTags(draft, tagsText), [draft, tagsText]);
@@ -136,6 +144,17 @@ export function Phase11CreatePage() {
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
   };
+
+  const applyPreset = useCallback((preset: ArticlePreset) => {
+    setDraft((current) => {
+      const next = applyArticlePreset(current, preset);
+      return current.magazineEnabled
+        ? { ...next, publicationTarget: "note", magazineEnabled: true }
+        : next;
+    });
+    setTagsText(preset.tags.join(", "));
+    setActivePresetId(preset.id);
+  }, []);
 
   const setGenre = (genre: string) => {
     if (genre === "その他") {
@@ -249,6 +268,7 @@ export function Phase11CreatePage() {
         gate.ownerId,
         articleDraft,
         draft.magazineEnabled ? magazinePlan : undefined,
+        activePresetId,
       );
       clearArticleWizardProgress(gate.ownerId);
       setCreatedId(result.id);
@@ -298,6 +318,17 @@ export function Phase11CreatePage() {
       </ol>
 
       <section className="creator-card">
+        <ArticlePresetPanel
+          ownerId={gate.ownerId}
+          draft={draft}
+          tagsText={tagsText}
+          activePresetId={activePresetId}
+          autoApplyDefault={wizardRestored === false && typeof window !== "undefined" && window.location.search.length === 0}
+          onApply={applyPreset}
+          onActivePresetChange={setActivePresetId}
+          setMessage={setMessage}
+        />
+
         {step === 0 && <GenerationMethodStep draft={draft} patch={patch} magazinePlan={magazinePlan} onMagazinePlanChange={setMagazinePlan} setGenre={setGenre} setSubgenre={setSubgenre} />}
         {step === 1 && <ImagePlanStep draft={draft} patch={patch} />}
         {step === 2 && (

@@ -14,6 +14,7 @@ export type ArticleWizardProgress = {
   draft: ArticleCreationDraft;
   magazinePlan: MagazinePlanDraft;
   tagsText: string;
+  activePresetId: string | null;
   updatedAt: string;
 };
 
@@ -74,6 +75,7 @@ export function loadArticleWizardProgress(ownerId: string): ArticleWizardProgres
       draft,
       magazinePlan,
       tagsText: parsed.tagsText,
+      activePresetId: typeof parsed.activePresetId === "string" ? parsed.activePresetId : null,
       updatedAt: parsed.updatedAt,
     };
   } catch {

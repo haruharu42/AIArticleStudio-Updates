@@ -71,3 +71,36 @@ test("custom navigation layout supports variable item counts and is loaded last"
   assert.match(flexCss, /display:\s*flex/);
   assert.match(flexCss, /flex:\s*1 1 0/);
 });
+
+
+test("desktop navigation can add hide reorder reset and persist items", async () => {
+  const [prefs, shell, css, layout] = await Promise.all([
+    read("lib/desktop-nav-preference.ts"),
+    read("components/aas-reference-shell.tsx"),
+    read("app/phase36-desktop-nav.css"),
+    read("app/layout.tsx"),
+  ]);
+
+  assert.match(prefs, /DESKTOP_NAV_ITEMS_KEY/);
+  assert.match(prefs, /MAX_DESKTOP_NAV_ITEMS = 8/);
+  assert.match(prefs, /localStorage\.setItem\(DESKTOP_NAV_ITEMS_KEY/);
+  for (const label of ["画像作成", "機能", "SNS", "公開管理", "分析", "使い方", "ミッション"]) {
+    assert.match(prefs, new RegExp(label));
+  }
+
+  assert.match(shell, /ナビをカスタマイズ/);
+  assert.match(shell, /表示・非表示と順番を変更できます/);
+  assert.match(shell, /move\(key, -1\)/);
+  assert.match(shell, /move\(key, 1\)/);
+  assert.match(shell, /初期状態に戻す/);
+  assert.match(shell, /ホームと設定は常に表示されます/);
+  assert.match(shell, /writeDesktopNavItems/);
+
+  assert.match(css, /@media \(min-width: 900px\)/);
+  assert.match(css, /\.aas-reference-desktop-nav/);
+  assert.match(css, /\.aas-desktop-nav-customizer/);
+  assert.match(css, /\.aas-reference-mobile-main-nav \{\s*display: none;/);
+  assert.match(layout, /phase36-desktop-nav\.css/);
+
+  assert.doesNotMatch(`${prefs}\n${shell}`, /sb_secret_|service[_-]?role|sk_(?:live|test)_|whsec_/i);
+});

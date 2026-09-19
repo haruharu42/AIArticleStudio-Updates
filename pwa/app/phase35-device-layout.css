@@ -1,0 +1,246 @@
+/* Phase 35: distinct smartphone and desktop layouts.
+   Keep the same feature set while changing density, width, and grouping by viewport. */
+
+@media (min-width: 900px) {
+  .reference-home-main,
+  .reference-ranking-page,
+  .reference-profile-page {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .reference-home-heading {
+    margin-bottom: 18px;
+  }
+
+  .reference-home-section,
+  .reference-creator-card,
+  .reference-status-card {
+    border-radius: 18px;
+  }
+
+  .reference-home-section {
+    padding: 18px 20px;
+  }
+
+  .reference-creator-card,
+  .reference-ranking-page .reference-status-card,
+  .reference-profile-page .reference-status-card {
+    padding: 18px 20px;
+  }
+
+  .beginner-quick-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .beginner-ai-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .reference-create-shell .creator-head,
+  .reference-create-shell .wizard-steps {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .reference-create-shell .creator-head {
+    padding-left: 18px;
+    padding-right: 18px;
+    padding-top: 22px;
+    margin-bottom: 18px;
+  }
+
+  .reference-create-shell .creator-head h1 {
+    font-size: 32px;
+  }
+
+  .reference-create-shell .creator-head p:last-child {
+    max-width: 760px;
+    font-size: 12px;
+  }
+
+  .reference-create-shell .wizard-steps {
+    padding-left: 18px;
+    padding-right: 18px;
+    margin-bottom: 18px;
+  }
+
+  .reference-create-shell .creator-card {
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 0;
+    padding: 26px 30px;
+  }
+
+  .reference-create-shell .wizard-pane > h2 {
+    font-size: 25px;
+  }
+
+  .reference-create-shell .article-kind-grid {
+    gap: 14px;
+  }
+
+  .reference-create-shell .article-kind-card {
+    min-height: 112px;
+    padding: 17px;
+  }
+
+  .reference-create-shell .generation-select-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .reference-create-shell .magazine-dropdown-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .reference-create-shell .wizard-actions {
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .reference-create-shell .wizard-actions button,
+  .reference-create-shell .wizard-actions a {
+    min-width: 150px;
+  }
+}
+
+@media (max-width: 700px) {
+  .reference-home-main,
+  .reference-ranking-page,
+  .reference-profile-page {
+    width: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .reference-home-heading {
+    margin-bottom: 10px;
+  }
+
+  .reference-home-heading h1 {
+    font-size: 20px;
+  }
+
+  .reference-home-section {
+    margin-top: 10px;
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .reference-creator-card,
+  .reference-ranking-page .reference-status-card,
+  .reference-profile-page .reference-status-card {
+    border-radius: 14px;
+    padding: 11px;
+  }
+
+  .beginner-quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .beginner-ai-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .reference-create-shell .creator-head {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+    padding: 14px 11px 0;
+    margin-bottom: 10px;
+  }
+
+  .reference-create-shell .creator-head h1 {
+    font-size: 22px;
+  }
+
+  .reference-create-shell .creator-head p:last-child {
+    font-size: 9.5px;
+    line-height: 1.55;
+  }
+
+  .reference-create-shell .reference-help-link {
+    min-height: 40px;
+    align-self: start;
+    padding: 8px 9px;
+  }
+
+  .reference-create-shell .wizard-steps {
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(70px, 1fr));
+    overflow-x: auto;
+    padding: 0 11px 4px;
+    margin-bottom: 10px;
+  }
+
+  .reference-create-shell .wizard-steps li {
+    font-size: 8.5px;
+  }
+
+  .reference-create-shell .creator-card {
+    width: calc(100% - 16px);
+    border-radius: 14px;
+    padding: 13px;
+  }
+
+  .reference-create-shell .wizard-pane > h2 {
+    font-size: 20px;
+  }
+
+  .reference-create-shell .generation-select-row {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .reference-create-shell .magazine-dropdown-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .reference-create-shell .wizard-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .reference-create-shell .wizard-actions button,
+  .reference-create-shell .wizard-actions a {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .reference-create-shell .wizard-actions a:only-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 380px) {
+  .beginner-quick-grid,
+  .reference-create-shell .magazine-dropdown-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reference-create-shell .creator-head {
+    grid-template-columns: 1fr;
+  }
+
+  .reference-create-shell .reference-help-link {
+    justify-self: start;
+  }
+}
