@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
 import { Phase7App } from "@/components/phase6-app";
-import { Phase7Library } from "@/components/phase7-library";
+import { Phase7Library } from "@/components/phase7-library";\nimport { NoteTodayPanel } from "@/components/note-today-panel";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import {
   getCreatorRanking,
@@ -364,6 +364,8 @@ export function Phase18BeginnerHome() {
             <small>継続は力なり！</small>
           </div>
         </section>
+
+        <NoteTodayPanel client={client} ownerId={profile.id} />
 
         <section className="reference-home-section">
           <div className="reference-section-heading">
