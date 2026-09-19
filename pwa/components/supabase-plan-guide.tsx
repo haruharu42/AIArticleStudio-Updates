@@ -2,28 +2,35 @@ const SUPABASE_USAGE_URL = "https://supabase.com/dashboard/org/_/usage";
 const SUPABASE_BILLING_URL = "https://supabase.com/dashboard/org/_/billing";
 const SUPABASE_PRICING_URL = "https://supabase.com/pricing";
 
+const JPY_REFERENCE_RATE = 157;
+const JPY_REFERENCE_LABEL = "1 USD ≈ ¥157（2026-09-18終値付近）";
+
 const plans = [
   {
     name: "Free",
-    price: "$0 / 月",
+    priceUsd: "$0 / 月",
+    priceJpy: "約 ¥0 / 月",
     note: "開発・小規模運用向け",
     quota: "DB 500 MB / Storage 1 GB / MAU 50,000 / Egress 5 GB / Edge Functions 500,000回",
   },
   {
     name: "Pro",
-    price: "$25〜 / 月",
+    priceUsd: "$25〜 / 月",
+    priceJpy: `約 ¥${(25 * JPY_REFERENCE_RATE).toLocaleString("ja-JP")}〜 / 月`,
     note: "本番公開の基本候補",
     quota: "DB 8 GB / Storage 100 GB / MAU 100,000 / Egress 250 GB / Edge Functions 200万回",
   },
   {
     name: "Team",
-    price: "$599〜 / 月",
+    priceUsd: "$599〜 / 月",
+    priceJpy: `約 ¥${(599 * JPY_REFERENCE_RATE).toLocaleString("ja-JP")}〜 / 月`,
     note: "組織・監査・コンプライアンス強化向け",
     quota: "Pro相当の主要使用枠 + SOC2 / ISO 27001 / 14日バックアップ / 28日ログ保持など",
   },
   {
     name: "Enterprise",
-    price: "要問い合わせ",
+    priceUsd: "要問い合わせ",
+    priceJpy: "日本円も個別見積",
     note: "大規模・個別要件向け",
     quota: "使用枠・SLA・サポート等を個別契約",
   },
@@ -56,7 +63,8 @@ export function SupabasePlanGuide() {
               <span style={{ display: "grid", gap: 6 }}>
                 <small>{plan.note}</small>
                 <strong style={{ fontSize: 18 }}>{plan.name}</strong>
-                <strong>{plan.price}</strong>
+                <strong>{plan.priceUsd}</strong>
+                <strong style={{ color: "#0b67c2" }}>{plan.priceJpy}</strong>
                 <small>{plan.quota}</small>
               </span>
             </article>
@@ -64,7 +72,7 @@ export function SupabasePlanGuide() {
         </div>
 
         <p className="trial-admin-note" style={{ marginTop: 14 }}>
-          料金は2026-09-17時点のSupabase公式情報を基にした参考表示です。Pro / Teamは使用超過、追加Compute、PITR、Custom Domain等で追加料金が発生する場合があります。税・為替・請求額を含む最終金額はSupabase Billing画面を優先してください。
+          日本円は{JPY_REFERENCE_LABEL}で換算した概算です。料金は2026-09-19時点のSupabase公式情報を基にしています。Pro / Teamは使用超過、追加Compute、PITR、Custom Domain等で追加料金が発生する場合があります。実際のカード請求額は為替・税・決済会社の換算レート等で変動するため、最終金額はSupabase Billing画面を優先してください。
         </p>
       </div>
     </section>
