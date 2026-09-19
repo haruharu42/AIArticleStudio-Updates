@@ -170,6 +170,9 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
 
   for (const symbol of [
     "buildNoteScheduleResearchPrompt",
+    "previousJstMonth",
+    "summarizeNoteSchedulePerformance",
+    "NoteSchedulePerformanceSnapshot",
     "parseNoteAiSchedulePlan",
     "replaceNoteScheduleMonth",
     "saveNoteAiSchedulePlan",
@@ -193,6 +196,12 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(lib, /直近180日以内の出典/);
   assert.match(lib, /replacementStart/);
   assert.match(lib, /status === "done"/);
+  assert.match(lib, /前月のAAS運用実績/);
+  assert.match(lib, /投稿予定に対する完了率/);
+  assert.match(lib, /曜日別/);
+  assert.match(lib, /時刻別/);
+  assert.match(lib, /AASから渡していない本文、PV、売上、購入率/);
+  assert.match(lib, /item\.itemType === "free_note" \|\| item\.itemType === "paid_note"/);
   assert.match(lib, /neq\("status", "done"\)/);
   assert.match(lib, /gte\("scheduled_date", replacementStart\)/);
   assert.match(lib, /lte\("scheduled_date", end\)/);
@@ -207,10 +216,14 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /この月のAASスケジュールに反映/);
   assert.match(page, /他の月の予定は残ります/);
   assert.match(page, /なぜこの頻度にしたか/);
+  assert.match(page, /前月のAAS実績も使って、無理のない頻度へ調整/);
+  assert.match(page, /previousPerformance\.adherenceRate/);
+  assert.match(page, /本文・PV・売上・購入率などは前月実績としてAIへ渡しません/);
   assert.match(page, /schedulePreview\.sources/);
 
   assert.match(css, /\.note-ai-month-controls/);
   assert.match(css, /\.note-ai-import-box/);
   assert.match(css, /\.note-ai-plan-preview/);
   assert.doesNotMatch(`${migration}\n${lib}\n${page}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+  assert.doesNotMatch(lib, /previousPerformance\.(?:title|theme|body|revenue|pv)/);
 });
