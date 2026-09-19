@@ -56,7 +56,7 @@ Preset usage count itself is updated when a saved article is associated with tha
 Migrations:
 
 - `20260919094500_article_presets_learning.sql`
-- `20260919061101_article_presets_server_limit.sql`
+- `20260919151101_article_presets_server_limit.sql`
 
 - adds `article_presets`
 - uses self-only RLS + FORCE RLS
