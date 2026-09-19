@@ -126,6 +126,16 @@ export function ReleaseUpdateManager() {
     );
   }
 
+  if (state.is_tester_preview && state.effective_release) {
+    return (
+      <aside className="release-admin-preview" aria-label="指定テスターテスト版">
+        <strong>一般ユーザーテスト版</strong>
+        <span>v{state.effective_release.version}</span>
+        <small>指定されたテスターだけに反映中です。他の一般ユーザーにはまだ公開されていません。</small>
+      </aside>
+    );
+  }
+
   const available = state.available_release;
   if (!available || dismissedReleaseId === available.id) return null;
 
