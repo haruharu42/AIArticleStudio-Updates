@@ -162,16 +162,18 @@ test("staged release rollout isolates admin preview, selected user testers, and 
 
 
 test("account switching stays available on prerelease denial and clears cached release state", async () => {
-  const [gate, session, release, settings, access] = await Promise.all([
+  const [gate, session, release, settings, access, logoutPage] = await Promise.all([
     read("components/release-audience-gate.tsx"),
     read("lib/auth-session.ts"),
     read("lib/app-release.ts"),
     read("components/pwa-settings-page.tsx"),
     read("components/phase6-app.tsx"),
+    read("app/logout/page.tsx"),
   ]);
 
   assert.match(gate, /ログアウトして別のアカウントでログイン/);
-  assert.match(gate, /signOutCurrentBrowser/);
+  assert.match(gate, /href="\/logout"/);
+  assert.match(gate, /ALWAYS_PUBLIC_PREVIEW_PATHS = \["\/auth\/callback", "\/logout"/);
   assert.match(gate, /auth\.getSession\(\)/);
   assert.match(gate, /sessionError \|\| !session/);
   assert.match(gate, /clearEffectiveRelease\(\)/);
@@ -188,6 +190,11 @@ test("account switching stays available on prerelease denial and clears cached r
   assert.match(release, /localStorage\.removeItem\(APP_RELEASE_EFFECTIVE_KEY\)/);
   assert.match(release, /aasReleaseVersion/);
   assert.match(release, /aasReleaseBuild/);
+
+  assert.match(logoutPage, /signOutCurrentBrowser/);
+  assert.match(logoutPage, /clearLocalAuthArtifacts/);
+  assert.match(logoutPage, /clearEffectiveRelease/);
+  assert.match(logoutPage, /window\.location\.replace\("\/"\)/);
 
   assert.match(settings, /signOutCurrentBrowser/);
   assert.match(settings, /window\.location\.replace\("\/"\)/);
