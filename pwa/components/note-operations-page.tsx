@@ -20,6 +20,8 @@ import {
   currentJstMonth,
   previousJstMonth,
   summarizeNoteSchedulePerformance,
+  loadNoteArticleOutputSnapshot,
+  exportNoteAiSchedulePlanJson,
   exportNoteOperationsJson,
   exportNoteScheduleCsv,
   listNoteSchedule,
@@ -34,6 +36,7 @@ import {
   setNoteScheduleStatus,
   todayJstDateKey,
   type NoteAiSchedulePlan,
+  type NoteArticleOutputSnapshot,
   type NoteOperationProfile,
   type NoteScheduleItem,
 } from "@/lib/note-operations";
@@ -137,6 +140,7 @@ export function NoteOperationsPage() {
   const [scheduleResponse, setScheduleResponse] = useState("");
   const [schedulePreview, setSchedulePreview] = useState<NoteAiSchedulePlan | null>(null);
   const [performanceLoopEnabled, setPerformanceLoopEnabled] = useState(false);
+  const [articleOutput, setArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
 
   const reload = async (userId: string) => {
     const client = getSupabaseClient();
@@ -180,10 +184,13 @@ export function NoteOperationsPage() {
     return () => { active = false; };
   }, []);
 
-  const previousMonth = useMemo(() => previousJstMonth(targetMonth), [targetMonth]);
-  const previousPerformance = useMemo(
-    () => summarizeNoteSchedulePerformance(schedule, previousMonth),
-    [schedule, previousMonth],
+  const referenceMonth = useMemo(
+    () => targetMonth === currentJstMonth() ? targetMonth : previousJstMonth(targetMonth),
+    [targetMonth],
+  );
+  const referencePerformance = useMemo(
+    () => summarizeNoteSchedulePerformance(schedule, referenceMonth),
+    [schedule, referenceMonth],
   );
 
   useEffect(() => {
@@ -192,6 +199,19 @@ export function NoteOperationsPage() {
     window.addEventListener(APP_RELEASE_STATE_EVENT, syncReleaseGate);
     return () => window.removeEventListener(APP_RELEASE_STATE_EVENT, syncReleaseGate);
   }, []);
+
+  useEffect(() => {
+    if (gate.kind !== "ready" || !performanceLoopEnabled) {
+      setArticleOutput(null);
+      return;
+    }
+    let active = true;
+    void loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth).then(
+      (snapshot) => { if (active) setArticleOutput(snapshot); },
+      () => { if (active) setArticleOutput(null); },
+    );
+    return () => { active = false; };
+  }, [gate, performanceLoopEnabled, referenceMonth]);
 
   const groupedByDate = useMemo(() => {
     const map = new Map<string, NoteScheduleItem[]>();
@@ -253,12 +273,17 @@ export function NoteOperationsPage() {
         const saved = await saveWritingProfile(getSupabaseClient(), { ...writingProfile, preferredAi: selectedAi });
         setWritingProfile(saved);
       }
+      const freshArticleOutput = performanceLoopEnabled
+        ? await loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth)
+        : undefined;
+      if (performanceLoopEnabled) setArticleOutput(freshArticleOutput ?? null);
       const prompt = buildNoteScheduleResearchPrompt(
         profile,
         selectedAi,
         targetMonth,
         todayJstDateKey(),
-        performanceLoopEnabled ? previousPerformance : undefined,
+        performanceLoopEnabled ? referencePerformance : undefined,
+        freshArticleOutput,
       );
       setSchedulePrompt(prompt);
       setScheduleResponse("");
@@ -322,6 +347,18 @@ export function NoteOperationsPage() {
       previewAiSchedule(text);
     } catch {
       setMessage("AIスケジュールファイルを読み込めませんでした。");
+    }
+  };
+
+
+  const copyAiScheduleJson = async () => {
+    if (!schedulePreview) return;
+    const text = exportNoteAiSchedulePlanJson(schedulePreview);
+    try {
+      await navigator.clipboard.writeText(text);
+      setMessage("AAS用の運用プランJSONをコピーしました。そのまま保存・共有・再貼り付けできます。");
+    } catch {
+      setMessage("JSONをクリップボードへコピーできませんでした。JSONファイル保存をお使いください。");
     }
   };
 
@@ -525,7 +562,7 @@ export function NoteOperationsPage() {
                 <span>週に何回投稿するか</span><span>1日に何回まで投稿するか</span><span>無料note / 有料noteの比率</span>
                 <span>有料noteを週何回にするか</span><span>投稿する曜日・時間帯</span><span>その月の記事テーマ</span>
                 <span>トレンド記事と長期記事の配分</span><span>SNS告知・週次振り返り</span>
-                {performanceLoopEnabled && <span>前月の継続実績に合わせた負荷調整</span>}
+                {performanceLoopEnabled && <span>実際の作成本数に合わせた途中再計画</span>}
               </div>
             </div>
 
@@ -536,18 +573,25 @@ export function NoteOperationsPage() {
 
             {performanceLoopEnabled && (
               <div className="note-ai-research-note">
-                <strong>前月のAAS実績も使って、無理のない頻度へ調整</strong>
+                <strong>{targetMonth === currentJstMonth() ? "今月の実績から残り期間を組み直せます" : "直前月の実績から次月を調整します"}</strong>
                 <span>
-                  {previousPerformance
-                    ? `${previousMonth.replace("-", "年")}月は記事予定${previousPerformance.scheduledPosts}件、完了${previousPerformance.donePosts}件、スキップ${previousPerformance.skippedPosts}件、未完了${previousPerformance.remainingPlannedPosts}件（完了率${previousPerformance.adherenceRate}%）でした。曜日・時刻別の集計もAIへ渡します。`
-                    : `${previousMonth.replace("-", "年")}月のfree_note / paid_note実績はAAS内にありません。前月実績を推測せず、最新調査と継続しやすさから計画します。`}
-                  本文・PV・売上・購入率などは前月実績としてAIへ渡しません。
+                  {referencePerformance
+                    ? `${referenceMonth.replace("-", "年")}月の予定は${referencePerformance.scheduledPosts}件、完了${referencePerformance.donePosts}件、スキップ${referencePerformance.skippedPosts}件、未完了${referencePerformance.remainingPlannedPosts}件（完了率${referencePerformance.adherenceRate}%）です。`
+                    : `${referenceMonth.replace("-", "年")}月の運用予定実績はまだありません。`}
+                  {articleOutput
+                    ? ` AASではnote記事を${articleOutput.createdPosts}本作成済み（無料${articleOutput.freeCreated} / 有料${articleOutput.paidCreated}）です。`
+                    : " AAS内のnote記事作成実績はまだありません。"}
+                  本文・PV・売上・購入率はAIへ渡しません。予定より多くても少なくても問題なく、再計画時は実績を参考に今日以降だけを組み直します。
                 </span>
               </div>
             )}
 
             <button type="button" className="primary-action note-ai-build-button" disabled={busy} onClick={() => void openScheduleBuilderAi()}>
-              {busy ? "準備中…" : `${AI_PROVIDER_LABELS[selectedAi]}で${targetMonth.replace("-", "年")}月をリサーチする`}
+              {busy
+                ? "準備中…"
+                : targetMonth === currentJstMonth() && performanceLoopEnabled
+                  ? `${AI_PROVIDER_LABELS[selectedAi]}で今月の残りを実績から組み直す`
+                  : `${AI_PROVIDER_LABELS[selectedAi]}で${targetMonth.replace("-", "年")}月をリサーチする`}
             </button>
 
             {schedulePrompt && <details className="note-account-prompt"><summary>AIへ渡す月間スケジュール用プロンプトを確認</summary><textarea readOnly value={schedulePrompt} rows={18} onFocus={(event) => event.currentTarget.select()} /></details>}
@@ -587,10 +631,14 @@ export function NoteOperationsPage() {
 
                 {schedulePreview.sources.length > 0 && <details className="note-ai-plan-sources"><summary>AIが参照した情報源（{schedulePreview.sources.length}件）</summary>{schedulePreview.sources.map((source) => <div key={source.url}><strong>{source.title || "出典"}</strong><span>{source.publishedAt}</span><code>{source.url}</code>{source.whyUsed && <p>{source.whyUsed}</p>}</div>)}</details>}
 
+                <div className="note-data-actions">
+                  <button type="button" onClick={() => void copyAiScheduleJson()}>AAS用JSONをコピー</button>
+                  <button type="button" onClick={() => downloadText(`aas-note-schedule-${schedulePreview.targetMonth}.json`, exportNoteAiSchedulePlanJson(schedulePreview), "application/json;charset=utf-8")}>JSONファイルで保存</button>
+                </div>
                 <button type="button" className="primary-action note-ai-apply-button" disabled={busy} onClick={() => void applyAiSchedule()}>
-                  この月のAASスケジュールに反映
+                  {targetMonth === currentJstMonth() ? "今日以降の予定を組み直して反映" : "この月のAASスケジュールに反映"}
                 </button>
-                <p className="note-data-note">対象月だけを入れ替えます。他の月の予定は残ります。今月を途中で再計画する場合も、過去の予定と完了済み履歴は残します。AIの調査概要と根拠もAASへ保存するため、後から「なぜこの頻度にしたか」を確認できます。{performanceLoopEnabled ? "翌月計画では、前月の予定種別・状態・曜日・時刻の集計だけを継続性の参考にし、本文や売上を自動学習しません。" : ""}</p>
+                <p className="note-data-note">対象月だけを入れ替えます。他の月の予定は残ります。今月を途中で再計画する場合も、過去の予定と完了済み履歴は残します。AIの調査概要と根拠もAASへ保存するため、後から「なぜこの頻度にしたか」を確認できます。{performanceLoopEnabled ? "再計画では、予定実績とAAS内で実際に作成した無料/有料noteの本数を参考にします。本文や売上は自動学習しません。過去・完了・スキップ履歴は残し、今日以降の未実行予定だけを組み直します。" : ""}</p>
               </div>
             )}
 
