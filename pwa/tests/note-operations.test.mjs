@@ -219,6 +219,11 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /前月のAAS実績も使って、無理のない頻度へ調整/);
   assert.match(page, /previousPerformance\.adherenceRate/);
   assert.match(page, /本文・PV・売上・購入率などは前月実績としてAIへ渡しません/);
+  assert.match(page, /NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0\.1\.1"/);
+  assert.match(page, /releaseVersionAtLeast/);
+  assert.match(page, /readEffectiveRelease/);
+  assert.match(page, /ai-article-studio-pwa-preview/);
+  assert.match(page, /performanceLoopEnabled \? previousPerformance : undefined/);
   assert.match(page, /schedulePreview\.sources/);
 
   assert.match(css, /\.note-ai-month-controls/);
