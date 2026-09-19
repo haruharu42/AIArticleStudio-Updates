@@ -137,7 +137,7 @@ test("note beginner profile builder uses dropdown presets and current-web resear
   assert.match(page, /主に誰に届けたい/);
   assert.match(page, /文章の雰囲気は/);
   assert.match(page, /収益化はどうしたい/);
-  assert.match(page, /その他（自由入力）/);
+  assert.match(lib, /その他（自由入力）/);
   assert.match(page, /chatgpt","gemini","claude/);
   assert.match(page, /現在のよく使うAI/);
   assert.match(page, /最新情報から構成候補を作る/);
