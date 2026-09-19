@@ -930,7 +930,7 @@ export async function replaceNoteScheduleMonth(
     .map((item) => ({ ...item, id: undefined, source: "imported" as NoteScheduleSource }));
   const previousReplaceable = previous.filter((item) => item.scheduledDate >= replacementStart && item.status !== "done");
 
-  let deleteQuery = client
+  const deleteQuery = client
     .from("note_operation_schedule_items")
     .delete()
     .eq("user_id", userId)
