@@ -189,7 +189,12 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(lib, /同じ日時に記事投稿が重複/);
   assert.match(lib, /1日に最大/);
   assert.match(lib, /調査元URLがありません/);
-  assert.match(lib, /gte\("scheduled_date", start\)/);
+  assert.match(lib, /note公式（note\.com\/info）/);
+  assert.match(lib, /直近180日以内の出典/);
+  assert.match(lib, /replacementStart/);
+  assert.match(lib, /status === "done"/);
+  assert.match(lib, /neq\("status", "done"\)/);
+  assert.match(lib, /gte\("scheduled_date", replacementStart\)/);
   assert.match(lib, /lte\("scheduled_date", end\)/);
 
   assert.match(page, /type="month"/);
