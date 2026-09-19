@@ -158,3 +158,16 @@ test("user data isolation hardening is explicit and continuously audited", async
   assert.match(sql, /7 \* \* \* \*/);
   assert.match(sql, /private\.ops_run_user_data_isolation_audit\(\)/);
 });
+
+
+test("Supabase plan guide shows current USD pricing with approximate Japanese yen", async () => {
+  const guide = await read("components/supabase-plan-guide.tsx");
+  assert.match(guide, /\$0 \/ 月/);
+  assert.match(guide, /\$25〜 \/ 月/);
+  assert.match(guide, /\$599〜 \/ 月/);
+  assert.match(guide, /JPY_REFERENCE_RATE = 157/);
+  assert.match(guide, /1 USD ≈ ¥157/);
+  assert.match(guide, /2026-09-19時点/);
+  assert.match(guide, /日本円も個別見積/);
+  assert.match(guide, /為替・税・決済会社の換算レート/);
+});
