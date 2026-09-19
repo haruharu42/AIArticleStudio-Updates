@@ -211,6 +211,7 @@ export async function createArticleFromWizard(
   ownerId: string,
   input: ArticleCreationDraft,
   magazinePlan?: MagazinePlanDraft,
+  presetId?: string | null,
 ): Promise<CreatedArticle> {
   const draft = validateCreationDraft(input);
   if (draft.magazineEnabled) {
@@ -271,8 +272,9 @@ export async function createArticleFromWizard(
     cloud_knowledge_channel: knowledgeRuntime.channel,
     cloud_knowledge_version: knowledgeRuntime.effectiveVersion,
     prompt_optimization_version: knowledgeRuntime.effectiveVersion,
-    user_personalization_version: 1,
+    user_personalization_version: 2,
     personalization_enabled: writingProfile?.personalizationEnabled ?? false,
+    article_preset_id: presetId ?? null,
     selected_title: draft.title,
     generation_method: draft.generationMode,
     local_status: draft.saveStatus === "ready" ? "完成" : draft.saveStatus,
@@ -395,8 +397,12 @@ export async function createArticleFromWizard(
   void recordPersonalizationSignal(client, {
     platform: draft.publicationTarget,
     genre: draft.genre,
+    subgenre: draft.subgenre,
     articleType: draft.articleType,
     generationMode: draft.generationMode,
+    ageGroup: draft.ageGroup,
+    targetLength: draft.targetLength,
+    presetId: presetId ?? null,
   }).catch(() => undefined);
   if (customGenre) {
     void recordKnowledgeCandidate(client, { kind: "genre", value: draft.genre }).catch(() => undefined);
