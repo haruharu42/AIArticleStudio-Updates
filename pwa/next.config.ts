@@ -31,6 +31,8 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_AAS_AI_TERMS_URL ??
       process.env.AAS_AI_TERMS_URL ??
       "/ai-terms",
+    NEXT_PUBLIC_AAS_RELEASE_AUDIENCE:
+      process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE === "preview" ? "preview" : "public",
   },
   poweredByHeader: false,
 };
