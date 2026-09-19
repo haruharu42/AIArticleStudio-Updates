@@ -362,6 +362,16 @@ export async function recordPersonalizationSignal(
 
   if (!richSignal.error) return;
 
+  const richErrorCode = String(richSignal.error.code ?? "").toUpperCase();
+  const richErrorMessage = String(richSignal.error.message ?? "").toLowerCase();
+  const missingRichRpc = richErrorCode === "PGRST202"
+    || richErrorCode === "42883"
+    || richErrorMessage.includes("record_my_article_workflow_signal")
+      && (richErrorMessage.includes("not found") || richErrorMessage.includes("does not exist"));
+  if (!missingRichRpc) {
+    throw new Error("個人最適化の利用傾向を更新できませんでした。");
+  }
+
   const legacy = await client.rpc("record_my_personalization_signal", {
     p_platform: input.platform,
     p_genre: input.genre.trim().slice(0, 100) || null,
