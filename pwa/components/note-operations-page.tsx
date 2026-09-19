@@ -1,0 +1,409 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
+import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import {
+  NOTE_OPERATION_GOALS,
+  NOTE_SCHEDULE_TYPE_LABELS,
+  buildNoteProfileDraft,
+  defaultNoteOperationProfile,
+  exportNoteOperationsJson,
+  exportNoteScheduleCsv,
+  generateNoteSchedule,
+  listNoteSchedule,
+  loadNoteOperationProfile,
+  parseNoteOperationsImport,
+  replaceNoteSchedule,
+  saveNoteOperationProfile,
+  setNoteScheduleStatus,
+  todayJstDateKey,
+  type NoteOperationProfile,
+  type NoteScheduleItem,
+} from "@/lib/note-operations";
+import { getSupabaseClient } from "@/lib/supabase";
+
+type Gate =
+  | { kind: "loading" }
+  | { kind: "signed_out" }
+  | { kind: "ready"; userId: string }
+  | { kind: "error"; message: string };
+
+type Tab = "start" | "profile" | "plan" | "calendar";
+
+const NOTE_HOME_URL = "https://note.com/";
+const NOTE_PROFILE_OFFICIAL = "https://note.com/info/n/n27cb842c7737";
+const NOTE_PAID_OFFICIAL = "https://note.com/info/n/na5f43ec69740";
+const NOTE_RESERVATION_OFFICIAL = "https://note.com/info/n/nc84e9a40b092";
+
+function downloadText(filename: string, text: string, type: string) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function monthStart(value: string): string {
+  return /^\d{4}-\d{2}$/.test(value) ? value + "-01" : todayJstDateKey().slice(0, 7) + "-01";
+}
+
+function moveMonth(value: string, delta: number): string {
+  const [year, month] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + delta, 1));
+  return date.toISOString().slice(0, 7);
+}
+
+function monthCells(value: string): Array<{ date: string; current: boolean }> {
+  const start = monthStart(value);
+  const [year, month] = start.split("-").map(Number);
+  const first = new Date(Date.UTC(year, month - 1, 1));
+  const lead = first.getUTCDay();
+  const base = new Date(Date.UTC(year, month - 1, 1 - lead));
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(base);
+    date.setUTCDate(base.getUTCDate() + index);
+    return {
+      date: date.toISOString().slice(0, 10),
+      current: date.getUTCMonth() === month - 1,
+    };
+  });
+}
+
+function typeClass(item: NoteScheduleItem): string {
+  if (item.itemType === "paid_note") return "paid";
+  if (item.itemType === "free_note") return "free";
+  if (item.itemType === "review") return "review";
+  return "setup";
+}
+
+function createHref(item: NoteScheduleItem): string {
+  const params = new URLSearchParams({
+    publicationTarget: "note",
+    articleType: item.itemType === "paid_note" ? "paid" : "free",
+    theme: item.theme || "",
+    from: "note-operations",
+  });
+  return "/create?" + params.toString();
+}
+
+function profileGoalDefaults(profile: NoteOperationProfile): NoteOperationProfile {
+  if (profile.operationGoal === "growth") {
+    return { ...profile, weeklyPostCount: 3, paidPostsPerMonth: 1, scheduleWeeks: 4, preferredTime: "20:00", secondaryTime: "12:00" };
+  }
+  if (profile.operationGoal === "monetize") {
+    return { ...profile, weeklyPostCount: 3, paidPostsPerMonth: 2, scheduleWeeks: 4, preferredTime: "20:00", secondaryTime: "12:00" };
+  }
+  if (profile.operationGoal === "portfolio") {
+    return { ...profile, weeklyPostCount: 2, paidPostsPerMonth: 1, scheduleWeeks: 4, preferredTime: "20:00", secondaryTime: "12:00" };
+  }
+  return { ...profile, weeklyPostCount: 2, paidPostsPerMonth: 0, scheduleWeeks: 4, preferredTime: "20:00", secondaryTime: "12:00" };
+}
+
+export function NoteOperationsPage() {
+  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const [tab, setTab] = useState<Tab>("start");
+  const [profile, setProfile] = useState<NoteOperationProfile | null>(null);
+  const [schedule, setSchedule] = useState<NoteScheduleItem[]>([]);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [startDate, setStartDate] = useState(todayJstDateKey());
+  const [calendarMonth, setCalendarMonth] = useState(todayJstDateKey().slice(0, 7));
+  const [dirtySchedule, setDirtySchedule] = useState(false);
+
+  const reload = async (userId: string) => {
+    const client = getSupabaseClient();
+    const [nextProfile, nextSchedule] = await Promise.all([
+      loadNoteOperationProfile(client, userId),
+      listNoteSchedule(client, userId),
+    ]);
+    setProfile(nextProfile);
+    setSchedule(nextSchedule);
+    setDirtySchedule(false);
+  };
+
+  useEffect(() => {
+    let active = true;
+    const boot = async () => {
+      try {
+        const client = getSupabaseClient();
+        const { data: { user }, error } = await client.auth.getUser();
+        if (!active) return;
+        if (error || !user) {
+          setGate({ kind: "signed_out" });
+          return;
+        }
+        const { data: account, error: profileError } = await client
+          .from("profiles")
+          .select("id,status")
+          .eq("id", user.id)
+          .single();
+        if (profileError || !account || account.id !== user.id || account.status !== "active") {
+          throw new Error("activeアカウントを確認できません。");
+        }
+        await reload(user.id);
+        if (active) setGate({ kind: "ready", userId: user.id });
+      } catch (error) {
+        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "note運営を初期化できませんでした。" });
+      }
+    };
+    void boot();
+    return () => { active = false; };
+  }, []);
+
+  const groupedByDate = useMemo(() => {
+    const map = new Map<string, NoteScheduleItem[]>();
+    for (const item of schedule) {
+      const list = map.get(item.scheduledDate) ?? [];
+      list.push(item);
+      map.set(item.scheduledDate, list);
+    }
+    return map;
+  }, [schedule]);
+
+  const stats = useMemo(() => ({
+    total: schedule.filter((item) => item.itemType === "free_note" || item.itemType === "paid_note").length,
+    free: schedule.filter((item) => item.itemType === "free_note").length,
+    paid: schedule.filter((item) => item.itemType === "paid_note").length,
+    done: schedule.filter((item) => item.status === "done").length,
+  }), [schedule]);
+
+  const saveProfile = async () => {
+    if (gate.kind !== "ready" || !profile) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await saveNoteOperationProfile(getSupabaseClient(), profile);
+      setMessage("note運営設定を保存しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const generate = () => {
+    if (!profile) return;
+    const nextProfile = profileGoalDefaults(profile);
+    const next = generateNoteSchedule(nextProfile, startDate);
+    setProfile(nextProfile);
+    setSchedule(next);
+    setDirtySchedule(true);
+    setMessage("AASの初期運用プランを作成しました。時間や頻度は実績を見ながら調整してください。");
+  };
+
+  const saveSchedule = async () => {
+    if (gate.kind !== "ready" || !profile) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await saveNoteOperationProfile(getSupabaseClient(), profile);
+      const next = await replaceNoteSchedule(getSupabaseClient(), gate.userId, schedule);
+      setSchedule(next);
+      setDirtySchedule(false);
+      setMessage("note運営スケジュールをAASに保存しました。ホームの「今日のnote運営」にも反映されます。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "スケジュールを保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const changeStatus = async (item: NoteScheduleItem, done: boolean) => {
+    if (gate.kind !== "ready" || !item.id) return;
+    setBusy(true);
+    try {
+      await setNoteScheduleStatus(getSupabaseClient(), gate.userId, item.id, done ? "done" : "planned");
+      setSchedule((current) => current.map((value) => value.id === item.id ? { ...value, status: done ? "done" : "planned" } : value));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "状態を更新できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const importFile = async (file: File) => {
+    if (gate.kind !== "ready" || !profile) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const parsed = parseNoteOperationsImport(await file.text(), file.name);
+      if (!parsed.schedule.length) throw new Error("読み込める予定がありません。");
+      if (!window.confirm(parsed.schedule.length + "件の予定を読み込み、現在のスケジュールと入れ替えますか？")) return;
+      const nextProfile = parsed.profile ? { ...profile, ...parsed.profile, userId: gate.userId, timezone: "Asia/Tokyo" } : profile;
+      await saveNoteOperationProfile(getSupabaseClient(), nextProfile);
+      const nextSchedule = await replaceNoteSchedule(getSupabaseClient(), gate.userId, parsed.schedule);
+      setProfile(nextProfile);
+      setSchedule(nextSchedule);
+      setDirtySchedule(false);
+      setMessage("運営データを読み込みました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "ファイルを読み込めませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (gate.kind !== "ready" || !profile) {
+    return (
+      <div className="note-ops-shell">
+        <AasReferenceHeader />
+        <main className="note-ops-gate">
+          <p className="eyebrow">NOTE OPERATIONS</p>
+          <h1>note運営アシスタント</h1>
+          {gate.kind === "loading" && <p>アカウントと運営データを確認しています…</p>}
+          {gate.kind === "signed_out" && <p>先にログインしてください。</p>}
+          {gate.kind === "error" && <p>{gate.message}</p>}
+          <Link href="/">← ホームへ戻る</Link>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="note-ops-shell">
+      <AasReferenceHeader />
+      <main className="note-ops-main">
+        <header className="note-ops-head">
+          <div>
+            <p className="eyebrow">NOTE OPERATIONS</p>
+            <h1>note運営アシスタント</h1>
+            <p>アカウント準備からプロフィール、無料・有料noteの運用予定、毎日のToDoまでAASで管理します。</p>
+          </div>
+          <Link href="/">ホームへ</Link>
+        </header>
+
+        <div className="note-ops-security-note">
+          <strong>noteのログイン情報は保存しません</strong>
+          <span>AASはnoteのパスワード、Cookie、認証コード、アクセストークンを入力・保存しません。運営計画と公開予定だけを管理します。</span>
+        </div>
+
+        <nav className="note-ops-tabs" aria-label="note運営メニュー">
+          <button className={tab === "start" ? "active" : ""} onClick={() => setTab("start")}>1. はじめ方</button>
+          <button className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}>2. プロフィール</button>
+          <button className={tab === "plan" ? "active" : ""} onClick={() => setTab("plan")}>3. 運用プラン</button>
+          <button className={tab === "calendar" ? "active" : ""} onClick={() => setTab("calendar")}>4. カレンダー</button>
+        </nav>
+
+        {message && <div className="route-notice note-ops-message">{message}</div>}
+
+        {tab === "start" && (
+          <section className="note-ops-panel">
+            <div className="note-ops-section-head">
+              <div><span>START GUIDE</span><h2>noteを始める順番</h2></div>
+              <a href={NOTE_HOME_URL} target="_blank" rel="noreferrer">note公式を開く ↗</a>
+            </div>
+            <div className="note-start-steps">
+              <article><b>1</b><div><strong>noteアカウントを作る</strong><p>note公式を開き、画面の案内に沿ってアカウントを作成します。AASへnoteのパスワードを入力する必要はありません。</p></div></article>
+              <article><b>2</b><div><strong>表示名・アイコン・発信テーマを決める</strong><p>誰に何を届けるアカウントかを先に決めると、プロフィールと記事テーマをそろえやすくなります。</p></div></article>
+              <article><b>3</b><div><strong>プロフィール文と自己紹介記事を準備</strong><p>noteでは投稿した記事をプロフィールとして表示できる仕組みがあります。AASでは入力した事実だけから下書きを作ります。</p><a href={NOTE_PROFILE_OFFICIAL} target="_blank" rel="noreferrer">note公式のプロフィール案内 ↗</a></div></article>
+              <article><b>4</b><div><strong>無料noteで読者の入口を作る</strong><p>AASおすすめとして、最初は無料記事を軸に投稿習慣とテーマの反応を確認します。これは成果を保証するものではありません。</p></div></article>
+              <article><b>5</b><div><strong>必要に応じて有料noteを組み合わせる</strong><p>有料記事は価格と無料で読める範囲をnote側で設定します。</p><a href={NOTE_PAID_OFFICIAL} target="_blank" rel="noreferrer">note公式の有料記事案内 ↗</a></div></article>
+              <article><b>6</b><div><strong>AASカレンダーで継続する</strong><p>投稿日時・無料/有料・週次振り返りをAASに保存します。note側の予約投稿を使う場合は対象プランを確認してください。</p><a href={NOTE_RESERVATION_OFFICIAL} target="_blank" rel="noreferrer">note公式の予約投稿案内 ↗</a></div></article>
+            </div>
+            <div className="note-ready-checks">
+              <label><input type="checkbox" checked={profile.accountReady} onChange={(event) => setProfile({ ...profile, accountReady: event.target.checked })} /> noteアカウントの作成が完了した</label>
+              <label><input type="checkbox" checked={profile.profileReady} onChange={(event) => setProfile({ ...profile, profileReady: event.target.checked })} /> プロフィールの準備が完了した</label>
+            </div>
+            <button className="primary-action" disabled={busy} onClick={() => void saveProfile()}>進捗を保存</button>
+          </section>
+        )}
+
+        {tab === "profile" && (
+          <section className="note-ops-panel">
+            <div className="note-ops-section-head"><div><span>PROFILE BUILDER</span><h2>プロフィールを作る</h2></div></div>
+            <p className="note-ops-hint">実績・資格・経験は、実際に事実として書ける内容だけ入力してください。AASが架空の経歴を追加することはありません。</p>
+            <div className="note-profile-grid">
+              <label><span>表示名</span><input value={profile.noteDisplayName} maxLength={120} onChange={(event) => setProfile({ ...profile, noteDisplayName: event.target.value })} placeholder="noteで使う表示名" /></label>
+              <label><span>届けたい読者</span><input value={profile.targetReader} maxLength={600} onChange={(event) => setProfile({ ...profile, targetReader: event.target.value })} placeholder="例：AIをこれから使い始める30代の会社員" /></label>
+              <label className="full"><span>主な発信テーマ（改行またはカンマ区切り）</span><textarea value={profile.mainTopics.join("\n")} onChange={(event) => setProfile({ ...profile, mainTopics: event.target.value.split(/[\n,、]/).map((value) => value.trim()).filter(Boolean).slice(0, 12) })} placeholder={"AI副業\nChatGPT活用\n初心者向け手順"} /></label>
+              <label className="full"><span>事実として書ける経験・資格・背景（任意）</span><textarea value={profile.experienceNote} maxLength={1200} onChange={(event) => setProfile({ ...profile, experienceNote: event.target.value })} placeholder="入力した内容だけプロフィール案に使用します" /></label>
+              <label className="full"><span>プロフィール文の下書き</span><textarea value={profile.bioDraft} maxLength={1200} onChange={(event) => setProfile({ ...profile, bioDraft: event.target.value })} /></label>
+            </div>
+            <div className="note-profile-actions">
+              <button type="button" onClick={() => setProfile({ ...profile, bioDraft: buildNoteProfileDraft(profile) })}>入力内容からプロフィール案を作る</button>
+              <button className="primary-action" type="button" disabled={busy} onClick={() => void saveProfile()}>プロフィール案を保存</button>
+            </div>
+          </section>
+        )}
+
+        {tab === "plan" && (
+          <section className="note-ops-panel">
+            <div className="note-ops-section-head"><div><span>OPERATION PLAN</span><h2>AASに運用スケジュールを決めてもらう</h2></div></div>
+            <p className="note-ops-hint">投稿時刻は「必ず伸びる時間」ではなく、継続しやすさを優先した初期提案です。実際の反応を見て変更してください。</p>
+            <div className="note-plan-grid">
+              <label><span>目的</span><select value={profile.operationGoal} onChange={(event) => setProfile({ ...profile, operationGoal: event.target.value as NoteOperationProfile["operationGoal"] })}>{NOTE_OPERATION_GOALS.map((goal) => <option key={goal.value} value={goal.value}>{goal.label}</option>)}</select></label>
+              <label><span>開始日</span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
+              <label><span>1週間の投稿数</span><input type="number" min={1} max={14} value={profile.weeklyPostCount} onChange={(event) => setProfile({ ...profile, weeklyPostCount: Number(event.target.value) || 1 })} /></label>
+              <label><span>1か月の有料note数</span><input type="number" min={0} max={14} value={profile.paidPostsPerMonth} onChange={(event) => setProfile({ ...profile, paidPostsPerMonth: Number(event.target.value) || 0 })} /></label>
+              <label><span>メイン投稿時間</span><input type="time" value={profile.preferredTime} onChange={(event) => setProfile({ ...profile, preferredTime: event.target.value })} /></label>
+              <label><span>2本投稿する日の追加時間</span><input type="time" value={profile.secondaryTime} onChange={(event) => setProfile({ ...profile, secondaryTime: event.target.value })} /></label>
+              <label><span>スケジュール期間</span><select value={profile.scheduleWeeks} onChange={(event) => setProfile({ ...profile, scheduleWeeks: Number(event.target.value) })}>{[2,4,6,8,12].map((weeks) => <option key={weeks} value={weeks}>{weeks}週間</option>)}</select></label>
+            </div>
+            <div className="note-plan-actions">
+              <button type="button" className="primary-action" onClick={generate}>AASおまかせで作る</button>
+              <button type="button" disabled={busy || !dirtySchedule} onClick={() => void saveSchedule()}>このスケジュールをAASに保存</button>
+            </div>
+            <div className="note-plan-stats">
+              <article><small>投稿予定</small><strong>{stats.total}</strong></article>
+              <article><small>無料note</small><strong>{stats.free}</strong></article>
+              <article><small>有料note</small><strong>{stats.paid}</strong></article>
+              <article><small>完了</small><strong>{stats.done}</strong></article>
+            </div>
+            <div className="note-data-actions">
+              <button type="button" disabled={!schedule.length} onClick={() => downloadText("aas-note-schedule.csv", exportNoteScheduleCsv(schedule), "text/csv;charset=utf-8")}>CSVをダウンロード</button>
+              <button type="button" disabled={!schedule.length} onClick={() => downloadText("aas-note-operations.json", exportNoteOperationsJson(profile, schedule), "application/json;charset=utf-8")}>JSONをダウンロード</button>
+              <label className="note-import-button">AASへアップロード<input type="file" accept=".json,.csv,application/json,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importFile(file); event.currentTarget.value = ""; }} /></label>
+            </div>
+            <p className="note-data-note">JSONはプロフィール設定＋スケジュール、CSVはスケジュールのみを保存します。どちらもAASへ再アップロードできます。</p>
+          </section>
+        )}
+
+        {tab === "calendar" && (
+          <section className="note-ops-panel">
+            <div className="note-calendar-head">
+              <button onClick={() => setCalendarMonth((value) => moveMonth(value, -1))}>←</button>
+              <div><span>CALENDAR</span><h2>{calendarMonth.replace("-", "年")}月</h2></div>
+              <button onClick={() => setCalendarMonth((value) => moveMonth(value, 1))}>→</button>
+            </div>
+            <div className="note-calendar-weekdays">{["日","月","火","水","木","金","土"].map((day) => <span key={day}>{day}</span>)}</div>
+            <div className="note-calendar-grid">
+              {monthCells(calendarMonth).map((cell) => {
+                const items = groupedByDate.get(cell.date) ?? [];
+                return (
+                  <article key={cell.date} className={(cell.current ? "" : "outside ") + (cell.date === todayJstDateKey() ? "today" : "")}>
+                    <strong>{Number(cell.date.slice(-2))}</strong>
+                    <div>{items.map((item, index) => <span key={item.id ?? item.scheduledDate + item.scheduledTime + index} className={typeClass(item)} title={item.title}>{item.scheduledTime} {NOTE_SCHEDULE_TYPE_LABELS[item.itemType]}</span>)}</div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <div className="note-schedule-list">
+              <h3>予定一覧</h3>
+              {schedule.length === 0 ? <p>まだ予定がありません。「運用プラン」から作成してください。</p> : schedule.slice(0, 120).map((item, index) => (
+                <article key={item.id ?? item.scheduledDate + item.scheduledTime + index} className={item.status === "done" ? "done" : ""}>
+                  <div className={"note-schedule-type " + typeClass(item)}>{NOTE_SCHEDULE_TYPE_LABELS[item.itemType]}</div>
+                  <div>
+                    <small>{item.scheduledDate} {item.scheduledTime}</small>
+                    <strong>{item.title}</strong>
+                    {item.theme && <span>テーマ：{item.theme}</span>}
+                  </div>
+                  <div className="note-schedule-actions">
+                    {(item.itemType === "free_note" || item.itemType === "paid_note") && <Link href={createHref(item)}>この記事を作る</Link>}
+                    {item.id && <button disabled={busy} onClick={() => void changeStatus(item, item.status !== "done")}>{item.status === "done" ? "未完了に戻す" : "完了"}</button>}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
