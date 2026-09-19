@@ -4,6 +4,7 @@ export type AdminSectionId =
   | "sales"
   | "promotion"
   | "knowledge"
+  | "releases"
   | "security"
   | "operations";
 
@@ -58,6 +59,14 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     description: "ジャンル・サブジャンル候補や学習候補を確認・承認。",
   },
   {
+    id: "releases",
+    href: "/admin/releases",
+    eyebrow: "RELEASE CONTROL",
+    title: "アップデート管理",
+    shortTitle: "アップデート",
+    description: "管理者テスト版、ユーザー向け更新通知、必須更新、ロールバックを管理。",
+  },
+  {
     id: "security",
     href: "/admin/security",
     eyebrow: "ADMIN MFA",
@@ -79,6 +88,7 @@ export const ADMIN_HOME_SHORTCUT_IDS: readonly AdminSectionId[] = [
   "users",
   "free-plan",
   "sales",
+  "releases",
   "security",
   "operations",
 ];
