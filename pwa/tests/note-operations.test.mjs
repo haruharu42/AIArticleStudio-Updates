@@ -170,6 +170,12 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
 
   for (const symbol of [
     "buildNoteScheduleResearchPrompt",
+    "previousJstMonth",
+    "summarizeNoteSchedulePerformance",
+    "NoteSchedulePerformanceSnapshot",
+    "loadNoteArticleOutputSnapshot",
+    "NoteArticleOutputSnapshot",
+    "exportNoteAiSchedulePlanJson",
     "parseNoteAiSchedulePlan",
     "replaceNoteScheduleMonth",
     "saveNoteAiSchedulePlan",
@@ -193,7 +199,17 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(lib, /直近180日以内の出典/);
   assert.match(lib, /replacementStart/);
   assert.match(lib, /status === "done"/);
-  assert.match(lib, /neq\("status", "done"\)/);
+  assert.match(lib, /AAS運用スケジュール実績/);
+  assert.match(lib, /AASで実際に作成したnote記事数/);
+  assert.match(lib, /投稿予定に対する完了率/);
+  assert.match(lib, /無料30本・有料20本/);
+  assert.match(lib, /未完了分やスキップ分を「借金」/);
+  assert.match(lib, /今日から月末までに新しく行う分/);
+  assert.match(lib, /曜日別/);
+  assert.match(lib, /時刻別/);
+  assert.match(lib, /AASから渡していない本文、PV、売上、購入率/);
+  assert.match(lib, /item\.itemType === "free_note" \|\| item\.itemType === "paid_note"/);
+  assert.match(lib, /eq\("status", "planned"\)/);
   assert.match(lib, /gte\("scheduled_date", replacementStart\)/);
   assert.match(lib, /lte\("scheduled_date", end\)/);
 
@@ -207,10 +223,28 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /この月のAASスケジュールに反映/);
   assert.match(page, /他の月の予定は残ります/);
   assert.match(page, /なぜこの頻度にしたか/);
+  assert.match(page, /今月の実績から残り期間を組み直せます/);
+  assert.match(page, /referencePerformance\.adherenceRate/);
+  assert.match(page, /articleOutput\.freeCreated/);
+  assert.match(page, /本文・PV・売上・購入率はAIへ渡しません/);
+  assert.match(page, /AAS用JSONをコピー/);
+  assert.match(page, /JSONファイルで保存/);
+  assert.match(page, /今日以降の予定を組み直して反映/);
+  assert.match(page, /NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0\.1\.1"/);
+  assert.match(page, /releaseVersionAtLeast/);
+  assert.match(page, /readEffectiveRelease/);
+  assert.match(page, /ai-article-studio-pwa-preview/);
+  assert.match(page, /performanceLoopEnabled \? referencePerformance : undefined/);
+  assert.match(page, /loadNoteArticleOutputSnapshot/);
   assert.match(page, /schedulePreview\.sources/);
 
   assert.match(css, /\.note-ai-month-controls/);
   assert.match(css, /\.note-ai-import-box/);
   assert.match(css, /\.note-ai-plan-preview/);
   assert.doesNotMatch(`${migration}\n${lib}\n${page}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+  assert.match(lib, /select\("id", \{ count: "exact", head: true \}\)/);
+  assert.match(lib, /eq\("publication_target", "note"\)/);
+  assert.match(lib, /gte\("created_at", startIso\)/);
+  assert.match(lib, /lt\("created_at", endIso\)/);
+  assert.doesNotMatch(lib, /articleOutput\.(?:title|theme|body|revenue|pv)/);
 });
