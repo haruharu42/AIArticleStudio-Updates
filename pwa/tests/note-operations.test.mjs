@@ -59,7 +59,7 @@ test("note operations UI covers setup profile planning calendar and home todo", 
 
   for (const label of [
     "noteを始める順番",
-    "プロフィールを作る",
+    "初心者向け・選ぶだけプロフィール設計",
     "AASに運用スケジュールを決めてもらう",
     "AASおまかせで作る",
     "CSVをダウンロード",
@@ -91,4 +91,60 @@ test("note operations UI covers setup profile planning calendar and home todo", 
   assert.match(css, /\.note-today-list/);
 
   assert.doesNotMatch(`${page}\n${today}\n${home}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+});
+
+
+test("note beginner profile builder uses dropdown presets and current-web research prompts", async () => {
+  const [migration, lib, page, css] = await Promise.all([
+    readRepo("supabase/migrations/20260919125425_note_operations_profile_builder_presets.sql"),
+    readPwa("lib/note-operations.ts"),
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("app/phase38-note-operations.css"),
+  ]);
+
+  for (const column of [
+    "account_genre",
+    "account_style",
+    "audience_preset",
+    "tone_preset",
+    "monetization_style",
+  ]) {
+    assert.match(migration, new RegExp(column));
+  }
+
+  for (const optionSet of [
+    "NOTE_ACCOUNT_GENRES",
+    "NOTE_ACCOUNT_STYLES",
+    "NOTE_AUDIENCE_PRESETS",
+    "NOTE_TONE_PRESETS",
+    "NOTE_MONETIZATION_STYLES",
+  ]) {
+    assert.match(lib, new RegExp(optionSet));
+  }
+
+  assert.match(lib, /buildNoteAccountResearchPrompt/);
+  assert.match(lib, /回答を作る前に必ずWeb検索/);
+  assert.match(lib, /note公式/);
+  assert.match(lib, /直近90日/);
+  assert.match(lib, /直近12か月/);
+  assert.match(lib, /出典名・URL・公開\/更新日/);
+  assert.match(lib, /最新情報を確認できないため/);
+  assert.match(lib, /経歴、年齢、職業、収入、実績、資格/);
+  assert.match(lib, /アカウント構成を3案/);
+
+  assert.match(page, /どのジャンルで運営したい/);
+  assert.match(page, /どんなアカウントにしたい/);
+  assert.match(page, /主に誰に届けたい/);
+  assert.match(page, /文章の雰囲気は/);
+  assert.match(page, /収益化はどうしたい/);
+  assert.match(page, /その他（自由入力）/);
+  assert.match(page, /chatgpt","gemini","claude/);
+  assert.match(page, /現在のよく使うAI/);
+  assert.match(page, /最新情報から構成候補を作る/);
+  assert.match(page, /navigator\.clipboard\.writeText/);
+  assert.match(page, /launchAiApp\(selectedAi\)/);
+  assert.match(page, /saveWritingProfile/);
+  assert.match(css, /\.note-profile-choice-grid/);
+  assert.match(css, /\.note-ai-provider-grid/);
+  assert.doesNotMatch(`${lib}\n${page}\n${migration}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
 });
