@@ -79,6 +79,7 @@ to authenticated
 using (
     user_id = (select auth.uid())
     and (select private.is_active_profile())
+    and (select public.can_access_product('AAS-PWA-BETA'))
 );
 
 drop policy if exists article_presets_insert_own_active on public.article_presets;
@@ -89,6 +90,7 @@ to authenticated
 with check (
     user_id = (select auth.uid())
     and (select private.is_active_profile())
+    and (select public.can_access_product('AAS-PWA-BETA'))
 );
 
 drop policy if exists article_presets_update_own_active on public.article_presets;
@@ -103,6 +105,7 @@ using (
 with check (
     user_id = (select auth.uid())
     and (select private.is_active_profile())
+    and (select public.can_access_product('AAS-PWA-BETA'))
 );
 
 drop policy if exists article_presets_delete_own_active on public.article_presets;
@@ -113,6 +116,7 @@ to authenticated
 using (
     user_id = (select auth.uid())
     and (select private.is_active_profile())
+    and (select public.can_access_product('AAS-PWA-BETA'))
 );
 
 revoke all on table public.article_presets from public, anon, authenticated;
@@ -192,6 +196,9 @@ begin
     end if;
     if not (select private.is_active_profile()) then
         raise exception 'active profile required' using errcode = '42501';
+    end if;
+    if not (select public.can_access_product('AAS-PWA-BETA')) then
+        raise exception 'active PWA access required' using errcode = '42501';
     end if;
 
     if platform_value not in ('note', 'tips', 'brain', 'blog') then
