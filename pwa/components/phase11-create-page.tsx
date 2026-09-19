@@ -107,6 +107,7 @@ export function Phase11CreatePage() {
           setDraft(saved.draft);
           setMagazinePlan(saved.magazinePlan);
           setTagsText(saved.tagsText);
+          setActivePresetId(saved.activePresetId);
           setWizardRestored(true);
           setMessage("前回の作業内容を復元しました。");
         } else {
@@ -129,8 +130,8 @@ export function Phase11CreatePage() {
 
   useEffect(() => {
     if (gate.kind !== "ready" || progressOwnerIdRef.current !== gate.ownerId || createdId) return;
-    saveArticleWizardProgress(gate.ownerId, { step, draft, magazinePlan, tagsText });
-  }, [gate, step, draft, magazinePlan, tagsText, createdId]);
+    saveArticleWizardProgress(gate.ownerId, { step, draft, magazinePlan, tagsText, activePresetId });
+  }, [gate, step, draft, magazinePlan, tagsText, activePresetId, createdId]);
 
   const displayStep = displayStepForInternalStep(step);
   const articleDraft = useMemo(() => withArticleTags(draft, tagsText), [draft, tagsText]);
