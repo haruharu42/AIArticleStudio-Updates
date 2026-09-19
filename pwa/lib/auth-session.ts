@@ -4,7 +4,7 @@ import { clearEffectiveRelease } from "@/lib/app-release";
 
 const AUTH_STORAGE_PREFIX = "aas-pwa-auth";
 
-function clearLocalAuthArtifacts(): void {
+export function clearLocalAuthArtifacts(): void {
   if (typeof window === "undefined") return;
   for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
     const key = window.localStorage.key(index);
