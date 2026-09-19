@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
 import { launchAiApp } from "@/lib/ai-app-links";
+import { APP_RELEASE_STATE_EVENT, readEffectiveRelease, releaseVersionAtLeast } from "@/lib/app-release";
 import {
   NOTE_ACCOUNT_GENRES,
   NOTE_ACCOUNT_STYLES,
@@ -57,6 +58,13 @@ const NOTE_HOME_URL = "https://note.com/";
 const NOTE_PROFILE_OFFICIAL = "https://note.com/info/n/n27cb842c7737";
 const NOTE_PAID_OFFICIAL = "https://note.com/info/n/na5f43ec69740";
 const NOTE_RESERVATION_OFFICIAL = "https://note.com/info/n/nc84e9a40b092";
+const NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0.1.1";
+
+function notePerformanceLoopAvailable(): boolean {
+  if (typeof window === "undefined") return false;
+  const isGuardedPreview = window.location.hostname.includes("ai-article-studio-pwa-preview");
+  return isGuardedPreview || releaseVersionAtLeast(readEffectiveRelease()?.version, NOTE_PERFORMANCE_LOOP_MIN_RELEASE);
+}
 
 function downloadText(filename: string, text: string, type: string) {
   const blob = new Blob([text], { type });
@@ -128,6 +136,7 @@ export function NoteOperationsPage() {
   const [schedulePrompt, setSchedulePrompt] = useState("");
   const [scheduleResponse, setScheduleResponse] = useState("");
   const [schedulePreview, setSchedulePreview] = useState<NoteAiSchedulePlan | null>(null);
+  const [performanceLoopEnabled, setPerformanceLoopEnabled] = useState(false);
 
   const reload = async (userId: string) => {
     const client = getSupabaseClient();
@@ -176,6 +185,13 @@ export function NoteOperationsPage() {
     () => summarizeNoteSchedulePerformance(schedule, previousMonth),
     [schedule, previousMonth],
   );
+
+  useEffect(() => {
+    const syncReleaseGate = () => setPerformanceLoopEnabled(notePerformanceLoopAvailable());
+    syncReleaseGate();
+    window.addEventListener(APP_RELEASE_STATE_EVENT, syncReleaseGate);
+    return () => window.removeEventListener(APP_RELEASE_STATE_EVENT, syncReleaseGate);
+  }, []);
 
   const groupedByDate = useMemo(() => {
     const map = new Map<string, NoteScheduleItem[]>();
@@ -242,7 +258,7 @@ export function NoteOperationsPage() {
         selectedAi,
         targetMonth,
         todayJstDateKey(),
-        previousPerformance,
+        performanceLoopEnabled ? previousPerformance : undefined,
       );
       setSchedulePrompt(prompt);
       setScheduleResponse("");
@@ -509,7 +525,7 @@ export function NoteOperationsPage() {
                 <span>週に何回投稿するか</span><span>1日に何回まで投稿するか</span><span>無料note / 有料noteの比率</span>
                 <span>有料noteを週何回にするか</span><span>投稿する曜日・時間帯</span><span>その月の記事テーマ</span>
                 <span>トレンド記事と長期記事の配分</span><span>SNS告知・週次振り返り</span>
-                <span>前月の継続実績に合わせた負荷調整</span>
+                {performanceLoopEnabled && <span>前月の継続実績に合わせた負荷調整</span>}
               </div>
             </div>
 
@@ -518,15 +534,17 @@ export function NoteOperationsPage() {
               <span>note公式、創作カレンダー、現在の企画・お題、カテゴリ/おすすめの仕組み、選択ジャンルの直近30日・90日・12か月を確認し、出典URLと日付をJSONへ入れるよう指示します。検索できない場合は最新情報を作らないルールです。</span>
             </div>
 
-            <div className="note-ai-research-note">
-              <strong>前月のAAS実績も使って、無理のない頻度へ調整</strong>
-              <span>
-                {previousPerformance
-                  ? `${previousMonth.replace("-", "年")}月は記事予定${previousPerformance.scheduledPosts}件、完了${previousPerformance.donePosts}件、スキップ${previousPerformance.skippedPosts}件、未完了${previousPerformance.remainingPlannedPosts}件（完了率${previousPerformance.adherenceRate}%）でした。曜日・時刻別の集計もAIへ渡します。`
-                  : `${previousMonth.replace("-", "年")}月のfree_note / paid_note実績はAAS内にありません。前月実績を推測せず、最新調査と継続しやすさから計画します。`}
-                本文・PV・売上・購入率などは前月実績としてAIへ渡しません。
-              </span>
-            </div>
+            {performanceLoopEnabled && (
+              <div className="note-ai-research-note">
+                <strong>前月のAAS実績も使って、無理のない頻度へ調整</strong>
+                <span>
+                  {previousPerformance
+                    ? `${previousMonth.replace("-", "年")}月は記事予定${previousPerformance.scheduledPosts}件、完了${previousPerformance.donePosts}件、スキップ${previousPerformance.skippedPosts}件、未完了${previousPerformance.remainingPlannedPosts}件（完了率${previousPerformance.adherenceRate}%）でした。曜日・時刻別の集計もAIへ渡します。`
+                    : `${previousMonth.replace("-", "年")}月のfree_note / paid_note実績はAAS内にありません。前月実績を推測せず、最新調査と継続しやすさから計画します。`}
+                  本文・PV・売上・購入率などは前月実績としてAIへ渡しません。
+                </span>
+              </div>
+            )}
 
             <button type="button" className="primary-action note-ai-build-button" disabled={busy} onClick={() => void openScheduleBuilderAi()}>
               {busy ? "準備中…" : `${AI_PROVIDER_LABELS[selectedAi]}で${targetMonth.replace("-", "年")}月をリサーチする`}
@@ -572,7 +590,7 @@ export function NoteOperationsPage() {
                 <button type="button" className="primary-action note-ai-apply-button" disabled={busy} onClick={() => void applyAiSchedule()}>
                   この月のAASスケジュールに反映
                 </button>
-                <p className="note-data-note">対象月だけを入れ替えます。他の月の予定は残ります。今月を途中で再計画する場合も、過去の予定と完了済み履歴は残します。AIの調査概要と根拠もAASへ保存するため、後から「なぜこの頻度にしたか」を確認できます。翌月計画では、前月の予定種別・状態・曜日・時刻の集計だけを継続性の参考にし、本文や売上を自動学習しません。</p>
+                <p className="note-data-note">対象月だけを入れ替えます。他の月の予定は残ります。今月を途中で再計画する場合も、過去の予定と完了済み履歴は残します。AIの調査概要と根拠もAASへ保存するため、後から「なぜこの頻度にしたか」を確認できます。{performanceLoopEnabled ? "翌月計画では、前月の予定種別・状態・曜日・時刻の集計だけを継続性の参考にし、本文や売上を自動学習しません。" : ""}</p>
               </div>
             )}
 
