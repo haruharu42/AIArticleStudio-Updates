@@ -3,6 +3,7 @@ export const DESKTOP_NAV_ITEMS_EVENT = "aas-pwa-desktop-nav-items-preference";
 
 export type DesktopNavItemKey =
   | "create"
+  | "noteOps"
   | "library"
   | "images"
   | "tools"
@@ -37,6 +38,7 @@ export const DESKTOP_NAV_ITEM_OPTIONS: readonly DesktopNavItem[] = [
 
 export const DEFAULT_DESKTOP_NAV_ITEMS: readonly DesktopNavItemKey[] = [
   "create",
+  "noteOps",
   "library",
   "tools",
   "sns",
