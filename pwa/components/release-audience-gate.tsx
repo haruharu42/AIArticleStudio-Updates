@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import {
   appDeploymentAudience,
+  clearEffectiveRelease,
   loadMyAppReleaseState,
   type AppReleaseState,
 } from "@/lib/app-release";
@@ -40,6 +41,13 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
 
     const refresh = async () => {
       try {
+        const { data: { session }, error: sessionError } = await client.auth.getSession();
+        if (!active) return;
+        if (sessionError || !session) {
+          clearEffectiveRelease();
+          setGate({ kind: "signed_out" });
+          return;
+        }
         const next = await loadMyAppReleaseState(client, "preview");
         if (!active) return;
         if (!next.signed_in) {
