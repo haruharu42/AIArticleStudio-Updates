@@ -3,6 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export const APP_RELEASE_EFFECTIVE_KEY = "aas-pwa-effective-release";
 export const APP_RELEASE_STATE_EVENT = "aas-pwa-release-state";
 
+export type AppDeploymentAudience = "public" | "preview";
+
+export function appDeploymentAudience(): AppDeploymentAudience {
+  return process.env.NEXT_PUBLIC_AAS_RELEASE_AUDIENCE === "preview" ? "preview" : "public";
+}
+
 export type AppRelease = {
   id: string;
   version: string;
@@ -17,7 +23,11 @@ export type AppReleaseState = {
   active?: boolean;
   configured?: boolean;
   is_admin?: boolean;
+  is_release_tester?: boolean;
+  preview_allowed?: boolean;
+  candidate_stage?: "admin" | "tester" | null;
   is_admin_preview?: boolean;
+  is_tester_preview?: boolean;
   current_release?: AppRelease | null;
   effective_release?: AppRelease | null;
   available_release?: AppRelease | null;
@@ -32,13 +42,22 @@ export type AdminAppRelease = AppRelease & {
   adopted_users: number;
 };
 
+export type AdminReleaseTester = {
+  aas_user_id: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AdminReleaseSnapshot = {
   channel: {
     current_release_id: string | null;
     candidate_release_id: string | null;
+    candidate_stage: "admin" | "tester" | null;
     updated_at: string | null;
   };
   releases: AdminAppRelease[];
+  testers: AdminReleaseTester[];
 };
 
 function isRelease(value: unknown): value is AppRelease {
@@ -62,7 +81,11 @@ function normalizeState(value: unknown): AppReleaseState {
     active: row.active === true,
     configured: row.configured === true,
     is_admin: row.is_admin === true,
+    is_release_tester: row.is_release_tester === true,
+    preview_allowed: row.preview_allowed !== false,
+    candidate_stage: row.candidate_stage === "admin" || row.candidate_stage === "tester" ? row.candidate_stage : null,
     is_admin_preview: row.is_admin_preview === true,
+    is_tester_preview: row.is_tester_preview === true,
     current_release: isRelease(row.current_release) ? row.current_release : null,
     effective_release: isRelease(row.effective_release) ? row.effective_release : null,
     available_release: isRelease(row.available_release) ? row.available_release : null,
@@ -74,6 +97,7 @@ function normalizeAdminSnapshot(value: unknown): AdminReleaseSnapshot {
   const row = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const rawChannel = row.channel && typeof row.channel === "object" ? (row.channel as Record<string, unknown>) : {};
   const rawReleases = Array.isArray(row.releases) ? row.releases : [];
+  const rawTesters = Array.isArray(row.testers) ? row.testers : [];
   const releases: AdminAppRelease[] = rawReleases.flatMap((item) => {
     if (!isRelease(item) || typeof item !== "object") return [];
     const release = item as Record<string, unknown>;
@@ -89,14 +113,38 @@ function normalizeAdminSnapshot(value: unknown): AdminReleaseSnapshot {
     }];
   });
 
+  const testers: AdminReleaseTester[] = rawTesters.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const tester = item as Record<string, unknown>;
+    if (typeof tester.aas_user_id !== "string") return [];
+    return [{
+      aas_user_id: tester.aas_user_id,
+      enabled: tester.enabled === true,
+      created_at: typeof tester.created_at === "string" ? tester.created_at : "",
+      updated_at: typeof tester.updated_at === "string" ? tester.updated_at : "",
+    }];
+  });
+
   return {
     channel: {
       current_release_id: typeof rawChannel.current_release_id === "string" ? rawChannel.current_release_id : null,
       candidate_release_id: typeof rawChannel.candidate_release_id === "string" ? rawChannel.candidate_release_id : null,
+      candidate_stage: rawChannel.candidate_stage === "admin" || rawChannel.candidate_stage === "tester" ? rawChannel.candidate_stage : null,
       updated_at: typeof rawChannel.updated_at === "string" ? rawChannel.updated_at : null,
     },
     releases,
+    testers,
   };
+}
+
+export function clearEffectiveRelease(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(APP_RELEASE_EFFECTIVE_KEY);
+  delete document.documentElement.dataset.aasReleaseVersion;
+  delete document.documentElement.dataset.aasReleaseBuild;
+  window.dispatchEvent(new CustomEvent<AppReleaseState>(APP_RELEASE_STATE_EVENT, {
+    detail: { signed_in: false },
+  }));
 }
 
 export function persistEffectiveRelease(state: AppReleaseState): void {
@@ -126,8 +174,11 @@ export function readEffectiveRelease(): AppRelease | null {
   }
 }
 
-export async function loadMyAppReleaseState(client: SupabaseClient): Promise<AppReleaseState> {
-  const { data, error } = await client.rpc("get_my_app_release_state");
+export async function loadMyAppReleaseState(
+  client: SupabaseClient,
+  audience: AppDeploymentAudience = appDeploymentAudience(),
+): Promise<AppReleaseState> {
+  const { data, error } = await client.rpc("get_my_app_release_state", { p_audience: audience });
   if (error) throw error;
   const state = normalizeState(data);
   persistEffectiveRelease(state);
@@ -158,6 +209,25 @@ export async function adminCreateAppRelease(
     p_notes: input.notes,
     p_update_kind: input.updateKind,
     p_build_key: input.buildKey,
+  });
+  if (error) throw error;
+  return normalizeAdminSnapshot(data);
+}
+
+export async function adminPromoteAppReleaseToTesters(client: SupabaseClient, releaseId: string): Promise<AdminReleaseSnapshot> {
+  const { data, error } = await client.rpc("admin_promote_app_release_to_testers", { p_release_id: releaseId });
+  if (error) throw error;
+  return normalizeAdminSnapshot(data);
+}
+
+export async function adminSetAppReleaseTester(
+  client: SupabaseClient,
+  aasUserId: string,
+  enabled: boolean,
+): Promise<AdminReleaseSnapshot> {
+  const { data, error } = await client.rpc("admin_set_app_release_tester", {
+    p_aas_user_id: aasUserId,
+    p_enabled: enabled,
   });
   if (error) throw error;
   return normalizeAdminSnapshot(data);

@@ -103,3 +103,101 @@ test("admin release control provides candidate publish and rollback flows", asyn
   assert.match(css, /\.release-required-backdrop/);
   assert.match(css, /\.release-admin-page/);
 });
+
+
+test("staged release rollout isolates admin preview, selected user testers, and public users", async () => {
+  const [migration, client, gate, manager, page, nextConfig, previewWorkflow, publicWorkflow, layout] = await Promise.all([
+    readRepo("supabase/migrations/20260919144016_pwa_staged_release_rollout.sql"),
+    read("lib/app-release.ts"),
+    read("components/release-audience-gate.tsx"),
+    read("components/release-update-manager.tsx"),
+    read("components/admin-release-page.tsx"),
+    read("next.config.ts"),
+    readRepo(".github/workflows/pwa-preview-deploy.yml"),
+    readRepo(".github/workflows/pwa-member-beta-deploy.yml"),
+    read("app/layout.tsx"),
+  ]);
+
+  assert.match(migration, /create table if not exists public\.app_release_testers/);
+  assert.match(migration, /alter table public\.app_release_testers force row level security/);
+  assert.match(migration, /revoke all on table public\.app_release_testers from anon, authenticated/);
+  assert.match(migration, /AAS-000002/);
+  assert.match(migration, /candidate_stage in \('admin','tester'\)/);
+  assert.match(migration, /function public\.get_my_app_release_state\(p_audience text\)/);
+  assert.match(migration, /'preview_allowed'/);
+  assert.match(migration, /'is_release_tester'/);
+  assert.match(migration, /'is_tester_preview'/);
+  assert.match(migration, /function public\.admin_set_app_release_tester/);
+  assert.match(migration, /function public\.admin_promote_app_release_to_testers/);
+  assert.match(migration, /candidate must pass tester stage before publish/);
+  assert.match(migration, /candidate_stage = 'tester'/);
+  assert.doesNotMatch(migration, /grant .* to anon/i);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+
+  assert.match(client, /AppDeploymentAudience = "public" \| "preview"/);
+  assert.match(client, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE/);
+  assert.match(client, /adminPromoteAppReleaseToTesters/);
+  assert.match(client, /adminSetAppReleaseTester/);
+  assert.match(client, /p_audience: audience/);
+
+  assert.match(gate, /preview_allowed/);
+  assert.match(gate, /is_release_tester/);
+  assert.match(gate, /ALWAYS_PUBLIC_PREVIEW_PATHS/);
+  assert.match(gate, /\/auth\/callback/);
+  assert.match(gate, /pathname === "\/"/);
+  assert.match(gate, /第1段階の管理者確認中/);
+  assert.match(gate, /管理者が指定した一般ユーザーテスター/);
+  assert.match(layout, /ReleaseAudienceGate/);
+
+  assert.match(manager, /is_tester_preview/);
+  assert.match(manager, /一般ユーザーテスト版/);
+  assert.match(page, /第2段階：指定テスターへ反映/);
+  assert.match(page, /第3段階：全一般ユーザーへ公開承認/);
+  assert.match(page, /AAS-000002/);
+
+  assert.match(nextConfig, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE/);
+  assert.match(previewWorkflow, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: preview/);
+  assert.match(publicWorkflow, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: public/);
+});
+
+
+test("account switching stays available on prerelease denial and clears cached release state", async () => {
+  const [gate, session, release, settings, access, logoutPage] = await Promise.all([
+    read("components/release-audience-gate.tsx"),
+    read("lib/auth-session.ts"),
+    read("lib/app-release.ts"),
+    read("components/pwa-settings-page.tsx"),
+    read("components/phase6-app.tsx"),
+    read("app/logout/page.tsx"),
+  ]);
+
+  assert.match(gate, /ログアウトして別のアカウントでログイン/);
+  assert.match(gate, /href="\/logout"/);
+  assert.match(gate, /ALWAYS_PUBLIC_PREVIEW_PATHS = \["\/auth\/callback", "\/logout"/);
+  assert.match(gate, /auth\.getSession\(\)/);
+  assert.match(gate, /sessionError \|\| !session/);
+  assert.match(gate, /clearEffectiveRelease\(\)/);
+
+  assert.match(session, /auth\.signOut\(\{ scope: "local" \}\)/);
+  assert.match(session, /finally/);
+  assert.match(session, /AUTH_STORAGE_PREFIX = "aas-pwa-auth"/);
+  assert.match(session, /localStorage\.removeItem\(key\)/);
+  assert.match(session, /clearEffectiveRelease\(\)/);
+  assert.match(session, /aas-pwa-google-consent/);
+
+  assert.match(release, /export function clearEffectiveRelease/);
+  assert.match(release, /localStorage\.removeItem\(APP_RELEASE_EFFECTIVE_KEY\)/);
+  assert.match(release, /aasReleaseVersion/);
+  assert.match(release, /aasReleaseBuild/);
+
+  assert.match(logoutPage, /signOutCurrentBrowser/);
+  assert.match(logoutPage, /clearLocalAuthArtifacts/);
+  assert.match(logoutPage, /clearEffectiveRelease/);
+  assert.match(logoutPage, /window\.location\.replace\("\/"\)/);
+
+  assert.match(settings, /signOutCurrentBrowser/);
+  assert.match(settings, /window\.location\.replace\("\/"\)/);
+  assert.match(settings, />ログアウト</);
+  assert.match(access, /signOutCurrentBrowser/);
+  assert.match(access, /window\.location\.replace\("\/"\)/);
+});
