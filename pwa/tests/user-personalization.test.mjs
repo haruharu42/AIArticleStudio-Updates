@@ -140,3 +140,19 @@ test("personalization learns structured article preferences without storing raw 
   assert.match(creator, /targetLength: draft\.targetLength/);
   assert.doesNotMatch(migration, /source_body|publish_body|AI回答全文|プロンプト全文/);
 });
+test("mobile and desktop reference UIs use distinct responsive layouts", async () => {
+  const layout = await read("app/layout.tsx");
+  const css = await read("app/phase35-device-layout.css");
+
+  assert.match(layout, /phase35-device-layout\.css/);
+  assert.match(css, /@media \(min-width: 900px\)/);
+  assert.match(css, /@media \(max-width: 700px\)/);
+  assert.match(css, /reference-create-shell \.creator-card/);
+  assert.match(css, /reference-home-main/);
+  assert.match(css, /reference-ranking-page/);
+  assert.match(css, /reference-profile-page/);
+  assert.match(css, /grid-template-columns: minmax\(0, 1\.15fr\)/);
+  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /grid-template-columns: 1fr;/);
+});
+
