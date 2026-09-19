@@ -688,7 +688,7 @@ export function buildNoteScheduleResearchPrompt(
 - トレンド記事だけで埋めず、対象月の旬の記事と半年後も読まれる記事を混ぜる。
 - 有料noteを置く場合、その前後に関連する無料noteがあるなど読者導線を考える。
 - 投稿時間は検証案として理由をnotesまたはresearch.strategy_summaryに残す。
-- research.recommendation_reasonには、なぜその投稿頻度と無料/有料比率にしたのかを具体的に書く。
+- recommendation.recommendation_reasonには、なぜその投稿頻度と無料/有料比率にしたのかを具体的に書く。
 
 【絶対ルール】
 - ユーザーが入力していない経歴、職業、年齢、収入、実績、資格、購入経験、利用経験、成功体験を作らない。
