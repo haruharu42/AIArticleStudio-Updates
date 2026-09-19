@@ -854,6 +854,29 @@ export function parseNoteAiSchedulePlan(
     .filter((value): value is NoteAiResearchSource => Boolean(value))
     .slice(0, 30);
 
+  if (sources.length > 0 && !sources.some((source) => {
+    try {
+      const url = new URL(source.url);
+      return url.hostname === "note.com" && url.pathname.startsWith("/info/");
+    } catch {
+      return false;
+    }
+  })) {
+    warnings.push("note公式（note.com/info）の出典が確認できません。note現行仕様や企画の根拠を再確認してください。");
+  }
+
+  const generatedDate = new Date(generatedForJst + "T00:00:00Z");
+  const recentSourceCutoff = new Date(generatedDate);
+  recentSourceCutoff.setUTCDate(recentSourceCutoff.getUTCDate() - 180);
+  const datedSources = sources
+    .map((source) => /^\d{4}-\d{2}-\d{2}/.test(source.publishedAt) ? new Date(source.publishedAt.slice(0, 10) + "T00:00:00Z") : null)
+    .filter((value): value is Date => Boolean(value) && !Number.isNaN(value.getTime()));
+  if (sources.length > 0 && datedSources.length === 0) {
+    warnings.push("出典の公開・更新日を確認できません。最新トレンドの根拠日付をAIに再確認してください。");
+  } else if (datedSources.length > 0 && !datedSources.some((date) => date >= recentSourceCutoff && date <= generatedDate)) {
+    warnings.push("直近180日以内の出典が確認できません。最新トレンド部分は再調査をおすすめします。");
+  }
+
   const declaredTotal = Math.max(0, Math.round(finiteNumber(recommendationRaw.total_posts, articleItems.length)));
   const declaredFree = Math.max(0, Math.round(finiteNumber(recommendationRaw.free_posts, actualFree)));
   const declaredPaid = Math.max(0, Math.round(finiteNumber(recommendationRaw.paid_posts, actualPaid)));
@@ -891,20 +914,30 @@ export async function replaceNoteScheduleMonth(
   userId: string,
   targetMonth: string,
   items: NoteScheduleItem[],
+  currentDate = todayJstDateKey(),
 ): Promise<NoteScheduleItem[]> {
   const { start, end } = noteMonthBounds(targetMonth);
+  const replacementStart = targetMonth === currentDate.slice(0, 7) ? currentDate : start;
+  const previous = await listNoteSchedule(client, userId, start, end);
+  const preserved = previous.filter((item) => item.scheduledDate < replacementStart || item.status === "done");
+  const preservedKeys = new Set(
+    preserved.map((item) => `${item.scheduledDate}|${item.scheduledTime}|${item.itemType}`),
+  );
   const clean = items
-    .filter((item) => item.scheduledDate >= start && item.scheduledDate <= end && item.title.trim())
+    .filter((item) => item.scheduledDate >= replacementStart && item.scheduledDate <= end && item.title.trim())
+    .filter((item) => !preservedKeys.has(`${item.scheduledDate}|${item.scheduledTime}|${item.itemType}`))
     .slice(0, 200)
     .map((item) => ({ ...item, id: undefined, source: "imported" as NoteScheduleSource }));
-  const previous = await listNoteSchedule(client, userId, start, end);
+  const previousReplaceable = previous.filter((item) => item.scheduledDate >= replacementStart && item.status !== "done");
 
-  const { error: deleteError } = await client
+  let deleteQuery = client
     .from("note_operation_schedule_items")
     .delete()
     .eq("user_id", userId)
-    .gte("scheduled_date", start)
-    .lte("scheduled_date", end);
+    .gte("scheduled_date", replacementStart)
+    .lte("scheduled_date", end)
+    .neq("status", "done");
+  const { error: deleteError } = await deleteQuery;
   if (deleteError) throw new Error("対象月の既存スケジュールを更新できませんでした。");
 
   if (clean.length) {
@@ -912,8 +945,8 @@ export async function replaceNoteScheduleMonth(
       .from("note_operation_schedule_items")
       .insert(clean.map((item) => dbScheduleRow(userId, item)));
     if (insertError) {
-      if (previous.length) {
-        await client.from("note_operation_schedule_items").insert(previous.map((item) => dbScheduleRow(userId, item)));
+      if (previousReplaceable.length) {
+        await client.from("note_operation_schedule_items").insert(previousReplaceable.map((item) => dbScheduleRow(userId, item)));
       }
       throw new Error("AIの月間スケジュールを保存できませんでした。");
     }
