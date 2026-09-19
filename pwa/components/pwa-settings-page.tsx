@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
+import { signOutCurrentBrowser } from "@/lib/auth-session";
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { readMobileNavAlways, writeMobileNavAlways } from "@/lib/mobile-nav-preference";
 import { getSupabaseClient } from "@/lib/supabase";
@@ -141,7 +142,7 @@ export function PwaSettingsPage() {
   const logout = async () => {
     try {
       const client = getSupabaseClient();
-      await client.auth.signOut({ scope: "local" });
+      await signOutCurrentBrowser(client);
     } finally {
       router.push("/");
       router.refresh();
