@@ -5,6 +5,7 @@ export const MOBILE_NAV_ITEMS_EVENT = "aas-pwa-bottom-nav-items-preference";
 
 export type MobileNavItemKey =
   | "create"
+  | "noteOps"
   | "images"
   | "tools"
   | "sns"
