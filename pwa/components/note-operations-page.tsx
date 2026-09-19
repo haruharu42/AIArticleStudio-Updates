@@ -15,17 +15,23 @@ import {
   NOTE_TONE_PRESETS,
   buildNoteAccountResearchPrompt,
   buildNoteProfileDraft,
+  buildNoteScheduleResearchPrompt,
+  currentJstMonth,
   defaultNoteOperationProfile,
   exportNoteOperationsJson,
   exportNoteScheduleCsv,
-  generateNoteSchedule,
   listNoteSchedule,
+  loadNoteAiSchedulePlan,
   loadNoteOperationProfile,
+  parseNoteAiSchedulePlan,
   parseNoteOperationsImport,
   replaceNoteSchedule,
+  replaceNoteScheduleMonth,
+  saveNoteAiSchedulePlan,
   saveNoteOperationProfile,
   setNoteScheduleStatus,
   todayJstDateKey,
+  type NoteAiSchedulePlan,
   type NoteOperationProfile,
   type NoteScheduleItem,
 } from "@/lib/note-operations";
@@ -106,19 +112,6 @@ function createHref(item: NoteScheduleItem): string {
   return "/create?" + params.toString();
 }
 
-function profileGoalDefaults(profile: NoteOperationProfile): NoteOperationProfile {
-  if (profile.operationGoal === "growth") {
-    return { ...profile, weeklyPostCount: 3, paidPostsPerMonth: 1, scheduleWeeks: 4, preferredTime: "20:00", secondaryTime: "12:00" };
-  }
-  if (profile.operationGoal === "monetize") {
-    return { ...profile, weeklyPostCount: 3, paidPostsPerMonth: 2, scheduleWeeks: 4, preferredTime: "20:00", secondaryTime: "12:00" };
-  }
-  if (profile.operationGoal === "portfolio") {
-    return { ...profile, weeklyPostCount: 2, paidPostsPerMonth: 1, scheduleWeeks: 4, preferredTime: "20:00", secondaryTime: "12:00" };
-  }
-  return { ...profile, weeklyPostCount: 2, paidPostsPerMonth: 0, scheduleWeeks: 4, preferredTime: "20:00", secondaryTime: "12:00" };
-}
-
 export function NoteOperationsPage() {
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [tab, setTab] = useState<Tab>("start");
@@ -126,12 +119,14 @@ export function NoteOperationsPage() {
   const [schedule, setSchedule] = useState<NoteScheduleItem[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [startDate, setStartDate] = useState(todayJstDateKey());
-  const [calendarMonth, setCalendarMonth] = useState(todayJstDateKey().slice(0, 7));
-  const [dirtySchedule, setDirtySchedule] = useState(false);
+  const [targetMonth, setTargetMonth] = useState(currentJstMonth());
+  const [calendarMonth, setCalendarMonth] = useState(currentJstMonth());
   const [selectedAi, setSelectedAi] = useState<AiProvider>("chatgpt");
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
   const [accountPrompt, setAccountPrompt] = useState("");
+  const [schedulePrompt, setSchedulePrompt] = useState("");
+  const [scheduleResponse, setScheduleResponse] = useState("");
+  const [schedulePreview, setSchedulePreview] = useState<NoteAiSchedulePlan | null>(null);
 
   const reload = async (userId: string) => {
     const client = getSupabaseClient();
@@ -144,7 +139,6 @@ export function NoteOperationsPage() {
     setSchedule(nextSchedule);
     setWritingProfile(nextWritingProfile);
     setSelectedAi(nextWritingProfile.preferredAi);
-    setDirtySchedule(false);
   };
 
   useEffect(() => {
@@ -186,13 +180,6 @@ export function NoteOperationsPage() {
     return map;
   }, [schedule]);
 
-  const stats = useMemo(() => ({
-    total: schedule.filter((item) => item.itemType === "free_note" || item.itemType === "paid_note").length,
-    free: schedule.filter((item) => item.itemType === "free_note").length,
-    paid: schedule.filter((item) => item.itemType === "paid_note").length,
-    done: schedule.filter((item) => item.status === "done").length,
-  }), [schedule]);
-
   const saveProfile = async () => {
     if (gate.kind !== "ready" || !profile) return;
     setBusy(true);
@@ -233,30 +220,72 @@ export function NoteOperationsPage() {
     }
   };
 
-  const generate = () => {
-    if (!profile) return;
-    const nextProfile = profileGoalDefaults(profile);
-    const next = generateNoteSchedule(nextProfile, startDate);
-    setProfile(nextProfile);
-    setSchedule(next);
-    setDirtySchedule(true);
-    setMessage("AASの初期運用プランを作成しました。時間や頻度は実績を見ながら調整してください。");
-  };
-
-  const saveSchedule = async () => {
+  const openScheduleBuilderAi = async () => {
     if (gate.kind !== "ready" || !profile) return;
     setBusy(true);
     setMessage("");
     try {
       await saveNoteOperationProfile(getSupabaseClient(), profile);
-      const next = await replaceNoteSchedule(getSupabaseClient(), gate.userId, schedule);
-      setSchedule(next);
-      setDirtySchedule(false);
-      setMessage("note運営スケジュールをAASに保存しました。ホームの「今日のnote運営」にも反映されます。");
+      if (writingProfile && writingProfile.preferredAi !== selectedAi) {
+        const saved = await saveWritingProfile(getSupabaseClient(), { ...writingProfile, preferredAi: selectedAi });
+        setWritingProfile(saved);
+      }
+      const prompt = buildNoteScheduleResearchPrompt(profile, selectedAi, targetMonth);
+      setSchedulePrompt(prompt);
+      setScheduleResponse("");
+      setSchedulePreview(null);
+      try {
+        await navigator.clipboard.writeText(prompt);
+        setMessage(`${AI_PROVIDER_LABELS[selectedAi]}用の月間運用リサーチプロンプトをコピーしました。AIのJSON回答をAASへ貼り付けてください。`);
+      } catch {
+        setMessage("クリップボードへコピーできなかったため、下のプロンプト欄からコピーしてください。");
+      }
+      launchAiApp(selectedAi);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "スケジュールを保存できませんでした。");
+      setMessage(error instanceof Error ? error.message : "月間運用プロンプトを作成できませんでした。");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const previewAiSchedule = (text: string) => {
+    setMessage("");
+    try {
+      const plan = parseNoteAiSchedulePlan(text, targetMonth);
+      setScheduleResponse(text);
+      setSchedulePreview(plan);
+      setMessage(`${targetMonth.replace("-", "年")}月のAI運用案を読み込みました。内容を確認してからAASへ反映してください。`);
+    } catch (error) {
+      setSchedulePreview(null);
+      setMessage(error instanceof Error ? error.message : "AIの運用スケジュールを読み込めませんでした。");
+    }
+  };
+
+  const applyAiSchedule = async () => {
+    if (gate.kind !== "ready" || !schedulePreview) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const client = getSupabaseClient();
+      const next = await replaceNoteScheduleMonth(client, gate.userId, targetMonth, schedulePreview.schedule);
+      await saveNoteAiSchedulePlan(client, gate.userId, schedulePreview);
+      setSchedule(next);
+      setCalendarMonth(targetMonth);
+      setMessage(`${targetMonth.replace("-", "年")}月のAI運用スケジュールをAASへ反映しました。他の月の予定は変更していません。`);
+      setTab("calendar");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "AI運用スケジュールを反映できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const importAiScheduleFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      previewAiSchedule(text);
+    } catch {
+      setMessage("AIスケジュールファイルを読み込めませんでした。");
     }
   };
 
@@ -294,6 +323,21 @@ export function NoteOperationsPage() {
       setBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (gate.kind !== "ready") return;
+    let active = true;
+    setSchedulePreview(null);
+    void loadNoteAiSchedulePlan(getSupabaseClient(), gate.userId, targetMonth).then(
+      (plan) => {
+        if (active && plan) setSchedulePreview(plan);
+      },
+      () => {
+        // Previous plan history is optional. Schedule browsing must still work.
+      },
+    );
+    return () => { active = false; };
+  }, [gate, targetMonth]);
 
   if (gate.kind !== "ready" || !profile) {
     return (
@@ -420,33 +464,97 @@ export function NoteOperationsPage() {
 
         {tab === "plan" && (
           <section className="note-ops-panel">
-            <div className="note-ops-section-head"><div><span>OPERATION PLAN</span><h2>AASに運用スケジュールを決めてもらう</h2></div></div>
-            <p className="note-ops-hint">投稿時刻は「必ず伸びる時間」ではなく、継続しやすさを優先した初期提案です。実際の反応を見て変更してください。</p>
-            <div className="note-plan-grid">
-              <label><span>目的</span><select value={profile.operationGoal} onChange={(event) => setProfile({ ...profile, operationGoal: event.target.value as NoteOperationProfile["operationGoal"] })}>{NOTE_OPERATION_GOALS.map((goal) => <option key={goal.value} value={goal.value}>{goal.label}</option>)}</select></label>
-              <label><span>開始日</span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></label>
-              <label><span>1週間の投稿数</span><input type="number" min={1} max={14} value={profile.weeklyPostCount} onChange={(event) => setProfile({ ...profile, weeklyPostCount: Number(event.target.value) || 1 })} /></label>
-              <label><span>1か月の有料note数</span><input type="number" min={0} max={14} value={profile.paidPostsPerMonth} onChange={(event) => setProfile({ ...profile, paidPostsPerMonth: Number(event.target.value) || 0 })} /></label>
-              <label><span>メイン投稿時間</span><input type="time" value={profile.preferredTime} onChange={(event) => setProfile({ ...profile, preferredTime: event.target.value })} /></label>
-              <label><span>2本投稿する日の追加時間</span><input type="time" value={profile.secondaryTime} onChange={(event) => setProfile({ ...profile, secondaryTime: event.target.value })} /></label>
-              <label><span>スケジュール期間</span><select value={profile.scheduleWeeks} onChange={(event) => setProfile({ ...profile, scheduleWeeks: Number(event.target.value) })}>{[2,4,6,8,12].map((weeks) => <option key={weeks} value={weeks}>{weeks}週間</option>)}</select></label>
+            <div className="note-ops-section-head"><div><span>AI MONTHLY OPERATION PLAN</span><h2>AIに1か月の運用スケジュールを決めてもらう</h2></div></div>
+            <p className="note-ops-hint">開始日ではなく「対象月」で計画します。投稿回数、有料noteの頻度、1日の投稿回数、曜日、時間帯、記事テーマまでChatGPT / Gemini / Claudeが最新情報を調査して提案します。時間や頻度は成果保証ではなく、検証するための運用仮説として扱います。</p>
+
+            <div className="note-ai-month-controls">
+              <label>
+                <span>① 計画したい月</span>
+                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setScheduleResponse(""); setSchedulePreview(null); }} />
+              </label>
+              <div>
+                <span>② リサーチに使うAI</span>
+                <div className="note-ai-provider-grid">
+                  {(["chatgpt","gemini","claude"] as AiProvider[]).map((provider) => (
+                    <button type="button" key={provider} className={selectedAi === provider ? "active" : ""} onClick={() => setSelectedAi(provider)}>
+                      <strong>{AI_PROVIDER_LABELS[provider]}</strong>
+                      <small>{writingProfile?.preferredAi === provider ? "現在のよく使うAI" : "選択する"}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div className="note-plan-actions">
-              <button type="button" className="primary-action" onClick={generate}>AASおまかせで作る</button>
-              <button type="button" disabled={busy || !dirtySchedule} onClick={() => void saveSchedule()}>このスケジュールをAASに保存</button>
+
+            <div className="note-ai-decision-list">
+              <strong>AIに決めてもらう内容</strong>
+              <div>
+                <span>週に何回投稿するか</span><span>1日に何回まで投稿するか</span><span>無料note / 有料noteの比率</span>
+                <span>有料noteを週何回にするか</span><span>投稿する曜日・時間帯</span><span>その月の記事テーマ</span>
+                <span>トレンド記事と長期記事の配分</span><span>SNS告知・週次振り返り</span>
+              </div>
             </div>
-            <div className="note-plan-stats">
-              <article><small>投稿予定</small><strong>{stats.total}</strong></article>
-              <article><small>無料note</small><strong>{stats.free}</strong></article>
-              <article><small>有料note</small><strong>{stats.paid}</strong></article>
-              <article><small>完了</small><strong>{stats.done}</strong></article>
+
+            <div className="note-ai-research-note">
+              <strong>最新情報を毎回調査</strong>
+              <span>note公式、創作カレンダー、現在の企画・お題、カテゴリ/おすすめの仕組み、選択ジャンルの直近30日・90日・12か月を確認し、出典URLと日付をJSONへ入れるよう指示します。検索できない場合は最新情報を作らないルールです。</span>
             </div>
-            <div className="note-data-actions">
-              <button type="button" disabled={!schedule.length} onClick={() => downloadText("aas-note-schedule.csv", exportNoteScheduleCsv(schedule), "text/csv;charset=utf-8")}>CSVをダウンロード</button>
-              <button type="button" disabled={!schedule.length} onClick={() => downloadText("aas-note-operations.json", exportNoteOperationsJson(profile, schedule), "application/json;charset=utf-8")}>JSONをダウンロード</button>
-              <label className="note-import-button">AASへアップロード<input type="file" accept=".json,.csv,application/json,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importFile(file); event.currentTarget.value = ""; }} /></label>
+
+            <button type="button" className="primary-action note-ai-build-button" disabled={busy} onClick={() => void openScheduleBuilderAi()}>
+              {busy ? "準備中…" : `${AI_PROVIDER_LABELS[selectedAi]}で${targetMonth.replace("-", "年")}月をリサーチする`}
+            </button>
+
+            {schedulePrompt && <details className="note-account-prompt"><summary>AIへ渡す月間スケジュール用プロンプトを確認</summary><textarea readOnly value={schedulePrompt} rows={18} onFocus={(event) => event.currentTarget.select()} /></details>}
+
+            <div className="note-ai-import-box">
+              <div><strong>③ AIのJSON回答をAASへ読み込む</strong><small>AIの回答全体を貼り付けるか、JSONファイルをアップロードしてください。</small></div>
+              <textarea value={scheduleResponse} onChange={(event) => setScheduleResponse(event.target.value)} placeholder={'{"schema":"aas-note-schedule-v2", ...}'} rows={10} />
+              <div className="note-data-actions">
+                <button type="button" disabled={!scheduleResponse.trim()} onClick={() => previewAiSchedule(scheduleResponse)}>読み込み・確認</button>
+                <label className="note-import-button">JSONファイルを読み込む<input type="file" accept=".json,.txt,application/json,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAiScheduleFile(file); event.currentTarget.value = ""; }} /></label>
+              </div>
             </div>
-            <p className="note-data-note">JSONはプロフィール設定＋スケジュール、CSVはスケジュールのみを保存します。どちらもAASへ再アップロードできます。</p>
+
+            {schedulePreview && (
+              <div className="note-ai-plan-preview">
+                <div className="note-ops-section-head"><div><span>RESEARCH PREVIEW</span><h2>{schedulePreview.targetMonth.replace("-", "年")}月 AI運用案</h2></div></div>
+                <div className="note-plan-stats">
+                  <article><small>平均投稿/週</small><strong>{schedulePreview.recommendation.postsPerWeek}</strong></article>
+                  <article><small>有料note/週</small><strong>{schedulePreview.recommendation.paidPostsPerWeek}</strong></article>
+                  <article><small>無料 / 有料</small><strong>{schedulePreview.recommendation.freePosts} / {schedulePreview.recommendation.paidPosts}</strong></article>
+                  <article><small>1日最大</small><strong>{schedulePreview.recommendation.maxPostsPerDay}</strong></article>
+                </div>
+
+                {schedulePreview.researchSummary && <div className="note-ai-plan-text"><strong>最新動向</strong><p>{schedulePreview.researchSummary}</p></div>}
+                {schedulePreview.strategySummary && <div className="note-ai-plan-text"><strong>今月の運用方針</strong><p>{schedulePreview.strategySummary}</p></div>}
+                {schedulePreview.recommendation.reason && <div className="note-ai-plan-text"><strong>この投稿頻度にした理由</strong><p>{schedulePreview.recommendation.reason}</p></div>}
+
+                {schedulePreview.warnings.length > 0 && <div className="note-ai-plan-warnings"><strong>AASの確認事項</strong>{schedulePreview.warnings.map((warning) => <p key={warning}>• {warning}</p>)}</div>}
+
+                <div className="note-ai-plan-sample">
+                  <strong>予定プレビュー（{schedulePreview.schedule.length}件）</strong>
+                  {schedulePreview.schedule.slice(0, 12).map((item, index) => (
+                    <div key={item.scheduledDate + item.scheduledTime + index}><span>{item.scheduledDate} {item.scheduledTime}</span><b>{NOTE_SCHEDULE_TYPE_LABELS[item.itemType]}</b><em>{item.title}</em></div>
+                  ))}
+                  {schedulePreview.schedule.length > 12 && <small>ほか {schedulePreview.schedule.length - 12}件。反映後はカレンダーで全件確認できます。</small>}
+                </div>
+
+                {schedulePreview.sources.length > 0 && <details className="note-ai-plan-sources"><summary>AIが参照した情報源（{schedulePreview.sources.length}件）</summary>{schedulePreview.sources.map((source) => <div key={source.url}><strong>{source.title || "出典"}</strong><span>{source.publishedAt}</span><code>{source.url}</code>{source.whyUsed && <p>{source.whyUsed}</p>}</div>)}</details>}
+
+                <button type="button" className="primary-action note-ai-apply-button" disabled={busy} onClick={() => void applyAiSchedule()}>
+                  この月のAASスケジュールに反映
+                </button>
+                <p className="note-data-note">対象月だけを入れ替えます。他の月の予定は残ります。AIの調査概要と根拠もAASへ保存するため、後から「なぜこの頻度にしたか」を確認できます。</p>
+              </div>
+            )}
+
+            <details className="note-profile-advanced note-schedule-backup">
+              <summary>バックアップ・従来形式の読み込み</summary>
+              <div className="note-data-actions">
+                <button type="button" disabled={!schedule.length} onClick={() => downloadText("aas-note-schedule.csv", exportNoteScheduleCsv(schedule), "text/csv;charset=utf-8")}>現在の予定をCSV保存</button>
+                <button type="button" disabled={!schedule.length} onClick={() => downloadText("aas-note-operations.json", exportNoteOperationsJson(profile, schedule), "application/json;charset=utf-8")}>AAS運営データをJSON保存</button>
+                <label className="note-import-button">従来JSON/CSVを読み込む<input type="file" accept=".json,.csv,application/json,text/csv" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importFile(file); event.currentTarget.value = ""; }} /></label>
+              </div>
+            </details>
           </section>
         )}
 
