@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AiProvider } from "@/lib/user-personalization";
 
 export type NoteOperationGoal = "habit" | "growth" | "monetize" | "portfolio";
+export type NoteAccountGenre = "ai" | "sidejob" | "business" | "lifestyle" | "gadget" | "learning" | "parenting" | "health_beauty" | "money" | "creative" | "entertainment" | "other";
+export type NoteAccountStyle = "beginner" | "howto" | "experience" | "essay" | "review" | "trend" | "expert" | "creative" | "other";
+export type NoteAudiencePreset = "beginner" | "employee" | "sidejob_beginner" | "student" | "parent" | "senior" | "creator" | "business_owner" | "broad" | "other";
+export type NoteTonePreset = "friendly" | "gentle" | "professional" | "casual" | "expert" | "energetic" | "other";
+export type NoteMonetizationStyle = "free_first" | "free_to_paid" | "paid_expertise" | "membership_future" | "no_monetization" | "other";
 export type NoteScheduleItemType = "free_note" | "paid_note" | "review" | "profile_setup" | "sns_share";
 export type NoteScheduleStatus = "planned" | "done" | "skipped";
 export type NoteScheduleSource = "generated" | "imported" | "manual";
@@ -12,6 +18,16 @@ export type NoteOperationProfile = {
   targetReader: string;
   mainTopics: string[];
   experienceNote: string;
+  accountGenre: NoteAccountGenre;
+  customGenre: string;
+  accountStyle: NoteAccountStyle;
+  customAccountStyle: string;
+  audiencePreset: NoteAudiencePreset;
+  customAudience: string;
+  tonePreset: NoteTonePreset;
+  customTone: string;
+  monetizationStyle: NoteMonetizationStyle;
+  customMonetizationStyle: string;
   operationGoal: NoteOperationGoal;
   weeklyPostCount: number;
   paidPostsPerMonth: number;
@@ -48,6 +64,81 @@ export const NOTE_OPERATION_GOALS: readonly { value: NoteOperationGoal; label: s
   { value: "portfolio", label: "実績・作品を整理したい", description: "専門性や制作物を分かりやすく蓄積する" },
 ] as const;
 
+
+export const NOTE_ACCOUNT_GENRES: readonly { value: NoteAccountGenre; label: string }[] = [
+  { value: "ai", label: "AI・ChatGPT・生成AI" },
+  { value: "sidejob", label: "副業・働き方" },
+  { value: "business", label: "ビジネス・キャリア" },
+  { value: "lifestyle", label: "暮らし・ライフスタイル" },
+  { value: "gadget", label: "ガジェット・IT" },
+  { value: "learning", label: "学習・資格" },
+  { value: "parenting", label: "子育て・教育" },
+  { value: "health_beauty", label: "健康・美容" },
+  { value: "money", label: "お金・家計・投資" },
+  { value: "creative", label: "創作・クリエイティブ" },
+  { value: "entertainment", label: "趣味・エンタメ" },
+  { value: "other", label: "その他（自由入力）" },
+] as const;
+
+export const NOTE_ACCOUNT_STYLES: readonly { value: NoteAccountStyle; label: string }[] = [
+  { value: "beginner", label: "初心者向けにやさしく解説" },
+  { value: "howto", label: "実践ノウハウ・手順中心" },
+  { value: "experience", label: "経験・学び・試行錯誤中心" },
+  { value: "essay", label: "日記・エッセイ・考え方中心" },
+  { value: "review", label: "レビュー・比較・おすすめ中心" },
+  { value: "trend", label: "ニュース・最新トレンド整理" },
+  { value: "expert", label: "専門知識・深掘り中心" },
+  { value: "creative", label: "作品・創作活動中心" },
+  { value: "other", label: "その他（自由入力）" },
+] as const;
+
+export const NOTE_AUDIENCE_PRESETS: readonly { value: NoteAudiencePreset; label: string }[] = [
+  { value: "beginner", label: "そのジャンルの完全初心者" },
+  { value: "employee", label: "会社員・働く人" },
+  { value: "sidejob_beginner", label: "副業を始めたい人" },
+  { value: "student", label: "学生・学び直し層" },
+  { value: "parent", label: "子育て中の人" },
+  { value: "senior", label: "50代・60代以上" },
+  { value: "creator", label: "クリエイター・発信者" },
+  { value: "business_owner", label: "個人事業主・経営者" },
+  { value: "broad", label: "年齢を限定せず幅広く" },
+  { value: "other", label: "その他（自由入力）" },
+] as const;
+
+export const NOTE_TONE_PRESETS: readonly { value: NoteTonePreset; label: string }[] = [
+  { value: "friendly", label: "親しみやすい" },
+  { value: "gentle", label: "やさしく丁寧" },
+  { value: "professional", label: "落ち着いた・信頼感重視" },
+  { value: "casual", label: "カジュアル・会話調" },
+  { value: "expert", label: "専門的・簡潔" },
+  { value: "energetic", label: "明るく前向き" },
+  { value: "other", label: "その他（自由入力）" },
+] as const;
+
+export const NOTE_MONETIZATION_STYLES: readonly { value: NoteMonetizationStyle; label: string }[] = [
+  { value: "free_first", label: "無料note中心で読者を増やす" },
+  { value: "free_to_paid", label: "無料noteから有料noteへ自然につなぐ" },
+  { value: "paid_expertise", label: "専門ノウハウを有料noteで深掘り" },
+  { value: "membership_future", label: "将来メンバーシップも検討" },
+  { value: "no_monetization", label: "収益化せず発信・記録を優先" },
+  { value: "other", label: "その他（自由入力）" },
+] as const;
+
+function optionLabel<T extends string>(options: readonly { value: T; label: string }[], value: T, custom: string): string {
+  if (value === "other" && custom.trim()) return custom.trim();
+  return options.find((item) => item.value === value)?.label ?? value;
+}
+
+export function noteProfileSelectionLabels(profile: NoteOperationProfile) {
+  return {
+    genre: optionLabel(NOTE_ACCOUNT_GENRES, profile.accountGenre, profile.customGenre),
+    style: optionLabel(NOTE_ACCOUNT_STYLES, profile.accountStyle, profile.customAccountStyle),
+    audience: optionLabel(NOTE_AUDIENCE_PRESETS, profile.audiencePreset, profile.customAudience),
+    tone: optionLabel(NOTE_TONE_PRESETS, profile.tonePreset, profile.customTone),
+    monetization: optionLabel(NOTE_MONETIZATION_STYLES, profile.monetizationStyle, profile.customMonetizationStyle),
+  };
+}
+
 export const NOTE_SCHEDULE_TYPE_LABELS: Record<NoteScheduleItemType, string> = {
   free_note: "無料note",
   paid_note: "有料note",
@@ -64,6 +155,16 @@ export function defaultNoteOperationProfile(userId: string): NoteOperationProfil
     targetReader: "",
     mainTopics: [],
     experienceNote: "",
+    accountGenre: "ai",
+    customGenre: "",
+    accountStyle: "beginner",
+    customAccountStyle: "",
+    audiencePreset: "beginner",
+    customAudience: "",
+    tonePreset: "friendly",
+    customTone: "",
+    monetizationStyle: "free_to_paid",
+    customMonetizationStyle: "",
     operationGoal: "habit",
     weeklyPostCount: 3,
     paidPostsPerMonth: 2,
@@ -84,6 +185,16 @@ function parseProfileRow(row: Record<string, unknown>, userId: string): NoteOper
     targetReader: typeof row.target_reader === "string" ? row.target_reader : "",
     mainTopics: Array.isArray(row.main_topics) ? row.main_topics.filter((v): v is string => typeof v === "string").slice(0, 12) : [],
     experienceNote: typeof row.experience_note === "string" ? row.experience_note : "",
+    accountGenre: ["ai","sidejob","business","lifestyle","gadget","learning","parenting","health_beauty","money","creative","entertainment","other"].includes(String(row.account_genre)) ? row.account_genre as NoteAccountGenre : "ai",
+    customGenre: typeof row.custom_genre === "string" ? row.custom_genre : "",
+    accountStyle: ["beginner","howto","experience","essay","review","trend","expert","creative","other"].includes(String(row.account_style)) ? row.account_style as NoteAccountStyle : "beginner",
+    customAccountStyle: typeof row.custom_account_style === "string" ? row.custom_account_style : "",
+    audiencePreset: ["beginner","employee","sidejob_beginner","student","parent","senior","creator","business_owner","broad","other"].includes(String(row.audience_preset)) ? row.audience_preset as NoteAudiencePreset : "beginner",
+    customAudience: typeof row.custom_audience === "string" ? row.custom_audience : "",
+    tonePreset: ["friendly","gentle","professional","casual","expert","energetic","other"].includes(String(row.tone_preset)) ? row.tone_preset as NoteTonePreset : "friendly",
+    customTone: typeof row.custom_tone === "string" ? row.custom_tone : "",
+    monetizationStyle: ["free_first","free_to_paid","paid_expertise","membership_future","no_monetization","other"].includes(String(row.monetization_style)) ? row.monetization_style as NoteMonetizationStyle : "free_to_paid",
+    customMonetizationStyle: typeof row.custom_monetization_style === "string" ? row.custom_monetization_style : "",
     operationGoal: row.operation_goal === "growth" || row.operation_goal === "monetize" || row.operation_goal === "portfolio" ? row.operation_goal : "habit",
     weeklyPostCount: Math.max(1, Math.min(14, Number(row.weekly_post_count ?? 3) || 3)),
     paidPostsPerMonth: Math.max(0, Math.min(14, Number(row.paid_posts_per_month ?? 2) || 0)),
@@ -132,6 +243,16 @@ export async function saveNoteOperationProfile(client: SupabaseClient, profile: 
     target_reader: profile.targetReader.trim().slice(0, 600),
     main_topics: [...new Set(profile.mainTopics.map((item) => item.trim()).filter(Boolean))].slice(0, 12),
     experience_note: profile.experienceNote.trim().slice(0, 1200),
+    account_genre: profile.accountGenre,
+    custom_genre: profile.customGenre.trim().slice(0, 120),
+    account_style: profile.accountStyle,
+    custom_account_style: profile.customAccountStyle.trim().slice(0, 180),
+    audience_preset: profile.audiencePreset,
+    custom_audience: profile.customAudience.trim().slice(0, 300),
+    tone_preset: profile.tonePreset,
+    custom_tone: profile.customTone.trim().slice(0, 120),
+    monetization_style: profile.monetizationStyle,
+    custom_monetization_style: profile.customMonetizationStyle.trim().slice(0, 180),
     operation_goal: profile.operationGoal,
     weekly_post_count: Math.max(1, Math.min(14, Math.trunc(profile.weeklyPostCount))),
     paid_posts_per_month: Math.max(0, Math.min(14, Math.trunc(profile.paidPostsPerMonth))),
@@ -379,6 +500,82 @@ export function buildNoteProfileDraft(profile: Pick<NoteOperationProfile, "noteD
   return lines.join("\n");
 }
 
+
+export function buildNoteAccountResearchPrompt(profile: NoteOperationProfile, aiProvider: AiProvider, currentDate = todayJstDateKey()): string {
+  const selected = noteProfileSelectionLabels(profile);
+  const providerName = aiProvider === "gemini" ? "Gemini" : aiProvider === "claude" ? "Claude" : "ChatGPT";
+  const providerSearch = aiProvider === "gemini"
+    ? "Google検索/グラウンディング等、現在利用できるWeb検索機能を使う"
+    : aiProvider === "claude"
+      ? "Web検索機能が利用できる場合は必ず使う"
+      : "Web検索機能が利用できる場合は必ず使う";
+  const topics = profile.mainTopics.length ? profile.mainTopics.join(" / ") : "未指定（調査結果から候補を出す）";
+  const factualBackground = profile.experienceNote.trim() || "未入力。経歴・実績・資格を推測して追加しない";
+  const readerExtra = profile.targetReader.trim() || "なし";
+  const displayName = profile.noteDisplayName.trim() || "未定";
+
+  return `あなたは日本のnote運営に詳しい編集者・コンテンツ戦略担当です。
+目的は、初心者でも継続しやすい「noteアカウント構成案」を、最新情報と直近トレンドを調査したうえで3案作ることです。
+
+【重要：最新情報の確認】
+- 基準日: ${currentDate}（日本時間）
+- ${providerName}の${providerSearch}。
+- 回答を作る前に必ずWeb検索を行う。検索できない場合は「最新情報を確認できないため、トレンド部分は確定できません」と明記し、未確認情報を最新事実として作らない。
+- note公式（note.com/info、公式ヘルプ等）を最優先し、現在の機能・カテゴリ・おすすめの仕組み・創作カレンダー・開催中/直近の企画やお題・プロフィール関連の変更を確認する。
+- 選択ジャンルについて、直近90日と直近12か月の両方を調べる。検索需要、季節性、話題、継続して読まれやすい悩みを分ける。
+- SNSの一時的なバズだけで決めず、note内の文脈、公式企画、検索需要、長期的な読者課題を分けて評価する。
+- 根拠として使った情報は、出典名・URL・公開/更新日を最後に一覧化する。
+- 推測や分析は「分析」と明記し、公式事実と混同しない。
+
+【ユーザーが選んだ条件】
+- 主ジャンル: ${selected.genre}
+- 運営スタイル: ${selected.style}
+- 想定読者: ${selected.audience}
+- 読者の補足: ${readerExtra}
+- 文章の雰囲気: ${selected.tone}
+- 収益化方針: ${selected.monetization}
+- 運営目的: ${NOTE_OPERATION_GOALS.find((item) => item.value === profile.operationGoal)?.label ?? profile.operationGoal}
+- 補足テーマ: ${topics}
+- 希望表示名: ${displayName}
+- ユーザーが事実として入力した経験・資格・背景: ${factualBackground}
+
+【絶対ルール】
+- ユーザーが入力していない経歴、年齢、職業、収入、実績、資格、利用経験、成功体験を作らない。
+- 「稼げる」「伸びる」「この時間が正解」など成果を保証しない。
+- 有料noteを提案する場合も、無料部分で十分な価値を提供し、誇張や不安煽りを使わない。
+- 現在のnote仕様やトレンドは検索結果で確認できた範囲だけを事実として扱う。
+- アカウントID/ユーザー名候補は「空き状況未確認」と明記する。
+- 競合クリエイターの文章・プロフィールをコピーまたは近似模倣しない。
+
+【出力してほしい内容】
+最初に「今回確認した最新動向」を5〜10項目で要約し、そのあとアカウント構成を3案出してください。
+
+各案は次の順番で出力:
+1. アカウントのコンセプト（1文）
+2. この案が向く理由（最新動向との関係を含む）
+3. 表示名候補 5個
+4. アカウントID候補 5個（空き状況未確認と明記）
+5. プロフィール文候補 3個
+6. 自己紹介noteのタイトル候補と構成
+7. 発信の柱 3〜5本
+8. 無料noteで扱う内容
+9. 有料noteで扱う内容（収益化しない設定なら省略）
+10. 最初の10記事のタイトル案
+11. 「今のトレンドを狙う記事」と「半年後も読める記事」を分ける
+12. 初月4週間の運営案（投稿回数・曜日・時間はテスト案として提示）
+13. 使うハッシュタグ/キーワード候補と、その根拠
+14. 注意点・避けるべきこと
+15. この案を選ぶ判断基準
+
+最後に:
+- 3案の比較表
+- 初心者が選びやすい判断フロー
+- 参照した情報源一覧（URL・日付）
+- 「今後1か月で再確認したいトレンド項目」
+
+日本語で、初心者がそのまま実行できる具体性で出力してください。`;
+}
+
 function csvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
@@ -408,6 +605,16 @@ export function exportNoteOperationsJson(profile: NoteOperationProfile, items: N
       target_reader: profile.targetReader,
       main_topics: profile.mainTopics,
       experience_note: profile.experienceNote,
+      account_genre: profile.accountGenre,
+      custom_genre: profile.customGenre,
+      account_style: profile.accountStyle,
+      custom_account_style: profile.customAccountStyle,
+      audience_preset: profile.audiencePreset,
+      custom_audience: profile.customAudience,
+      tone_preset: profile.tonePreset,
+      custom_tone: profile.customTone,
+      monetization_style: profile.monetizationStyle,
+      custom_monetization_style: profile.customMonetizationStyle,
       operation_goal: profile.operationGoal,
       weekly_post_count: profile.weeklyPostCount,
       paid_posts_per_month: profile.paidPostsPerMonth,
@@ -497,6 +704,16 @@ export function parseNoteOperationsImport(text: string, filename: string): NoteS
       targetReader: typeof p.target_reader === "string" ? p.target_reader.slice(0, 600) : "",
       mainTopics: Array.isArray(p.main_topics) ? p.main_topics.filter((item): item is string => typeof item === "string").slice(0, 12) : [],
       experienceNote: typeof p.experience_note === "string" ? p.experience_note.slice(0, 1200) : "",
+      accountGenre: ["ai","sidejob","business","lifestyle","gadget","learning","parenting","health_beauty","money","creative","entertainment","other"].includes(String(p.account_genre)) ? p.account_genre as NoteAccountGenre : "ai",
+      customGenre: typeof p.custom_genre === "string" ? p.custom_genre.slice(0, 120) : "",
+      accountStyle: ["beginner","howto","experience","essay","review","trend","expert","creative","other"].includes(String(p.account_style)) ? p.account_style as NoteAccountStyle : "beginner",
+      customAccountStyle: typeof p.custom_account_style === "string" ? p.custom_account_style.slice(0, 180) : "",
+      audiencePreset: ["beginner","employee","sidejob_beginner","student","parent","senior","creator","business_owner","broad","other"].includes(String(p.audience_preset)) ? p.audience_preset as NoteAudiencePreset : "beginner",
+      customAudience: typeof p.custom_audience === "string" ? p.custom_audience.slice(0, 300) : "",
+      tonePreset: ["friendly","gentle","professional","casual","expert","energetic","other"].includes(String(p.tone_preset)) ? p.tone_preset as NoteTonePreset : "friendly",
+      customTone: typeof p.custom_tone === "string" ? p.custom_tone.slice(0, 120) : "",
+      monetizationStyle: ["free_first","free_to_paid","paid_expertise","membership_future","no_monetization","other"].includes(String(p.monetization_style)) ? p.monetization_style as NoteMonetizationStyle : "free_to_paid",
+      customMonetizationStyle: typeof p.custom_monetization_style === "string" ? p.custom_monetization_style.slice(0, 180) : "",
       operationGoal: p.operation_goal === "growth" || p.operation_goal === "monetize" || p.operation_goal === "portfolio" ? p.operation_goal : "habit",
       weeklyPostCount: Math.max(1, Math.min(14, Number(p.weekly_post_count ?? 3) || 3)),
       paidPostsPerMonth: Math.max(0, Math.min(14, Number(p.paid_posts_per_month ?? 2) || 0)),
