@@ -104,8 +104,12 @@ export function persistEffectiveRelease(state: AppReleaseState): void {
   const release = state.effective_release ?? state.current_release ?? null;
   if (release) {
     window.localStorage.setItem(APP_RELEASE_EFFECTIVE_KEY, JSON.stringify(release));
+    document.documentElement.dataset.aasReleaseVersion = release.version;
+    document.documentElement.dataset.aasReleaseBuild = release.build_key;
   } else {
     window.localStorage.removeItem(APP_RELEASE_EFFECTIVE_KEY);
+    delete document.documentElement.dataset.aasReleaseVersion;
+    delete document.documentElement.dataset.aasReleaseBuild;
   }
   window.dispatchEvent(new CustomEvent<AppReleaseState>(APP_RELEASE_STATE_EVENT, { detail: state }));
 }
@@ -169,4 +173,23 @@ export async function adminRollbackAppRelease(client: SupabaseClient, targetRele
   const { data, error } = await client.rpc("admin_rollback_app_release", { p_target_release_id: targetReleaseId });
   if (error) throw error;
   return normalizeAdminSnapshot(data);
+}
+
+
+function numericVersion(value: string): [number, number, number] | null {
+  const match = value.match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+export function releaseVersionAtLeast(currentVersion: string | null | undefined, minimumVersion: string): boolean {
+  if (!currentVersion) return false;
+  const current = numericVersion(currentVersion);
+  const minimum = numericVersion(minimumVersion);
+  if (!current || !minimum) return false;
+  for (let index = 0; index < 3; index += 1) {
+    if (current[index] > minimum[index]) return true;
+    if (current[index] < minimum[index]) return false;
+  }
+  return true;
 }
