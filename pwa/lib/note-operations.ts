@@ -1149,7 +1149,7 @@ export async function replaceNoteScheduleMonth(
   const { start, end } = noteMonthBounds(targetMonth);
   const replacementStart = targetMonth === currentDate.slice(0, 7) ? currentDate : start;
   const previous = await listNoteSchedule(client, userId, start, end);
-  const preserved = previous.filter((item) => item.scheduledDate < replacementStart || item.status === "done");
+  const preserved = previous.filter((item) => item.scheduledDate < replacementStart || item.status !== "planned");
   const preservedKeys = new Set(
     preserved.map((item) => `${item.scheduledDate}|${item.scheduledTime}|${item.itemType}`),
   );
@@ -1158,7 +1158,7 @@ export async function replaceNoteScheduleMonth(
     .filter((item) => !preservedKeys.has(`${item.scheduledDate}|${item.scheduledTime}|${item.itemType}`))
     .slice(0, 200)
     .map((item) => ({ ...item, id: undefined, source: "imported" as NoteScheduleSource }));
-  const previousReplaceable = previous.filter((item) => item.scheduledDate >= replacementStart && item.status !== "done");
+  const previousReplaceable = previous.filter((item) => item.scheduledDate >= replacementStart && item.status === "planned");
 
   const deleteQuery = client
     .from("note_operation_schedule_items")
@@ -1166,7 +1166,7 @@ export async function replaceNoteScheduleMonth(
     .eq("user_id", userId)
     .gte("scheduled_date", replacementStart)
     .lte("scheduled_date", end)
-    .neq("status", "done");
+    .eq("status", "planned");
   const { error: deleteError } = await deleteQuery;
   if (deleteError) throw new Error("対象月の既存スケジュールを更新できませんでした。");
 
@@ -1260,6 +1260,44 @@ export async function loadNoteAiSchedulePlan(
     schedule: monthSchedule,
     warnings: [],
   };
+}
+
+
+export function exportNoteAiSchedulePlanJson(plan: NoteAiSchedulePlan): string {
+  return JSON.stringify({
+    schema: "aas-note-schedule-v2",
+    target_month: plan.targetMonth,
+    generated_for_jst: plan.generatedForJst,
+    provider: plan.provider,
+    research: {
+      summary: plan.researchSummary,
+      strategy_summary: plan.strategySummary,
+      assumptions: plan.assumptions,
+      sources: plan.sources.map((source) => ({
+        title: source.title,
+        url: source.url,
+        published_at: source.publishedAt,
+        why_used: source.whyUsed,
+      })),
+    },
+    recommendation: {
+      posts_per_week: plan.recommendation.postsPerWeek,
+      paid_posts_per_week: plan.recommendation.paidPostsPerWeek,
+      max_posts_per_day: plan.recommendation.maxPostsPerDay,
+      total_posts: plan.recommendation.totalPosts,
+      free_posts: plan.recommendation.freePosts,
+      paid_posts: plan.recommendation.paidPosts,
+      recommendation_reason: plan.recommendation.reason,
+    },
+    schedule: plan.schedule.map((item) => ({
+      date: item.scheduledDate,
+      time: item.scheduledTime,
+      type: item.itemType,
+      title: item.title,
+      theme: item.theme,
+      notes: item.notes,
+    })),
+  }, null, 2);
 }
 
 
