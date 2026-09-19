@@ -1,10 +1,42 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type KnowledgeRefreshStatus = "pending" | "processing" | "completed" | "failed" | "cancelled";
+export type KnowledgeRefreshChannel = "stable" | "fresh";
+export type KnowledgeRefreshChangeAction = "added" | "updated" | "unchanged";
+
+export type KnowledgeRefreshChangeItem = {
+  itemType: "knowledge" | "prompt";
+  key: string;
+  label: string;
+  action: KnowledgeRefreshChangeAction;
+  changedFields: string[];
+  sourceSummary: string;
+};
+
+export type KnowledgeRefreshChangeGroup = {
+  added: number;
+  updated: number;
+  unchanged: number;
+  items: KnowledgeRefreshChangeItem[];
+};
+
+export type KnowledgeRefreshDiff = {
+  knowledge: KnowledgeRefreshChangeGroup;
+  prompt: KnowledgeRefreshChangeGroup;
+};
+
+export type KnowledgeRefreshChannelState = {
+  channel: KnowledgeRefreshChannel;
+  refreshHours: number;
+  currentVersion: number;
+  lastPublishedAt: string | null;
+  nextRefreshDueAt: string | null;
+  lastRefreshRequestedAt: string | null;
+};
 
 export type KnowledgeRefreshRequest = {
   id: number;
-  channel: "stable" | "fresh";
+  channel: KnowledgeRefreshChannel;
   requestedAt: string;
   startedAt: string | null;
   status: KnowledgeRefreshStatus;
@@ -14,13 +46,15 @@ export type KnowledgeRefreshRequest = {
   publishedPromptCount: number;
   publishedVersion: number | null;
   errorMessage: string;
+  changeDetails: KnowledgeRefreshDiff;
 };
 
 export type KnowledgeRefreshPublishResult = {
-  channel: "stable" | "fresh";
+  channel: KnowledgeRefreshChannel;
   publishedVersion: number;
   knowledgeCount: number;
   promptCount: number;
+  changeDetails: KnowledgeRefreshDiff;
 };
 
 export type KnowledgeRefreshBundle = {
@@ -28,6 +62,58 @@ export type KnowledgeRefreshBundle = {
   knowledge_rules: unknown[];
   prompt_optimizations: unknown[];
 };
+
+function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
+  return { added: 0, updated: 0, unchanged: 0, items: [] };
+}
+
+export function emptyKnowledgeRefreshDiff(): KnowledgeRefreshDiff {
+  return { knowledge: emptyChangeGroup(), prompt: emptyChangeGroup() };
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function parseChangeItem(raw: unknown, fallbackType: "knowledge" | "prompt"): KnowledgeRefreshChangeItem | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const value = raw as Record<string, unknown>;
+  const action = value.action;
+  if (action !== "added" && action !== "updated" && action !== "unchanged") return null;
+  return {
+    itemType: value.item_type === "prompt" ? "prompt" : fallbackType,
+    key: typeof value.key === "string" ? value.key : "",
+    label: typeof value.label === "string" ? value.label : "",
+    action,
+    changedFields: Array.isArray(value.changed_fields)
+      ? value.changed_fields.filter((item): item is string => typeof item === "string").slice(0, 20)
+      : [],
+    sourceSummary: typeof value.source_summary === "string" ? value.source_summary : "",
+  };
+}
+
+function parseChangeGroup(raw: unknown, fallbackType: "knowledge" | "prompt"): KnowledgeRefreshChangeGroup {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return emptyChangeGroup();
+  const value = raw as Record<string, unknown>;
+  return {
+    added: Math.max(0, asNumber(value.added)),
+    updated: Math.max(0, asNumber(value.updated)),
+    unchanged: Math.max(0, asNumber(value.unchanged)),
+    items: Array.isArray(value.items)
+      ? value.items.map((item) => parseChangeItem(item, fallbackType)).filter((item): item is KnowledgeRefreshChangeItem => Boolean(item))
+      : [],
+  };
+}
+
+export function parseKnowledgeRefreshDiff(raw: unknown): KnowledgeRefreshDiff {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return emptyKnowledgeRefreshDiff();
+  const value = raw as Record<string, unknown>;
+  return {
+    knowledge: parseChangeGroup(value.knowledge, "knowledge"),
+    prompt: parseChangeGroup(value.prompt, "prompt"),
+  };
+}
 
 function parseRequest(raw: Record<string, unknown>): KnowledgeRefreshRequest {
   return {
@@ -40,14 +126,13 @@ function parseRequest(raw: Record<string, unknown>): KnowledgeRefreshRequest {
       : "pending",
     completedAt: typeof raw.completed_at === "string" ? raw.completed_at : null,
     researchSummary: typeof raw.research_summary === "string" ? raw.research_summary : "",
-    publishedKnowledgeCount: typeof raw.published_knowledge_count === "number" ? raw.published_knowledge_count : Number(raw.published_knowledge_count ?? 0),
-    publishedPromptCount: typeof raw.published_prompt_count === "number" ? raw.published_prompt_count : Number(raw.published_prompt_count ?? 0),
+    publishedKnowledgeCount: asNumber(raw.published_knowledge_count),
+    publishedPromptCount: asNumber(raw.published_prompt_count),
     publishedVersion: raw.published_version === null || raw.published_version === undefined
       ? null
-      : typeof raw.published_version === "number"
-        ? raw.published_version
-        : Number(raw.published_version),
+      : asNumber(raw.published_version, 1),
     errorMessage: typeof raw.error_message === "string" ? raw.error_message : "",
+    changeDetails: parseKnowledgeRefreshDiff(raw.change_details),
   };
 }
 
@@ -56,17 +141,36 @@ export async function adminListKnowledgeRefreshRequests(
   status: KnowledgeRefreshStatus | null = null,
   limit = 50,
 ): Promise<KnowledgeRefreshRequest[]> {
-  const { data, error } = await client.rpc("admin_list_knowledge_refresh_requests", {
+  const args = {
     p_status: status,
     p_limit: Math.max(1, Math.min(200, Math.trunc(limit))),
-  });
-  if (error) throw new Error("ナレッジ更新キューを取得できませんでした。");
-  return (data ?? []).map((row: Record<string, unknown>) => parseRequest(row));
+  };
+  const current = await client.rpc("admin_list_knowledge_refresh_requests_v2", args);
+  const response = current.error
+    ? await client.rpc("admin_list_knowledge_refresh_requests", args)
+    : current;
+  if (response.error) throw new Error("ナレッジ更新キューを取得できませんでした。");
+  return (response.data ?? []).map((row: Record<string, unknown>) => parseRequest(row));
+}
+
+export async function adminGetKnowledgeRefreshChannels(
+  client: SupabaseClient,
+): Promise<KnowledgeRefreshChannelState[]> {
+  const { data, error } = await client.rpc("admin_get_knowledge_refresh_channels");
+  if (error) throw new Error("Fresh / Stable の状態を取得できませんでした。");
+  return (data ?? []).map((raw: Record<string, unknown>) => ({
+    channel: raw.channel === "fresh" ? "fresh" : "stable",
+    refreshHours: Math.max(1, asNumber(raw.refresh_hours, 1)),
+    currentVersion: Math.max(1, asNumber(raw.current_version, 1)),
+    lastPublishedAt: typeof raw.last_published_at === "string" ? raw.last_published_at : null,
+    nextRefreshDueAt: typeof raw.next_refresh_due_at === "string" ? raw.next_refresh_due_at : null,
+    lastRefreshRequestedAt: typeof raw.last_refresh_requested_at === "string" ? raw.last_refresh_requested_at : null,
+  }));
 }
 
 export async function adminRequestKnowledgeRefresh(
   client: SupabaseClient,
-  channel: "stable" | "fresh",
+  channel: KnowledgeRefreshChannel,
 ): Promise<number> {
   const { data, error } = await client.rpc("admin_request_knowledge_refresh", { p_channel: channel });
   if (error) throw new Error("ナレッジ更新をキューへ追加できませんでした。");
@@ -92,12 +196,21 @@ export async function adminFailKnowledgeRefresh(
   if (error) throw new Error("ナレッジ更新の失敗状態を保存できませんでした。");
 }
 
+export async function adminPreviewKnowledgeRefreshBundleDiff(
+  client: SupabaseClient,
+  bundle: KnowledgeRefreshBundle,
+): Promise<KnowledgeRefreshDiff> {
+  const { data, error } = await client.rpc("admin_preview_knowledge_refresh_bundle_diff", { p_bundle: bundle });
+  if (error) throw new Error(error.message || "変更点を比較できませんでした。");
+  return parseKnowledgeRefreshDiff(data);
+}
+
 export async function adminPublishKnowledgeRefreshBundle(
   client: SupabaseClient,
   requestId: number,
   bundle: KnowledgeRefreshBundle,
 ): Promise<KnowledgeRefreshPublishResult> {
-  const { data, error } = await client.rpc("admin_publish_knowledge_refresh_bundle", {
+  const { data, error } = await client.rpc("admin_publish_knowledge_refresh_bundle_v2", {
     p_request_id: requestId,
     p_bundle: bundle,
   });
@@ -109,9 +222,10 @@ export async function adminPublishKnowledgeRefreshBundle(
   const value = row as Record<string, unknown>;
   return {
     channel: value.channel === "fresh" ? "fresh" : "stable",
-    publishedVersion: typeof value.published_version === "number" ? value.published_version : Number(value.published_version ?? 1),
-    knowledgeCount: typeof value.knowledge_count === "number" ? value.knowledge_count : Number(value.knowledge_count ?? 0),
-    promptCount: typeof value.prompt_count === "number" ? value.prompt_count : Number(value.prompt_count ?? 0),
+    publishedVersion: asNumber(value.published_version, 1),
+    knowledgeCount: asNumber(value.knowledge_count),
+    promptCount: asNumber(value.prompt_count),
+    changeDetails: parseKnowledgeRefreshDiff(value.change_details),
   };
 }
 
@@ -211,3 +325,4 @@ ${rollout}
 - 一時的なUI文言やキャンペーンだけの変更は原則Knowledge化しない。
 - 既存仕様を確認できない場合は候補にせずsummaryへ「要確認」と書く。`;
 }
+
