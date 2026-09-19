@@ -111,6 +111,17 @@ export type NoteSchedulePerformanceSnapshot = {
   times: NoteSchedulePerformanceBreakdown[];
 };
 
+export type NoteArticleOutputSnapshot = {
+  targetMonth: string;
+  createdPosts: number;
+  freeCreated: number;
+  paidCreated: number;
+  draftLike: number;
+  readyLike: number;
+  published: number;
+  statusCounts: Record<string, number>;
+};
+
 export function currentJstMonth(date = new Date()): string {
   return todayJstDateKey(date).slice(0, 7);
 }
@@ -128,6 +139,58 @@ export function previousJstMonth(month: string): string {
   noteMonthBounds(month);
   const [year, monthNumber] = month.split("-").map(Number);
   return new Date(Date.UTC(year, monthNumber - 2, 1)).toISOString().slice(0, 7);
+}
+
+function nextJstMonth(month: string): string {
+  noteMonthBounds(month);
+  const [year, monthNumber] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, monthNumber, 1)).toISOString().slice(0, 7);
+}
+
+export async function loadNoteArticleOutputSnapshot(
+  client: SupabaseClient,
+  userId: string,
+  targetMonth: string,
+): Promise<NoteArticleOutputSnapshot | null> {
+  noteMonthBounds(targetMonth);
+  const nextMonth = nextJstMonth(targetMonth);
+  const startIso = `${targetMonth}-01T00:00:00+09:00`;
+  const endIso = `${nextMonth}-01T00:00:00+09:00`;
+  const { data, error } = await client
+    .from("articles")
+    .select("article_type,status")
+    .eq("user_id", userId)
+    .eq("publication_target", "note")
+    .gte("created_at", startIso)
+    .lt("created_at", endIso)
+    .limit(1000);
+  if (error) throw new Error("AASの記事作成実績を読み込めませんでした。");
+
+  const rows = data ?? [];
+  if (!rows.length) return null;
+  const statusCounts: Record<string, number> = {};
+  let freeCreated = 0;
+  let paidCreated = 0;
+  for (const row of rows) {
+    if (row.article_type === "paid") paidCreated += 1;
+    else freeCreated += 1;
+    const status = typeof row.status === "string" ? row.status : "unknown";
+    statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+  }
+  const published = statusCounts.published ?? 0;
+  const readyLike = (statusCounts.ready ?? 0) + (statusCounts.waiting_publish ?? 0) + published;
+  const draftLike = rows.length - readyLike;
+
+  return {
+    targetMonth,
+    createdPosts: rows.length,
+    freeCreated,
+    paidCreated,
+    draftLike,
+    readyLike,
+    published,
+    statusCounts,
+  };
 }
 
 function aiProviderName(provider: AiProvider): string {
@@ -570,6 +633,23 @@ function paidIndexes(total: number, paidCount: number): Set<number> {
   }
   return result;
 }
+
+function formatArticleOutputForPrompt(output: NoteArticleOutputSnapshot | null, expectedMonth: string): string {
+  if (!output || output.targetMonth !== expectedMonth) {
+    return `- ${expectedMonth}にAASで作成したnote記事は確認できません。作成本数を推測しない。`;
+  }
+  const statuses = Object.entries(output.statusCounts)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([status, count]) => `${status}=${count}`)
+    .join("、");
+  return [
+    `- 対象月: ${output.targetMonth}`,
+    `- AASで作成したnote記事: ${output.createdPosts}本（無料 ${output.freeCreated} / 有料 ${output.paidCreated}）`,
+    `- 公開済み: ${output.published}本 / 公開準備段階を含むready系: ${output.readyLike}本 / draft・writing等: ${output.draftLike}本`,
+    `- status内訳: ${statuses || "データなし"}`,
+  ].join("\n");
+}
+
 
 export function generateNoteSchedule(
   profile: NoteOperationProfile,
