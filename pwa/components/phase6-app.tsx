@@ -547,8 +547,7 @@ export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Prom
   const logout = useCallback(async () => {
     if (!client) return;
     await signOutCurrentBrowser(client);
-    setAuthMode("login");
-    setScreen({ kind: "auth" });
+    window.location.replace("/");
   }, [client]);
 
   useEffect(() => {
