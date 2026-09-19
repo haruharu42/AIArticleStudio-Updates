@@ -156,34 +156,42 @@ export async function loadNoteArticleOutputSnapshot(
   const nextMonth = nextJstMonth(targetMonth);
   const startIso = `${targetMonth}-01T00:00:00+09:00`;
   const endIso = `${nextMonth}-01T00:00:00+09:00`;
-  const { data, error } = await client
-    .from("articles")
-    .select("article_type,status")
-    .eq("user_id", userId)
-    .eq("publication_target", "note")
-    .gte("created_at", startIso)
-    .lt("created_at", endIso)
-    .limit(1000);
-  if (error) throw new Error("AASの記事作成実績を読み込めませんでした。");
+  const countRows = async (articleType?: "free" | "paid", status?: string): Promise<number> => {
+    let query = client
+      .from("articles")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("publication_target", "note")
+      .gte("created_at", startIso)
+      .lt("created_at", endIso);
+    if (articleType) query = query.eq("article_type", articleType);
+    if (status) query = query.eq("status", status);
+    const { count, error } = await query;
+    if (error) throw new Error("AASの記事作成実績を読み込めませんでした。");
+    return count ?? 0;
+  };
 
-  const rows = data ?? [];
-  if (!rows.length) return null;
+  const statuses = ["draft", "writing", "ready", "waiting_publish", "published", "on_hold", "archived"] as const;
+  const [createdPosts, freeCreated, paidCreated, ...statusValues] = await Promise.all([
+    countRows(),
+    countRows("free"),
+    countRows("paid"),
+    ...statuses.map((status) => countRows(undefined, status)),
+  ]);
+  if (!createdPosts) return null;
+
   const statusCounts: Record<string, number> = {};
-  let freeCreated = 0;
-  let paidCreated = 0;
-  for (const row of rows) {
-    if (row.article_type === "paid") paidCreated += 1;
-    else freeCreated += 1;
-    const status = typeof row.status === "string" ? row.status : "unknown";
-    statusCounts[status] = (statusCounts[status] ?? 0) + 1;
-  }
+  statuses.forEach((status, index) => {
+    const count = statusValues[index] ?? 0;
+    if (count > 0) statusCounts[status] = count;
+  });
   const published = statusCounts.published ?? 0;
   const readyLike = (statusCounts.ready ?? 0) + (statusCounts.waiting_publish ?? 0) + published;
-  const draftLike = rows.length - readyLike;
+  const draftLike = createdPosts - readyLike;
 
   return {
     targetMonth,
-    createdPosts: rows.length,
+    createdPosts,
     freeCreated,
     paidCreated,
     draftLike,
