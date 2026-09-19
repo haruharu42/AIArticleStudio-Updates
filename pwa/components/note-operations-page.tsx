@@ -315,7 +315,6 @@ export function NoteOperationsPage() {
       const nextSchedule = await replaceNoteSchedule(getSupabaseClient(), gate.userId, parsed.schedule);
       setProfile(nextProfile);
       setSchedule(nextSchedule);
-      setDirtySchedule(false);
       setMessage("運営データを読み込みました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "ファイルを読み込めませんでした。");
