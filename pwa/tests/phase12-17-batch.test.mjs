@@ -149,7 +149,7 @@ test("tools hub and beginner-first root expose all functional routes with SNS in
 test("service worker fetches current UI assets before cache fallback and purges older cache generations", async () => {
   const sw = await read("public/sw.js");
 
-  assert.match(sw, /aas-pwa-phase17-prod-v2-runtime-v3/);
+  assert.match(sw, /aas-pwa-phase17-prod-v2-runtime-v4-release-control/);
   assert.match(sw, /new Request\(request, \{ cache: "no-store" \}\)/);
   assert.match(sw, /keys\.filter\(\(key\) => key !== CACHE_NAME\)/);
   assert.match(sw, /if \(request\.mode === "navigate"\)[\s\S]*fetch\(freshRequest\(request\)\)/);

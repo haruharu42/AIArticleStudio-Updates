@@ -4,6 +4,7 @@ import { AppErrorReporter } from "@/components/app-error-reporter";
 import { FreeTrialBanner } from "@/components/free-trial-banner";
 import { KnowledgeRuntimeBootstrap } from "@/components/knowledge-runtime-bootstrap";
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
+import { ReleaseUpdateManager } from "@/components/release-update-manager";
 import "./globals.css";
 import "./phase9-11.css";
 import "./phase12-17.css";
@@ -29,6 +30,7 @@ import "./phase33-reference-ui.css";
 import "./phase34-article-presets.css";
 import "./phase35-device-layout.css";
 import "./phase36-desktop-nav.css";
+import "./phase37-release-management.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
@@ -63,6 +65,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <KnowledgeRuntimeBootstrap />
         <AdminHomeTopbar />
         <div className="free-trial-global-shell"><FreeTrialBanner /></div>
+        <ReleaseUpdateManager />
         {children}
         <PersistentMobileNav />
       </body>
