@@ -5,9 +5,12 @@
   .reference-home-main,
   .reference-ranking-page,
   .reference-profile-page {
-    width: min(100%, 1120px);
-    padding-left: 24px;
-    padding-right: 24px;
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .reference-home-heading {
@@ -42,12 +45,15 @@
 
   .reference-create-shell .creator-head,
   .reference-create-shell .wizard-steps {
-    width: min(100%, 1120px);
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   .reference-create-shell .creator-head {
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: 18px;
+    padding-right: 18px;
     padding-top: 22px;
     margin-bottom: 18px;
   }
@@ -62,14 +68,17 @@
   }
 
   .reference-create-shell .wizard-steps {
-    padding-left: 24px;
-    padding-right: 24px;
+    padding-left: 18px;
+    padding-right: 18px;
     margin-bottom: 18px;
   }
 
   .reference-create-shell .creator-card {
-    width: min(calc(100% - 48px), 1080px);
-    border-radius: 22px;
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: 0;
     padding: 26px 30px;
   }
 
