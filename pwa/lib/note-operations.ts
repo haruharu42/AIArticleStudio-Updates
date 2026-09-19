@@ -470,7 +470,8 @@ function performanceBreakdown(
     else bucket.remainingPlanned += 1;
     buckets.set(key, bucket);
   }
-  const order = new Map((orderedKeys ?? []).map((key, index) => [key, index]));
+  const order = new Map<string, number>();
+  (orderedKeys ?? []).forEach((key, index) => order.set(key, index));
   return [...buckets.values()].sort((a, b) => {
     const aOrder = order.get(a.key);
     const bOrder = order.get(b.key);
