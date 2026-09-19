@@ -11,10 +11,10 @@ import {
 } from "@/lib/app-release";
 import { getSupabaseClient } from "@/lib/supabase";
 
-const PUBLIC_PREVIEW_PATHS = ["/", "/auth/callback", "/terms", "/privacy", "/ai-terms"];
+const ALWAYS_PUBLIC_PREVIEW_PATHS = ["/auth/callback", "/terms", "/privacy", "/ai-terms"];
 
-function publicPreviewPath(pathname: string): boolean {
-  return PUBLIC_PREVIEW_PATHS.some((path) => pathname === path || pathname.startsWith(path + "/"));
+function alwaysPublicPreviewPath(pathname: string): boolean {
+  return ALWAYS_PUBLIC_PREVIEW_PATHS.some((path) => pathname === path || pathname.startsWith(path + "/"));
 }
 
 type GateState =
@@ -65,9 +65,9 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
     };
   }, [audience]);
 
-  if (audience === "public" || gate.kind === "public" || gate.kind === "allowed") return <>{children}</>;
+  if (audience === "public" || gate.kind === "public" || alwaysPublicPreviewPath(pathname) || gate.kind === "allowed") return <>{children}</>;
 
-  if (gate.kind === "signed_out" && publicPreviewPath(pathname)) return <>{children}</>;
+  if (gate.kind === "signed_out" && pathname === "/") return <>{children}</>;
 
   const message = gate.kind === "denied" && gate.state?.is_release_tester
     ? "現在は第1段階の管理者確認中です。管理者が第2段階へ進めると、この一般ユーザーテストアカウントで候補版を確認できます。"
