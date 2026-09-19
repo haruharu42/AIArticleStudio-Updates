@@ -137,6 +137,16 @@ function normalizeAdminSnapshot(value: unknown): AdminReleaseSnapshot {
   };
 }
 
+export function clearEffectiveRelease(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(APP_RELEASE_EFFECTIVE_KEY);
+  delete document.documentElement.dataset.aasReleaseVersion;
+  delete document.documentElement.dataset.aasReleaseBuild;
+  window.dispatchEvent(new CustomEvent<AppReleaseState>(APP_RELEASE_STATE_EVENT, {
+    detail: { signed_in: false },
+  }));
+}
+
 export function persistEffectiveRelease(state: AppReleaseState): void {
   if (typeof window === "undefined") return;
   const release = state.effective_release ?? state.current_release ?? null;
