@@ -53,7 +53,10 @@ Preset usage count itself is updated when a saved article is associated with tha
 
 ## Database
 
-Migration: `20260919094500_article_presets_learning.sql`
+Migrations:
+
+- `20260919094500_article_presets_learning.sql`
+- `20260919061101_article_presets_server_limit.sql`
 
 - adds `article_presets`
 - uses self-only RLS + FORCE RLS
@@ -61,6 +64,7 @@ Migration: `20260919094500_article_presets_learning.sql`
 - adds richer aggregate JSON counters to `user_writing_profiles`
 - adds `record_my_article_workflow_signal`
 - keeps the old `record_my_personalization_signal` RPC for backward compatibility
+- enforces the 30-presets-per-user cap in the database as well as the UI, including concurrent insert protection
 
 ## Privacy and safety
 
