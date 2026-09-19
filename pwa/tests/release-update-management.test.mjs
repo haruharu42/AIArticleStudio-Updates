@@ -159,3 +159,31 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(previewWorkflow, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: preview/);
   assert.match(publicWorkflow, /NEXT_PUBLIC_AAS_RELEASE_AUDIENCE: public/);
 });
+
+
+test("account switching stays available on prerelease denial and clears cached release state", async () => {
+  const [gate, session, release, settings, access] = await Promise.all([
+    read("components/release-audience-gate.tsx"),
+    read("lib/auth-session.ts"),
+    read("lib/app-release.ts"),
+    read("components/pwa-settings-page.tsx"),
+    read("components/phase6-app.tsx"),
+  ]);
+
+  assert.match(gate, /ログアウトして別のアカウントでログイン/);
+  assert.match(gate, /signOutCurrentBrowser/);
+  assert.match(gate, /window\.location\.replace\("\/"\)/);
+
+  assert.match(session, /auth\.signOut\(\{ scope: "local" \}\)/);
+  assert.match(session, /clearEffectiveRelease\(\)/);
+  assert.match(session, /aas-pwa-google-consent/);
+
+  assert.match(release, /export function clearEffectiveRelease/);
+  assert.match(release, /localStorage\.removeItem\(APP_RELEASE_EFFECTIVE_KEY\)/);
+  assert.match(release, /aasReleaseVersion/);
+  assert.match(release, /aasReleaseBuild/);
+
+  assert.match(settings, /signOutCurrentBrowser/);
+  assert.match(settings, />ログアウト</);
+  assert.match(access, /signOutCurrentBrowser/);
+});
