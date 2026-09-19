@@ -870,7 +870,7 @@ export function parseNoteAiSchedulePlan(
   recentSourceCutoff.setUTCDate(recentSourceCutoff.getUTCDate() - 180);
   const datedSources = sources
     .map((source) => /^\d{4}-\d{2}-\d{2}/.test(source.publishedAt) ? new Date(source.publishedAt.slice(0, 10) + "T00:00:00Z") : null)
-    .filter((value): value is Date => Boolean(value) && !Number.isNaN(value.getTime()));
+    .filter((value): value is Date => value instanceof Date && !Number.isNaN(value.getTime()));
   if (sources.length > 0 && datedSources.length === 0) {
     warnings.push("出典の公開・更新日を確認できません。最新トレンドの根拠日付をAIに再確認してください。");
   } else if (datedSources.length > 0 && !datedSources.some((date) => date >= recentSourceCutoff && date <= generatedDate)) {
