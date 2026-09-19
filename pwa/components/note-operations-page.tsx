@@ -17,7 +17,6 @@ import {
   buildNoteProfileDraft,
   buildNoteScheduleResearchPrompt,
   currentJstMonth,
-  defaultNoteOperationProfile,
   exportNoteOperationsJson,
   exportNoteScheduleCsv,
   listNoteSchedule,
@@ -268,10 +267,17 @@ export function NoteOperationsPage() {
     try {
       const client = getSupabaseClient();
       const next = await replaceNoteScheduleMonth(client, gate.userId, targetMonth, schedulePreview.schedule);
-      await saveNoteAiSchedulePlan(client, gate.userId, schedulePreview);
       setSchedule(next);
       setCalendarMonth(targetMonth);
-      setMessage(`${targetMonth.replace("-", "年")}月のAI運用スケジュールをAASへ反映しました。他の月の予定は変更していません。`);
+      let historySaved = true;
+      try {
+        await saveNoteAiSchedulePlan(client, gate.userId, schedulePreview);
+      } catch {
+        historySaved = false;
+      }
+      setMessage(historySaved
+        ? `${targetMonth.replace("-", "年")}月のAI運用スケジュールをAASへ反映しました。他の月の予定は変更していません。`
+        : `${targetMonth.replace("-", "年")}月の予定は反映できましたが、AI調査メモだけ保存できませんでした。予定自体は利用できます。`);
       setTab("calendar");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "AI運用スケジュールを反映できませんでした。");
@@ -326,7 +332,6 @@ export function NoteOperationsPage() {
   useEffect(() => {
     if (gate.kind !== "ready") return;
     let active = true;
-    setSchedulePreview(null);
     void loadNoteAiSchedulePlan(getSupabaseClient(), gate.userId, targetMonth).then(
       (plan) => {
         if (active && plan) setSchedulePreview(plan);
