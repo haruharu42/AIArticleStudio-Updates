@@ -60,8 +60,9 @@ test("note operations UI covers setup profile planning calendar and home todo", 
   for (const label of [
     "noteを始める順番",
     "初心者向け・選ぶだけプロフィール設計",
-    "AASに運用スケジュールを決めてもらう",
-    "AASおまかせで作る",
+    "AIに1か月の運用スケジュールを決めてもらう",
+    "AIのJSON回答をAASへ読み込む",
+    "この月のAASスケジュールに反映",
     "CSVをダウンロード",
     "JSONをダウンロード",
     "AASへアップロード",
@@ -147,4 +148,64 @@ test("note beginner profile builder uses dropdown presets and current-web resear
   assert.match(css, /\.note-profile-choice-grid/);
   assert.match(css, /\.note-ai-provider-grid/);
   assert.doesNotMatch(`${lib}\n${page}\n${migration}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+});
+
+
+test("AI monthly note schedule uses month-based research, validation, and owner-scoped plan storage", async () => {
+  const [migration, lib, page, css] = await Promise.all([
+    readRepo("supabase/migrations/20260919131121_note_ai_monthly_schedule_plans.sql"),
+    readPwa("lib/note-operations.ts"),
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("app/phase38-note-operations.css"),
+  ]);
+
+  assert.match(migration, /create table if not exists public\.note_operation_schedule_plans/);
+  assert.match(migration, /enable row level security/);
+  assert.match(migration, /force row level security/);
+  assert.match(migration, /user_id = \(select auth\.uid\(\)\)/);
+  assert.match(migration, /private\.is_active_profile\(\)/);
+  assert.match(migration, /can_access_product\('AAS-PWA-BETA'\)/);
+  assert.match(migration, /grant select, insert, update, delete on table public\.note_operation_schedule_plans to authenticated/);
+  assert.doesNotMatch(migration, /grant .* to anon/i);
+
+  for (const symbol of [
+    "buildNoteScheduleResearchPrompt",
+    "parseNoteAiSchedulePlan",
+    "replaceNoteScheduleMonth",
+    "saveNoteAiSchedulePlan",
+    "loadNoteAiSchedulePlan",
+    "aas-note-schedule-v2",
+    "直近30日",
+    "直近90日",
+    "直近12か月",
+    "投稿頻度",
+    "paid_posts_per_week",
+    "recommendation_reason",
+  ]) {
+    assert.match(lib, new RegExp(symbol));
+  }
+
+  assert.match(lib, /対象月の外にある予定/);
+  assert.match(lib, /同じ日時に記事投稿が重複/);
+  assert.match(lib, /1日に最大/);
+  assert.match(lib, /調査元URLがありません/);
+  assert.match(lib, /gte\("scheduled_date", start\)/);
+  assert.match(lib, /lte\("scheduled_date", end\)/);
+
+  assert.match(page, /type="month"/);
+  assert.match(page, /min=\{currentJstMonth\(\)\}/);
+  assert.match(page, /週に何回投稿するか/);
+  assert.match(page, /1日に何回まで投稿するか/);
+  assert.match(page, /有料noteを週何回にするか/);
+  assert.match(page, /ChatGPT \/ Gemini \/ Claude/);
+  assert.match(page, /読み込み・確認/);
+  assert.match(page, /この月のAASスケジュールに反映/);
+  assert.match(page, /他の月の予定は残ります/);
+  assert.match(page, /なぜこの頻度にしたか/);
+  assert.match(page, /schedulePreview\.sources/);
+
+  assert.match(css, /\.note-ai-month-controls/);
+  assert.match(css, /\.note-ai-import-box/);
+  assert.match(css, /\.note-ai-plan-preview/);
+  assert.doesNotMatch(`${migration}\n${lib}\n${page}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
 });
