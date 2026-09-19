@@ -76,6 +76,7 @@ test("personalization UI has dedicated responsive styling", async () => {
 
 test("article presets save reusable note settings with self-only RLS and no article body storage", async () => {
   const migration = await readRepo("supabase/migrations/20260919094500_article_presets_learning.sql");
+  const serverLimit = await readRepo("supabase/migrations/20260919061101_article_presets_server_limit.sql");
   const api = await read("lib/article-presets.ts");
   const panel = await read("components/article-create/article-preset-panel.tsx");
   const page = await read("components/phase11-create-page.tsx");
@@ -89,6 +90,10 @@ test("article presets save reusable note settings with self-only RLS and no arti
   assert.match(migration, /user_id = \(select auth\.uid\(\)\)/);
   assert.match(migration, /article_presets_one_default_idx/);
   assert.match(migration, /record_my_article_workflow_signal/);
+  assert.match(serverLimit, /enforce_article_preset_limit/);
+  assert.match(serverLimit, /preset_count >= 30/);
+  assert.match(serverLimit, /article_presets_limit_30/);
+  assert.match(serverLimit, /from public, anon, authenticated/);
   assert.doesNotMatch(migration, /article_body|ai_response|prompt_text/i);
 
   assert.match(api, /articlePresetFromDraft/);
