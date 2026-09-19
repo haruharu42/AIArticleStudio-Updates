@@ -116,7 +116,7 @@ test("article presets save reusable note settings with self-only RLS and no arti
   assert.match(page, /createArticleFromWizard[\s\S]*activePresetId/);
   assert.match(progress, /activePresetId/);
   assert.match(layout, /phase34-article-presets\.css/);
-  assert.match(css, /@media \(max-width: 560px\)/);
+  assert.match(css, /@media \(max-width: 700px\)/);
   assert.doesNotMatch(`${api}\n${panel}\n${page}`, /service[_-]?role|sb_secret_/i);
 });
 
