@@ -487,16 +487,16 @@ export function generateNoteSchedule(
     .slice(0, 500);
 }
 
-export function buildNoteProfileDraft(profile: Pick<NoteOperationProfile, "noteDisplayName" | "targetReader" | "mainTopics" | "experienceNote">): string {
+export function buildNoteProfileDraft(profile: NoteOperationProfile): string {
   const name = profile.noteDisplayName.trim();
-  const reader = profile.targetReader.trim();
+  const readerExtra = profile.targetReader.trim();
   const topics = profile.mainTopics.map((item) => item.trim()).filter(Boolean);
+  const selected = noteProfileSelectionLabels(profile);
   const lines: string[] = [];
   if (name) lines.push(`${name}です。`);
-  if (topics.length) lines.push(`${topics.join("・")}を中心に発信しています。`);
-  if (reader) lines.push(`${reader}に向けて、分かりやすく実践しやすい形でまとめます。`);
+  lines.push(`${topics.length ? topics.join("・") : selected.genre}を中心に、${selected.style}の発信をしています。`);
+  lines.push(`${readerExtra || selected.audience}に向けて、${selected.tone}な文章で分かりやすくまとめます。`);
   if (profile.experienceNote.trim()) lines.push(profile.experienceNote.trim());
-  if (!lines.length) lines.push("発信テーマ・届けたい読者・事実として書ける経験を入力すると、プロフィール案を作成できます。");
   return lines.join("\n");
 }
 
