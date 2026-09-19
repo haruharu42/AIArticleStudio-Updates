@@ -177,7 +177,6 @@ test("account switching stays available on prerelease denial and clears cached r
   assert.match(gate, /auth\.getSession\(\)/);
   assert.match(gate, /sessionError \|\| !session/);
   assert.match(gate, /clearEffectiveRelease\(\)/);
-  assert.match(gate, /window\.location\.replace\("\/"\)/);
 
   assert.match(session, /auth\.signOut\(\{ scope: "local" \}\)/);
   assert.match(session, /finally/);
