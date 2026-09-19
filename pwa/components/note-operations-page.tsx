@@ -547,7 +547,7 @@ export function NoteOperationsPage() {
                 <button type="button" className="primary-action note-ai-apply-button" disabled={busy} onClick={() => void applyAiSchedule()}>
                   この月のAASスケジュールに反映
                 </button>
-                <p className="note-data-note">対象月だけを入れ替えます。他の月の予定は残ります。AIの調査概要と根拠もAASへ保存するため、後から「なぜこの頻度にしたか」を確認できます。</p>
+                <p className="note-data-note">対象月だけを入れ替えます。他の月の予定は残ります。今月を途中で再計画する場合も、過去の予定と完了済み履歴は残します。AIの調査概要と根拠もAASへ保存するため、後から「なぜこの頻度にしたか」を確認できます。</p>
               </div>
             )}
 
