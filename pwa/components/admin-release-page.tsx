@@ -142,7 +142,7 @@ export function AdminReleasePage() {
 
   const publish = async (release: AdminAppRelease) => {
     if (busy) return;
-    if (!window.confirm("第1段階・第2段階の確認済みとして、v" + release.version + " を全一般ユーザー向けに公開承認しますか？\nこの操作後に一般ユーザー向け安定版へ同じexact SHAをデプロイする運用です。")) return;
+    if (!window.confirm("第1段階・第2段階の確認済みとして、v" + release.version + " を全一般ユーザー向けに公開承認しますか？\nこの操作後に一般ユーザー向け安定版へ確認済みリリースをデプロイする運用です。")) return;
 
     setBusy(true);
     setError("");
