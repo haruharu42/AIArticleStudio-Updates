@@ -4,6 +4,7 @@ import { AppErrorReporter } from "@/components/app-error-reporter";
 import { FreeTrialBanner } from "@/components/free-trial-banner";
 import { KnowledgeRuntimeBootstrap } from "@/components/knowledge-runtime-bootstrap";
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
+import { ReleaseAudienceGate } from "@/components/release-audience-gate";
 import { ReleaseUpdateManager } from "@/components/release-update-manager";
 import "./globals.css";
 import "./phase9-11.css";
@@ -62,13 +63,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="ja">
       <body>
-        <AppErrorReporter />
-        <KnowledgeRuntimeBootstrap />
-        <AdminHomeTopbar />
-        <div className="free-trial-global-shell"><FreeTrialBanner /></div>
-        <ReleaseUpdateManager />
-        {children}
-        <PersistentMobileNav />
+        <ReleaseAudienceGate>
+          <AppErrorReporter />
+          <KnowledgeRuntimeBootstrap />
+          <AdminHomeTopbar />
+          <div className="free-trial-global-shell"><FreeTrialBanner /></div>
+          <ReleaseUpdateManager />
+          {children}
+          <PersistentMobileNav />
+        </ReleaseAudienceGate>
       </body>
     </html>
   );
