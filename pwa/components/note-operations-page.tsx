@@ -201,10 +201,7 @@ export function NoteOperationsPage() {
   }, []);
 
   useEffect(() => {
-    if (gate.kind !== "ready" || !performanceLoopEnabled) {
-      setArticleOutput(null);
-      return;
-    }
+    if (gate.kind !== "ready" || !performanceLoopEnabled) return;
     let active = true;
     void loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth).then(
       (snapshot) => { if (active) setArticleOutput(snapshot); },
@@ -541,7 +538,7 @@ export function NoteOperationsPage() {
             <div className="note-ai-month-controls">
               <label>
                 <span>① 計画したい月</span>
-                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setScheduleResponse(""); setSchedulePreview(null); }} />
+                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setScheduleResponse(""); setSchedulePreview(null); setArticleOutput(null); }} />
               </label>
               <div>
                 <span>② リサーチに使うAI</span>
