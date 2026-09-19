@@ -5,7 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
 import { Phase7App } from "@/components/phase6-app";
-import { Phase7Library } from "@/components/phase7-library";\nimport { NoteTodayPanel } from "@/components/note-today-panel";
+import { Phase7Library } from "@/components/phase7-library";
+import { NoteTodayPanel } from "@/components/note-today-panel";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import {
   getCreatorRanking,
