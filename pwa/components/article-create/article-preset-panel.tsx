@@ -184,27 +184,58 @@ export function ArticlePresetPanel({
       </div>
 
       {presets.length > 0 ? (
-        <div className="article-preset-list">
-          {presets.map((preset) => (
-            <article key={preset.id} className={activePresetId === preset.id ? "active" : ""}>
-              <button type="button" className="article-preset-main" disabled={busy} onClick={() => apply(preset)}>
-                <span>
-                  {preset.isDefault && <em>既定</em>}
-                  {preset.usageCount > 0 && <em>使用 {preset.usageCount}回</em>}
-                </span>
-                <strong>{preset.name}</strong>
+        <div className="article-preset-picker">
+          <label className="article-preset-select-label">
+            <span>プリセットを選択</span>
+            <select
+              value={activePresetId ?? ""}
+              disabled={busy}
+              onChange={(event) => {
+                const selected = presets.find((preset) => preset.id === event.target.value);
+                if (selected) apply(selected);
+              }}
+            >
+              <option value="" disabled>保存済みプリセットを選択</option>
+              {presets.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.isDefault ? "★ " : ""}{preset.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {activePreset && (
+            <>
+              <div className="article-preset-selected-summary" aria-live="polite">
+                <div>
+                  <span>
+                    {activePreset.isDefault && <em>既定</em>}
+                    {activePreset.usageCount > 0 && <em>使用 {activePreset.usageCount}回</em>}
+                  </span>
+                  <strong>{activePreset.name}</strong>
+                </div>
                 <small>
-                  {preset.publicationTarget} / {preset.genre} / {preset.subgenre} / {preset.articleType === "paid" ? "有料" : "無料"} / 約{preset.targetLength.toLocaleString("ja-JP")}文字
+                  {activePreset.publicationTarget} / {activePreset.genre} / {activePreset.subgenre} / {activePreset.articleType === "paid" ? "有料" : "無料"} / 約{activePreset.targetLength.toLocaleString("ja-JP")}文字
                 </small>
-              </button>
-              <div className="article-preset-item-actions">
-                {!preset.isDefault && (
-                  <button type="button" disabled={busy} onClick={() => void makeDefault(preset)}>既定にする</button>
-                )}
-                <button type="button" disabled={busy} onClick={() => void remove(preset)}>削除</button>
               </div>
-            </article>
-          ))}
+
+              <div className="article-preset-picker-actions">
+                <button
+                  type="button"
+                  className="article-preset-delete"
+                  disabled={busy}
+                  onClick={() => void remove(activePreset)}
+                >
+                  選択中のプリセットを削除
+                </button>
+                {!activePreset.isDefault && (
+                  <button type="button" disabled={busy} onClick={() => void makeDefault(activePreset)}>
+                    既定にする
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       ) : loaded ? (
         <p className="article-preset-empty">まだプリセットはありません。下の「現在の設定を保存」から作成できます。</p>
