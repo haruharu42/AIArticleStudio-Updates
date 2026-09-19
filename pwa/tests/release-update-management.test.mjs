@@ -142,6 +142,9 @@ test("staged release rollout isolates admin preview, selected user testers, and 
 
   assert.match(gate, /preview_allowed/);
   assert.match(gate, /is_release_tester/);
+  assert.match(gate, /ALWAYS_PUBLIC_PREVIEW_PATHS/);
+  assert.match(gate, /\/auth\/callback/);
+  assert.match(gate, /pathname === "\/"/);
   assert.match(gate, /第1段階の管理者確認中/);
   assert.match(gate, /管理者が指定した一般ユーザーテスター/);
   assert.match(layout, /ReleaseAudienceGate/);
