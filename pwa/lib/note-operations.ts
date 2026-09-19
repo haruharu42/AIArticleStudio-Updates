@@ -832,7 +832,8 @@ export function buildNoteScheduleResearchPrompt(
   aiProvider: AiProvider,
   targetMonth: string,
   currentDate = todayJstDateKey(),
-  previousPerformance?: NoteSchedulePerformanceSnapshot | null,
+  referencePerformance?: NoteSchedulePerformanceSnapshot | null,
+  articleOutput?: NoteArticleOutputSnapshot | null,
 ): string {
   const { start, end } = noteMonthBounds(targetMonth);
   const selected = noteProfileSelectionLabels(profile);
@@ -843,16 +844,29 @@ export function buildNoteScheduleResearchPrompt(
   const currentMonth = currentDate.slice(0, 7);
   const firstAllowedDate = targetMonth === currentMonth ? currentDate : start;
   const previousMonth = previousJstMonth(targetMonth);
-  const performanceSection = previousPerformance === undefined
+  const performanceMonth = referencePerformance?.targetMonth ?? previousMonth;
+  const articleOutputMonth = articleOutput?.targetMonth ?? (targetMonth === currentMonth ? targetMonth : previousMonth);
+  const performanceSection = referencePerformance === undefined
     ? ""
     : `
-【前月のAAS運用実績（構造化データのみ）】
-${formatSchedulePerformanceForPrompt(previousPerformance, previousMonth)}
-- この実績は「回数を増やす/減らす」の機械的な命令ではない。完了しやすかった曜日・時刻・実際に継続できた頻度を参考に、翌月の負荷を調整する。
-- 前月の完了率が低い場合は、未完了分を翌月へ単純に上乗せせず、まず継続可能な頻度へ落とすことを優先する。
+【AAS運用スケジュール実績（構造化データのみ）】
+${formatSchedulePerformanceForPrompt(referencePerformance, performanceMonth)}
+- この実績は「回数を増やす/減らす」の機械的な命令ではない。完了しやすかった曜日・時刻・実際に継続できた頻度を参考に、今後の負荷を調整する。
+- 未完了分やスキップ分を「借金」のように残り期間へ詰め込まない。スケジュール通りに運用できなかったこと自体を失敗扱いしない。
+- 完了率が低い場合は、まず継続可能な頻度へ落とすことを優先する。
 - 完了率が高くても自動的に投稿数を増やさず、最新リサーチと品質維持の余力を合わせて判断する。
 - AASから渡していない本文、PV、売上、購入率、フォロワー増減、読者属性、成功要因を推測して実績として扱わない。
-- 記事タイトルや本文そのものは前月実績として渡していない。ここでは予定種別・状態・曜日・時刻の集計だけを使う。
+- 記事タイトルや本文そのものは実績として渡していない。ここでは予定種別・状態・曜日・時刻の集計だけを使う。
+`;
+  const articleOutputSection = articleOutput === undefined
+    ? ""
+    : `
+【AASで実際に作成したnote記事数】
+${formatArticleOutputForPrompt(articleOutput, articleOutputMonth)}
+- これはAAS内のarticlesで対象期間に作成されたnote記事数であり、PV・売上・購入数ではない。
+- 無料/有料の実際の制作ペースとして使う。たとえば無料30本・有料20本を作成済みなら、その50本を制作能力の実績として考慮する。
+- ただし作成数と公開成果は同義ではない。draft・writing等も含むため、作成本数だけを理由に投稿数を機械的に増やさない。
+- 対象月の途中で再計画する場合、ここまでに作った本数を既存実績として扱い、残り期間だけを現実的に再設計する。
 `;
 
   return `あなたは日本のnote運営に詳しい編集者・コンテンツ戦略担当です。
@@ -890,6 +904,7 @@ ${formatSchedulePerformanceForPrompt(previousPerformance, previousMonth)}
 - プロフィール準備済み: ${profile.profileReady ? "はい" : "いいえ"}
 - ユーザーが事実として入力した経験・資格・背景: ${factualBackground}
 ${performanceSection}
+${articleOutputSection}
 【スケジュール設計】
 - あなた自身が、平均の週投稿数・有料noteの週平均・1日の最大投稿数・無料/有料の本数を決定する。
 - free_note / paid_note には、実際に記事作成へ進める具体的なテーマとタイトルを入れる。
@@ -899,7 +914,10 @@ ${performanceSection}
 - トレンド記事だけで埋めず、対象月の旬の記事と半年後も読まれる記事を混ぜる。
 - 有料noteを置く場合、その前後に関連する無料noteがあるなど読者導線を考える。
 - 投稿時間は検証案として理由をnotesまたはresearch.strategy_summaryに残す。
-- recommendation.recommendation_reasonには、なぜその投稿頻度と無料/有料比率にしたのかを具体的に書く。前月実績がある場合は、最新リサーチと前月の継続実績をどう組み合わせたかも明記する。
+- recommendation.recommendation_reasonには、なぜその投稿頻度と無料/有料比率にしたのかを具体的に書く。AAS実績がある場合は、最新リサーチ・予定実績・実際の作成本数をどう組み合わせたかも明記する。
+- 対象月が今月の場合、recommendationとscheduleは「今日から月末までに新しく行う分」だけを表す。すでに作成済み・完了済みの記事を本数へ二重計上しない。
+- 月途中の再計画では、今日より前の履歴は変更対象にせず、今日以降だけを新しい計画にする。
+- ユーザーはスケジュール通りに完璧に運用する必要はない。予定より多く作れた場合も少なかった場合も、その実績から次回再計画できる柔軟な案にする。
 
 【絶対ルール】
 - ユーザーが入力していない経歴、職業、年齢、収入、実績、資格、購入経験、利用経験、成功体験を作らない。
@@ -949,6 +967,7 @@ ${performanceSection}
 }
 
 recommendation内の本数とschedule内のfree_note / paid_note件数は一致させる。
+対象月が今月の場合、この一致対象は「今日以降の残り期間の予定件数」とする。
 JSONとして解析できることを最終確認してから返すこと。`;
 }
 
