@@ -79,3 +79,47 @@ test("admin refresh UI requires sourced JSON review before publication", async (
   assert.match(client, /admin_publish_knowledge_refresh_bundle/);
   assert.doesNotMatch(`${panel}\n${client}`, /service[_-]?role|sb_secret_|api[_-]?key/i);
 });
+
+
+test("knowledge update diff migration records material changes before publish", async () => {
+  const migration = await readRepo("supabase/migrations/20260919122008_knowledge_prompt_update_diff_visibility.sql");
+
+  assert.match(migration, /add column if not exists change_details jsonb/);
+  assert.match(migration, /private\.aas_knowledge_refresh_diff/);
+  assert.match(migration, /admin_preview_knowledge_refresh_bundle_diff/);
+  assert.match(migration, /admin_publish_knowledge_refresh_bundle_v2/);
+  assert.match(migration, /admin_list_knowledge_refresh_requests_v2/);
+  assert.match(migration, /admin_get_knowledge_refresh_channels/);
+  assert.match(migration, /changed_fields/);
+  assert.match(migration, /'added'/);
+  assert.match(migration, /'updated'/);
+  assert.match(migration, /'unchanged'/);
+  assert.match(migration, /private\.is_active_admin/);
+  assert.doesNotMatch(migration, /grant .* to anon/i);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+});
+
+test("Fresh and Stable are explained clearly and publication requires diff review", async () => {
+  const panel = await readPwa("components/knowledge-refresh-panel.tsx");
+  const client = await readPwa("lib/knowledge-auto-update.ts");
+  const css = await readPwa("app/phase26-knowledge.css");
+
+  assert.match(panel, /FRESH/);
+  assert.match(panel, /先行確認版/);
+  assert.match(panel, /STABLE/);
+  assert.match(panel, /標準版/);
+  assert.match(panel, /Fresh = 早めに確認する場所/);
+  assert.match(panel, /Stable = 一般利用の基準/);
+  assert.match(panel, /変更点を確認/);
+  assert.match(panel, /差分確認後に公開/);
+  assert.match(panel, /今回どこが変わるか/);
+  assert.match(panel, /変更した場所を詳しく見る/);
+  assert.match(panel, /adminPreviewKnowledgeRefreshBundleDiff/);
+  assert.match(panel, /adminGetKnowledgeRefreshChannels/);
+
+  assert.match(client, /admin_list_knowledge_refresh_requests_v2/);
+  assert.match(client, /admin_publish_knowledge_refresh_bundle_v2/);
+  assert.match(client, /parseKnowledgeRefreshDiff/);
+  assert.match(css, /\.knowledge-channel-guide/);
+  assert.match(css, /\.knowledge-diff-summary/);
+});
