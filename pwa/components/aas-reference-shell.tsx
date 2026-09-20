@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { SharedMobileBottomNav } from "@/components/shared-mobile-bottom-nav";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -178,13 +180,11 @@ export function AasReferenceBottomNav({
 
   return (
     <>
-      <nav className="aas-reference-bottom-nav aas-reference-mobile-main-nav" aria-label="メインナビゲーション">
-        <NavItem active={active === "home"} href="/" icon="⌂" label="ホーム" />
-        <NavItem active={active === "create"} href="/create" icon="＋" label="作成" />
-        <NavItem active={active === "library"} href="/?section=library" icon="▤" label="ライブラリ" onClick={onLibrary} />
-        <NavItem active={active === "ranking"} href="/ranking" icon="♛" label="ランキング" />
-        <NavItem active={active === "profile"} href="/profile" icon="♙" label="プロフィール" />
-      </nav>
+      <SharedMobileBottomNav
+        activeKey={active}
+        onLibrary={onLibrary}
+        className="aas-reference-mobile-main-nav"
+      />
 
       <nav className="aas-reference-desktop-nav" aria-label="PCメインナビゲーション">
         <NavItem active={active === "home"} href="/" icon="⌂" label="ホーム" />
