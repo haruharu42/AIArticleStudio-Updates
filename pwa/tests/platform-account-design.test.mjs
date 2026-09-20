@@ -77,7 +77,9 @@ test("account designs load and save per user and platform without external crede
 
   assert.match(lib, /\.from\("platform_account_designs"\)/);
   assert.match(lib, /\.eq\("user_id", userId\)/);
-  assert.match(lib, /upsert\(payload, \{ onConflict: "user_id,platform" \}\)/);
+  assert.match(lib, /\.update\(fields\)/);
+  assert.match(lib, /\.eq\("updated_at", normalized\.updatedAt\)/);
+  assert.match(lib, /\.insert\(\{/);
   assert.match(lib, /defaultPlatformAccountDesign\(userId, "note"\)/);
   assert.match(lib, /defaultPlatformAccountDesign\(userId, "tips"\)/);
   assert.match(lib, /defaultPlatformAccountDesign\(userId, "brain"\)/);
