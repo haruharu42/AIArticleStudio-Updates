@@ -3,6 +3,11 @@ export const MOBILE_NAV_PREFERENCE_EVENT = "aas-pwa-bottom-nav-preference";
 export const MOBILE_NAV_ITEMS_KEY = "aas-pwa-bottom-nav-items";
 export const MOBILE_NAV_ITEMS_EVENT = "aas-pwa-bottom-nav-items-preference";
 
+export type MobileNavItemsPreferenceEventDetail = {
+  userId: string;
+  items: MobileNavItemKey[];
+};
+
 export type MobileNavItemKey =
   | "create"
   | "library"
@@ -89,10 +94,23 @@ export function normalizeMobileNavItems(value: unknown): MobileNavItemKey[] {
   return next.slice(0, MAX_CUSTOM_MOBILE_NAV_ITEMS);
 }
 
-export function readMobileNavItems(): MobileNavItemKey[] {
+export function mobileNavItemsStorageKey(userId?: string | null): string {
+  const normalized = userId?.trim();
+  return normalized ? `${MOBILE_NAV_ITEMS_KEY}:${normalized}` : MOBILE_NAV_ITEMS_KEY;
+}
+
+export function readMobileNavItems(userId?: string | null): MobileNavItemKey[] {
   if (typeof window === "undefined") return [...DEFAULT_MOBILE_NAV_ITEMS];
-  const stored = window.localStorage.getItem(MOBILE_NAV_ITEMS_KEY);
+  const scopedKey = mobileNavItemsStorageKey(userId);
+  let stored = window.localStorage.getItem(scopedKey);
+
+  // Keep the old device setting as a one-way fallback so existing users do not
+  // lose their layout when account-scoped storage is introduced.
+  if (stored === null && scopedKey !== MOBILE_NAV_ITEMS_KEY) {
+    stored = window.localStorage.getItem(MOBILE_NAV_ITEMS_KEY);
+  }
   if (stored === null) return [...DEFAULT_MOBILE_NAV_ITEMS];
+
   try {
     return normalizeMobileNavItems(JSON.parse(stored));
   } catch {
@@ -100,11 +118,19 @@ export function readMobileNavItems(): MobileNavItemKey[] {
   }
 }
 
-export function writeMobileNavItems(value: readonly MobileNavItemKey[]): MobileNavItemKey[] {
+export function writeMobileNavItems(
+  value: readonly MobileNavItemKey[],
+  userId?: string | null,
+): MobileNavItemKey[] {
   const next = normalizeMobileNavItems([...value]);
   if (typeof window === "undefined") return next;
-  window.localStorage.setItem(MOBILE_NAV_ITEMS_KEY, JSON.stringify(next));
-  window.dispatchEvent(new CustomEvent<MobileNavItemKey[]>(MOBILE_NAV_ITEMS_EVENT, { detail: next }));
+
+  const normalizedUserId = userId?.trim() ?? "";
+  const key = mobileNavItemsStorageKey(normalizedUserId);
+  window.localStorage.setItem(key, JSON.stringify(next));
+  window.dispatchEvent(new CustomEvent<MobileNavItemsPreferenceEventDetail>(MOBILE_NAV_ITEMS_EVENT, {
+    detail: { userId: normalizedUserId, items: next },
+  }));
   return next;
 }
 
