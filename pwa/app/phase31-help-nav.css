@@ -472,3 +472,40 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+.nav-customizer-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.nav-customizer-slots label {
+  display: grid;
+  gap: 5px;
+}
+
+.nav-customizer-slots label > span {
+  color: #536b89;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.nav-customizer-slots select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #cfddec;
+  border-radius: 10px;
+  background: #fff;
+  color: #183552;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 10px;
+}
+
+@media (max-width: 760px) {
+  .nav-customizer-slots {
+    grid-template-columns: 1fr;
+  }
+}
