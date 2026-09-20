@@ -301,6 +301,12 @@ test("AI note calendar is article-only and tolerates common free paid aliases", 
   assert.match(lib, /raw\.type \?\? raw\.item_type \?\? raw\.article_type/);
   assert.match(lib, /raw\.scheduled_date/);
   assert.match(lib, /raw\.scheduled_time/);
+  assert.match(lib, /object\.targetMonth/);
+  assert.match(lib, /Array\.isArray\(object\.calendar\)/);
+  assert.match(lib, /Array\.isArray\(object\.items\)/);
+  assert.match(lib, /root\.targetMonth/);
+  assert.match(lib, /raw\.day/);
+  assert.match(lib, /raw\.name/);
   assert.match(lib, /rawTitle \|\| fallbackTitle/);
   assert.match(lib, /isNoteArticleScheduleItem\(item\)/);
   assert.match(page, /schedule\.filter\(\(item\) => isNoteArticleScheduleItem\(item\)\)/);
