@@ -104,11 +104,11 @@ test("admin promotion prompts protect confirmed product facts and cover article 
   assert.doesNotMatch(api, /service[_-]?role|sb_secret_/i);
 });
 
-test("active admins receive a top-of-home dashboard shortcut and an admin nav item", async () => {
+test("active admins keep admin access without changing the shared five-item mobile nav", async () => {
   const topbar = await read("components/admin-home-topbar.tsx");
   const sections = await read("lib/admin-sections.ts");
   const nav = await read("components/persistent-mobile-nav.tsx");
-  const css = await read("app/phase24-admin-promotion.css");
+  const settings = await read("components/pwa-settings-page.tsx");
   const layout = await read("app/layout.tsx");
   assert.match(topbar, /pathname !== "\/"/);
   assert.match(topbar, /data\.role === "admin"/);
@@ -116,11 +116,10 @@ test("active admins receive a top-of-home dashboard shortcut and an admin nav it
   assert.match(topbar, /ADMIN_HOME_SHORTCUT_IDS/);
   assert.match(sections, /販売促進・SNS/);
   assert.match(sections, /\/admin\/promotion/);
-  assert.match(nav, /data\.role === "admin"/);
-  assert.match(nav, />管理<\/button>/);
-  assert.match(nav, /go\("\/admin"\)/);
-  assert.match(css, /\.persistent-mobile-nav\.admin-enabled/);
-  assert.match(css, /repeat\(6,/);
+  assert.match(nav, /CANONICAL_NAV_ITEMS/);
+  assert.doesNotMatch(nav, />管理<\/button>|go\("\/admin"\)|admin-enabled/);
+  assert.match(settings, /profile\?\.role === "admin"/);
+  assert.match(settings, /href="\/admin">管理者画面/);
   assert.match(layout, /AdminHomeTopbar/);
-  assert.match(layout, /phase24-admin-promotion\.css/);
+  assert.match(layout, /PersistentMobileNav/);
 });
