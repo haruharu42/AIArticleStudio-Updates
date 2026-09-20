@@ -52,14 +52,19 @@ test("mobile navigation uses one shared customizable source across home and othe
   assert.match(prefs, /DEFAULT_MOBILE_NAV_ITEMS[^\n]*\["create", "library", "ranking", "profile"\]/);
   assert.match(prefs, /MAX_CUSTOM_MOBILE_NAV_ITEMS = 4/);
   assert.match(prefs, /MOBILE_NAV_ITEMS_KEY/);
-  assert.match(prefs, /localStorage\.setItem\(MOBILE_NAV_ITEMS_KEY/);
+  assert.match(prefs, /mobileNavItemsStorageKey/);
+  assert.match(prefs, /\$\{MOBILE_NAV_ITEMS_KEY\}:\$\{normalized\}/);
+  assert.match(prefs, /writeMobileNavItems\([\s\S]*userId\?: string \| null/);
+  assert.match(prefs, /localStorage\.setItem\(key, JSON\.stringify\(next\)\)/);
   for (const label of ["ライブラリ", "note運営", "設計", "画像", "機能", "SNS", "分析", "ランキング", "プロフィール", "設定"]) {
     assert.match(prefs, new RegExp(label));
   }
 
-  assert.match(shared, /readMobileNavItems/);
+  assert.match(shared, /readMobileNavItems\(userId\)/);
   assert.match(shared, /MOBILE_NAV_ITEMS_EVENT/);
-  assert.match(shared, /MOBILE_NAV_ITEMS_KEY/);
+  assert.match(shared, /mobileNavItemsStorageKey\(userId\)/);
+  assert.match(shared, /getSupabaseClient/);
+  assert.match(shared, /setUserId\(data\.session\?\.user\.id \?\? ""\)/);
   assert.match(shared, /window\.addEventListener\("storage"/);
   assert.match(shared, /mobileNavItemFor/);
   assert.match(shared, /ホーム/);
@@ -71,10 +76,14 @@ test("mobile navigation uses one shared customizable source across home and othe
 
   assert.match(customizer, /残り\{MAX_CUSTOM_MOBILE_NAV_ITEMS\}枠/);
   assert.match(customizer, /全画面のスマホ下部ナビへ共通反映/);
+  assert.match(customizer, /userId = ""/);
+  assert.match(customizer, /readMobileNavItems\(userId\)/);
+  assert.match(customizer, /writeMobileNavItems\(next, userId\)/);
   assert.match(customizer, /changeSlot/);
   assert.match(customizer, /move\(index, -1\)/);
   assert.match(customizer, /初期状態に戻す/);
-  assert.match(settings, /<MobileNavCustomizer \/>/);
+  assert.match(settings, /<MobileNavCustomizer userId=\{profile\.id\} \/>/);
+  assert.match(settings, /ナビ設定を読み込んでいます/);
   assert.match(settings, /ホームは固定、残り4枠/);
   assert.match(manual, /残り4枠を好きな機能へ入れ替え/);
   assert.match(faq, /残り4枠を設定の「下部ナビをカスタマイズ」/);
@@ -150,4 +159,44 @@ test("manual quick guide and readability layer are loaded for light user surface
   assert.match(css, /font-size: 11px/);
   assert.match(layout, /phase39-readability\.css/);
   assert.ok(layout.indexOf("phase38-note-operations.css") < layout.indexOf("phase39-readability.css"));
+});
+
+
+test("home and feature screens cannot diverge because both render the same shared mobile nav", async () => {
+  const [home, create, ranking, profile, shell, persistent, shared] = await Promise.all([
+    read("components/phase18-beginner-home.tsx"),
+    read("components/phase11-create-page.tsx"),
+    read("app/ranking/page.tsx"),
+    read("app/profile/page.tsx"),
+    read("components/aas-reference-shell.tsx"),
+    read("components/persistent-mobile-nav.tsx"),
+    read("components/shared-mobile-bottom-nav.tsx"),
+  ]);
+
+  for (const source of [home, create, ranking, profile]) {
+    assert.match(source, /AasReferenceBottomNav/);
+  }
+  assert.match(shell, /<SharedMobileBottomNav/);
+  assert.match(persistent, /<SharedMobileBottomNav/);
+  assert.equal((shared.match(/<nav className=\{navClass\}/g) ?? []).length, 1);
+  assert.doesNotMatch(home, /CANONICAL_NAV_ITEMS|DEFAULT_MOBILE_NAV_ITEMS/);
+  assert.doesNotMatch(create, /CANONICAL_NAV_ITEMS|DEFAULT_MOBILE_NAV_ITEMS/);
+  assert.doesNotMatch(ranking, /CANONICAL_NAV_ITEMS|DEFAULT_MOBILE_NAV_ITEMS/);
+  assert.doesNotMatch(profile, /CANONICAL_NAV_ITEMS|DEFAULT_MOBILE_NAV_ITEMS/);
+});
+
+test("mobile nav choices are isolated between accounts on the same device", async () => {
+  const [prefs, shared, customizer, settings] = await Promise.all([
+    read("lib/mobile-nav-preference.ts"),
+    read("components/shared-mobile-bottom-nav.tsx"),
+    read("components/mobile-nav-customizer.tsx"),
+    read("components/pwa-settings-page.tsx"),
+  ]);
+
+  assert.match(prefs, /mobileNavItemsStorageKey\(userId\?: string \| null\)/);
+  assert.match(prefs, /MOBILE_NAV_ITEMS_KEY.*normalized/);
+  assert.match(prefs, /MobileNavItemsPreferenceEventDetail/);
+  assert.match(shared, /detail\.userId !== userId/);
+  assert.match(customizer, /ログイン中のユーザーごとに保存されます/);
+  assert.match(settings, /profile\s*\?\s*<MobileNavCustomizer userId=\{profile\.id\}/);
 });
