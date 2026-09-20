@@ -253,7 +253,7 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /window\.localStorage\.setItem/);
   assert.match(page, /window\.localStorage\.removeItem/);
   assert.match(page, /貼り付け内容をクリア/);
-  assert.match(page, /previewPostingTimes\.join\("\/"/);
+  assert.match(page, /previewPostingTimes\.join\(" \/ "\)/);
   assert.match(page, /投稿時間/);
   assert.doesNotMatch(page, /setSchedulePrompt\(prompt\);\s*setScheduleResponse\(""/);
   assert.match(page, /この月のAASスケジュールに反映/);
