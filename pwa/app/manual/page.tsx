@@ -57,6 +57,22 @@ const MANUAL_SECTIONS = [
     links: [{ href: "/?section=library", label: "記事ライブラリを開く" }],
   },
   {
+    id: "account-design",
+    group: "アカウント設計",
+    title: "note / Tips / Brain アカウント設計",
+    when: "記事を書く前に、媒体ごとの発信ジャンル・読者・収益化方針・信頼の作り方を整理したい時。",
+    lead: "note・Tips・Brainを切り替えながら、基本項目をプルダウン中心で設計し、媒体ごとにクラウド保存します。",
+    points: [
+      "上部でnote / Tips / Brainのどれを設計するか選びます。",
+      "ジャンル、アカウント型、読者、トーン、収益化、目的、信頼の作り方、コンテンツの中心をプルダウンで選びます。",
+      "各項目で「その他（自由入力）」を選んだ時だけ、専用の入力欄が表示されます。",
+      "必要な人だけ、表示名・テーマ・事実として書ける経験・プロフィール文を詳細設定へ入力します。",
+      "note / Tips / Brainのパスワード、Cookie、アクセストークン、認証コードはAASへ保存しません。",
+      "既存のnote運営プロフィールがある場合は、初回移行時にnote設計へ引き継ぎます。",
+    ],
+    links: [{ href: "/account-design", label: "アカウント設計を開く" }],
+  },
+  {
     id: "note-profile",
     group: "note運営",
     title: "note運営アシスタント：プロフィール設計",
