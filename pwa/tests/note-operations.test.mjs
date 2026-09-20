@@ -201,7 +201,7 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(lib, /前文、挨拶、説明、要約、理由、注意書き、出典一覧、コードフェンス、表の後の文章は一切出力しない/);
   assert.match(lib, /Markdown表/);
   assert.match(lib, /\| 日付 \| 時刻 \| 種別 \| 記事タイトル \| テーマ \|/);
-  assert.match(lib, /JSONは不要です/);
+  assert.match(lib, /最終回答は、AASへそのままコピー＆ペーストする次のMarkdown表だけを返す/);
   assert.match(lib, /AI回答内の無料note・有料note作成予定をAASが直接読み取りました/);
   assert.match(lib, /normalizeAiArticleScheduleType/);
   assert.match(lib, /無料note作成/);
@@ -346,8 +346,8 @@ test("note schedule can be recovered from a plain markdown table without JSON", 
   assert.match(lib, /text\.split\(\/\\r\?\\n\//);
   assert.match(lib, /line\.split\("\|"\)/);
   assert.match(lib, /JSONではなくAI回答内の予定表・文章から読み取りました/);
-  assert.match(page, /Markdown表・箇条書き・対応JSON/);
-  assert.match(page, /通常操作ではJSONを作る必要はありません/);
+  assert.match(page, /AIにはAASへ貼る予定表だけを返すよう指示します/);
+  assert.match(page, /貼り付けた内容はこの端末でアカウント別に保存/);
   assert.match(manual, /JSONを作ったり編集したりする必要はありません/);
 });
 
