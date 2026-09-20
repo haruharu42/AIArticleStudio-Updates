@@ -37,39 +37,56 @@ test("manual and Q&A routes provide full help surfaces", async () => {
   assert.match(settings, /href="\/faq">Q&A・よくある質問/);
 });
 
-test("mobile navigation is unified with the home five-item reference nav", async () => {
-  const [prefs, nav, settings, manual, faq] = await Promise.all([
+test("mobile navigation uses one shared customizable source across home and other screens", async () => {
+  const [prefs, shared, shell, nav, customizer, settings, manual, faq] = await Promise.all([
     read("lib/mobile-nav-preference.ts"),
+    read("components/shared-mobile-bottom-nav.tsx"),
+    read("components/aas-reference-shell.tsx"),
     read("components/persistent-mobile-nav.tsx"),
+    read("components/mobile-nav-customizer.tsx"),
     read("components/pwa-settings-page.tsx"),
     read("app/manual/page.tsx"),
     read("app/faq/page.tsx"),
   ]);
 
-  assert.match(prefs, /MOBILE_NAV_PREFERENCE_KEY/);
-  assert.match(nav, /CANONICAL_NAV_ITEMS/);
-  for (const label of ["ホーム", "作成", "ライブラリ", "ランキング", "プロフィール"]) {
-    assert.match(nav, new RegExp(`label: "${label}"`));
+  assert.match(prefs, /DEFAULT_MOBILE_NAV_ITEMS[^\n]*\["create", "library", "ranking", "profile"\]/);
+  assert.match(prefs, /MAX_CUSTOM_MOBILE_NAV_ITEMS = 4/);
+  assert.match(prefs, /MOBILE_NAV_ITEMS_KEY/);
+  assert.match(prefs, /localStorage\.setItem\(MOBILE_NAV_ITEMS_KEY/);
+  for (const label of ["ライブラリ", "note運営", "設計", "画像", "機能", "SNS", "分析", "ランキング", "プロフィール", "設定"]) {
+    assert.match(prefs, new RegExp(label));
   }
-  assert.match(nav, /href: "\/\?section=library"/);
-  assert.match(nav, /aas-reference-bottom-nav persistent-mobile-nav unified-reference-mobile-nav/);
-  assert.match(nav, /REFERENCE_SHELL_ROUTES/);
-  assert.match(nav, /!referenceShellRoute/);
-  assert.doesNotMatch(nav, /customItems\.map|readMobileNavItems|mobileNavItemFor|admin-enabled/);
-  assert.doesNotMatch(settings, /<MobileNavCustomizer/);
-  assert.match(settings, /スマホ下部ナビは全画面で共通/);
-  assert.match(settings, /profile\?\.role === "admin"/);
-  assert.match(settings, /href="\/admin">管理者画面/);
-  assert.match(manual, /ホーム \/ 作成 \/ ライブラリ \/ ランキング \/ プロフィール/);
-  assert.match(faq, /5項目に統一/);
-  assert.doesNotMatch(`${prefs}\n${nav}\n${settings}`, /sb_secret_|service[_-]?role|sk_(?:live|test)_|whsec_/i);
+
+  assert.match(shared, /readMobileNavItems/);
+  assert.match(shared, /MOBILE_NAV_ITEMS_EVENT/);
+  assert.match(shared, /MOBILE_NAV_ITEMS_KEY/);
+  assert.match(shared, /window\.addEventListener\("storage"/);
+  assert.match(shared, /mobileNavItemFor/);
+  assert.match(shared, />ホーム/);
+
+  assert.match(shell, /SharedMobileBottomNav/);
+  assert.doesNotMatch(shell, /className="aas-reference-bottom-nav aas-reference-mobile-main-nav"/);
+  assert.match(nav, /SharedMobileBottomNav/);
+  assert.doesNotMatch(nav, /CANONICAL_NAV_ITEMS/);
+
+  assert.match(customizer, /残り\{MAX_CUSTOM_MOBILE_NAV_ITEMS\}枠/);
+  assert.match(customizer, /全画面のスマホ下部ナビへ共通反映/);
+  assert.match(customizer, /changeSlot/);
+  assert.match(customizer, /move\(index, -1\)/);
+  assert.match(customizer, /初期状態に戻す/);
+  assert.match(settings, /<MobileNavCustomizer \/>/);
+  assert.match(settings, /ホームは固定、残り4枠/);
+  assert.match(manual, /残り4枠を好きな機能へ入れ替え/);
+  assert.match(faq, /残り4枠を設定の「下部ナビをカスタマイズ」/);
+  assert.doesNotMatch(`${prefs}\n${shared}\n${shell}\n${nav}\n${settings}`, /sb_secret_|service[_-]?role|sk_(?:live|test)_|whsec_/i);
 });
 
-test("unified mobile navigation keeps five equal columns and stays mobile-only", async () => {
-  const [layout, flexCss, legacyCss] = await Promise.all([
+
+test("shared mobile navigation keeps five equal slots and stays mobile-only", async () => {
+  const [layout, flexCss, shared] = await Promise.all([
     read("app/layout.tsx"),
     read("app/phase31-nav-flex.css"),
-    read("app/phase22-persistent-nav.css"),
+    read("components/shared-mobile-bottom-nav.tsx"),
   ]);
   assert.match(layout, /phase31-help-nav\.css/);
   assert.match(layout, /phase31-nav-flex\.css/);
@@ -77,9 +94,11 @@ test("unified mobile navigation keeps five equal columns and stays mobile-only",
   assert.match(flexCss, /grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\)/);
   assert.match(flexCss, /@media \(min-width: 900px\)/);
   assert.match(flexCss, /\.unified-reference-mobile-nav/);
-  assert.doesNotMatch(flexCss, /admin-enabled|display:\s*flex|flex:\s*1 1 0/);
-  assert.doesNotMatch(legacyCss, /center item is now the feature hub/);
+  assert.match(shared, /items\.map/);
+  assert.match(shared, /<Link className=\{homeActive/);
 });
+
+
 
 
 test("desktop navigation can add hide reorder reset and persist items", async () => {
