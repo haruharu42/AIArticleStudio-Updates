@@ -1099,6 +1099,52 @@ function normalizeAiArticleScheduleType(value: unknown): "free_note" | "paid_not
   return null;
 }
 
+function fallbackDailyPostingTimes(count: number): string[] {
+  if (count <= 1) return ["20:00"];
+  const presets: Record<number, string[]> = {
+    2: ["12:00", "20:00"],
+    3: ["09:00", "14:00", "20:00"],
+    4: ["08:00", "12:00", "16:00", "20:00"],
+  };
+  if (presets[count]) return presets[count];
+
+  const startMinutes = 8 * 60;
+  const endMinutes = 21 * 60;
+  const step = (endMinutes - startMinutes) / Math.max(1, count - 1);
+  return Array.from({ length: count }, (_, index) => {
+    const total = Math.round(startMinutes + step * index);
+    const hours = Math.floor(total / 60);
+    const minutes = total % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  });
+}
+
+function ensureDistinctDailyPostingTimes(items: NoteScheduleItem[]): NoteScheduleItem[] {
+  const result = items.map((item) => ({ ...item }));
+  const indexesByDate = new Map<string, number[]>();
+
+  result.forEach((item, index) => {
+    const indexes = indexesByDate.get(item.scheduledDate) ?? [];
+    indexes.push(index);
+    indexesByDate.set(item.scheduledDate, indexes);
+  });
+
+  for (const indexes of indexesByDate.values()) {
+    if (indexes.length <= 1) continue;
+    const uniqueTimes = new Set(indexes.map((index) => result[index].scheduledTime));
+    if (uniqueTimes.size === indexes.length) continue;
+
+    const fallbackTimes = fallbackDailyPostingTimes(indexes.length);
+    indexes
+      .sort((left, right) => result[left].scheduledTime.localeCompare(result[right].scheduledTime))
+      .forEach((index, order) => {
+        result[index] = { ...result[index], scheduledTime: fallbackTimes[order] };
+      });
+  }
+
+  return result;
+}
+
 function parseSimpleAiArticleSchedule(text: string, expectedMonth: string): NoteScheduleItem[] {
   const { start, end } = noteMonthBounds(expectedMonth);
   const [targetYear, targetMonthNumber] = expectedMonth.split("-").map(Number);
@@ -1173,7 +1219,8 @@ function parseSimpleAiArticleSchedule(text: string, expectedMonth: string): Note
     });
   }
 
-  return items.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate) || a.scheduledTime.localeCompare(b.scheduledTime));
+  return ensureDistinctDailyPostingTimes(items)
+    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate) || a.scheduledTime.localeCompare(b.scheduledTime));
 }
 function parseAiScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | null {
   const date = typeof raw.date === "string"
@@ -1287,9 +1334,11 @@ export function parseNoteAiSchedulePlan(
         ? root.items
         : [];
   const { start, end } = bounds;
-  const schedule = scheduleRaw
-    .map((item) => item && typeof item === "object" && !Array.isArray(item) ? parseAiScheduleItem(item as Record<string, unknown>) : null)
-    .filter((item): item is NoteScheduleItem => Boolean(item));
+  const schedule = ensureDistinctDailyPostingTimes(
+    scheduleRaw
+      .map((item) => item && typeof item === "object" && !Array.isArray(item) ? parseAiScheduleItem(item as Record<string, unknown>) : null)
+      .filter((item): item is NoteScheduleItem => Boolean(item)),
+  );
 
   if (!schedule.length) throw new Error("無料note作成・有料note作成の予定を読み込めませんでした。AIの回答に日付と無料/有料noteの予定が含まれているか確認してください。");
   const outside = schedule.filter((item) => item.scheduledDate < start || item.scheduledDate > end);
