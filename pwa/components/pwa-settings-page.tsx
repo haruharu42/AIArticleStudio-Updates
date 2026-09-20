@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
 import { signOutCurrentBrowser } from "@/lib/auth-session";
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { readMobileNavAlways, writeMobileNavAlways } from "@/lib/mobile-nav-preference";
@@ -169,7 +168,12 @@ export function PwaSettingsPage() {
             </button>
           </section>
 
-          <MobileNavCustomizer />
+          <section className="persistent-settings-section" aria-labelledby="navigation-common-title">
+            <div>
+              <strong id="navigation-common-title">スマホ下部ナビは全画面で共通</strong>
+              <small>ホーム / 作成 / ライブラリ / ランキング / プロフィールの5項目に統一しています。設定や管理者画面はメニュー・設定ページから開きます。</small>
+            </div>
+          </section>
 
           {profile && (
             <section className="personalization-settings" aria-labelledby="personalization-settings-title">
@@ -243,6 +247,7 @@ export function PwaSettingsPage() {
           )}
 
           <div className="beginner-settings-links">
+            {profile?.role === "admin" && <Link href="/admin">管理者画面 <span>›</span></Link>}
             <Link href="/manual">使い方マニュアル <span>›</span></Link>
             <Link href="/faq">Q&A・よくある質問 <span>›</span></Link>
             <Link href="/tools">機能一覧 <span>›</span></Link>
