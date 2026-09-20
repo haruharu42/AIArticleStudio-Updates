@@ -12,15 +12,15 @@ import {
   type MobileNavItemKey,
 } from "@/lib/mobile-nav-preference";
 
-export function MobileNavCustomizer() {
+export function MobileNavCustomizer({ userId = "" }: { userId?: string }) {
   const [items, setItems] = useState<MobileNavItemKey[]>([...DEFAULT_MOBILE_NAV_ITEMS]);
 
   useEffect(() => {
-    queueMicrotask(() => setItems(readMobileNavItems()));
-  }, []);
+    queueMicrotask(() => setItems(readMobileNavItems(userId)));
+  }, [userId]);
 
   const save = (next: MobileNavItemKey[]) => {
-    setItems(writeMobileNavItems(next));
+    setItems(writeMobileNavItems(next, userId));
   };
 
   const changeSlot = (index: number, key: MobileNavItemKey) => {
@@ -80,7 +80,7 @@ export function MobileNavCustomizer() {
         ))}
       </div>
 
-      <p className="nav-customizer-note">初期状態は「ホーム / 作成 / ライブラリ / ランキング / プロフィール」です。この設定はこの端末のPWA／ブラウザに保存されます。</p>
+      <p className="nav-customizer-note">初期状態は「ホーム / 作成 / ライブラリ / ランキング / プロフィール」です。この設定はこの端末のPWA／ブラウザ内で、ログイン中のユーザーごとに保存されます。</p>
     </section>
   );
 }
