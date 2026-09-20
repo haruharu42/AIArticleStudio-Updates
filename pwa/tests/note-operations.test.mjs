@@ -193,6 +193,12 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   }
 
   assert.match(lib, /parseSimpleAiArticleSchedule/);
+  assert.match(lib, /fallbackDailyPostingTimes/);
+  assert.match(lib, /ensureDistinctDailyPostingTimes/);
+  assert.match(lib, /2: \["12:00", "20:00"\]/);
+  assert.match(lib, /3: \["09:00", "14:00", "20:00"\]/);
+  assert.match(lib, /1日2回以上なら投稿回数と同じ行数/);
+  assert.match(lib, /前文、挨拶、説明、要約、理由、注意書き、出典一覧、コードフェンス、表の後の文章は一切出力しない/);
   assert.match(lib, /Markdown表/);
   assert.match(lib, /\| 日付 \| 時刻 \| 種別 \| 記事タイトル \| テーマ \|/);
   assert.match(lib, /JSONは不要です/);
@@ -242,6 +248,14 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /反映前に内容だけ確認/);
   assert.match(page, /importAndApplyAiSchedule/);
   assert.match(page, /navigator\.clipboard\?\.readText/);
+  assert.match(page, /NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX/);
+  assert.match(page, /window\.localStorage\.getItem/);
+  assert.match(page, /window\.localStorage\.setItem/);
+  assert.match(page, /window\.localStorage\.removeItem/);
+  assert.match(page, /貼り付け内容をクリア/);
+  assert.match(page, /previewPostingTimes\.join\("\/"/);
+  assert.match(page, /投稿時間/);
+  assert.doesNotMatch(page, /setSchedulePrompt\(prompt\);\s*setScheduleResponse\(""/);
   assert.match(page, /この月のAASスケジュールに反映/);
   assert.match(page, /他の月の予定は残ります/);
   assert.match(page, /なぜこの頻度にしたか/);
@@ -335,4 +349,32 @@ test("note schedule can be recovered from a plain markdown table without JSON", 
   assert.match(page, /Markdown表・箇条書き・対応JSON/);
   assert.match(page, /通常操作ではJSONを作る必要はありません/);
   assert.match(manual, /JSONを作ったり編集したりする必要はありません/);
+});
+
+
+test("AI schedule output is copy-only, multi-post times are explicit, and pasted text persists until clear", async () => {
+  const [lib, page, css, manual] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("app/phase39-readability.css"),
+    readPwa("app/manual/page.tsx"),
+  ]);
+
+  assert.match(lib, /最終回答は、AASへそのままコピー＆ペーストする次のMarkdown表だけを返す/);
+  assert.match(lib, /表以外の文字は出力しない/);
+  assert.match(lib, /1日2回なら2行・2時刻、1日3回なら3行・3時刻/);
+  assert.match(lib, /同日の時刻同士は原則3時間以上空ける/);
+  assert.match(lib, /ensureDistinctDailyPostingTimes\(items\)/);
+  assert.match(lib, /ensureDistinctDailyPostingTimes\(/);
+
+  assert.match(page, /aas\.note\.schedule\.response\.v1/);
+  assert.match(page, /scheduleResponseLoaded/);
+  assert.match(page, /localStorage\.setItem\(key, scheduleResponse\)/);
+  assert.match(page, /clearScheduleResponse/);
+  assert.match(page, /貼り付けたAI回答をクリアしました/);
+  assert.match(page, /note-plan-times/);
+  assert.match(page, /previewPostingTimes/);
+  assert.match(css, /\.note-plan-stats \.note-plan-times/);
+  assert.match(manual, /前置きや説明文を除いてコピーしやすくします/);
+  assert.match(manual, /「貼り付け内容をクリア」を押した時だけ削除/);
 });
