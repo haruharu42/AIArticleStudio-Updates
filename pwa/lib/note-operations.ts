@@ -995,6 +995,12 @@ function scheduleRootFromValue(value: unknown, depth = 0): Record<string, unknow
   if (!Array.isArray(value)) {
     const object = value as Record<string, unknown>;
     if (object.schema === "aas-note-schedule-v2") return object;
+    if (
+      (typeof object.target_month === "string" || typeof object.targetMonth === "string") &&
+      (Array.isArray(object.schedule) || Array.isArray(object.calendar) || Array.isArray(object.items))
+    ) {
+      return object;
+    }
     for (const nested of Object.values(object)) {
       const found = scheduleRootFromValue(nested, depth + 1);
       if (found) return found;
@@ -1124,7 +1130,9 @@ function parseAiScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | n
     ? raw.date
     : typeof raw.scheduled_date === "string"
       ? raw.scheduled_date
-      : "";
+      : typeof raw.day === "string"
+        ? raw.day
+        : "";
   const type = normalizeAiArticleScheduleType(raw.type ?? raw.item_type ?? raw.article_type);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !type) return null;
 
@@ -1137,7 +1145,9 @@ function parseAiScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | n
     ? raw.title.trim()
     : typeof raw.article_title === "string"
       ? raw.article_title.trim()
-      : "";
+      : typeof raw.name === "string"
+        ? raw.name.trim()
+        : "";
   const fallbackTitle = theme || (type === "paid_note" ? "有料noteを作成" : "無料noteを作成");
 
   return {
@@ -1166,15 +1176,27 @@ export function parseNoteAiSchedulePlan(
 ): NoteAiSchedulePlan {
   noteMonthBounds(expectedMonth);
   const root = extractNoteAiScheduleJson(text);
-  if (root.target_month !== expectedMonth) throw new Error(`AIの対象月（${String(root.target_month ?? "")}）とAASで選択した対象月（${expectedMonth}）が一致しません。`);
+  const responseTargetMonth = typeof root.target_month === "string"
+    ? root.target_month
+    : typeof root.targetMonth === "string"
+      ? root.targetMonth
+      : "";
+  if (responseTargetMonth !== expectedMonth) throw new Error(`AIの対象月（${responseTargetMonth}）とAASで選択した対象月（${expectedMonth}）が一致しません。`);
 
-  const provider = root.provider === "gemini" || root.provider === "claude" ? root.provider : "chatgpt";
+  const providerRaw = typeof root.provider === "string" ? root.provider.toLowerCase() : "";
+  const provider = providerRaw.includes("gemini") ? "gemini" : providerRaw.includes("claude") ? "claude" : "chatgpt";
   const generatedForJst = typeof root.generated_for_jst === "string" && /^\d{4}-\d{2}-\d{2}$/.test(root.generated_for_jst)
     ? root.generated_for_jst
     : currentDate;
   const research = asObject(root.research);
   const recommendationRaw = asObject(root.recommendation);
-  const scheduleRaw = Array.isArray(root.schedule) ? root.schedule : [];
+  const scheduleRaw = Array.isArray(root.schedule)
+    ? root.schedule
+    : Array.isArray(root.calendar)
+      ? root.calendar
+      : Array.isArray(root.items)
+        ? root.items
+        : [];
   const { start, end } = noteMonthBounds(expectedMonth);
   const schedule = scheduleRaw
     .map((item) => item && typeof item === "object" && !Array.isArray(item) ? parseAiScheduleItem(item as Record<string, unknown>) : null)
