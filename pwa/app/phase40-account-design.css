@@ -449,3 +449,83 @@
     text-align: center;
   }
 }
+
+
+.account-design-actions .secondary-action {
+  min-height: 44px;
+  border: 1px solid #c8d8e8;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #456681;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.account-design-actions .secondary-action:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.account-design-create-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  border: 1px solid #d9e5f1;
+  border-radius: 12px;
+  background: #f9fbfe;
+  padding: 10px 12px;
+}
+
+.account-design-create-status > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.account-design-create-status strong {
+  color: #365876;
+  font-size: 10px;
+}
+
+.account-design-create-status small {
+  color: #647d96;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.account-design-create-status.ready {
+  border-color: #b8dfcc;
+  background: #f4fbf7;
+}
+
+.account-design-create-status.ready strong {
+  color: #2d6b51;
+}
+
+.account-design-create-status a {
+  flex: 0 0 auto;
+  color: #176fd9;
+  font-size: 9px;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+@media (max-width: 760px) {
+  .account-design-create-status {
+    align-items: flex-start;
+    display: grid;
+  }
+
+  .account-design-create-status a {
+    justify-self: start;
+  }
+
+  .account-design-actions .secondary-action {
+    width: 100%;
+  }
+}
