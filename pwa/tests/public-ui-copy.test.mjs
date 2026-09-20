@@ -116,8 +116,8 @@ test("active admins keep admin access without changing the shared five-item mobi
   assert.match(topbar, /ADMIN_HOME_SHORTCUT_IDS/);
   assert.match(sections, /販売促進・SNS/);
   assert.match(sections, /\/admin\/promotion/);
-  assert.match(nav, /CANONICAL_NAV_ITEMS/);
-  assert.doesNotMatch(nav, />管理<\/button>|go\("\/admin"\)|admin-enabled/);
+  assert.match(nav, /SharedMobileBottomNav/);
+  assert.doesNotMatch(nav, />管理<\/button>|go\("\/admin"\)|admin-enabled|CANONICAL_NAV_ITEMS/);
   assert.match(settings, /profile\?\.role === "admin"/);
   assert.match(settings, /href="\/admin">管理者画面/);
   assert.match(layout, /AdminHomeTopbar/);
