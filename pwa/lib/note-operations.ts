@@ -1096,7 +1096,7 @@ function normalizeAiArticleScheduleType(value: unknown): "free_note" | "paid_not
 }
 
 function parseSimpleAiArticleSchedule(text: string, expectedMonth: string): NoteScheduleItem[] {
-  const { start, end } = noteMonthBounds(expectedMonth);
+  const { start, end } = bounds;
   const [targetYear, targetMonthNumber] = expectedMonth.split("-").map(Number);
   const items: NoteScheduleItem[] = [];
   const seen = new Set<string>();
@@ -1220,8 +1220,47 @@ export function parseNoteAiSchedulePlan(
   expectedMonth: string,
   currentDate = todayJstDateKey(),
 ): NoteAiSchedulePlan {
-  noteMonthBounds(expectedMonth);
-  const root = extractNoteAiScheduleJson(text);
+  const bounds = noteMonthBounds(expectedMonth);
+  let root: Record<string, unknown>;
+  try {
+    root = extractNoteAiScheduleJson(text);
+  } catch {
+    const parsed = parseSimpleAiArticleSchedule(text, expectedMonth);
+    const simpleSchedule = expectedMonth === currentDate.slice(0, 7)
+      ? parsed.filter((item) => item.scheduledDate >= currentDate)
+      : parsed;
+    if (!simpleSchedule.length) {
+      throw new Error("AI回答から無料note・有料noteの作成予定を見つけられませんでした。回答全文をそのまま貼り付けてください。");
+    }
+    const freePosts = simpleSchedule.filter((item) => item.itemType === "free_note").length;
+    const paidPosts = simpleSchedule.filter((item) => item.itemType === "paid_note").length;
+    const perDay = new Map<string, number>();
+    for (const item of simpleSchedule) perDay.set(item.scheduledDate, (perDay.get(item.scheduledDate) ?? 0) + 1);
+    const startForRate = expectedMonth === currentDate.slice(0, 7) ? currentDate : bounds.start;
+    const spanDays = Math.max(1, Math.floor((Date.parse(bounds.end + "T00:00:00Z") - Date.parse(startForRate + "T00:00:00Z")) / 86400000) + 1);
+    const planningWeeks = Math.max(1, spanDays / 7);
+    return {
+      schema: "aas-note-schedule-v2",
+      targetMonth: expectedMonth,
+      generatedForJst: currentDate,
+      provider: "chatgpt",
+      researchSummary: "",
+      strategySummary: "",
+      assumptions: [],
+      sources: [],
+      recommendation: {
+        postsPerWeek: Math.round((simpleSchedule.length / planningWeeks) * 10) / 10,
+        paidPostsPerWeek: Math.round((paidPosts / planningWeeks) * 10) / 10,
+        maxPostsPerDay: Math.max(0, ...perDay.values()),
+        totalPosts: simpleSchedule.length,
+        freePosts,
+        paidPosts,
+        reason: "AI回答内の無料note・有料note作成予定をAASが直接読み取りました。",
+      },
+      schedule: simpleSchedule,
+      warnings: ["JSONではなくAI回答内の予定表・文章から読み取りました。"],
+    };
+  }
   const responseTargetMonth = typeof root.target_month === "string"
     ? root.target_month
     : typeof root.targetMonth === "string"
