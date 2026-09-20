@@ -1096,7 +1096,7 @@ function normalizeAiArticleScheduleType(value: unknown): "free_note" | "paid_not
 }
 
 function parseSimpleAiArticleSchedule(text: string, expectedMonth: string): NoteScheduleItem[] {
-  const { start, end } = bounds;
+  const { start, end } = noteMonthBounds(expectedMonth);
   const [targetYear, targetMonthNumber] = expectedMonth.split("-").map(Number);
   const items: NoteScheduleItem[] = [];
   const seen = new Set<string>();
@@ -1282,7 +1282,7 @@ export function parseNoteAiSchedulePlan(
       : Array.isArray(root.items)
         ? root.items
         : [];
-  const { start, end } = noteMonthBounds(expectedMonth);
+  const { start, end } = bounds;
   const schedule = scheduleRaw
     .map((item) => item && typeof item === "object" && !Array.isArray(item) ? parseAiScheduleItem(item as Record<string, unknown>) : null)
     .filter((item): item is NoteScheduleItem => Boolean(item));
