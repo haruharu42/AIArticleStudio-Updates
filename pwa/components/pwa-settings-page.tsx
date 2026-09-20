@@ -177,7 +177,9 @@ export function PwaSettingsPage() {
             </div>
           </section>
 
-          <MobileNavCustomizer userId={profile?.id ?? ""} />
+          {profile
+            ? <MobileNavCustomizer userId={profile.id} />
+            : <div className="persistent-settings-status">ナビ設定を読み込んでいます…</div>}
 
           {profile && (
             <section className="personalization-settings" aria-labelledby="personalization-settings-title">
