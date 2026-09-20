@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
 import { useEffect, useState } from "react";
 
 import { signOutCurrentBrowser } from "@/lib/auth-session";
@@ -171,9 +173,11 @@ export function PwaSettingsPage() {
           <section className="persistent-settings-section" aria-labelledby="navigation-common-title">
             <div>
               <strong id="navigation-common-title">スマホ下部ナビは全画面で共通</strong>
-              <small>ホーム / 作成 / ライブラリ / ランキング / プロフィールの5項目に統一しています。設定や管理者画面はメニュー・設定ページから開きます。</small>
+              <small>ホームは固定、残り4枠は下の設定で変更できます。選んだ並びはホーム・作成・設定・note運営などすべてのスマホ画面で同じ内容になります。</small>
             </div>
           </section>
+
+          <MobileNavCustomizer />
 
           {profile && (
             <section className="personalization-settings" aria-labelledby="personalization-settings-title">
