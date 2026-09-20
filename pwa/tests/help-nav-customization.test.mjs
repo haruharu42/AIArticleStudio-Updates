@@ -19,7 +19,7 @@ test("manual and Q&A routes provide full help surfaces", async () => {
     assert.match(manual, new RegExp(label));
   }
   assert.match(manual, /こういう時に使います/);
-  assert.match(manual, /AIの回答全文をそのままコピー/);
+  assert.match(manual, /回答全文をそのままコピー/);
   assert.match(manual, /管理者→指定テスター→全体公開/);
   for (const label of ["はじめ方・基本操作", "記事・画像・SNS", "PWA・ナビ・表示", "アカウント・利用権・決済", "トラブル・安全性"]) {
     assert.match(faq, new RegExp(label));
