@@ -192,6 +192,11 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
     assert.match(lib, new RegExp(symbol));
   }
 
+  assert.match(lib, /parseSimpleAiArticleSchedule/);
+  assert.match(lib, /Markdown表/);
+  assert.match(lib, /\| 日付 \| 時刻 \| 種別 \| 記事タイトル \| テーマ \|/);
+  assert.match(lib, /JSONは不要です/);
+  assert.match(lib, /AI回答内の無料note・有料note作成予定をAASが直接読み取りました/);
   assert.match(lib, /normalizeAiArticleScheduleType/);
   assert.match(lib, /無料note作成/);
   assert.match(lib, /有料note作成/);
@@ -280,7 +285,7 @@ test("note schedule import accepts full AI response prose and keeps file import 
   assert.match(lib, /balancedJsonObjects\(rawText\)/);
   assert.match(lib, /object\.schema === "aas-note-schedule-v2"/);
   assert.match(page, /AIの回答をそのままAASへ反映/);
-  assert.match(page, /JSONだけを切り出す必要はありません/);
+  assert.match(page, /JSONは不要です/);
   assert.match(page, /コピーしたAI回答を読み込んで反映/);
   assert.match(page, /ファイルから反映/);
   assert.match(css, /\.note-ai-easy-import/);
@@ -311,4 +316,23 @@ test("AI note calendar is article-only and tolerates common free paid aliases", 
   assert.match(page, /schedule\.filter\(\(item\) => isNoteArticleScheduleItem\(item\)\)/);
   assert.match(page, /articleSchedule\.slice\(0, 120\)/);
   assert.match(today, /value\.filter\(\(item\) => isNoteArticleScheduleItem\(item\)\)/);
+});
+
+
+test("note schedule can be recovered from a plain markdown table without JSON", async () => {
+  const [lib, page, manual] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("app/manual/page.tsx"),
+  ]);
+
+  assert.match(lib, /function parseSimpleAiArticleSchedule/);
+  assert.match(lib, /有料\(\?:note\|ノート\|記事\)/);
+  assert.match(lib, /無料\(\?:note\|ノート\|記事\)/);
+  assert.match(lib, /text\.split\(\/\\r\?\\n\//);
+  assert.match(lib, /line\.split\("\|"\)/);
+  assert.match(lib, /JSONではなくAI回答内の予定表・文章から読み取りました/);
+  assert.match(page, /Markdown表・箇条書き・対応JSON/);
+  assert.match(page, /通常操作ではJSONを作る必要はありません/);
+  assert.match(manual, /JSONを作ったり編集したりする必要はありません/);
 });
