@@ -38,6 +38,12 @@ import {
   saveArticleWizardProgress,
 } from "@/lib/phase11-wizard-progress";
 import { subgenreOptionsFor } from "@/lib/phase18-content-options";
+import {
+  loadPlatformAccountDesigns,
+  setRuntimePlatformAccountDesigns,
+  type AccountDesignPlatform,
+  type PlatformAccountDesign,
+} from "@/lib/platform-account-design";
 import { getSupabaseClient } from "@/lib/supabase";
 
 const ARTICLE_CREATE_UI_STEPS = [
@@ -76,12 +82,14 @@ export function Phase11CreatePage() {
   const [createdId, setCreatedId] = useState("");
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [wizardRestored, setWizardRestored] = useState<boolean | null>(null);
+  const [accountDesigns, setAccountDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
   const progressOwnerIdRef = useRef("");
   const titleQuotaInFlightRef = useRef(false);
   const articleQuotaInFlightRef = useRef(false);
 
   useEffect(() => {
     let active = true;
+    setRuntimePlatformAccountDesigns(null);
     const boot = async () => {
       try {
         const access = await loadCoreAccessState(getSupabaseClient());
@@ -101,6 +109,19 @@ export function Phase11CreatePage() {
         }
 
         const ownerId = access.user.id;
+        try {
+          const loadedDesigns = await loadPlatformAccountDesigns(getSupabaseClient(), ownerId);
+          if (active) {
+            setAccountDesigns(loadedDesigns);
+            setRuntimePlatformAccountDesigns(loadedDesigns);
+          }
+        } catch {
+          if (active) {
+            setAccountDesigns(null);
+            setRuntimePlatformAccountDesigns(null);
+          }
+        }
+
         const saved = loadArticleWizardProgress(ownerId);
         if (saved) {
           setStep(saved.step);
@@ -125,7 +146,10 @@ export function Phase11CreatePage() {
       }
     };
     void boot();
-    return () => { active = false; };
+    return () => {
+      active = false;
+      setRuntimePlatformAccountDesigns(null);
+    };
   }, []);
 
   useEffect(() => {
@@ -136,8 +160,20 @@ export function Phase11CreatePage() {
   const displayStep = displayStepForInternalStep(step);
   const articleDraft = useMemo(() => withArticleTags(draft, tagsText), [draft, tagsText]);
   const localTitles = useMemo(() => suggestLocalTitles(draft), [draft]);
-  const titlePrompt = useMemo(() => buildTitlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined), [articleDraft, draft.magazineEnabled, magazinePlan]);
-  const articlePrompt = useMemo(() => buildArticlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined), [articleDraft, draft.magazineEnabled, magazinePlan]);
+  const activeAccountDesign = draft.publicationTarget === "blog"
+    ? null
+    : accountDesigns?.[draft.publicationTarget] ?? null;
+  const accountDesignPromptKey = activeAccountDesign?.ready
+    ? `${activeAccountDesign.platform}:${activeAccountDesign.updatedAt ?? "unsaved"}`
+    : "none";
+  const titlePrompt = useMemo(
+    () => buildTitlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined),
+    [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey],
+  );
+  const articlePrompt = useMemo(
+    () => buildArticlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined),
+    [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey],
+  );
   const titleCandidatesReady = titlePromptAuthorized === titlePrompt;
   const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
@@ -328,6 +364,22 @@ export function Phase11CreatePage() {
           onActivePresetChange={setActivePresetId}
           setMessage={setMessage}
         />
+
+        {draft.publicationTarget !== "blog" && (
+          <div className={`account-design-create-status ${activeAccountDesign?.ready ? "ready" : "missing"}`}>
+            <div>
+              <strong>{activeAccountDesign?.ready ? "✓ アカウント設計を自動反映" : "アカウント設計は未完了"}</strong>
+              <small>
+                {activeAccountDesign?.ready
+                  ? `${draft.publicationTarget === "note" ? "note" : draft.publicationTarget === "tips" ? "Tips" : "Brain"}の保存済み設計をタイトル・本文プロンプトへ反映します。`
+                  : "設計なしでも記事作成はできます。設定すると読者・トーン・収益化方針をAI指示へ自動反映できます。"}
+              </small>
+            </div>
+            <a href={`/account-design?platform=${draft.publicationTarget}`}>
+              {activeAccountDesign?.ready ? "設計を確認" : "アカウント設計を設定"}
+            </a>
+          </div>
+        )}
 
         {step === 0 && <GenerationMethodStep draft={draft} patch={patch} magazinePlan={magazinePlan} onMagazinePlanChange={setMagazinePlan} setGenre={setGenre} setSubgenre={setSubgenre} />}
         {step === 1 && <ImagePlanStep draft={draft} patch={patch} />}
