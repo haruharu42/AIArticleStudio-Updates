@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   NOTE_SCHEDULE_TYPE_LABELS,
+  isNoteArticleScheduleItem,
   listNoteSchedule,
   setNoteScheduleStatus,
   todayJstDateKey,
@@ -23,7 +24,7 @@ export function NoteTodayPanel({ client, ownerId }: { client: SupabaseClient; ow
     void listNoteSchedule(client, ownerId, today, today).then(
       (value) => {
         if (!active) return;
-        setItems(value);
+        setItems(value.filter((item) => isNoteArticleScheduleItem(item)));
         setError(false);
       },
       () => {
@@ -53,7 +54,7 @@ export function NoteTodayPanel({ client, ownerId }: { client: SupabaseClient; ow
   return (
     <section className="reference-home-section note-today-home">
       <div className="reference-section-heading">
-        <h2>🗓 今日のnote運営</h2>
+        <h2>🗓 今日のnote作成</h2>
         <Link href="/note-operations">運営を開く ›</Link>
       </div>
       {error ? (
@@ -62,7 +63,7 @@ export function NoteTodayPanel({ client, ownerId }: { client: SupabaseClient; ow
         <p className="beginner-right-muted">今日の予定を確認しています…</p>
       ) : items.length === 0 ? (
         <div className="note-today-empty">
-          <div><strong>今日のnote予定はありません</strong><small>初回はAASに運営スケジュールを作ってもらえます。</small></div>
+          <div><strong>今日の無料note・有料note作成予定はありません</strong><small>AASのAI運用プランから、無料note・有料noteの作成予定を組んでもらえます。</small></div>
           <Link href="/note-operations">note運営を設定する</Link>
         </div>
       ) : (
