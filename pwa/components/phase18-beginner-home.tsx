@@ -7,6 +7,7 @@ import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-refe
 import { Phase7App } from "@/components/phase6-app";
 import { Phase7Library } from "@/components/phase7-library";
 import { NoteTodayPanel } from "@/components/note-today-panel";
+import { ReleasePreviewHomeStatus } from "@/components/release-preview-home-status";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import {
   getCreatorRanking,
@@ -338,6 +339,8 @@ export function Phase18BeginnerHome() {
           <h1>⌂ ホーム</h1>
           <p>今日も、いい記事をつくりましょう！</p>
         </div>
+
+        <ReleasePreviewHomeStatus />
 
         <section className="reference-creator-card" aria-label="Creatorステータス">
           <span className="reference-avatar" aria-hidden="true">
