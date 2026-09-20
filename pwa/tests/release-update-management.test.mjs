@@ -106,16 +106,19 @@ test("admin release control provides candidate publish and rollback flows", asyn
 
 
 test("staged release rollout isolates admin preview, selected user testers, and public users", async () => {
-  const [migration, client, gate, manager, page, nextConfig, previewWorkflow, publicWorkflow, layout] = await Promise.all([
+  const [migration, client, gate, manager, previewStatus, home, page, nextConfig, previewWorkflow, publicWorkflow, layout, css] = await Promise.all([
     readRepo("supabase/migrations/20260919144016_pwa_staged_release_rollout.sql"),
     read("lib/app-release.ts"),
     read("components/release-audience-gate.tsx"),
     read("components/release-update-manager.tsx"),
+    read("components/release-preview-home-status.tsx"),
+    read("components/phase18-beginner-home.tsx"),
     read("components/admin-release-page.tsx"),
     read("next.config.ts"),
     readRepo(".github/workflows/pwa-preview-deploy.yml"),
     readRepo(".github/workflows/pwa-member-beta-deploy.yml"),
     read("app/layout.tsx"),
+    read("app/phase37-release-management.css"),
   ]);
 
   assert.match(migration, /create table if not exists public\.app_release_testers/);
@@ -149,8 +152,17 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(gate, /管理者が指定した一般ユーザーテスター/);
   assert.match(layout, /ReleaseAudienceGate/);
 
-  assert.match(manager, /is_tester_preview/);
-  assert.match(manager, /一般ユーザーテスト版/);
+  assert.match(manager, /is_admin_preview \|\| state\.is_tester_preview/);
+  assert.match(manager, /return null/);
+  assert.match(previewStatus, /is_admin_preview/);
+  assert.match(previewStatus, /is_tester_preview/);
+  assert.match(previewStatus, /管理者確認/);
+  assert.match(previewStatus, /テスター確認/);
+  assert.match(previewStatus, /className="release-preview-home-status"/);
+  assert.match(home, /ReleasePreviewHomeStatus/);
+  assert.match(css, /\.release-preview-home-status/);
+  assert.doesNotMatch(css, /\.release-admin-preview\s*\{/);
+  assert.doesNotMatch(css, /release-preview-home-status[\s\S]{0,500}position:\s*fixed/);
   assert.match(page, /第2段階：指定テスターへ反映/);
   assert.match(page, /第3段階：全一般ユーザーへ公開承認/);
   assert.match(page, /AAS-000002/);
@@ -200,4 +212,27 @@ test("account switching stays available on prerelease denial and clears cached r
   assert.match(settings, />ログアウト</);
   assert.match(access, /signOutCurrentBrowser/);
   assert.match(access, /window\.location\.replace\("\/"\)/);
+});
+
+
+test("preview release identity is subtle and rendered only by the home screen", async () => {
+  const [manager, status, home, layout, css] = await Promise.all([
+    read("components/release-update-manager.tsx"),
+    read("components/release-preview-home-status.tsx"),
+    read("components/phase18-beginner-home.tsx"),
+    read("app/layout.tsx"),
+    read("app/phase37-release-management.css"),
+  ]);
+
+  assert.match(layout, /<ReleaseUpdateManager \/>/);
+  assert.match(manager, /Preview identity is shown only inside the home screen/);
+  assert.doesNotMatch(manager, /className="release-admin-preview"/);
+  assert.match(home, /<ReleasePreviewHomeStatus \/>/);
+  assert.equal((home.match(/<ReleasePreviewHomeStatus \/>/g) ?? []).length, 1);
+  assert.match(status, /<span>TEST<\/span>/);
+  assert.match(status, /v\{state\.effective_release\.version\}/);
+  assert.doesNotMatch(status, /一般ユーザーにはまだ|他の一般ユーザーにはまだ/);
+  assert.match(css, /border-radius:\s*999px/);
+  assert.match(css, /opacity:\s*\.86/);
+  assert.match(css, /box-shadow:\s*none/);
 });
