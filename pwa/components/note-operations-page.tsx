@@ -500,7 +500,7 @@ export function NoteOperationsPage() {
               <article><b>3</b><div><strong>プロフィール文と自己紹介記事を準備</strong><p>noteでは投稿した記事をプロフィールとして表示できる仕組みがあります。AASでは入力した事実だけから下書きを作ります。</p><a href={NOTE_PROFILE_OFFICIAL} target="_blank" rel="noreferrer">note公式のプロフィール案内 ↗</a></div></article>
               <article><b>4</b><div><strong>無料noteで読者の入口を作る</strong><p>AASおすすめとして、最初は無料記事を軸に投稿習慣とテーマの反応を確認します。これは成果を保証するものではありません。</p></div></article>
               <article><b>5</b><div><strong>必要に応じて有料noteを組み合わせる</strong><p>有料記事は価格と無料で読める範囲をnote側で設定します。</p><a href={NOTE_PAID_OFFICIAL} target="_blank" rel="noreferrer">note公式の有料記事案内 ↗</a></div></article>
-              <article><b>6</b><div><strong>AASカレンダーで継続する</strong><p>投稿日時・無料/有料・週次振り返りをAASに保存します。AASカレンダー自体はプランを問わず使えます。note側の予約投稿はnoteプレミアム / note pro向け機能として案内されています。</p><a href={NOTE_RESERVATION_OFFICIAL} target="_blank" rel="noreferrer">note公式の予約投稿案内 ↗</a></div></article>
+              <article><b>6</b><div><strong>AASカレンダーで継続する</strong><p>AIが決めた「無料note作成」「有料note作成」の日付と時間だけをAASカレンダーへ保存します。AASカレンダー自体はプランを問わず使えます。note側の予約投稿はnoteプレミアム / note pro向け機能として案内されています。</p><a href={NOTE_RESERVATION_OFFICIAL} target="_blank" rel="noreferrer">note公式の予約投稿案内 ↗</a></div></article>
             </div>
             <div className="note-ready-checks">
               <label><input type="checkbox" checked={profile.accountReady} onChange={(event) => setProfile({ ...profile, accountReady: event.target.checked })} /> noteアカウントの作成が完了した</label>
@@ -634,7 +634,7 @@ export function NoteOperationsPage() {
             <div className="note-ai-import-box note-ai-easy-import">
               <div>
                 <strong>③ AIの回答をそのままAASへ反映</strong>
-                <small>JSONだけを切り出す必要はありません。ChatGPT / Gemini / Claudeの説明文や```jsonコードブロックを含む回答全文を、そのまま使えます。</small>
+                <small>JSONは不要です。ChatGPT / Gemini / Claudeの回答全文をそのままコピーしてください。AASが回答内の「無料note作成」「有料note作成」の予定表を自動で探します。</small>
               </div>
               <div className="note-ai-easy-actions">
                 <button type="button" className="primary-action" disabled={busy} onClick={() => void pasteAndApplyAiSchedule()}>
@@ -655,7 +655,7 @@ export function NoteOperationsPage() {
                 <button type="button" disabled={!scheduleResponse.trim()} onClick={() => previewAiSchedule(scheduleResponse)}>反映前に内容だけ確認</button>
                 <label className="note-import-button">ファイルから反映<input type="file" accept=".json,.txt,application/json,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAiScheduleFile(file); event.currentTarget.value = ""; }} /></label>
               </div>
-              <p className="note-data-note">AASが回答内から「無料note作成」「有料note作成」だけを自動で探し、対象月と日付を検証して反映します。振り返り・SNS告知・初期設定などはAIカレンダーへ入れません。対象月が今月の場合、過去・完了・スキップ履歴は残し、今日以降の未実行記事予定だけを入れ替えます。</p>
+              <p className="note-data-note">AASはAI回答のMarkdown表・箇条書き・対応JSONのいずれからでも「日付＋無料note作成/有料note作成」を探して反映します。通常操作ではJSONを作る必要はありません。対象月が今月の場合、過去・完了・スキップ履歴は残し、今日以降の未実行記事予定だけを入れ替えます。</p>
             </div>
 
             {schedulePreview && (
@@ -684,10 +684,13 @@ export function NoteOperationsPage() {
 
                 {schedulePreview.sources.length > 0 && <details className="note-ai-plan-sources"><summary>AIが参照した情報源（{schedulePreview.sources.length}件）</summary>{schedulePreview.sources.map((source) => <div key={source.url}><strong>{source.title || "出典"}</strong><span>{source.publishedAt}</span><code>{source.url}</code>{source.whyUsed && <p>{source.whyUsed}</p>}</div>)}</details>}
 
-                <div className="note-data-actions">
-                  <button type="button" onClick={() => void copyAiScheduleJson()}>AAS用JSONをコピー</button>
-                  <button type="button" onClick={() => downloadText(`aas-note-schedule-${schedulePreview.targetMonth}.json`, exportNoteAiSchedulePlanJson(schedulePreview), "application/json;charset=utf-8")}>JSONファイルで保存</button>
-                </div>
+                <details className="note-profile-advanced">
+                  <summary>上級者向け：JSONバックアップ</summary>
+                  <div className="note-data-actions">
+                    <button type="button" onClick={() => void copyAiScheduleJson()}>AAS用JSONをコピー</button>
+                    <button type="button" onClick={() => downloadText(`aas-note-schedule-${schedulePreview.targetMonth}.json`, exportNoteAiSchedulePlanJson(schedulePreview), "application/json;charset=utf-8")}>JSONファイルで保存</button>
+                  </div>
+                </details>
                 <button type="button" className="primary-action note-ai-apply-button" disabled={busy} onClick={() => void applyAiSchedule()}>
                   {targetMonth === currentJstMonth() ? "今日以降の予定を組み直して反映" : "この月のAASスケジュールに反映"}
                 </button>
