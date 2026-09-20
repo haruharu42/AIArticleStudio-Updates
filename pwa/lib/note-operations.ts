@@ -901,7 +901,7 @@ ${formatArticleOutputForPrompt(articleOutput, articleOutputMonth)}
 - 「毎日投稿すれば伸びる」「20時が正解」などの断定は禁止。時間帯は検証用の仮説として扱う。
 - 有料noteは数を増やすことを目的にせず、無料記事で信頼や入口を作れるか、選択ジャンルで深掘り価値を出せるかを考えて頻度を決める。
 - 新規/初心者アカウントでは、制作負荷と継続性を特に重視する。
-- 根拠にした情報源はURLと公開/更新日をJSONに入れる。
+- 根拠にした情報源はURLと公開/更新日を回答内に明記する。
 
 【アカウント条件】
 - 主ジャンル: ${selected.genre}
@@ -926,9 +926,9 @@ ${articleOutputSection}
 - 休む日も含めて、初心者が現実的に続けられる計画にする。
 - トレンド記事だけで埋めず、対象月の旬の記事と半年後も読まれる記事を混ぜる。
 - 有料noteを置く場合、その前後に関連する無料noteがあるなど読者導線を考える。
-- 投稿時間は検証案として理由をnotesまたはresearch.strategy_summaryに残す。
-- recommendation.recommendation_reasonには、なぜその投稿頻度と無料/有料比率にしたのかを具体的に書く。AAS実績がある場合は、最新リサーチ・予定実績・実際の作成本数をどう組み合わせたかも明記する。
-- 対象月が今月の場合、recommendationとscheduleは「今日から月末までに新しく行う分」だけを表す。すでに作成済み・完了済みの記事を本数へ二重計上しない。
+- 投稿時間は検証案として、その理由を調査結果または運用方針に残す。
+- なぜその投稿頻度と無料/有料比率にしたのかを具体的に書く。AAS実績がある場合は、最新リサーチ・予定実績・実際の作成本数をどう組み合わせたかも明記する。
+- 対象月が今月の場合、予定表は「今日から月末までに新しく行う分」だけを表す。すでに作成済み・完了済みの記事を本数へ二重計上しない。
 - 月途中の再計画では、今日より前の履歴は変更対象にせず、今日以降だけを新しい計画にする。
 - ユーザーはスケジュール通りに完璧に運用する必要はない。予定より多く作れた場合も少なかった場合も、その実績から次回再計画できる柔軟な案にする。
 
@@ -939,49 +939,19 @@ ${articleOutputSection}
 - 調査で確認できない数値やトレンドを事実として断定しない。
 
 【出力形式】
-説明文やMarkdownコードフェンスを付けず、次の構造の有効なJSONだけを返す。
-{
-  "schema": "aas-note-schedule-v2",
-  "target_month": "${targetMonth}",
-  "generated_for_jst": "${currentDate}",
-  "provider": "${aiProvider}",
-  "research": {
-    "summary": "今回確認した最新動向の要約",
-    "strategy_summary": "この月の運用方針",
-    "assumptions": ["仮定1", "仮定2"],
-    "sources": [
-      {
-        "title": "出典名",
-        "url": "https://...",
-        "published_at": "YYYY-MM-DD",
-        "why_used": "この計画にどう使ったか"
-      }
-    ]
-  },
-  "recommendation": {
-    "posts_per_week": 3.0,
-    "paid_posts_per_week": 0.5,
-    "max_posts_per_day": 1,
-    "total_posts": 12,
-    "free_posts": 10,
-    "paid_posts": 2,
-    "recommendation_reason": "この頻度・比率にした理由"
-  },
-  "schedule": [
-    {
-      "date": "${firstAllowedDate}",
-      "time": "20:00",
-      "type": "free_note",
-      "title": "具体的な記事タイトル",
-      "theme": "記事テーマ",
-      "notes": "狙い・公開タイミングの理由"
-    }
-  ]
-}
+JSONは不要です。初心者が読める通常の日本語で調査結果と方針を説明し、回答の最後に必ず次のMarkdown表を付けてください。
 
-recommendation内の本数とschedule内のfree_note / paid_note件数は一致させる。
-対象月が今月の場合、この一致対象は「今日以降の残り期間の予定件数」とする。
-JSONとして解析できることを最終確認してから返すこと。`;
+| 日付 | 時刻 | 種別 | 記事タイトル | テーマ |
+|---|---|---|---|---|
+| ${firstAllowedDate} | 20:00 | 無料note作成 | 具体的な記事タイトル | 記事テーマ |
+
+- 種別は「無料note作成」または「有料note作成」の2種類だけ。
+- 日付はYYYY-MM-DD形式。
+- 時刻はHH:MM形式。
+- 対象月が今月の場合、今日より前の日付は入れない。
+- 表には記事作成予定だけを入れ、振り返り・SNS告知・初期設定は入れない。
+- AASはこの表を回答全文から自動抽出するため、表の列名と種別名は上記を維持する。
+- 最後に無料note本数・有料note本数・この頻度にした理由を文章でまとめる。`;
 }
 
 function stripJsonFence(text: string): string {
