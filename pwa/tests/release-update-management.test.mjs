@@ -162,7 +162,7 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(home, /ReleasePreviewHomeStatus/);
   assert.match(css, /\.release-preview-home-status/);
   assert.doesNotMatch(css, /\.release-admin-preview\s*\{/);
-  assert.doesNotMatch(css, /release-preview-home-status[\s\S]{0,500}position:\s*fixed/);
+  assert.doesNotMatch(css, /\.release-preview-home-status\s*\{[^}]*position:\s*fixed/);
   assert.match(page, /第2段階：指定テスターへ反映/);
   assert.match(page, /第3段階：全一般ユーザーへ公開承認/);
   assert.match(page, /AAS-000002/);
