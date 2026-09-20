@@ -177,7 +177,7 @@ export function PwaSettingsPage() {
             </div>
           </section>
 
-          <MobileNavCustomizer />
+          <MobileNavCustomizer userId={profile?.id ?? ""} />
 
           {profile && (
             <section className="personalization-settings" aria-labelledby="personalization-settings-title">
