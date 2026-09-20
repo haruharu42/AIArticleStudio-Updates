@@ -295,3 +295,34 @@
     width: 100%;
   }
 }
+
+
+.note-plan-stats .note-plan-times {
+  grid-column: span 2;
+}
+
+.note-plan-stats .note-plan-times strong {
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.note-clear-response-button {
+  border-color: #c7d6e6 !important;
+  background: #fff !important;
+  color: #536d89 !important;
+}
+
+@media (max-width: 760px) {
+  .note-plan-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .note-plan-stats .note-plan-times {
+    grid-column: 1 / -1;
+  }
+
+  .note-plan-stats .note-plan-times strong {
+    font-size: 12px;
+  }
+}
