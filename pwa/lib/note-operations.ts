@@ -293,12 +293,16 @@ export function noteProfileSelectionLabels(profile: NoteOperationProfile) {
 }
 
 export const NOTE_SCHEDULE_TYPE_LABELS: Record<NoteScheduleItemType, string> = {
-  free_note: "無料note",
-  paid_note: "有料note",
+  free_note: "無料note作成",
+  paid_note: "有料note作成",
   review: "振り返り",
   profile_setup: "初期設定",
   sns_share: "SNS告知",
 };
+
+export function isNoteArticleScheduleItem(item: NoteScheduleItem): boolean {
+  return item.itemType === "free_note" || item.itemType === "paid_note";
+}
 
 export function defaultNoteOperationProfile(userId: string): NoteOperationProfile {
   return {
@@ -915,9 +919,10 @@ ${performanceSection}
 ${articleOutputSection}
 【スケジュール設計】
 - あなた自身が、平均の週投稿数・有料noteの週平均・1日の最大投稿数・無料/有料の本数を決定する。
+- scheduleに入れてよいtypeは free_note と paid_note の2種類だけ。review / sns_share / profile_setup は出力しない。
 - free_note / paid_note には、実際に記事作成へ進める具体的なテーマとタイトルを入れる。
-- 必要なら review（週次振り返り）、sns_share（SNS告知）、profile_setup（初期設定）を入れてよい。
-- 同じ日・同じ時間に記事投稿を重複させない。
+- カレンダーは「無料note作成」「有料note作成」の制作予定として使う。SNS告知、振り返り、初期設定などの記事制作以外の予定は入れない。
+- 同じ日・同じ時間に記事作成予定を重複させない。
 - 休む日も含めて、初心者が現実的に続けられる計画にする。
 - トレンド記事だけで埋めず、対象月の旬の記事と半年後も読まれる記事を混ぜる。
 - 有料noteを置く場合、その前後に関連する無料noteがあるなど読者導線を考える。
@@ -1106,18 +1111,48 @@ function safeHttpUrl(value: unknown): string {
   }
 }
 
+function normalizeAiArticleScheduleType(value: unknown): "free_note" | "paid_note" | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (["free_note", "free", "free_article", "無料note", "無料ノート", "無料記事", "無料note作成"].includes(normalized)) return "free_note";
+  if (["paid_note", "paid", "paid_article", "有料note", "有料ノート", "有料記事", "有料note作成"].includes(normalized)) return "paid_note";
+  return null;
+}
+
 function parseAiScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | null {
-  const date = typeof raw.date === "string" ? raw.date : "";
-  const title = typeof raw.title === "string" ? raw.title.trim() : "";
-  const type = raw.type;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !title) return null;
-  if (type !== "free_note" && type !== "paid_note" && type !== "review" && type !== "profile_setup" && type !== "sns_share") return null;
+  const date = typeof raw.date === "string"
+    ? raw.date
+    : typeof raw.scheduled_date === "string"
+      ? raw.scheduled_date
+      : "";
+  const type = normalizeAiArticleScheduleType(raw.type ?? raw.item_type ?? raw.article_type);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !type) return null;
+
+  const theme = typeof raw.theme === "string"
+    ? raw.theme.trim().slice(0, 500)
+    : typeof raw.topic === "string"
+      ? raw.topic.trim().slice(0, 500)
+      : "";
+  const rawTitle = typeof raw.title === "string"
+    ? raw.title.trim()
+    : typeof raw.article_title === "string"
+      ? raw.article_title.trim()
+      : "";
+  const fallbackTitle = theme || (type === "paid_note" ? "有料noteを作成" : "無料noteを作成");
+
   return {
     scheduledDate: date,
-    scheduledTime: normalizeTime(typeof raw.time === "string" ? raw.time : "20:00", "20:00"),
+    scheduledTime: normalizeTime(
+      typeof raw.time === "string"
+        ? raw.time
+        : typeof raw.scheduled_time === "string"
+          ? raw.scheduled_time
+          : "20:00",
+      "20:00",
+    ),
     itemType: type,
-    title: title.slice(0, 240),
-    theme: typeof raw.theme === "string" ? raw.theme.trim().slice(0, 500) : "",
+    title: (rawTitle || fallbackTitle).slice(0, 240),
+    theme,
     status: "planned",
     source: "imported",
     notes: typeof raw.notes === "string" ? raw.notes.trim().slice(0, 1200) : "",
@@ -1145,12 +1180,12 @@ export function parseNoteAiSchedulePlan(
     .map((item) => item && typeof item === "object" && !Array.isArray(item) ? parseAiScheduleItem(item as Record<string, unknown>) : null)
     .filter((item): item is NoteScheduleItem => Boolean(item));
 
-  if (!schedule.length) throw new Error("AIのJSONに読み込める予定がありません。");
+  if (!schedule.length) throw new Error("無料note作成・有料note作成の予定を読み込めませんでした。AIの回答に日付と無料/有料noteの予定が含まれているか確認してください。");
   const outside = schedule.filter((item) => item.scheduledDate < start || item.scheduledDate > end);
   if (outside.length) throw new Error("対象月の外にある予定が含まれています。AIに対象月だけで再作成してもらってください。");
   if (schedule.length > 200) throw new Error("1か月の予定が多すぎます。200件以下にしてください。");
 
-  const articleItems = schedule.filter((item) => item.itemType === "free_note" || item.itemType === "paid_note");
+  const articleItems = schedule;
   const actualFree = articleItems.filter((item) => item.itemType === "free_note").length;
   const actualPaid = articleItems.filter((item) => item.itemType === "paid_note").length;
   const perDay = new Map<string, number>();
@@ -1252,16 +1287,21 @@ export async function replaceNoteScheduleMonth(
   const { start, end } = noteMonthBounds(targetMonth);
   const replacementStart = targetMonth === currentDate.slice(0, 7) ? currentDate : start;
   const previous = await listNoteSchedule(client, userId, start, end);
-  const preserved = previous.filter((item) => item.scheduledDate < replacementStart || item.status !== "planned");
+  const preserved = previous.filter(
+    (item) => item.scheduledDate < replacementStart || item.status !== "planned" || !isNoteArticleScheduleItem(item),
+  );
   const preservedKeys = new Set(
     preserved.map((item) => `${item.scheduledDate}|${item.scheduledTime}|${item.itemType}`),
   );
   const clean = items
+    .filter((item) => isNoteArticleScheduleItem(item))
     .filter((item) => item.scheduledDate >= replacementStart && item.scheduledDate <= end && item.title.trim())
     .filter((item) => !preservedKeys.has(`${item.scheduledDate}|${item.scheduledTime}|${item.itemType}`))
     .slice(0, 200)
     .map((item) => ({ ...item, id: undefined, source: "imported" as NoteScheduleSource }));
-  const previousReplaceable = previous.filter((item) => item.scheduledDate >= replacementStart && item.status === "planned");
+  const previousReplaceable = previous.filter(
+    (item) => item.scheduledDate >= replacementStart && item.status === "planned" && isNoteArticleScheduleItem(item),
+  );
 
   const deleteQuery = client
     .from("note_operation_schedule_items")
@@ -1269,7 +1309,8 @@ export async function replaceNoteScheduleMonth(
     .eq("user_id", userId)
     .gte("scheduled_date", replacementStart)
     .lte("scheduled_date", end)
-    .eq("status", "planned");
+    .eq("status", "planned")
+    .in("item_type", ["free_note", "paid_note"]);
   const { error: deleteError } = await deleteQuery;
   if (deleteError) throw new Error("対象月の既存スケジュールを更新できませんでした。");
 
@@ -1341,7 +1382,8 @@ export async function loadNoteAiSchedulePlan(
       whyUsed: typeof source.why_used === "string" ? source.why_used : "",
     };
   }).filter((source: NoteAiResearchSource) => source.url);
-  const monthSchedule = await listNoteSchedule(client, userId, targetMonth + "-01", noteMonthBounds(targetMonth).end);
+  const monthSchedule = (await listNoteSchedule(client, userId, targetMonth + "-01", noteMonthBounds(targetMonth).end))
+    .filter((item) => isNoteArticleScheduleItem(item));
   return {
     schema: "aas-note-schedule-v2",
     targetMonth,
