@@ -210,7 +210,7 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(lib, /\.in\("item_type", \["free_note", "paid_note"\]\)/);
   assert.match(page, /articleSchedule/);
   assert.match(page, /無料note \/ 有料noteの作成日・時間/);
-  assert.match(page, /Markdown表・箇条書き・対応JSON/);
+  assert.match(page, /AIにはAASへ貼る予定表だけを返すよう指示します/);
   assert.match(lib, /balancedJsonObjects/);
   assert.match(lib, /scheduleRootFromValue/);
   assert.match(lib, /ChatGPTの回答全文を削らず/);
