@@ -425,12 +425,6 @@
 }
 
 @media (max-width: 760px) {
-  .release-admin-preview {
-    top: 66px;
-    right: 8px;
-    left: 8px;
-  }
-
   .release-update-banner {
     bottom: calc(76px + env(safe-area-inset-bottom));
     width: calc(100% - 16px);
