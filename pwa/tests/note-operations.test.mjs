@@ -79,7 +79,7 @@ test("note operations UI covers setup profile planning calendar and home todo", 
   assert.match(page, /note\.com\/info\/n\/na5f43ec69740/);
   assert.match(page, /note\.com\/info\/n\/nc84e9a40b092/);
 
-  assert.match(today, /今日のnote運営/);
+  assert.match(today, /今日のnote作成/);
   assert.match(today, /完了にする/);
   assert.match(home, /NoteTodayPanel/);
   assert.match(home, /ownerId=\{profile\.id\}/);
@@ -192,6 +192,15 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
     assert.match(lib, new RegExp(symbol));
   }
 
+  assert.match(lib, /normalizeAiArticleScheduleType/);
+  assert.match(lib, /無料note作成/);
+  assert.match(lib, /有料note作成/);
+  assert.match(lib, /scheduleに入れてよいtypeは free_note と paid_note の2種類だけ/);
+  assert.match(lib, /\.in\("item_type", \["free_note", "paid_note"\]\)/);
+  assert.match(page, /articleSchedule/);
+  assert.match(page, /無料note \/ 有料noteの作成日・時間/);
+  assert.match(page, /振り返り・SNS告知・初期設定などはAIカレンダーへ入れません/);
+  assert.match(today, /isNoteArticleScheduleItem/);
   assert.match(lib, /balancedJsonObjects/);
   assert.match(lib, /scheduleRootFromValue/);
   assert.match(lib, /ChatGPTの回答全文を削らず/);
@@ -277,4 +286,24 @@ test("note schedule import accepts full AI response prose and keeps file import 
   assert.match(page, /ファイルから反映/);
   assert.match(css, /\.note-ai-easy-import/);
   assert.match(layout, /phase39-readability\.css/);
+});
+
+
+test("AI note calendar is article-only and tolerates common free paid aliases", async () => {
+  const [lib, page, today] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("components/note-today-panel.tsx"),
+  ]);
+
+  assert.match(lib, /\["free_note", "free", "free_article", "無料note", "無料ノート", "無料記事", "無料note作成"\]/);
+  assert.match(lib, /\["paid_note", "paid", "paid_article", "有料note", "有料ノート", "有料記事", "有料note作成"\]/);
+  assert.match(lib, /raw\.type \?\? raw\.item_type \?\? raw\.article_type/);
+  assert.match(lib, /raw\.scheduled_date/);
+  assert.match(lib, /raw\.scheduled_time/);
+  assert.match(lib, /rawTitle \|\| fallbackTitle/);
+  assert.match(lib, /isNoteArticleScheduleItem\(item\)/);
+  assert.match(page, /schedule\.filter\(\(item\) => isNoteArticleScheduleItem\(item\)\)/);
+  assert.match(page, /articleSchedule\.slice\(0, 120\)/);
+  assert.match(today, /value\.filter\(\(item\) => isNoteArticleScheduleItem\(item\)\)/);
 });
