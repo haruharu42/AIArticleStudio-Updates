@@ -17,7 +17,9 @@ import {
   accountDesignLabels,
   buildPlatformProfileDraft,
   loadPlatformAccountDesigns,
+  restorePlatformAccountDesignDraft,
   savePlatformAccountDesign,
+  serializePlatformAccountDesignDraft,
   type AccountDesignAudience,
   type AccountDesignContentFocus,
   type AccountDesignGenre,
@@ -38,12 +40,44 @@ function platformLabel(platform: AccountDesignPlatform): string {
   return ACCOUNT_DESIGN_PLATFORMS.find((item) => item.value === platform)?.label ?? platform;
 }
 
+const ACCOUNT_DESIGN_DRAFT_STORAGE_PREFIX = "aas.account-design.draft.v1";
+
+function initialAccountDesignPlatform(): AccountDesignPlatform {
+  if (typeof window === "undefined") return "note";
+  const value = new URLSearchParams(window.location.search).get("platform");
+  return value === "tips" || value === "brain" || value === "note" ? value : "note";
+}
+
+function accountDesignDraftStorageKey(userId: string, platform: AccountDesignPlatform): string {
+  return `${ACCOUNT_DESIGN_DRAFT_STORAGE_PREFIX}:${userId}:${platform}`;
+}
+
+function saveLocalAccountDesignDraft(design: PlatformAccountDesign): void {
+  try {
+    window.localStorage.setItem(
+      accountDesignDraftStorageKey(design.userId, design.platform),
+      serializePlatformAccountDesignDraft(design),
+    );
+  } catch {
+    // Cloud save remains available even if this browser blocks local storage.
+  }
+}
+
+function clearLocalAccountDesignDraft(userId: string, platform: AccountDesignPlatform): void {
+  try {
+    window.localStorage.removeItem(accountDesignDraftStorageKey(userId, platform));
+  } catch {
+    // Nothing else is required if local storage is unavailable.
+  }
+}
+
 export function PlatformAccountDesignPage() {
   const [state, setState] = useState<PageState>({ kind: "loading" });
   const [designs, setDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
-  const [platform, setPlatform] = useState<AccountDesignPlatform>("note");
+  const [platform, setPlatform] = useState<AccountDesignPlatform>(() => initialAccountDesignPlatform());
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [dirtyPlatforms, setDirtyPlatforms] = useState<AccountDesignPlatform[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -55,7 +89,28 @@ export function PlatformAccountDesignPage() {
         setState(access);
         if (access.kind !== "ready") return;
         const next = await loadPlatformAccountDesigns(client, access.profile.id);
-        if (active) setDesigns(next);
+        const restored = { ...next };
+        const dirty: AccountDesignPlatform[] = [];
+        for (const item of ACCOUNT_DESIGN_PLATFORMS) {
+          const key = accountDesignDraftStorageKey(access.profile.id, item.value);
+          let raw: string | null = null;
+          try {
+            raw = window.localStorage.getItem(key);
+          } catch {
+            raw = null;
+          }
+          const localDraft = restorePlatformAccountDesignDraft(raw, next[item.value]);
+          if (localDraft) {
+            restored[item.value] = localDraft;
+            dirty.push(item.value);
+          } else if (raw) {
+            clearLocalAccountDesignDraft(access.profile.id, item.value);
+          }
+        }
+        if (active) {
+          setDesigns(restored);
+          setDirtyPlatforms(dirty);
+        }
       } catch {
         if (active) setState({ kind: "unavailable" });
       }
@@ -69,9 +124,11 @@ export function PlatformAccountDesignPage() {
   const platformMeta = ACCOUNT_DESIGN_PLATFORMS.find((item) => item.value === platform);
 
   const patch = <K extends keyof PlatformAccountDesign>(key: K, value: PlatformAccountDesign[K]) => {
-    setDesigns((current) => current
-      ? { ...current, [platform]: { ...current[platform], [key]: value } }
-      : current);
+    if (!designs) return;
+    const nextDesign = { ...designs[platform], [key]: value };
+    setDesigns({ ...designs, [platform]: nextDesign });
+    saveLocalAccountDesignDraft(nextDesign);
+    setDirtyPlatforms((current) => current.includes(platform) ? current : [...current, platform]);
     setMessage("");
   };
 
@@ -82,9 +139,28 @@ export function PlatformAccountDesignPage() {
     try {
       const saved = await savePlatformAccountDesign(getSupabaseClient(), design);
       setDesigns((current) => current ? { ...current, [platform]: saved } : current);
+      clearLocalAccountDesignDraft(saved.userId, platform);
+      setDirtyPlatforms((current) => current.filter((item) => item !== platform));
       setMessage(`${platformLabel(platform)}のアカウント設計を保存しました。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "アカウント設計を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reloadCurrentPlatform = async () => {
+    if (state.kind !== "ready") return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const latest = await loadPlatformAccountDesigns(getSupabaseClient(), state.profile.id);
+      clearLocalAccountDesignDraft(state.profile.id, platform);
+      setDesigns((current) => current ? { ...current, [platform]: latest[platform] } : latest);
+      setDirtyPlatforms((current) => current.filter((item) => item !== platform));
+      setMessage(`${platformLabel(platform)}の最新設計を再読み込みしました。`);
+    } catch {
+      setMessage("最新のアカウント設計を再読み込みできませんでした。");
     } finally {
       setBusy(false);
     }
@@ -118,7 +194,7 @@ export function PlatformAccountDesignPage() {
           <div>
             <p className="eyebrow">ACCOUNT DESIGN</p>
             <h1>note / Tips / Brain アカウント設計</h1>
-            <p>初心者は選ぶだけでOK。「その他」を選んだ項目だけ自由入力できます。媒体ごとに別々の設計をクラウド保存します。</p>
+            <p>初心者は選ぶだけでOK。「その他」を選んだ項目だけ自由入力できます。媒体ごとに別々の設計をクラウド保存し、保存前の変更はこの端末へ自動退避します。</p>
           </div>
           <Link href="/tools">機能一覧へ</Link>
         </header>
@@ -138,7 +214,7 @@ export function PlatformAccountDesignPage() {
             >
               <strong>{item.label}</strong>
               <small>{item.description}</small>
-              <span>{designs[item.value].ready ? "✓ 設計済み" : "未完了"}</span>
+              <span>{dirtyPlatforms.includes(item.value) ? "● 保存前の変更あり" : designs[item.value].ready ? "✓ 設計済み" : "未完了"}</span>
             </button>
           ))}
         </nav>
@@ -259,7 +335,8 @@ export function PlatformAccountDesignPage() {
 
           <div className="account-design-actions">
             <button className="primary-action" type="button" disabled={busy} onClick={() => void save()}>{busy ? "保存中…" : `${platformMeta?.label}の設計を保存`}</button>
-            <Link href="/create">この設計を見ながら記事を作る ›</Link>
+            {dirtyPlatforms.includes(platform) && <button className="secondary-action" type="button" disabled={busy} onClick={() => void reloadCurrentPlatform()}>保存前の変更を破棄して最新を再読込</button>}
+            <Link href={`/create?publicationTarget=${platform}`}>この設計を使って記事を作る ›</Link>
           </div>
         </section>
       </main>
