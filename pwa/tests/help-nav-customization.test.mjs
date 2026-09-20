@@ -62,7 +62,7 @@ test("mobile navigation uses one shared customizable source across home and othe
   assert.match(shared, /MOBILE_NAV_ITEMS_KEY/);
   assert.match(shared, /window\.addEventListener\("storage"/);
   assert.match(shared, /mobileNavItemFor/);
-  assert.match(shared, />ホーム/);
+  assert.match(shared, /ホーム/);
 
   assert.match(shell, /SharedMobileBottomNav/);
   assert.doesNotMatch(shell, /className="aas-reference-bottom-nav aas-reference-mobile-main-nav"/);
