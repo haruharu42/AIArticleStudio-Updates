@@ -110,3 +110,80 @@ test("account design is reachable from tools settings note operations and manual
   assert.match(manual, /note \/ Tips \/ Brain アカウント設計/);
   assert.match(faq, /媒体ごとに別々の設計を保存できます/);
 });
+
+
+test("saved account design is injected into article prompts only when ready", async () => {
+  const [designLib, createLib, createPage] = await Promise.all([
+    read("lib/platform-account-design.ts"),
+    read("lib/phase11-create.ts"),
+    read("components/phase11-create-page.tsx"),
+  ]);
+
+  assert.match(designLib, /setRuntimePlatformAccountDesigns/);
+  assert.match(designLib, /getRuntimePlatformAccountDesign/);
+  assert.match(designLib, /return design\?\.ready \? design : null/);
+  assert.match(designLib, /buildPlatformAccountPromptContext/);
+  assert.match(designLib, /【ACCOUNT DESIGN】/);
+  assert.match(designLib, /補完・誇張・創作しない/);
+  assert.match(createLib, /buildPlatformAccountPromptContext\(draft\.publicationTarget\)/);
+  assert.match(createLib, /account_design_applied/);
+  assert.match(createLib, /account_design_updated_at/);
+  assert.match(createPage, /loadPlatformAccountDesigns/);
+  assert.match(createPage, /setRuntimePlatformAccountDesigns\(loadedDesigns\)/);
+  assert.match(createPage, /アカウント設計を自動反映/);
+  assert.match(createPage, /アカウント設計は未完了/);
+  assert.match(createPage, /\/account-design\?platform=/);
+});
+
+test("account design protects unsaved edits and rejects stale cross-device updates", async () => {
+  const [lib, page] = await Promise.all([
+    read("lib/platform-account-design.ts"),
+    read("components/platform-account-design-page.tsx"),
+  ]);
+
+  assert.match(lib, /validatePlatformAccountDesign/);
+  assert.match(lib, /「その他」を選んだ項目を入力してください/);
+  assert.match(lib, /serializePlatformAccountDesignDraft/);
+  assert.match(lib, /restorePlatformAccountDesignDraft/);
+  assert.match(lib, /baseUpdatedAt: design\.updatedAt/);
+  assert.match(lib, /envelope\.baseUpdatedAt !== cloud\.updatedAt/);
+  assert.match(lib, /\.eq\("updated_at", normalized\.updatedAt\)/);
+  assert.match(lib, /別の画面または端末でこのアカウント設計が更新されています/);
+  assert.match(lib, /code === "23505"/);
+
+  assert.match(page, /aas\.account-design\.draft\.v1/);
+  assert.match(page, /window\.localStorage\.setItem/);
+  assert.match(page, /window\.localStorage\.removeItem/);
+  assert.match(page, /restorePlatformAccountDesignDraft/);
+  assert.match(page, /● 保存前の変更あり/);
+  assert.match(page, /保存前の変更を破棄して最新を再読込/);
+  assert.match(page, /publicationTarget=\$\{platform\}/);
+});
+
+test("all eight other selections require matching custom input before cloud save", async () => {
+  const lib = await read("lib/platform-account-design.ts");
+  for (const field of [
+    "genrePreset",
+    "accountStylePreset",
+    "audiencePreset",
+    "tonePreset",
+    "monetizationPreset",
+    "goalPreset",
+    "trustPreset",
+    "contentFocusPreset",
+  ]) {
+    assert.match(lib, new RegExp(`design\\.${field} === "other"`));
+  }
+  for (const custom of [
+    "customGenre",
+    "customAccountStyle",
+    "customAudience",
+    "customTone",
+    "customMonetization",
+    "customGoal",
+    "customTrust",
+    "customContentFocus",
+  ]) {
+    assert.match(lib, new RegExp(`design\\.${custom}\\.trim\\(\\)`));
+  }
+});
