@@ -63,6 +63,11 @@ const NOTE_PROFILE_OFFICIAL = "https://note.com/info/n/n27cb842c7737";
 const NOTE_PAID_OFFICIAL = "https://note.com/info/n/na5f43ec69740";
 const NOTE_RESERVATION_OFFICIAL = "https://note.com/info/n/nc84e9a40b092";
 const NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0.1.1";
+const NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX = "aas.note.schedule.response.v1";
+
+function noteScheduleResponseStorageKey(userId: string): string {
+  return `${NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX}:${userId}`;
+}
 
 function notePerformanceLoopAvailable(): boolean {
   if (typeof window === "undefined") return false;
@@ -139,6 +144,7 @@ export function NoteOperationsPage() {
   const [accountPrompt, setAccountPrompt] = useState("");
   const [schedulePrompt, setSchedulePrompt] = useState("");
   const [scheduleResponse, setScheduleResponse] = useState("");
+  const [scheduleResponseLoaded, setScheduleResponseLoaded] = useState(false);
   const [schedulePreview, setSchedulePreview] = useState<NoteAiSchedulePlan | null>(null);
   const [performanceLoopEnabled, setPerformanceLoopEnabled] = useState(false);
   const [articleOutput, setArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
@@ -202,6 +208,31 @@ export function NoteOperationsPage() {
   }, []);
 
   useEffect(() => {
+    if (gate.kind !== "ready") return;
+    try {
+      setScheduleResponse(window.localStorage.getItem(noteScheduleResponseStorageKey(gate.userId)) ?? "");
+    } catch {
+      // Device storage is optional. The current session still works without it.
+    } finally {
+      setScheduleResponseLoaded(true);
+    }
+  }, [gate]);
+
+  useEffect(() => {
+    if (gate.kind !== "ready" || !scheduleResponseLoaded) return;
+    try {
+      const key = noteScheduleResponseStorageKey(gate.userId);
+      if (scheduleResponse) {
+        window.localStorage.setItem(key, scheduleResponse);
+      } else {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Ignore storage failures. Do not block schedule import.
+    }
+  }, [gate, scheduleResponse, scheduleResponseLoaded]);
+
+  useEffect(() => {
     if (gate.kind !== "ready" || !performanceLoopEnabled) return;
     let active = true;
     void loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth).then(
@@ -225,6 +256,22 @@ export function NoteOperationsPage() {
     }
     return map;
   }, [articleSchedule]);
+
+  const previewPostingTimes = useMemo(() => {
+    if (!schedulePreview) return [] as string[];
+    const byDate = new Map<string, string[]>();
+    for (const item of schedulePreview.schedule) {
+      const times = byDate.get(item.scheduledDate) ?? [];
+      if (!times.includes(item.scheduledTime)) times.push(item.scheduledTime);
+      byDate.set(item.scheduledDate, times);
+    }
+    let result: string[] = [];
+    for (const times of byDate.values()) {
+      const sorted = [...times].sort();
+      if (sorted.length > result.length) result = sorted;
+    }
+    return result;
+  }, [schedulePreview]);
 
   const saveProfile = async () => {
     if (gate.kind !== "ready" || !profile) return;
@@ -289,7 +336,6 @@ export function NoteOperationsPage() {
         freshArticleOutput,
       );
       setSchedulePrompt(prompt);
-      setScheduleResponse("");
       setSchedulePreview(null);
       try {
         await navigator.clipboard.writeText(prompt);
@@ -383,6 +429,20 @@ export function NoteOperationsPage() {
     } catch {
       setMessage("AIスケジュールファイルを読み込めませんでした。");
     }
+  };
+
+
+  const clearScheduleResponse = () => {
+    setScheduleResponse("");
+    setSchedulePreview(null);
+    if (gate.kind === "ready") {
+      try {
+        window.localStorage.removeItem(noteScheduleResponseStorageKey(gate.userId));
+      } catch {
+        // The UI state is already cleared even if browser storage is unavailable.
+      }
+    }
+    setMessage("貼り付けたAI回答をクリアしました。");
   };
 
 
@@ -576,7 +636,7 @@ export function NoteOperationsPage() {
             <div className="note-ai-month-controls">
               <label>
                 <span>① 計画したい月</span>
-                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setScheduleResponse(""); setSchedulePreview(null); setArticleOutput(null); }} />
+                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setSchedulePreview(null); setArticleOutput(null); }} />
               </label>
               <div>
                 <span>② リサーチに使うAI</span>
@@ -653,9 +713,10 @@ export function NoteOperationsPage() {
                   貼り付けた回答をそのまま反映
                 </button>
                 <button type="button" disabled={!scheduleResponse.trim()} onClick={() => previewAiSchedule(scheduleResponse)}>反映前に内容だけ確認</button>
+                <button type="button" className="note-clear-response-button" disabled={!scheduleResponse} onClick={clearScheduleResponse}>貼り付け内容をクリア</button>
                 <label className="note-import-button">ファイルから反映<input type="file" accept=".json,.txt,application/json,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAiScheduleFile(file); event.currentTarget.value = ""; }} /></label>
               </div>
-              <p className="note-data-note">AASはAI回答のMarkdown表・箇条書き・対応JSONのいずれからでも「日付＋無料note作成/有料note作成」を探して反映します。通常操作ではJSONを作る必要はありません。対象月が今月の場合、過去・完了・スキップ履歴は残し、今日以降の未実行記事予定だけを入れ替えます。</p>
+              <p className="note-data-note">AIにはAASへ貼る予定表だけを返すよう指示します。貼り付けた内容はこの端末でアカウント別に保存され、「貼り付け内容をクリア」を押すまで再読み込みやAI再実行でも消えません。対象月が今月の場合、過去・完了・スキップ履歴は残し、今日以降の未実行記事予定だけを入れ替えます。</p>
             </div>
 
             {schedulePreview && (
@@ -666,6 +727,7 @@ export function NoteOperationsPage() {
                   <article><small>有料note/週</small><strong>{schedulePreview.recommendation.paidPostsPerWeek}</strong></article>
                   <article><small>無料 / 有料</small><strong>{schedulePreview.recommendation.freePosts} / {schedulePreview.recommendation.paidPosts}</strong></article>
                   <article><small>1日最大</small><strong>{schedulePreview.recommendation.maxPostsPerDay}</strong></article>
+                  <article className="note-plan-times"><small>投稿時間</small><strong>{previewPostingTimes.length ? previewPostingTimes.join(" / ") : "—"}</strong></article>
                 </div>
 
                 {schedulePreview.researchSummary && <div className="note-ai-plan-text"><strong>最新動向</strong><p>{schedulePreview.researchSummary}</p></div>}
