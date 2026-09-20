@@ -176,6 +176,7 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
     "loadNoteArticleOutputSnapshot",
     "NoteArticleOutputSnapshot",
     "exportNoteAiSchedulePlanJson",
+    "extractNoteAiScheduleJson",
     "parseNoteAiSchedulePlan",
     "replaceNoteScheduleMonth",
     "saveNoteAiSchedulePlan",
@@ -191,6 +192,10 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
     assert.match(lib, new RegExp(symbol));
   }
 
+  assert.match(lib, /balancedJsonObjects/);
+  assert.match(lib, /scheduleRootFromValue/);
+  assert.match(lib, /ChatGPTの回答全文を削らず/);
+  assert.match(lib, /AAS用の運用スケジュールが回答内に見つかりませんでした/);
   assert.match(lib, /対象月の外にある予定/);
   assert.match(lib, /同じ日時に記事投稿が重複/);
   assert.match(lib, /1日に最大/);
@@ -219,7 +224,11 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /1日に何回まで投稿するか/);
   assert.match(page, /有料noteを週何回にするか/);
   assert.match(page, /ChatGPT \/ Gemini \/ Claude/);
-  assert.match(page, /読み込み・確認/);
+  assert.match(page, /コピーしたAI回答を読み込んで反映/);
+  assert.match(page, /貼り付けた回答をそのまま反映/);
+  assert.match(page, /反映前に内容だけ確認/);
+  assert.match(page, /importAndApplyAiSchedule/);
+  assert.match(page, /navigator\.clipboard\?\.readText/);
   assert.match(page, /この月のAASスケジュールに反映/);
   assert.match(page, /他の月の予定は残ります/);
   assert.match(page, /なぜこの頻度にしたか/);
@@ -247,4 +256,25 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(lib, /gte\("created_at", startIso\)/);
   assert.match(lib, /lt\("created_at", endIso\)/);
   assert.doesNotMatch(lib, /articleOutput\.(?:title|theme|body|revenue|pv)/);
+});
+
+
+test("note schedule import accepts full AI response prose and keeps file import as fallback", async () => {
+  const [lib, page, css, layout] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("app/phase39-readability.css"),
+    readPwa("app/layout.tsx"),
+  ]);
+
+  assert.match(lib, /export function extractNoteAiScheduleJson/);
+  assert.match(lib, /matchAll\(fencePattern\)/);
+  assert.match(lib, /balancedJsonObjects\(rawText\)/);
+  assert.match(lib, /object\.schema === "aas-note-schedule-v2"/);
+  assert.match(page, /AIの回答をそのままAASへ反映/);
+  assert.match(page, /JSONだけを切り出す必要はありません/);
+  assert.match(page, /コピーしたAI回答を読み込んで反映/);
+  assert.match(page, /ファイルから反映/);
+  assert.match(css, /\.note-ai-easy-import/);
+  assert.match(layout, /phase39-readability\.css/);
 });
