@@ -154,6 +154,7 @@ test("root uses the approved beginner dashboard across mobile and desktop", asyn
   const rootPage = await read("app/page.tsx");
   const beginnerHome = await read("components/phase18-beginner-home.tsx");
   const referenceShell = await read("components/aas-reference-shell.tsx");
+  const mobilePrefs = await read("lib/mobile-nav-preference.ts");
   const layout = await read("app/layout.tsx");
   const css = await read("app/phase18-beginner.css");
   const dashboardCss = await read("app/phase19-dashboard.css");
@@ -171,8 +172,9 @@ test("root uses the approved beginner dashboard across mobile and desktop", asyn
   assert.match(beginnerHome, /listCloudArticles/);
   assert.match(beginnerHome, /href="\/sns"/);
   assert.match(beginnerHome, /href="\/images"/);
-  assert.match(referenceShell, /ランキング/);
-  assert.match(referenceShell, /プロフィール/);
+  assert.match(referenceShell, /SharedMobileBottomNav/);
+  assert.match(mobilePrefs, /ランキング/);
+  assert.match(mobilePrefs, /プロフィール/);
   assert.match(layout, /phase18-beginner\.css/);
   assert.match(layout, /phase19-dashboard\.css/);
   assert.match(layout, /phase20-device-e2e\.css/);
