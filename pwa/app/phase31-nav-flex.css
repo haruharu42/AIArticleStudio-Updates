@@ -1,11 +1,15 @@
-/* Keep the customizable mobile nav evenly distributed for 2-6 visible items. */
-.persistent-mobile-nav,
-.persistent-mobile-nav.admin-enabled {
-  display: flex;
-  grid-template-columns: none;
+/* Keep the global mobile navigation aligned with the approved five-item reference navigation. */
+.persistent-mobile-nav {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .persistent-mobile-nav > button {
   min-width: 0;
-  flex: 1 1 0;
+}
+
+@media (min-width: 900px) {
+  .unified-reference-mobile-nav {
+    display: none;
+  }
 }
