@@ -287,7 +287,7 @@ export function NoteOperationsPage() {
       setSchedulePreview(null);
       try {
         await navigator.clipboard.writeText(prompt);
-        setMessage(`${AI_PROVIDER_LABELS[selectedAi]}用の月間運用リサーチプロンプトをコピーしました。AIのJSON回答をAASへ貼り付けてください。`);
+        setMessage(`${AI_PROVIDER_LABELS[selectedAi]}用の月間運用リサーチプロンプトをコピーしました。AIが回答したら、回答全文をコピーしてAASへ戻ってください。`);
       } catch {
         setMessage("クリップボードへコピーできなかったため、下のプロンプト欄からコピーしてください。");
       }
@@ -312,23 +312,24 @@ export function NoteOperationsPage() {
     }
   };
 
-  const applyAiSchedule = async () => {
-    if (gate.kind !== "ready" || !schedulePreview) return;
+  const applySchedulePlan = async (plan: NoteAiSchedulePlan) => {
+    if (gate.kind !== "ready") return;
     setBusy(true);
     setMessage("");
     try {
       const client = getSupabaseClient();
-      const next = await replaceNoteScheduleMonth(client, gate.userId, targetMonth, schedulePreview.schedule);
+      const next = await replaceNoteScheduleMonth(client, gate.userId, targetMonth, plan.schedule);
       setSchedule(next);
+      setSchedulePreview(plan);
       setCalendarMonth(targetMonth);
       let historySaved = true;
       try {
-        await saveNoteAiSchedulePlan(client, gate.userId, schedulePreview);
+        await saveNoteAiSchedulePlan(client, gate.userId, plan);
       } catch {
         historySaved = false;
       }
       setMessage(historySaved
-        ? `${targetMonth.replace("-", "年")}月のAI運用スケジュールをAASへ反映しました。他の月の予定は変更していません。`
+        ? `${targetMonth.replace("-", "年")}月のAI運用スケジュールをAASへ反映しました。カレンダーで確認できます。`
         : `${targetMonth.replace("-", "年")}月の予定は反映できましたが、AI調査メモだけ保存できませんでした。予定自体は利用できます。`);
       setTab("calendar");
     } catch (error) {
@@ -338,10 +339,41 @@ export function NoteOperationsPage() {
     }
   };
 
+  const applyAiSchedule = async () => {
+    if (!schedulePreview) return;
+    await applySchedulePlan(schedulePreview);
+  };
+
+  const importAndApplyAiSchedule = async (text: string) => {
+    setMessage("");
+    try {
+      const plan = parseNoteAiSchedulePlan(text, targetMonth);
+      setScheduleResponse(text);
+      setSchedulePreview(plan);
+      await applySchedulePlan(plan);
+    } catch (error) {
+      setSchedulePreview(null);
+      setMessage(error instanceof Error ? error.message : "AIの運用スケジュールを読み込めませんでした。");
+    }
+  };
+
+  const pasteAndApplyAiSchedule = async () => {
+    try {
+      if (!navigator.clipboard?.readText) {
+        throw new Error("この端末ではクリップボードの自動読み込みを利用できません。回答全文を下の欄へ貼り付けてください。");
+      }
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) throw new Error("クリップボードに読み込めるAI回答がありません。AIの回答全文をコピーしてからお試しください。");
+      await importAndApplyAiSchedule(text);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "クリップボードからAI回答を読み込めませんでした。");
+    }
+  };
+
   const importAiScheduleFile = async (file: File) => {
     try {
       const text = await file.text();
-      previewAiSchedule(text);
+      await importAndApplyAiSchedule(text);
     } catch {
       setMessage("AIスケジュールファイルを読み込めませんでした。");
     }
@@ -593,13 +625,31 @@ export function NoteOperationsPage() {
 
             {schedulePrompt && <details className="note-account-prompt"><summary>AIへ渡す月間スケジュール用プロンプトを確認</summary><textarea readOnly value={schedulePrompt} rows={18} onFocus={(event) => event.currentTarget.select()} /></details>}
 
-            <div className="note-ai-import-box">
-              <div><strong>③ AIのJSON回答をAASへ読み込む</strong><small>AIの回答全体を貼り付けるか、JSONファイルをアップロードしてください。</small></div>
-              <textarea value={scheduleResponse} onChange={(event) => setScheduleResponse(event.target.value)} placeholder={'{"schema":"aas-note-schedule-v2", ...}'} rows={10} />
-              <div className="note-data-actions">
-                <button type="button" disabled={!scheduleResponse.trim()} onClick={() => previewAiSchedule(scheduleResponse)}>読み込み・確認</button>
-                <label className="note-import-button">JSONファイルを読み込む<input type="file" accept=".json,.txt,application/json,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAiScheduleFile(file); event.currentTarget.value = ""; }} /></label>
+            <div className="note-ai-import-box note-ai-easy-import">
+              <div>
+                <strong>③ AIの回答をそのままAASへ反映</strong>
+                <small>JSONだけを切り出す必要はありません。ChatGPT / Gemini / Claudeの説明文や```jsonコードブロックを含む回答全文を、そのまま使えます。</small>
               </div>
+              <div className="note-ai-easy-actions">
+                <button type="button" className="primary-action" disabled={busy} onClick={() => void pasteAndApplyAiSchedule()}>
+                  {busy ? "反映中…" : "コピーしたAI回答を読み込んで反映"}
+                </button>
+                <span>または</span>
+              </div>
+              <textarea
+                value={scheduleResponse}
+                onChange={(event) => setScheduleResponse(event.target.value)}
+                placeholder={"ここにAIの回答全文をそのまま貼り付けてください。前後に説明文があっても大丈夫です。"}
+                rows={10}
+              />
+              <div className="note-data-actions">
+                <button type="button" className="primary-action" disabled={busy || !scheduleResponse.trim()} onClick={() => void importAndApplyAiSchedule(scheduleResponse)}>
+                  貼り付けた回答をそのまま反映
+                </button>
+                <button type="button" disabled={!scheduleResponse.trim()} onClick={() => previewAiSchedule(scheduleResponse)}>反映前に内容だけ確認</button>
+                <label className="note-import-button">ファイルから反映<input type="file" accept=".json,.txt,application/json,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAiScheduleFile(file); event.currentTarget.value = ""; }} /></label>
+              </div>
+              <p className="note-data-note">AASが回答内から運用スケジュール部分を自動で探し、対象月・日付・無料/有料note種別を検証してから反映します。対象月が今月の場合、過去・完了・スキップ履歴は残し、今日以降の未実行予定だけを入れ替えます。</p>
             </div>
 
             {schedulePreview && (
