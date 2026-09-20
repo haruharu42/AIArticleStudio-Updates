@@ -109,7 +109,7 @@ const MANUAL_SECTIONS = [
     lead: "記事内容をもとに、SNSごとの投稿用プロンプトを作ります。",
     points: [
       "記事ライブラリから告知したい記事を選びます。",
-      "使うSNSを選択し、媒体に合わせた投稿案を作ります。",
+      "X、Instagram、Threads、TikTok、Facebook、LinkedIn、Pinterest、YouTubeから使うSNSを選び、媒体に合わせた投稿案を作ります。",
       "内容を確認してから各SNSへ投稿します。基本運用は自動投稿ではありません。",
       "スマホでは利用可能なSNSアプリ、PCではWeb版を開けます。",
     ],
