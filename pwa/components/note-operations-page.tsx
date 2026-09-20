@@ -571,8 +571,11 @@ export function NoteOperationsPage() {
 
         {tab === "profile" && (
           <section className="note-ops-panel">
-            <div className="note-ops-section-head"><div><span>PROFILE BUILDER</span><h2>初心者向け・選ぶだけプロフィール設計</h2></div></div>
-            <p className="note-ops-hint">まずプルダウンで近いものを選ぶだけで大丈夫です。「その他」を選んだ場合だけ自由入力できます。経験・資格・実績は、実際に事実として書ける内容だけ使用します。</p>
+            <div className="note-ops-section-head">
+              <div><span>PROFILE BUILDER</span><h2>初心者向け・選ぶだけプロフィール設計</h2></div>
+              <Link href="/account-design">note / Tips / Brain 共通設計へ ›</Link>
+            </div>
+            <p className="note-ops-hint">この画面はnote運営専用の既存設定です。3媒体をまとめて設計する場合は「note / Tips / Brain 共通設計」を使えます。まずプルダウンで近いものを選ぶだけで大丈夫です。「その他」を選んだ場合だけ自由入力できます。経験・資格・実績は、実際に事実として書ける内容だけ使用します。</p>
 
             <div className="note-profile-choice-grid">
               <label><span>① どのジャンルで運営したい？</span><select value={profile.accountGenre} onChange={(event) => setProfile({ ...profile, accountGenre: event.target.value as NoteOperationProfile["accountGenre"] })}>{NOTE_ACCOUNT_GENRES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountGenre === "other" && <input value={profile.customGenre} maxLength={120} onChange={(event) => setProfile({ ...profile, customGenre: event.target.value })} placeholder="運営したいジャンルを入力" />}</label>
