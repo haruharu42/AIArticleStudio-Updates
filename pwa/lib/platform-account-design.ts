@@ -160,6 +160,113 @@ export function accountDesignLabels(design: PlatformAccountDesign) {
   };
 }
 
+const ACCOUNT_DESIGN_SELECT_COLUMNS = "user_id,platform,genre_preset,custom_genre,account_style_preset,custom_account_style,audience_preset,custom_audience,tone_preset,custom_tone,monetization_preset,custom_monetization,goal_preset,custom_goal,trust_preset,custom_trust,content_focus_preset,custom_content_focus,display_name,profile_draft,experience_note,main_topics,ready,updated_at";
+
+let runtimePlatformAccountDesigns: Partial<Record<AccountDesignPlatform, PlatformAccountDesign>> = {};
+
+export function validatePlatformAccountDesign(design: PlatformAccountDesign): PlatformAccountDesign {
+  const missing: string[] = [];
+  if (design.genrePreset === "other" && !design.customGenre.trim()) missing.push("ジャンル");
+  if (design.accountStylePreset === "other" && !design.customAccountStyle.trim()) missing.push("アカウント型");
+  if (design.audiencePreset === "other" && !design.customAudience.trim()) missing.push("読者");
+  if (design.tonePreset === "other" && !design.customTone.trim()) missing.push("文章・発信の雰囲気");
+  if (design.monetizationPreset === "other" && !design.customMonetization.trim()) missing.push("収益化方針");
+  if (design.goalPreset === "other" && !design.customGoal.trim()) missing.push("運営目的");
+  if (design.trustPreset === "other" && !design.customTrust.trim()) missing.push("信頼の作り方");
+  if (design.contentFocusPreset === "other" && !design.customContentFocus.trim()) missing.push("コンテンツの中心");
+  if (missing.length) {
+    throw new Error(`「その他」を選んだ項目を入力してください: ${missing.join(" / ")}`);
+  }
+  return {
+    ...design,
+    customGenre: design.customGenre.trim().slice(0, 120),
+    customAccountStyle: design.customAccountStyle.trim().slice(0, 180),
+    customAudience: design.customAudience.trim().slice(0, 300),
+    customTone: design.customTone.trim().slice(0, 120),
+    customMonetization: design.customMonetization.trim().slice(0, 180),
+    customGoal: design.customGoal.trim().slice(0, 180),
+    customTrust: design.customTrust.trim().slice(0, 180),
+    customContentFocus: design.customContentFocus.trim().slice(0, 180),
+    displayName: design.displayName.trim().slice(0, 120),
+    profileDraft: design.profileDraft.trim().slice(0, 1200),
+    experienceNote: design.experienceNote.trim().slice(0, 1200),
+    mainTopics: [...new Set(design.mainTopics.map((item) => item.trim()).filter(Boolean))].slice(0, 12),
+  };
+}
+
+export function setRuntimePlatformAccountDesigns(
+  designs: Record<AccountDesignPlatform, PlatformAccountDesign> | null,
+): void {
+  runtimePlatformAccountDesigns = designs ? { ...designs } : {};
+}
+
+export function getRuntimePlatformAccountDesign(platform: string): PlatformAccountDesign | null {
+  if (platform !== "note" && platform !== "tips" && platform !== "brain") return null;
+  const design = runtimePlatformAccountDesigns[platform] ?? null;
+  return design?.ready ? design : null;
+}
+
+export function buildPlatformAccountPromptContext(platform: string): string {
+  const design = getRuntimePlatformAccountDesign(platform);
+  if (!design) return "";
+  const labels = accountDesignLabels(design);
+  const topics = design.mainTopics.length ? design.mainTopics.slice(0, 8).join(" / ") : "未指定";
+  const experience = design.experienceNote.trim() || "未指定";
+  return `\n\n【ACCOUNT DESIGN】\nこの掲載先の保存済みアカウント設計を記事の方向性として反映する。記事テーマやユーザーが今回指定した条件と衝突する場合は、今回の明示条件を優先する。\nアカウント型: ${labels.style}\n想定読者: ${labels.audience}\n発信トーン: ${labels.tone}\n収益化方針: ${labels.monetization}\n運営目的: ${labels.goal}\n信頼の作り方: ${labels.trust}\nコンテンツの中心: ${labels.contentFocus}\n主なテーマ: ${topics}\nユーザーが事実として入力した経験・背景: ${experience}\n経験・資格・実績は上記に書かれた範囲だけを事実として扱い、補完・誇張・創作しない。`;
+}
+
+export function serializePlatformAccountDesignDraft(design: PlatformAccountDesign): string {
+  return JSON.stringify({
+    version: 1,
+    baseUpdatedAt: design.updatedAt,
+    draft: design,
+  });
+}
+
+export function restorePlatformAccountDesignDraft(
+  raw: string | null,
+  cloud: PlatformAccountDesign,
+): PlatformAccountDesign | null {
+  if (!raw) return null;
+  try {
+    const envelope = JSON.parse(raw) as { version?: unknown; baseUpdatedAt?: unknown; draft?: unknown };
+    if (envelope.version !== 1 || envelope.baseUpdatedAt !== cloud.updatedAt || !envelope.draft || typeof envelope.draft !== "object" || Array.isArray(envelope.draft)) {
+      return null;
+    }
+    const draft = envelope.draft as Record<string, unknown>;
+    const candidate: PlatformAccountDesign = {
+      ...cloud,
+      genrePreset: oneOf(draft.genrePreset, ACCOUNT_DESIGN_GENRES.map((item) => item.value), cloud.genrePreset),
+      customGenre: typeof draft.customGenre === "string" ? draft.customGenre : cloud.customGenre,
+      accountStylePreset: oneOf(draft.accountStylePreset, ACCOUNT_DESIGN_STYLES.map((item) => item.value), cloud.accountStylePreset),
+      customAccountStyle: typeof draft.customAccountStyle === "string" ? draft.customAccountStyle : cloud.customAccountStyle,
+      audiencePreset: oneOf(draft.audiencePreset, ACCOUNT_DESIGN_AUDIENCES.map((item) => item.value), cloud.audiencePreset),
+      customAudience: typeof draft.customAudience === "string" ? draft.customAudience : cloud.customAudience,
+      tonePreset: oneOf(draft.tonePreset, ACCOUNT_DESIGN_TONES.map((item) => item.value), cloud.tonePreset),
+      customTone: typeof draft.customTone === "string" ? draft.customTone : cloud.customTone,
+      monetizationPreset: oneOf(draft.monetizationPreset, ACCOUNT_DESIGN_MONETIZATION.map((item) => item.value), cloud.monetizationPreset),
+      customMonetization: typeof draft.customMonetization === "string" ? draft.customMonetization : cloud.customMonetization,
+      goalPreset: oneOf(draft.goalPreset, ACCOUNT_DESIGN_GOALS.map((item) => item.value), cloud.goalPreset),
+      customGoal: typeof draft.customGoal === "string" ? draft.customGoal : cloud.customGoal,
+      trustPreset: oneOf(draft.trustPreset, ACCOUNT_DESIGN_TRUST.map((item) => item.value), cloud.trustPreset),
+      customTrust: typeof draft.customTrust === "string" ? draft.customTrust : cloud.customTrust,
+      contentFocusPreset: oneOf(draft.contentFocusPreset, ACCOUNT_DESIGN_CONTENT_FOCUS.map((item) => item.value), cloud.contentFocusPreset),
+      customContentFocus: typeof draft.customContentFocus === "string" ? draft.customContentFocus : cloud.customContentFocus,
+      displayName: typeof draft.displayName === "string" ? draft.displayName : cloud.displayName,
+      profileDraft: typeof draft.profileDraft === "string" ? draft.profileDraft : cloud.profileDraft,
+      experienceNote: typeof draft.experienceNote === "string" ? draft.experienceNote : cloud.experienceNote,
+      mainTopics: Array.isArray(draft.mainTopics) ? draft.mainTopics.filter((item): item is string => typeof item === "string").slice(0, 12) : cloud.mainTopics,
+      ready: typeof draft.ready === "boolean" ? draft.ready : cloud.ready,
+      userId: cloud.userId,
+      platform: cloud.platform,
+      updatedAt: cloud.updatedAt,
+    };
+    return candidate;
+  } catch {
+    return null;
+  }
+}
+
 export function defaultPlatformAccountDesign(userId: string, platform: AccountDesignPlatform): PlatformAccountDesign {
   const platformDefaults: Record<AccountDesignPlatform, Pick<PlatformAccountDesign, "accountStylePreset" | "monetizationPreset" | "goalPreset" | "contentFocusPreset">> = {
     note: { accountStylePreset: "beginner", monetizationPreset: "free_to_paid", goalPreset: "growth", contentFocusPreset: "howto" },
@@ -239,7 +346,7 @@ export async function loadPlatformAccountDesigns(
   };
   const { data, error } = await client
     .from("platform_account_designs")
-    .select("user_id,platform,genre_preset,custom_genre,account_style_preset,custom_account_style,audience_preset,custom_audience,tone_preset,custom_tone,monetization_preset,custom_monetization,goal_preset,custom_goal,trust_preset,custom_trust,content_focus_preset,custom_content_focus,display_name,profile_draft,experience_note,main_topics,ready,updated_at")
+.select(ACCOUNT_DESIGN_SELECT_COLUMNS)
     .eq("user_id", userId);
   if (error) throw new Error("アカウント設計を読み込めませんでした。");
 
@@ -255,40 +362,74 @@ export async function savePlatformAccountDesign(
   client: SupabaseClient,
   design: PlatformAccountDesign,
 ): Promise<PlatformAccountDesign> {
-  const payload = {
-    user_id: design.userId,
-    platform: design.platform,
-    genre_preset: design.genrePreset,
-    custom_genre: design.customGenre.trim().slice(0, 120),
-    account_style_preset: design.accountStylePreset,
-    custom_account_style: design.customAccountStyle.trim().slice(0, 180),
-    audience_preset: design.audiencePreset,
-    custom_audience: design.customAudience.trim().slice(0, 300),
-    tone_preset: design.tonePreset,
-    custom_tone: design.customTone.trim().slice(0, 120),
-    monetization_preset: design.monetizationPreset,
-    custom_monetization: design.customMonetization.trim().slice(0, 180),
-    goal_preset: design.goalPreset,
-    custom_goal: design.customGoal.trim().slice(0, 180),
-    trust_preset: design.trustPreset,
-    custom_trust: design.customTrust.trim().slice(0, 180),
-    content_focus_preset: design.contentFocusPreset,
-    custom_content_focus: design.customContentFocus.trim().slice(0, 180),
-    display_name: design.displayName.trim().slice(0, 120),
-    profile_draft: design.profileDraft.trim().slice(0, 1200),
-    experience_note: design.experienceNote.trim().slice(0, 1200),
-    main_topics: [...new Set(design.mainTopics.map((item) => item.trim()).filter(Boolean))].slice(0, 12),
-    ready: design.ready,
+  const normalized = validatePlatformAccountDesign(design);
+  const fields = {
+    genre_preset: normalized.genrePreset,
+    custom_genre: normalized.customGenre,
+    account_style_preset: normalized.accountStylePreset,
+    custom_account_style: normalized.customAccountStyle,
+    audience_preset: normalized.audiencePreset,
+    custom_audience: normalized.customAudience,
+    tone_preset: normalized.tonePreset,
+    custom_tone: normalized.customTone,
+    monetization_preset: normalized.monetizationPreset,
+    custom_monetization: normalized.customMonetization,
+    goal_preset: normalized.goalPreset,
+    custom_goal: normalized.customGoal,
+    trust_preset: normalized.trustPreset,
+    custom_trust: normalized.customTrust,
+    content_focus_preset: normalized.contentFocusPreset,
+    custom_content_focus: normalized.customContentFocus,
+    display_name: normalized.displayName,
+    profile_draft: normalized.profileDraft,
+    experience_note: normalized.experienceNote,
+    main_topics: normalized.mainTopics,
+    ready: normalized.ready,
   };
+
+  if (normalized.updatedAt) {
+    const { data, error } = await client
+      .from("platform_account_designs")
+      .update(fields)
+      .eq("user_id", normalized.userId)
+      .eq("platform", normalized.platform)
+      .eq("updated_at", normalized.updatedAt)
+      .select(ACCOUNT_DESIGN_SELECT_COLUMNS)
+      .maybeSingle();
+
+    if (error) throw new Error("アカウント設計を保存できませんでした。");
+    if (data) return parseDesign(data as Record<string, unknown>, normalized.userId, normalized.platform);
+
+    const { data: latest, error: latestError } = await client
+      .from("platform_account_designs")
+      .select("updated_at")
+      .eq("user_id", normalized.userId)
+      .eq("platform", normalized.platform)
+      .maybeSingle();
+    if (latestError) throw new Error("アカウント設計の最新状態を確認できませんでした。");
+    if (latest) {
+      throw new Error("別の画面または端末でこのアカウント設計が更新されています。再読み込みして最新内容を確認してから保存してください。");
+    }
+  }
 
   const { data, error } = await client
     .from("platform_account_designs")
-    .upsert(payload, { onConflict: "user_id,platform" })
-    .select("user_id,platform,genre_preset,custom_genre,account_style_preset,custom_account_style,audience_preset,custom_audience,tone_preset,custom_tone,monetization_preset,custom_monetization,goal_preset,custom_goal,trust_preset,custom_trust,content_focus_preset,custom_content_focus,display_name,profile_draft,experience_note,main_topics,ready,updated_at")
+    .insert({
+      user_id: normalized.userId,
+      platform: normalized.platform,
+      ...fields,
+    })
+    .select(ACCOUNT_DESIGN_SELECT_COLUMNS)
     .single();
 
-  if (error || !data) throw new Error("アカウント設計を保存できませんでした。");
-  return parseDesign(data as Record<string, unknown>, design.userId, design.platform);
+  if (error || !data) {
+    const code = typeof error?.code === "string" ? error.code : "";
+    if (code === "23505") {
+      throw new Error("別の画面または端末でこのアカウント設計が先に保存されました。再読み込みして最新内容を確認してください。");
+    }
+    throw new Error("アカウント設計を保存できませんでした。");
+  }
+  return parseDesign(data as Record<string, unknown>, normalized.userId, normalized.platform);
 }
 
 export function buildPlatformProfileDraft(design: PlatformAccountDesign): string {
