@@ -248,6 +248,7 @@ export function PwaSettingsPage() {
 
           <div className="beginner-settings-links">
             {profile?.role === "admin" && <Link href="/admin">管理者画面 <span>›</span></Link>}
+            <Link href="/account-design">note / Tips / Brain アカウント設計 <span>›</span></Link>
             <Link href="/manual">使い方マニュアル <span>›</span></Link>
             <Link href="/faq">Q&A・よくある質問 <span>›</span></Link>
             <Link href="/tools">機能一覧 <span>›</span></Link>
