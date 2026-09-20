@@ -182,7 +182,17 @@ export function NoteOperationsPage() {
           throw new Error("activeアカウントを確認できません。");
         }
         await reload(user.id);
-        if (active) setGate({ kind: "ready", userId: user.id });
+        let savedScheduleResponse = "";
+        try {
+          savedScheduleResponse = window.localStorage.getItem(noteScheduleResponseStorageKey(user.id)) ?? "";
+        } catch {
+          // Device storage is optional. The current session still works without it.
+        }
+        if (active) {
+          setScheduleResponse(savedScheduleResponse);
+          setScheduleResponseLoaded(true);
+          setGate({ kind: "ready", userId: user.id });
+        }
       } catch (error) {
         if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "note運営を初期化できませんでした。" });
       }
@@ -206,17 +216,6 @@ export function NoteOperationsPage() {
     window.addEventListener(APP_RELEASE_STATE_EVENT, syncReleaseGate);
     return () => window.removeEventListener(APP_RELEASE_STATE_EVENT, syncReleaseGate);
   }, []);
-
-  useEffect(() => {
-    if (gate.kind !== "ready") return;
-    try {
-      setScheduleResponse(window.localStorage.getItem(noteScheduleResponseStorageKey(gate.userId)) ?? "");
-    } catch {
-      // Device storage is optional. The current session still works without it.
-    } finally {
-      setScheduleResponseLoaded(true);
-    }
-  }, [gate]);
 
   useEffect(() => {
     if (gate.kind !== "ready" || !scheduleResponseLoaded) return;
