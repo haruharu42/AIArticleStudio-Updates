@@ -1095,6 +1095,82 @@ function normalizeAiArticleScheduleType(value: unknown): "free_note" | "paid_not
   return null;
 }
 
+function parseSimpleAiArticleSchedule(text: string, expectedMonth: string): NoteScheduleItem[] {
+  const { start, end } = noteMonthBounds(expectedMonth);
+  const [targetYear, targetMonthNumber] = expectedMonth.split("-").map(Number);
+  const items: NoteScheduleItem[] = [];
+  const seen = new Set<string>();
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.replace(/^\s*[-*]\s*/, "").trim();
+    if (!line) continue;
+
+    const type = /有料(?:note|ノート|記事)(?:作成)?/i.test(line) || /\bpaid(?:_note|_article)?\b/i.test(line)
+      ? "paid_note"
+      : /無料(?:note|ノート|記事)(?:作成)?/i.test(line) || /\bfree(?:_note|_article)?\b/i.test(line)
+        ? "free_note"
+        : null;
+    if (!type) continue;
+
+    let date = "";
+    const fullDate = line.match(/\b(20\d{2})[-\/.年](\d{1,2})[-\/.月](\d{1,2})(?:日)?\b/);
+    if (fullDate) {
+      date = fullDate[1] + "-" + String(Number(fullDate[2])).padStart(2, "0") + "-" + String(Number(fullDate[3])).padStart(2, "0");
+    } else {
+      const monthDay = line.match(/(?:^|[|\s])(\d{1,2})[\/.月](\d{1,2})(?:日)?(?:[|\s]|$)/);
+      if (monthDay && Number(monthDay[1]) === targetMonthNumber) {
+        date = String(targetYear) + "-" + String(Number(monthDay[1])).padStart(2, "0") + "-" + String(Number(monthDay[2])).padStart(2, "0");
+      }
+    }
+    if (!date || date < start || date > end) continue;
+
+    const timeMatch = line.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+    const time = timeMatch ? String(Number(timeMatch[1])).padStart(2, "0") + ":" + timeMatch[2] : "20:00";
+
+    const cells = line.split("|").map((value) => value.trim()).filter(Boolean);
+    const typeIndex = cells.findIndex((value) =>
+      /(?:無料|有料)(?:note|ノート|記事)(?:作成)?/i.test(value) ||
+      /\b(?:free|paid)(?:_note|_article)?\b/i.test(value),
+    );
+
+    let title = "";
+    let theme = "";
+    if (typeIndex >= 0) {
+      title = cells[typeIndex + 1] ?? "";
+      theme = cells[typeIndex + 2] ?? "";
+    }
+    if (!title) {
+      title = line
+        .replace(/\|/g, " ")
+        .replace(/\b20\d{2}[-\/.年]\d{1,2}[-\/.月]\d{1,2}(?:日)?\b/g, " ")
+        .replace(/\b\d{1,2}[\/.月]\d{1,2}(?:日)?\b/g, " ")
+        .replace(/\b(?:[01]?\d|2[0-3]):[0-5]\d\b/g, " ")
+        .replace(/(?:無料|有料)(?:note|ノート|記事)(?:作成)?/gi, " ")
+        .replace(/\b(?:free|paid)(?:_note|_article)?\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .replace(/^[:：\-–—\s]+|[:：\-–—\s]+$/g, "")
+        .trim();
+    }
+    const fallbackTitle = type === "paid_note" ? "有料noteを作成" : "無料noteを作成";
+    const finalTitle = (title || fallbackTitle).slice(0, 240);
+    const key = date + "|" + time + "|" + type + "|" + finalTitle;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    items.push({
+      scheduledDate: date,
+      scheduledTime: time,
+      itemType: type,
+      title: finalTitle,
+      theme: theme.slice(0, 500),
+      status: "planned",
+      source: "imported",
+      notes: "",
+    });
+  }
+
+  return items.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate) || a.scheduledTime.localeCompare(b.scheduledTime));
+}
 function parseAiScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | null {
   const date = typeof raw.date === "string"
     ? raw.date
