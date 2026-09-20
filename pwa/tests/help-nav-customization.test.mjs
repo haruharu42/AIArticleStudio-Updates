@@ -15,9 +15,12 @@ test("manual and Q&A routes provide full help surfaces", async () => {
     read("components/pwa-settings-page.tsx"),
   ]);
 
-  for (const label of ["記事を作る", "記事を保存・管理する", "アイキャッチ・挿絵", "SNS投稿", "下部ナビ", "困ったとき"]) {
+  for (const label of ["ホーム", "記事を作る", "記事ライブラリ", "note運営アシスタント：AIスケジュール", "画像生成計画", "SNS投稿を作る", "公開管理", "コンテンツ分析", "アップデート管理", "ユーザー管理", "トラブル時の確認"]) {
     assert.match(manual, new RegExp(label));
   }
+  assert.match(manual, /こういう時に使います/);
+  assert.match(manual, /AIの回答全文をそのままコピー/);
+  assert.match(manual, /管理者→指定テスター→全体公開/);
   for (const label of ["はじめ方・基本操作", "記事・画像・SNS", "PWA・ナビ・表示", "アカウント・利用権・決済", "トラブル・安全性"]) {
     assert.match(faq, new RegExp(label));
   }
@@ -25,7 +28,7 @@ test("manual and Q&A routes provide full help surfaces", async () => {
     assert.ok(manual.includes(platform), `manual missing SNS platform: ${platform}`);
     assert.ok(faq.includes(platform), `FAQ missing SNS platform: ${platform}`);
   }
-  assert.match(manual, /スマホでは対応アプリ/);
+  assert.match(manual, /スマホでは利用可能なSNSアプリ/);
   assert.match(manual, /PCではWeb版/);
   assert.match(faq, /選択したSNSをすぐ開けますか/);
   assert.match(home, /className="secondary" href="\/manual">使い方を見る/);
@@ -103,4 +106,23 @@ test("desktop navigation can add hide reorder reset and persist items", async ()
   assert.match(layout, /phase36-desktop-nav\.css/);
 
   assert.doesNotMatch(`${prefs}\n${shell}`, /sb_secret_|service[_-]?role|sk_(?:live|test)_|whsec_/i);
+});
+
+
+test("manual quick guide and readability layer are loaded for light user surfaces", async () => {
+  const [manual, css, layout] = await Promise.all([
+    read("app/manual/page.tsx"),
+    read("app/phase39-readability.css"),
+    read("app/layout.tsx"),
+  ]);
+
+  assert.match(manual, /help-quick-guide/);
+  assert.match(manual, /help-when/);
+  assert.match(manual, /help-card-links/);
+  assert.match(css, /--aas-muted: #536b89/);
+  assert.match(css, /\.help-quick-grid/);
+  assert.match(css, /\.note-ai-easy-import/);
+  assert.match(css, /font-size: 11px/);
+  assert.match(layout, /phase39-readability\.css/);
+  assert.ok(layout.indexOf("phase38-note-operations.css") < layout.indexOf("phase39-readability.css"));
 });
