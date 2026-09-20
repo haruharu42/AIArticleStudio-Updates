@@ -5,7 +5,9 @@ export const MOBILE_NAV_ITEMS_EVENT = "aas-pwa-bottom-nav-items-preference";
 
 export type MobileNavItemKey =
   | "create"
+  | "library"
   | "noteOps"
+  | "accountDesign"
   | "images"
   | "tools"
   | "sns"
@@ -15,7 +17,9 @@ export type MobileNavItemKey =
   | "analytics"
   | "ranking"
   | "profile"
-  | "manual";
+  | "missions"
+  | "manual"
+  | "settings";
 
 export type MobileNavItem = {
   key: MobileNavItemKey;
@@ -24,11 +28,13 @@ export type MobileNavItem = {
   href: string;
 };
 
-const FALLBACK_MOBILE_NAV_ITEM: MobileNavItem = { key: "create", label: "作成", icon: "✎", href: "/create" };
+const FALLBACK_MOBILE_NAV_ITEM: MobileNavItem = { key: "create", label: "作成", icon: "＋", href: "/create" };
 
 export const MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   FALLBACK_MOBILE_NAV_ITEM,
+  { key: "library", label: "ライブラリ", icon: "▤", href: "/?section=library" },
   { key: "noteOps", label: "note運営", icon: "▣", href: "/note-operations" },
+  { key: "accountDesign", label: "設計", icon: "◫", href: "/account-design" },
   { key: "images", label: "画像", icon: "▧", href: "/images" },
   { key: "tools", label: "機能", icon: "▦", href: "/tools" },
   { key: "sns", label: "SNS", icon: "↗", href: "/sns" },
@@ -36,13 +42,15 @@ export const MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   { key: "snsPlan", label: "SNS設計", icon: "◎", href: "/sns-plan" },
   { key: "publish", label: "公開", icon: "⇧", href: "/publish" },
   { key: "analytics", label: "分析", icon: "▥", href: "/analytics" },
-  { key: "ranking", label: "ランキング", icon: "🏆", href: "/ranking" },
-  { key: "profile", label: "プロフィール", icon: "◎", href: "/profile" },
+  { key: "ranking", label: "ランキング", icon: "♛", href: "/ranking" },
+  { key: "profile", label: "プロフィール", icon: "♙", href: "/profile" },
+  { key: "missions", label: "ミッション", icon: "♧", href: "/missions" },
   { key: "manual", label: "使い方", icon: "?", href: "/manual" },
+  { key: "settings", label: "設定", icon: "⚙", href: "/settings" },
 ] as const;
 
-export const DEFAULT_MOBILE_NAV_ITEMS: readonly MobileNavItemKey[] = ["create", "tools", "sns"];
-export const MAX_CUSTOM_MOBILE_NAV_ITEMS = 3;
+export const DEFAULT_MOBILE_NAV_ITEMS: readonly MobileNavItemKey[] = ["create", "library", "ranking", "profile"];
+export const MAX_CUSTOM_MOBILE_NAV_ITEMS = 4;
 
 const VALID_MOBILE_NAV_KEYS = new Set<MobileNavItemKey>(MOBILE_NAV_ITEM_OPTIONS.map((item) => item.key));
 
@@ -58,15 +66,27 @@ export function writeMobileNavAlways(value: boolean): void {
 }
 
 export function normalizeMobileNavItems(value: unknown): MobileNavItemKey[] {
-  if (!Array.isArray(value)) return [...DEFAULT_MOBILE_NAV_ITEMS];
   const next: MobileNavItemKey[] = [];
-  for (const raw of value) {
-    if (typeof raw !== "string" || !VALID_MOBILE_NAV_KEYS.has(raw as MobileNavItemKey)) continue;
-    const key = raw as MobileNavItemKey;
-    if (!next.includes(key)) next.push(key);
-    if (next.length >= MAX_CUSTOM_MOBILE_NAV_ITEMS) break;
+  if (Array.isArray(value)) {
+    for (const raw of value) {
+      if (typeof raw !== "string" || !VALID_MOBILE_NAV_KEYS.has(raw as MobileNavItemKey)) continue;
+      const key = raw as MobileNavItemKey;
+      if (!next.includes(key)) next.push(key);
+      if (next.length >= MAX_CUSTOM_MOBILE_NAV_ITEMS) break;
+    }
   }
-  return next;
+
+  for (const fallback of DEFAULT_MOBILE_NAV_ITEMS) {
+    if (next.length >= MAX_CUSTOM_MOBILE_NAV_ITEMS) break;
+    if (!next.includes(fallback)) next.push(fallback);
+  }
+
+  for (const option of MOBILE_NAV_ITEM_OPTIONS) {
+    if (next.length >= MAX_CUSTOM_MOBILE_NAV_ITEMS) break;
+    if (!next.includes(option.key)) next.push(option.key);
+  }
+
+  return next.slice(0, MAX_CUSTOM_MOBILE_NAV_ITEMS);
 }
 
 export function readMobileNavItems(): MobileNavItemKey[] {
