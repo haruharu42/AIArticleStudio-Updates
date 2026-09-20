@@ -27,6 +27,7 @@ import {
   listNoteSchedule,
   loadNoteAiSchedulePlan,
   loadNoteOperationProfile,
+  isNoteArticleScheduleItem,
   parseNoteAiSchedulePlan,
   parseNoteOperationsImport,
   replaceNoteSchedule,
@@ -210,15 +211,20 @@ export function NoteOperationsPage() {
     return () => { active = false; };
   }, [gate, performanceLoopEnabled, referenceMonth]);
 
+  const articleSchedule = useMemo(
+    () => schedule.filter((item) => isNoteArticleScheduleItem(item)),
+    [schedule],
+  );
+
   const groupedByDate = useMemo(() => {
     const map = new Map<string, NoteScheduleItem[]>();
-    for (const item of schedule) {
+    for (const item of articleSchedule) {
       const list = map.get(item.scheduledDate) ?? [];
       list.push(item);
       map.set(item.scheduledDate, list);
     }
     return map;
-  }, [schedule]);
+  }, [articleSchedule]);
 
   const saveProfile = async () => {
     if (gate.kind !== "ready" || !profile) return;
@@ -590,14 +596,14 @@ export function NoteOperationsPage() {
               <div>
                 <span>週に何回投稿するか</span><span>1日に何回まで投稿するか</span><span>無料note / 有料noteの比率</span>
                 <span>有料noteを週何回にするか</span><span>投稿する曜日・時間帯</span><span>その月の記事テーマ</span>
-                <span>トレンド記事と長期記事の配分</span><span>SNS告知・週次振り返り</span>
+                <span>トレンド記事と長期記事の配分</span><span>無料note / 有料noteの作成日・時間</span>
                 {performanceLoopEnabled && <span>実際の作成本数に合わせた途中再計画</span>}
               </div>
             </div>
 
             <div className="note-ai-research-note">
               <strong>最新情報を毎回調査</strong>
-              <span>note公式、創作カレンダー、現在の企画・お題、カテゴリ/おすすめの仕組み、選択ジャンルの直近30日・90日・12か月を確認し、出典URLと日付をJSONへ入れるよう指示します。検索できない場合は最新情報を作らないルールです。</span>
+              <span>note公式、創作カレンダー、現在の企画・お題、カテゴリ/おすすめの仕組み、選択ジャンルの直近30日・90日・12か月を確認します。AIが決めるカレンダー予定は「無料note作成」「有料note作成」の2種類だけです。</span>
             </div>
 
             {performanceLoopEnabled && (
@@ -649,7 +655,7 @@ export function NoteOperationsPage() {
                 <button type="button" disabled={!scheduleResponse.trim()} onClick={() => previewAiSchedule(scheduleResponse)}>反映前に内容だけ確認</button>
                 <label className="note-import-button">ファイルから反映<input type="file" accept=".json,.txt,application/json,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAiScheduleFile(file); event.currentTarget.value = ""; }} /></label>
               </div>
-              <p className="note-data-note">AASが回答内から運用スケジュール部分を自動で探し、対象月・日付・無料/有料note種別を検証してから反映します。対象月が今月の場合、過去・完了・スキップ履歴は残し、今日以降の未実行予定だけを入れ替えます。</p>
+              <p className="note-data-note">AASが回答内から「無料note作成」「有料note作成」だけを自動で探し、対象月と日付を検証して反映します。振り返り・SNS告知・初期設定などはAIカレンダーへ入れません。対象月が今月の場合、過去・完了・スキップ履歴は残し、今日以降の未実行記事予定だけを入れ替えます。</p>
             </div>
 
             {schedulePreview && (
@@ -722,7 +728,7 @@ export function NoteOperationsPage() {
 
             <div className="note-schedule-list">
               <h3>予定一覧</h3>
-              {schedule.length === 0 ? <p>まだ予定がありません。「運用プラン」から作成してください。</p> : schedule.slice(0, 120).map((item, index) => (
+              {articleSchedule.length === 0 ? <p>無料note・有料noteの作成予定はまだありません。「運用プラン」からAIに作成してもらってください。</p> : articleSchedule.slice(0, 120).map((item, index) => (
                 <article key={item.id ?? item.scheduledDate + item.scheduledTime + index} className={item.status === "done" ? "done" : ""}>
                   <div className={"note-schedule-type " + typeClass(item)}>{NOTE_SCHEDULE_TYPE_LABELS[item.itemType]}</div>
                   <div>
