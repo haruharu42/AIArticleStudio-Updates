@@ -9,9 +9,12 @@ import {
   MOBILE_NAV_ITEMS_EVENT,
   MOBILE_NAV_ITEMS_KEY,
   mobileNavItemFor,
+  mobileNavItemsStorageKey,
   readMobileNavItems,
   type MobileNavItemKey,
+  type MobileNavItemsPreferenceEventDetail,
 } from "@/lib/mobile-nav-preference";
+import { getSupabaseClient } from "@/lib/supabase";
 
 type SharedMobileBottomNavProps = {
   activeKey?: "home" | MobileNavItemKey | "";
@@ -31,16 +34,44 @@ export function SharedMobileBottomNav({
   className = "",
 }: SharedMobileBottomNavProps) {
   const pathname = usePathname();
+  const [userId, setUserId] = useState("");
   const [items, setItems] = useState<MobileNavItemKey[]>([...DEFAULT_MOBILE_NAV_ITEMS]);
 
   useEffect(() => {
-    const sync = () => setItems(readMobileNavItems());
+    let active = true;
+    let client: ReturnType<typeof getSupabaseClient>;
+    try {
+      client = getSupabaseClient();
+    } catch {
+      return;
+    }
+
+    void client.auth.getSession().then(({ data }) => {
+      if (active) setUserId(data.session?.user.id ?? "");
+    });
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
+      window.setTimeout(() => {
+        if (active) setUserId(session?.user.id ?? "");
+      }, 0);
+    });
+
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const sync = () => setItems(readMobileNavItems(userId));
     const onPreference = (event: Event) => {
-      const custom = event as CustomEvent<MobileNavItemKey[]>;
-      setItems(Array.isArray(custom.detail) ? custom.detail : readMobileNavItems());
+      const custom = event as CustomEvent<MobileNavItemsPreferenceEventDetail>;
+      const detail = custom.detail;
+      if (!detail || detail.userId !== userId || !Array.isArray(detail.items)) return;
+      setItems(detail.items);
     };
     const onStorage = (event: StorageEvent) => {
-      if (event.key === MOBILE_NAV_ITEMS_KEY) sync();
+      const scopedKey = mobileNavItemsStorageKey(userId);
+      if (event.key === scopedKey || (!userId && event.key === MOBILE_NAV_ITEMS_KEY)) sync();
     };
 
     queueMicrotask(sync);
@@ -50,7 +81,7 @@ export function SharedMobileBottomNav({
       window.removeEventListener(MOBILE_NAV_ITEMS_EVENT, onPreference);
       window.removeEventListener("storage", onStorage);
     };
-  }, []);
+  }, [userId]);
 
   const homeActive = activeKey ? activeKey === "home" : pathname === "/";
   const navClass = ["aas-reference-bottom-nav", className].filter(Boolean).join(" ");
