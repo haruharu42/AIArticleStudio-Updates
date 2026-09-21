@@ -25,13 +25,15 @@ export type MobileNavItemKey =
   | "missions"
   | "manual"
   | "settings"
+  | "inquiries"
   | "adminDashboard"
   | "adminUsers"
   | "adminFree"
   | "adminSales"
   | "adminReleases"
   | "adminMfa"
-  | "adminOperations";
+  | "adminOperations"
+  | "adminInquiries";
 
 export type MobileNavItem = {
   key: MobileNavItemKey;
@@ -59,9 +61,11 @@ export const USER_MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   { key: "missions", label: "ミッション", icon: "♧", href: "/missions" },
   { key: "manual", label: "使い方", icon: "?", href: "/manual" },
   { key: "settings", label: "設定", icon: "⚙", href: "/settings" },
+  { key: "inquiries", label: "問い合わせ", icon: "✉", href: "/inquiries" },
 ] as const;
 
 export const ADMIN_MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
+  { key: "adminInquiries", label: "問合せ確認", icon: "✉", href: "/admin/inquiries" },
   { key: "adminDashboard", label: "管理", icon: "◆", href: "/admin" },
   { key: "adminUsers", label: "ユーザー", icon: "♟", href: "/admin/users" },
   { key: "adminFree", label: "無料設定", icon: "◉", href: "/admin/free-trial" },
