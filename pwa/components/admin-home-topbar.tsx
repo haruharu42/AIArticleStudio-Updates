@@ -57,7 +57,7 @@ export function AdminHomeTopbar() {
 
   return (
     <aside className="admin-home-topbar" aria-label="管理者専用ショートカット">
-      <div><span>ADMIN</span><strong>管理者モード</strong><small>ユーザー・無料利用・販売・セキュリティを機能別に管理できます。</small></div>
+      <div><span>ADMIN</span><strong>管理者モード</strong><small>問い合わせ・ユーザー・無料利用・販売・セキュリティを機能別に管理できます。</small></div>
       <nav>
         <Link href="/admin">管理ダッシュボード</Link>
         {shortcuts.map((section) => section && <Link key={section.id} href={section.href}>{section.shortTitle}</Link>)}
