@@ -8,7 +8,7 @@ import {
   MOBILE_NAV_PREFERENCE_EVENT,
   MOBILE_NAV_PREFERENCE_KEY,
   readMobileNavAlways,
-} from "@/lib/mobile-nav-preference";
+} from "@/features/navigation";
 import { getSupabaseClient } from "@/lib/supabase";
 
 const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms"];
