@@ -191,6 +191,7 @@ export function TitleStep({
   localTitles,
   titlePrompt,
   onGenerate,
+  onBeforeExternalLaunch,
   setMessage,
 }: {
   draft: ArticleCreationDraft;
@@ -200,6 +201,7 @@ export function TitleStep({
   localTitles: string[];
   titlePrompt: string;
   onGenerate: () => Promise<void>;
+  onBeforeExternalLaunch: () => void;
   setMessage: MessageSetter;
 }) {
   return (
@@ -213,7 +215,7 @@ export function TitleStep({
         <label className="route-field"><span>AI用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
         <div className="openai-prompt-actions">
           <button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button>
-          {AI_LAUNCH_OPTIONS.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => launchAiApp(app.key)}>{app.label}を開く ↗</button>)}
+          {AI_LAUNCH_OPTIONS.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>{app.label}を開く ↗</button>)}
         </div>
         <p className="beginner-help">候補生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて候補を作り直した時だけ次の1回として記録されます。</p>
       </>}
@@ -228,6 +230,7 @@ export function BodyStep({
   articlePromptReady,
   articlePrompt,
   onGenerate,
+  onBeforeExternalLaunch,
   setMessage,
 }: {
   draft: ArticleCreationDraft;
@@ -236,6 +239,7 @@ export function BodyStep({
   articlePromptReady: boolean;
   articlePrompt: string;
   onGenerate: () => Promise<void>;
+  onBeforeExternalLaunch: () => void;
   setMessage: MessageSetter;
 }) {
   return (
@@ -248,7 +252,7 @@ export function BodyStep({
           <label className="route-field"><span>AI用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
           <div className="openai-prompt-actions">
             <button className="secondary-action" type="button" onClick={() => copyText(articlePrompt, setMessage)}>完成記事プロンプトをコピー</button>
-            {AI_LAUNCH_OPTIONS.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => launchAiApp(app.key)}>{app.label}を開く ↗</button>)}
+            {AI_LAUNCH_OPTIONS.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>{app.label}を開く ↗</button>)}
           </div>
           <p className="beginner-help">生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
         </>}
