@@ -19,7 +19,7 @@ import {
   type SupportCategory,
   type SupportMessage,
   type SupportRequest,
-} from "@/lib/support-center";
+} from "@/features/support";
 import { getSupabaseClient } from "@/lib/supabase";
 
 
