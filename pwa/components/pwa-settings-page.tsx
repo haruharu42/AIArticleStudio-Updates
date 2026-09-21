@@ -178,7 +178,7 @@ export function PwaSettingsPage() {
           </section>
 
           {profile
-            ? <MobileNavCustomizer userId={profile.id} />
+            ? <MobileNavCustomizer userId={profile.id} isAdmin={profile.role === "admin" && profile.status === "active"} />
             : <div className="persistent-settings-status">ナビ設定を読み込んでいます…</div>}
 
           {profile && (
