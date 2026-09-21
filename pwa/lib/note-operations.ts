@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildWorkspacePresetPromptContext, getRuntimeWorkspacePresetDefinition, getRuntimeWorkspacePresetPreference } from "@/features/presets/workspace-presets";
 import type { AiProvider } from "@/lib/user-personalization";
 
 export type NoteOperationGoal = "habit" | "growth" | "monetize" | "portfolio";
@@ -428,6 +429,36 @@ function parseScheduleRow(row: Record<string, unknown>): NoteScheduleItem {
     status: status === "done" || status === "skipped" ? status : "planned",
     source: source === "generated" || source === "imported" ? source : "manual",
     notes: typeof row.notes === "string" ? row.notes : "",
+  };
+}
+
+
+export function applyRuntimeWorkspacePresetToNoteProfile(profile: NoteOperationProfile): NoteOperationProfile {
+  const preference = getRuntimeWorkspacePresetPreference();
+  if (!preference?.applyNote) return profile;
+  if (preference.presetKey === "aas_official") return applyAasAdminNoteProfilePreset(profile);
+
+  const preset = getRuntimeWorkspacePresetDefinition();
+  const note = preset.note;
+  const topics = [...new Set([
+    ...profile.mainTopics,
+    ...(note.topics ?? preset.article.tags ?? []),
+  ])].slice(0, 30);
+
+  return {
+    ...profile,
+    mainTopics: topics,
+    accountGenre: note.genre ? "other" : profile.accountGenre,
+    customGenre: note.genre ?? profile.customGenre,
+    accountStyle: note.style ? "other" : profile.accountStyle,
+    customAccountStyle: note.style ?? profile.customAccountStyle,
+    audiencePreset: note.audience ? "other" : profile.audiencePreset,
+    customAudience: note.audience ?? profile.customAudience,
+    tonePreset: note.tone ? "other" : profile.tonePreset,
+    customTone: note.tone ?? profile.customTone,
+    monetizationStyle: note.monetization ? "other" : profile.monetizationStyle,
+    customMonetizationStyle: note.monetization ?? profile.customMonetizationStyle,
+    operationGoal: note.goal?.includes("読者") ? "growth" : profile.operationGoal,
   };
 }
 
