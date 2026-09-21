@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PresetSelect, type PresetOption } from "@/components/preset-select";
+import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
+import { workspacePresetImageDefaults } from "@/features/presets/preset-adapters";
+import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { consumeFreeTrialUsage, trialUsageMessage } from "@/lib/free-trial";
 import { OPENAI_LINKS } from "@/lib/openai-links";
 import { buildImagePromptPlan, type ImagePromptItem } from "@/lib/phase13-image-prompts";
@@ -31,6 +34,7 @@ function integerValue(value: unknown, fallback: number): number { return typeof 
 function publicationTarget(value: string): PublicationTarget { return value === "note" || value === "tips" || value === "brain" || value === "blog" ? value : "note"; }
 
 export function Phase13ImagePromptPage() {
+  const { preference: workspacePreference } = useWorkspacePreset();
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
@@ -80,13 +84,16 @@ export function Phase13ImagePromptPage() {
       const plan = next.workspace.imagePlanJson;
       const cover = objectValue(plan.cover);
       const inline = objectValue(plan.inline);
+      const presetDefaults = workspacePresetImageDefaults(workspacePreference);
       setDetail(next);
       setTheme(stringValue(request.theme) || next.title);
       setAgeGroup(stringValue(request.age_group) || "AIおまかせ");
       setGender(stringValue(request.gender) || "AIおまかせ");
-      setCoverEnabled(boolValue(cover.enabled, true));
-      setInlineEnabled(boolValue(inline.enabled, false));
-      setInlineCount(Math.max(1, Math.min(10, integerValue(inline.count, 2))));
+      setCoverEnabled(typeof cover.enabled === "boolean" ? cover.enabled : presetDefaults?.coverEnabled ?? true);
+      setInlineEnabled(typeof inline.enabled === "boolean" ? inline.enabled : presetDefaults?.inlineEnabled ?? false);
+      setInlineCount(Math.max(1, Math.min(10, typeof inline.count === "number" && Number.isSafeInteger(inline.count)
+        ? inline.count
+        : presetDefaults?.inlineCount ?? 2)));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "記事を読み込めませんでした。");
     } finally { setBusy(false); }
@@ -136,6 +143,8 @@ export function Phase13ImagePromptPage() {
         <div><p className="eyebrow">IMAGE CREATION</p><h1>記事から画像生成プロンプトを作る</h1><p>{gate.aasId} / アイキャッチと挿絵を同じ世界観で設計できます</p></div>
         <a className="route-back" href="/tools">← 機能一覧</a>
       </header>
+
+      <ActiveWorkspacePresetBadge feature="images" />
 
       <section className="creator-card">
         <div className="route-notice" role="note">画像本体はAASのSupabase Storageへアップロードしません。ChatGPT Images等で生成した画像はスマホ・PCへ保存し、AASが表示する推奨ファイル名で管理してください。</div>
