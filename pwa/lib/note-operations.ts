@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildPlatformAccountPromptContext } from "@/features/account-design";
 import { buildWorkspacePresetPromptContext, getRuntimeWorkspacePresetDefinition, getRuntimeWorkspacePresetPreference } from "@/features/presets/workspace-presets";
 import type { AiProvider } from "@/lib/user-personalization";
 
@@ -857,6 +858,7 @@ export function buildNoteAccountResearchPrompt(profile: NoteOperationProfile, ai
   const readerExtra = profile.targetReader.trim() || "なし";
   const displayName = profile.noteDisplayName.trim() || "未定";
   const workspacePresetContext = buildWorkspacePresetPromptContext("note");
+  const accountPresetContext = buildPlatformAccountPromptContext("note");
 
   return `あなたは日本のnote運営に詳しい編集者・コンテンツ戦略担当です。
 目的は、初心者でも継続しやすい「noteアカウント構成案」を、最新情報と直近トレンドを調査したうえで3案作ることです。
@@ -933,6 +935,7 @@ export function buildNoteScheduleResearchPrompt(
   const { start, end } = noteMonthBounds(targetMonth);
   const selected = noteProfileSelectionLabels(profile);
   const workspacePresetContext = buildWorkspacePresetPromptContext("note");
+  const accountPresetContext = buildPlatformAccountPromptContext("note");
   const providerName = aiProviderName(aiProvider);
   const topics = profile.mainTopics.length ? profile.mainTopics.join(" / ") : "未指定（最新調査から候補を決める）";
   const readerExtra = profile.targetReader.trim() || "なし";
