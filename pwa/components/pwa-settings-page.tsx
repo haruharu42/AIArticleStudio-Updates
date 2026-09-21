@@ -47,19 +47,19 @@ function SettingsAccordion({
   children: ReactNode;
 }) {
   return (
-    <section className={\`settings-accordion \${open ? "open" : ""}\`}>
+    <section className={`settings-accordion ${open ? "open" : ""}`}>
       <button
         className="settings-accordion-trigger"
         type="button"
         aria-expanded={open}
-        aria-controls={\`settings-panel-\${id}\`}
+        aria-controls={`settings-panel-${id}`}
         onClick={() => onOpen(id)}
       >
         <span className="settings-accordion-icon" aria-hidden="true">{icon}</span>
         <span><strong>{title}</strong><small>{description}</small></span>
         <b aria-hidden="true">{open ? "−" : "＋"}</b>
       </button>
-      {open && <div className="settings-accordion-panel" id={\`settings-panel-\${id}\`}>{children}</div>}
+      {open && <div className="settings-accordion-panel" id={`settings-panel-${id}`}>{children}</div>}
     </section>
   );
 }
@@ -198,7 +198,7 @@ export function PwaSettingsPage() {
                   <strong id="navigation-settings-title">下部ナビを常に表示</strong>
                   <small>ONにすると、記事作成・SNS・画像・各機能画面へ移動しても下部ナビを表示します。OFFではホームと設定画面だけに表示します。</small>
                 </div>
-                <button className={\`persistent-toggle \${alwaysShowNav ? "on" : ""}\`} type="button" role="switch" aria-checked={alwaysShowNav} onClick={toggleAlwaysShowNav}>
+                <button className={`persistent-toggle ${alwaysShowNav ? "on" : ""}`} type="button" role="switch" aria-checked={alwaysShowNav} onClick={toggleAlwaysShowNav}>
                   <span aria-hidden="true" />
                   <b>{alwaysShowNav ? "ON" : "OFF"}</b>
                 </button>
@@ -234,7 +234,7 @@ export function PwaSettingsPage() {
                     </div>
                     {writingProfile && (
                       <button
-                        className={\`persistent-toggle \${writingProfile.personalizationEnabled ? "on" : ""}\`}
+                        className={`persistent-toggle ${writingProfile.personalizationEnabled ? "on" : ""}`}
                         type="button"
                         role="switch"
                         aria-checked={writingProfile.personalizationEnabled}
