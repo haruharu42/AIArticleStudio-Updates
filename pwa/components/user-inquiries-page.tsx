@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";\nimport { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import {
