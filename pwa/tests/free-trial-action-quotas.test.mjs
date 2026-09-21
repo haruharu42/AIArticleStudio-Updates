@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
-test("all six configurable free-trial feature codes are wired to explicit current user actions", async () => {
+test("free-trial keeps the legacy title quota schema while current AAS actions consume only active features", async () => {
   const freeTrial = await read("lib/free-trial.ts");
   const createRoute = await read("app/create/page.tsx");
   const imageRoute = await read("app/images/page.tsx");
@@ -31,24 +31,25 @@ test("all six configurable free-trial feature codes are wired to explicit curren
   assert.doesNotMatch(createRoute, /FreeTrialFeatureGate/);
   assert.doesNotMatch(imageRoute, /FreeTrialFeatureGate/);
   assert.doesNotMatch(snsRoute, /FreeTrialFeatureGate/);
-  assert.match(creator, /consumeFreeTrialUsage\(getSupabaseClient\(\), "title_generate"\)/);
+  assert.doesNotMatch(creator, /consumeFreeTrialUsage\(getSupabaseClient\(\), "title_generate"\)/);
   assert.match(creator, /consumeFreeTrialUsage\(getSupabaseClient\(\), "article_generate"\)/);
   assert.match(images, /consumeFreeTrialUsage\(getSupabaseClient\(\), "image_generate"\)/);
   assert.match(sns, /consumeFreeTrialUsage\(getSupabaseClient\(\), "sns_generate"\)/);
   assert.match(articleTools, /kind === "rewrite" \? "article_rewrite" : "ai_assist"/);
 });
 
-test("title and article quotas are consumed only by explicit prompt generation", async () => {
+test("title creation stays external while article quota is consumed only by explicit article prompt generation", async () => {
   const creator = await read("components/phase11-create-page.tsx");
   const stepUi = await read("components/article-create/article-create-steps.tsx");
 
-  assert.match(stepUi, /タイトル候補を生成/);
+  assert.match(stepUi, /AAS内ではタイトル候補を生成しません/);
+  assert.match(stepUi, /AIで生成したタイトルをここへ貼り付け/);
+  assert.match(stepUi, /AI用タイトルプロンプト/);
   assert.match(stepUi, /完成記事プロンプトを作成/);
-  assert.match(creator, /titlePromptAuthorized === titlePrompt/);
+  assert.doesNotMatch(creator, /titlePromptAuthorized|titleQuotaInFlightRef|title_generate/);
   assert.match(creator, /articlePromptAuthorized === articlePrompt/);
-  assert.match(creator, /titleQuotaInFlightRef\.current/);
   assert.match(creator, /articleQuotaInFlightRef\.current/);
-  assert.equal((creator.match(/consumeFreeTrialUsage\(/g) || []).length, 2);
+  assert.equal((creator.match(/consumeFreeTrialUsage\(/g) || []).length, 1);
   assert.doesNotMatch(stepUi, /consumeFreeTrialUsage\(/);
   assert.match(stepUi, /copyText\(titlePrompt, setMessage\)/);
   assert.match(stepUi, /copyText\(articlePrompt, setMessage\)/);
