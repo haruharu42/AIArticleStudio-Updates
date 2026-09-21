@@ -55,9 +55,9 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     id: "promotion",
     href: "/admin/promotion",
     eyebrow: "PROMOTION",
-    title: "販売促進・SNS",
-    shortTitle: "販売促進・SNS",
-    description: "販売記事、SNS投稿、キャンペーンなどのプロモーション機能。",
+    title: "販売・プロモーション",
+    shortTitle: "プロモーション",
+    description: "実運用テスト・公開予告から紹介記事、SNS投稿、販売キャンペーンまで作成。",
   },
   {
     id: "knowledge",
