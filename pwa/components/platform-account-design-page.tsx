@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
+import { applyWorkspacePresetToAccountDesign } from "@/features/presets/preset-adapters";
+import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { AccountStarterKitPanel } from "@/components/account-starter-kit-panel";
 import {
   ACCOUNT_DESIGN_AUDIENCES,
@@ -73,6 +76,7 @@ function clearLocalAccountDesignDraft(userId: string, platform: AccountDesignPla
 }
 
 export function PlatformAccountDesignPage() {
+  const { preference: workspacePreference } = useWorkspacePreset();
   const [state, setState] = useState<PageState>({ kind: "loading" });
   const [designs, setDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
   const [platform, setPlatform] = useState<AccountDesignPlatform>(() => initialAccountDesignPlatform());
@@ -212,6 +216,29 @@ export function PlatformAccountDesignPage() {
           <strong>外部サービスのログイン情報は保存しません</strong>
           <span>パスワード・Cookie・アクセストークン・認証コードは入力不要です。AASが保存するのはアカウント設計だけです。</span>
         </div>
+
+        <ActiveWorkspacePresetBadge feature="account_design" />
+        {workspacePreference?.applyAccountDesign && (
+          <div className="account-design-preset-apply">
+            <div>
+              <strong>設定画面の共通プリセットをアカウント設計へ反映</strong>
+              <small>経験・資格・背景は変更せず、ジャンル・読者・発信トーン・収益化方針・主なテーマだけを反映します。</small>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (!designs || !design) return;
+                const nextDesign = applyWorkspacePresetToAccountDesign(design, workspacePreference);
+                setDesigns({ ...designs, [platform]: nextDesign });
+                saveLocalAccountDesignDraft(nextDesign);
+                setDirtyPlatforms((current) => current.includes(platform) ? current : [...current, platform]);
+                setMessage("共通プリセットをアカウント設計へ反映しました。内容を確認して保存してください。");
+              }}
+            >
+              この設計へ反映
+            </button>
+          </div>
+        )}
 
         <nav className="account-design-platforms" aria-label="設計する掲載先">
           {ACCOUNT_DESIGN_PLATFORMS.map((item) => (
