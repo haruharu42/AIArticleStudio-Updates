@@ -20,8 +20,12 @@ export type ReferenceNavKey = "home" | "create" | "library" | "ranking" | "profi
 
 export function AasReferenceHeader({
   hasUnreadNotifications = false,
+  notificationHref = "/missions",
+  notificationLabel = "ミッション・お知らせ",
 }: {
   hasUnreadNotifications?: boolean;
+  notificationHref?: string;
+  notificationLabel?: string;
 } = {}) {
   return (
     <header className="aas-reference-header">
@@ -33,7 +37,7 @@ export function AasReferenceHeader({
         </span>
       </Link>
       <nav className="aas-reference-header-actions" aria-label="クイックメニュー">
-        <Link href="/missions" aria-label="ミッション・お知らせ"><span aria-hidden="true">♧</span>{hasUnreadNotifications ? <i aria-hidden="true" /> : null}</Link>
+        <Link href={notificationHref} aria-label={notificationLabel}><span aria-hidden="true">♧</span>{hasUnreadNotifications ? <i aria-hidden="true" /> : null}</Link>
         <Link href="/settings" aria-label="メニュー"><span aria-hidden="true">☰</span></Link>
       </nav>
     </header>
