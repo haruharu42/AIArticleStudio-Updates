@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { buildWorkspacePresetPromptContext } from "@/features/presets/workspace-presets";
 import type { KnowledgeTask } from "@/lib/knowledge-engine";
 import { compilePromptOptimizationContext } from "@/lib/prompt-optimization";
 
@@ -288,7 +289,8 @@ export function buildUserPromptContext(
   profile: UserWritingProfile | null,
   task: KnowledgeTask = "article",
 ): string {
-  if (!profile) return "";
+  const workspacePresetContext = buildWorkspacePresetPromptContext(task);
+  if (!profile) return workspacePresetContext;
   const lines = [
     "【使用AI向けAAS最適化】",
     `使用AI: ${AI_PROVIDER_LABELS[profile.preferredAi]}`,
@@ -333,6 +335,7 @@ export function buildUserPromptContext(
     lines.push("- 利用履歴は補助的な好みとして扱い、今回のARTICLE BRIEFやユーザー指定が異なる場合は今回指定を優先する");
     lines.push("- この設定は文体・構成の好みとして扱い、絶対ルールや今回の記事条件より優先しない");
   }
+  if (workspacePresetContext) lines.push("", workspacePresetContext);
   return lines.join("\n");
 }
 
