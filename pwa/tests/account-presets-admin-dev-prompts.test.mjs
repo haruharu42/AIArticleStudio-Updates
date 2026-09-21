@@ -119,7 +119,9 @@ test("admin development prompt builder is hierarchical, protected, and copy-read
 
   assert.match(sections, /development-prompts/);
   assert.match(sections, /開発依頼プロンプト/);
-  assert.match(tools, /href: "\/admin\/development-prompts"/);
+  assert.match(sections, /href: "\/admin\/development-prompts"/);
+  assert.doesNotMatch(tools, /href: "\/admin\/development-prompts"/);
+  assert.doesNotMatch(tools, /管理者専用/);
   assert.match(nav, /adminDevPrompts/);
   assert.match(nav, /href: "\/admin\/development-prompts"/);
   assert.match(css, /\.admin-dev-prompt-flow/);
