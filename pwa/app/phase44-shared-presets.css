@@ -378,3 +378,54 @@
 .active-workspace-preset.admin > strong {
   color: #625ab8;
 }
+
+
+.note-shared-preset-apply {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #d4e2f0;
+  border-radius: 11px;
+  background: #f8fbff;
+  padding: 10px 11px;
+}
+
+.note-shared-preset-apply > div {
+  display: grid;
+  gap: 3px;
+}
+
+.note-shared-preset-apply strong {
+  color: #315574;
+  font-size: 9px;
+}
+
+.note-shared-preset-apply small {
+  color: #8192a5;
+  font-size: 7.5px;
+}
+
+.note-shared-preset-apply button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  border: 1px solid #2c7bd7;
+  border-radius: 9px;
+  background: #fff;
+  color: #246ab8;
+  padding: 7px 9px;
+  font-size: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .note-shared-preset-apply {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .note-shared-preset-apply button {
+    width: 100%;
+  }
+}
