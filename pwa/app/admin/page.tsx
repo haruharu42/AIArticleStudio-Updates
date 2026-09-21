@@ -16,18 +16,15 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <section className="admin-dashboard-section" aria-label="管理機能一覧">
-        <div className="admin-form-grid">
-          {ADMIN_SECTIONS.map((section) => (
-            <Link key={section.id} className="choice-card compact" href={section.href}>
-              <span>
-                <small>{section.eyebrow}</small>
-                <strong>{section.title}</strong>
-                <small>{section.description}</small>
-              </span>
-            </Link>
-          ))}
-        </div>
+      <section className="tool-grid admin-tool-grid" aria-label="管理機能一覧">
+        {ADMIN_SECTIONS.map((section) => (
+          <Link key={section.id} className="tool-card admin-tool-card" href={section.href}>
+            <span>{section.eyebrow}</span>
+            <h2>{section.title}</h2>
+            <p>{section.description}</p>
+            <strong>開く →</strong>
+          </Link>
+        ))}
       </section>
 
       <section className="admin-panel admin-dashboard-section">
