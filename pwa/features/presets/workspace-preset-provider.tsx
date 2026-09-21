@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -82,7 +83,7 @@ export function WorkspacePresetProvider({ children }: { children: ReactNode }) {
     return () => { active = false; };
   }, [ownerId, isAdmin]);
 
-  const save = async (next: WorkspacePresetPreference) => {
+  const save = useCallback(async (next: WorkspacePresetPreference) => {
     setSaving(true);
     setError("");
     try {
@@ -97,16 +98,16 @@ export function WorkspacePresetProvider({ children }: { children: ReactNode }) {
     } finally {
       setSaving(false);
     }
-  };
+  }, [isAdmin]);
 
-  const replaceLocal = (next: WorkspacePresetPreference) => {
+  const replaceLocal = useCallback((next: WorkspacePresetPreference) => {
     setPreference(next);
     setRuntimeWorkspacePresetPreference(next);
-  };
+  }, []);
 
   const value = useMemo<WorkspacePresetContextValue>(
     () => ({ preference, loading, saving, error, isAdmin, save, replaceLocal }),
-    [preference, loading, saving, error, isAdmin],
+    [preference, loading, saving, error, isAdmin, save, replaceLocal],
   );
 
   return <WorkspacePresetContext.Provider value={value}>{children}</WorkspacePresetContext.Provider>;
