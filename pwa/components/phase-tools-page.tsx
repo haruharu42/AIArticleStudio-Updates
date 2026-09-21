@@ -21,10 +21,12 @@ const memberTools: ToolCard[] = [
   { href: "/export", category: "出力", title: "記事を出力", description: "掲載用本文をコピーし、Markdownファイルとして端末へ保存します。" },
   { href: "/publish", category: "公開", title: "公開管理", description: "公開予定・公開済みURL・公開日時を記事ライブラリへ記録します。" },
   { href: "/analytics", category: "分析", title: "コンテンツ分析", description: "記事ストック、掲載先、状態、最近更新した記事をAAS内のデータから集計します。" },
+  { href: "/inquiries", category: "サポート", title: "お問い合わせ", description: "追加機能要望、不具合、使い方、アカウント・購入関連を送信し、管理者からの返信を確認します。" },
 ];
 
 const adminTools: ToolCard[] = [
   { href: "/admin", category: "運用", title: "管理ダッシュボード", description: "ユーザー、利用権、招待コード、要対応項目をまとめて確認します。" },
+  { href: "/admin/inquiries", category: "サポート", title: "問い合わせ確認", description: "ユーザーから届いた要望・不具合・質問を確認し、返信・優先度・対応状況を管理します。" },
   { href: "/admin/knowledge", category: "ナレッジ", title: "AASナレッジ管理", description: "自由入力されたジャンル候補を匿名集計で確認し、正式Knowledgeへ承認します。" },
   { href: "/admin/promotion?mode=article", category: "販売", title: "販売・宣伝記事作成", description: "note・Brain・Tips・ブログ向けにAASの紹介・販売記事を作成します。" },
   { href: "/admin/promotion?mode=social", category: "SNS販促", title: "SNSプロモーション", description: "X・Instagram・Threads・TikTok・YouTube Shorts向け販促素材を作成します。" },
