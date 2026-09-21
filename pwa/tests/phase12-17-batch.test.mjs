@@ -117,8 +117,9 @@ test("tools hub and beginner-first root expose all functional routes with SNS in
   for (const href of ["/create", "/images", "/sns", "/sidejob", "/publish", "/analytics"]) {
     assert.match(tools, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
   }
-  assert.match(tools, /try \{/);
-  assert.match(tools, /getSupabaseClient\(\)/);
+  assert.match(tools, /useSharedAccessState\(\)/);
+  assert.doesNotMatch(tools, /loadAccessState/);
+  assert.doesNotMatch(tools, /getSupabaseClient\(\)/);
   assert.match(toolsRoute, /PhaseToolsPage/);
   assert.match(rootPage, /Phase18BeginnerHome/);
   assert.match(shell, /Phase7App/);
