@@ -6,7 +6,8 @@ export type AdminSectionId =
   | "knowledge"
   | "releases"
   | "security"
-  | "operations";
+  | "operations"
+  | "inquiries";
 
 export type AdminSection = {
   id: AdminSectionId;
@@ -18,6 +19,14 @@ export type AdminSection = {
 };
 
 export const ADMIN_SECTIONS: readonly AdminSection[] = [
+  {
+    id: "inquiries",
+    href: "/admin/inquiries",
+    eyebrow: "SUPPORT INBOX",
+    title: "問い合わせ確認",
+    shortTitle: "問い合わせ",
+    description: "ユーザーからの要望・不具合・質問を確認し、返信と対応状況を管理。",
+  },
   {
     id: "users",
     href: "/admin/users",
@@ -85,6 +94,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
 ] as const;
 
 export const ADMIN_HOME_SHORTCUT_IDS: readonly AdminSectionId[] = [
+  "inquiries",
   "users",
   "free-plan",
   "sales",
