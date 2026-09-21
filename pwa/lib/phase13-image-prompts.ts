@@ -1,4 +1,5 @@
 import { buildSuggestedImageFilename } from "@/lib/image-file-names";
+import { buildPlatformAccountPromptContext } from "@/features/account-design";
 import { getRuntimeWorkspacePresetDefinition, workspacePresetAppliesTo } from "@/features/presets/workspace-presets";
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
 import { buildUserPromptContext, getRuntimeWritingProfile } from "@/lib/user-personalization";
@@ -52,13 +53,14 @@ function common(input: ImagePromptPlanInput): string {
     audience: input.gender && input.gender !== "AIおまかせ" ? `対象性別: ${input.gender}` : "",
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "image");
+  const accountContext = buildPlatformAccountPromptContext(input.publicationTarget);
   const presetStyle = workspacePresetAppliesTo("images")
     ? getRuntimeWorkspacePresetDefinition().images.styleContext
     : "";
   const selectedStyle = presetStyle
     ? `${presetStyle} この記事ではこの共通プリセットの画風指定を既定画風より優先する。`
     : style;
-  return `記事タイトル: ${input.title || "未定"}\n掲載先: ${input.publicationTarget}\nジャンル: ${input.genre || "未指定"}\nサブジャンル: ${input.subgenre || "AIおまかせ"}\n対象読者: ${input.ageGroup || "AIおまかせ"} / ${input.gender || "AIおまかせ"}\n記事テーマ: ${input.theme || "タイトルから推定"}\n画風: ${selectedStyle}。\n禁止・回避: ${avoid}\n\n${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}`;
+  return `記事タイトル: ${input.title || "未定"}\n掲載先: ${input.publicationTarget}\nジャンル: ${input.genre || "未指定"}\nサブジャンル: ${input.subgenre || "AIおまかせ"}\n対象読者: ${input.ageGroup || "AIおまかせ"} / ${input.gender || "AIおまかせ"}\n記事テーマ: ${input.theme || "タイトルから推定"}\n画風: ${selectedStyle}。\n禁止・回避: ${avoid}\n\n${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}${accountContext}`;
 }
 
 export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptItem[] {
