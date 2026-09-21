@@ -131,7 +131,7 @@ export function parseAccountStarterKit(value: unknown, expectedPlatform: Account
 
 function jsonCandidates(input: string): string[] {
   const result = [input.trim()];
-  for (const match of input.matchAll(/\`\`\`(?:json)?\\s*([\\s\\S]*?)\`\`\`/gi)) {
+  for (const match of input.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)) {
     if (match[1]?.trim()) result.push(match[1].trim());
   }
   const start = input.indexOf("{");
