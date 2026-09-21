@@ -40,14 +40,11 @@ export function PlatformAccountPresetSettings() {
   const defaultPreset = platformPresets.find((item) => item.isDefault) ?? null;
 
   useEffect(() => {
-    if (!ownerId) return;
+    if (!ownerId || accountPresetsLoading || draft) return;
     let active = true;
     queueMicrotask(() => {
       if (!active) return;
-      const existing = platformPresets.find((item) => item.id === selectedId)
-        ?? defaultPreset
-        ?? platformPresets[0]
-        ?? null;
+      const existing = defaultPreset ?? platformPresets[0] ?? null;
       if (existing) {
         setSelectedId(existing.id);
         setDraft(existing);
@@ -57,7 +54,7 @@ export function PlatformAccountPresetSettings() {
       }
     });
     return () => { active = false; };
-  }, [ownerId, platform, platformPresets, defaultPreset, selectedId]);
+  }, [ownerId, platform, platformPresets, defaultPreset, accountPresetsLoading, draft]);
 
   if (!ownerId || !draft) {
     return <p className="persistent-settings-status">アカウント別プリセットを準備しています…</p>;
