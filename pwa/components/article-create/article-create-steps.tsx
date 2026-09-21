@@ -186,39 +186,32 @@ export function ArticleConditionsStep({
 export function TitleStep({
   draft,
   patch,
-  titleBusy,
-  titleCandidatesReady,
-  localTitles,
   titlePrompt,
-  onGenerate,
   onBeforeExternalLaunch,
   setMessage,
 }: {
   draft: ArticleCreationDraft;
   patch: ArticleDraftPatch;
-  titleBusy: boolean;
-  titleCandidatesReady: boolean;
-  localTitles: string[];
   titlePrompt: string;
-  onGenerate: () => Promise<void>;
   onBeforeExternalLaunch: () => void;
   setMessage: MessageSetter;
 }) {
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 4</p><h2>タイトルを選んでください</h2>
-      <p className="panel-muted">自分でタイトルを入力する場合は回数を消費しません。「タイトル候補を生成」を押した時だけ無料トライアルのタイトル生成1回として記録されます。</p>
-      <button className="secondary-action" type="button" disabled={titleBusy} onClick={() => void onGenerate()}>{titleBusy ? "利用回数を確認中…" : titleCandidatesReady ? "タイトル候補を作り直す" : "タイトル候補を生成"}</button>
-      {titleCandidatesReady && <div className="title-candidates">{localTitles.map((title) => <button type="button" key={title} onClick={() => patch("title", title)} className={draft.title === title ? "active" : ""}>{title}</button>)}</div>}
-      <label className="route-field"><span>選択タイトル</span><input value={draft.title} onChange={(event) => patch("title", event.target.value)} placeholder="候補を使わず直接入力もできます" /></label>
-      {draft.generationMode === "prompt_export" && titleCandidatesReady && <>
+      <p className="eyebrow">STEP 4</p><h2>タイトルを作成して貼り付けてください</h2>
+      {draft.generationMode === "prompt_export" && <>
+        <p className="panel-muted">AAS内ではタイトル候補を生成しません。下のプロンプトをChatGPT・Claude・Geminiへ渡し、生成されたタイトルをAASへ貼り付けてください。</p>
         <label className="route-field"><span>AI用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
         <div className="openai-prompt-actions">
           <button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button>
           {AI_LAUNCH_OPTIONS.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>{app.label}を開く ↗</button>)}
         </div>
-        <p className="beginner-help">候補生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて候補を作り直した時だけ次の1回として記録されます。</p>
+        <p className="beginner-help">外部AIを開く直前に現在の作成状況を保存します。AASへ戻ったら、このタイトル工程と入力内容を復元します。</p>
       </>}
+      <label className="route-field">
+        <span>{draft.generationMode === "prompt_export" ? "AIで生成したタイトルをここへ貼り付け" : "タイトル"}</span>
+        <input value={draft.title} onChange={(event) => patch("title", event.target.value)} placeholder={draft.generationMode === "prompt_export" ? "ChatGPTなどで生成したタイトルを貼り付け" : "記事タイトルを入力"} />
+      </label>
     </div>
   );
 }
