@@ -252,12 +252,14 @@ export function buildAdminSocialPromotionPrompt(
   facts: AdminProductFacts,
   input: AdminSocialPromotionInput,
 ): string {
+  const targetChars = sanitizeSocialTargetChars(input.targetChars);
+  const preset = SOCIAL_LENGTH_PRESETS[input.platform].find((item) => item.id === input.lengthPresetId);
   const platformRule: Record<AdminSocialPromotionInput["platform"], string> = {
-    x: "X向け。1投稿は140文字以内を目安にし、短く理解できる投稿と、必要なら連投案を作る。",
+    x: "X向け。標準投稿かPremium長文かを指定文字数に従って使い分ける。長文でも冒頭で要点が分かる構成にする。",
     instagram: "Instagram向け。通常投稿キャプション、6枚前後のカルーセル構成、短いリール台本を作る。",
-    threads: "Threads向け。会話調で読みやすく、押し売り感を抑えた紹介投稿を作る。",
+    threads: "Threads向け。会話調で読みやすく、押し売り感を抑える。500文字を超える指定では長文テキスト添付を前提にする。",
     tiktok: "TikTok向け。冒頭3秒のフック、30〜45秒の縦動画台本、画面テロップ案を作る。",
-    youtube: "YouTube Shorts向け。30〜60秒の台本、タイトル案、概要欄用の短文を作る。",
+    youtube: "YouTube Shorts向け。30〜60秒の台本、100文字以内のタイトル案、指定文字数を目安にした概要欄を作る。",
   };
   const knowledge = compileKnowledgeContext({
     task: "promotion",
@@ -267,17 +269,21 @@ export function buildAdminSocialPromotionPrompt(
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
 
   return `あなたはSNSプロモーション担当者です。
-AI Article Studioを紹介するSNS販促素材を作成してください。
+AI Article Studioについて、現在の発信フェーズに合ったSNS投稿素材を作成してください。販売前なら、実運用テスト・開発状況・公開予定の共有として作り、購入可能と誤認させないでください。
 
 ${FACT_SAFETY}
 
 【SNS条件】
-媒体: ${input.platform}
+媒体: ${socialPlatformLabel(input.platform)}
+発信フェーズ: ${input.phase || facts.releaseStage || "要確認"}
 目的: ${input.purpose}
 想定読者: ${input.audience || facts.targetAudience || "要確認"}
 紹介テーマ: ${input.focus || "製品全体"}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
 作成数: ${Math.max(1, Math.min(10, input.variants))}案
+目標文字数: 1案あたり約${targetChars}文字
+文字数プリセット: ${preset?.label || "カスタム"}
+文字数メモ: ${preset?.note || "指定文字数を上限目安として自然に収める"}
 媒体ルール: ${platformRule[input.platform]}
 
 ${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
@@ -286,8 +292,10 @@ ${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 ${factsBlock(facts)}
 
 【出力ルール】
+- 各投稿本文は目標文字数を超えないように調整し、文字数の概算も添える。
 - 同じ文面の使い回しではなく、媒体に合わせて構成を変える。
 - 投稿ごとに狙いを1行で添える。
+- 販売前なら「テスト中」「準備中」「公開予定」など事実に合う表現を使い、販売URLが空なら購入CTAを作らない。
 - ハッシュタグは必要な媒体だけ、過剰に付けない。
 - 画像・動画が有効な場合は、投稿素材の構図案または画像生成プロンプトも付ける。
 - 確認が必要な情報は最後に「公開前チェック」として分離する。`;
