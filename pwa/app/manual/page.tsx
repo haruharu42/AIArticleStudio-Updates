@@ -59,7 +59,7 @@ const MANUAL_SECTIONS = [
   {
     id: "account-design",
     group: "アカウント設計",
-    title: "note / Tips / Brain アカウント設計",
+    title: "note / Tips / Brain アカウント作成・設計",
     when: "記事を書く前に、媒体ごとの発信ジャンル・読者・収益化方針・信頼の作り方を整理したい時。",
     lead: "note・Tips・Brainを切り替えながら、基本項目をプルダウン中心で設計し、媒体ごとにクラウド保存します。",
     points: [
