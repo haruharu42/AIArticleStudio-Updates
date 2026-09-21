@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { buildPlatformAccountPresetPromptContext } from "@/features/presets/platform-account-presets";
+
 export type AccountDesignPlatform = "note" | "tips" | "brain";
 export type AccountDesignGenre = "ai" | "sidejob" | "business" | "lifestyle" | "gadget" | "learning" | "parenting" | "health_beauty" | "money" | "creative" | "entertainment" | "other";
 export type AccountDesignStyle = "beginner" | "howto" | "experience" | "essay" | "review" | "trend" | "expert" | "creative" | "community" | "other";
@@ -208,11 +210,12 @@ export function getRuntimePlatformAccountDesign(platform: string): PlatformAccou
 
 export function buildPlatformAccountPromptContext(platform: string): string {
   const design = getRuntimePlatformAccountDesign(platform);
-  if (!design) return "";
+  const presetContext = buildPlatformAccountPresetPromptContext(platform);
+  if (!design) return presetContext ? `\n\n${presetContext}` : "";
   const labels = accountDesignLabels(design);
   const topics = design.mainTopics.length ? design.mainTopics.slice(0, 8).join(" / ") : "未指定";
   const experience = design.experienceNote.trim() || "未指定";
-  return `\n\n【ACCOUNT DESIGN】\nこの掲載先の保存済みアカウント設計を記事の方向性として反映する。記事テーマやユーザーが今回指定した条件と衝突する場合は、今回の明示条件を優先する。\nアカウント型: ${labels.style}\n想定読者: ${labels.audience}\n発信トーン: ${labels.tone}\n収益化方針: ${labels.monetization}\n運営目的: ${labels.goal}\n信頼の作り方: ${labels.trust}\nコンテンツの中心: ${labels.contentFocus}\n主なテーマ: ${topics}\nユーザーが事実として入力した経験・背景: ${experience}\n経験・資格・実績は上記に書かれた範囲だけを事実として扱い、補完・誇張・創作しない。`;
+  return `\n\n【ACCOUNT DESIGN】\nこの掲載先の保存済みアカウント設計を記事の方向性として反映する。記事テーマやユーザーが今回指定した条件と衝突する場合は、今回の明示条件を優先する。\nアカウント型: ${labels.style}\n想定読者: ${labels.audience}\n発信トーン: ${labels.tone}\n収益化方針: ${labels.monetization}\n運営目的: ${labels.goal}\n信頼の作り方: ${labels.trust}\nコンテンツの中心: ${labels.contentFocus}\n主なテーマ: ${topics}\nユーザーが事実として入力した経験・背景: ${experience}\n経験・資格・実績は上記に書かれた範囲だけを事実として扱い、補完・誇張・創作しない。${presetContext ? `\n\n${presetContext}` : ""}`;
 }
 
 export function serializePlatformAccountDesignDraft(design: PlatformAccountDesign): string {
