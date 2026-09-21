@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
+import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { launchAiApp } from "@/lib/ai-app-links";
 import { APP_RELEASE_STATE_EVENT, readEffectiveRelease, releaseVersionAtLeast } from "@/lib/app-release";
 import {
@@ -16,6 +18,7 @@ import {
   NOTE_SCHEDULE_TYPE_LABELS,
   NOTE_TONE_PRESETS,
   applyAasAdminNoteProfilePreset,
+  applyRuntimeWorkspacePresetToNoteProfile,
   buildNoteAccountResearchPrompt,
   buildNoteProfileDraft,
   buildNoteScheduleResearchPrompt,
@@ -133,6 +136,7 @@ function createHref(item: NoteScheduleItem): string {
 }
 
 export function NoteOperationsPage() {
+  const { preference: workspacePreference } = useWorkspacePreset();
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [tab, setTab] = useState<Tab>("start");
   const [profile, setProfile] = useState<NoteOperationProfile | null>(null);
@@ -578,6 +582,26 @@ export function NoteOperationsPage() {
               <Link href="/account-design">note / Tips / Brain 共通設計へ ›</Link>
             </div>
             <p className="note-ops-hint">この画面はnote運営専用の既存設定です。3媒体をまとめて設計する場合は「note / Tips / Brain 共通設計」を使えます。まずプルダウンで近いものを選ぶだけで大丈夫です。「その他」を選んだ場合だけ自由入力できます。経験・資格・実績は、実際に事実として書ける内容だけ使用します。</p>
+
+            <ActiveWorkspacePresetBadge feature="note" />
+            {workspacePreference?.applyNote && (
+              <div className="note-shared-preset-apply">
+                <div>
+                  <strong>設定画面の共通プリセットをnote運営設定にも使う</strong>
+                  <small>経験・資格・背景、投稿頻度、投稿時間、準備完了チェックは変更しません。</small>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = applyRuntimeWorkspacePresetToNoteProfile(profile);
+                    setProfile(next);
+                    setMessage("共通プリセットをnoteプロフィール条件へ反映しました。内容を確認してから保存してください。");
+                  }}
+                >
+                  note設定へ反映
+                </button>
+              </div>
+            )}
 
             {gate.isAdmin && (
               <section className="note-aas-admin-preset" aria-labelledby="aas-note-admin-preset-title">
