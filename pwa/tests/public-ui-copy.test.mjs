@@ -80,19 +80,35 @@ test("admin dashboard keeps two-column summary cards on narrow mobile screens", 
   assert.match(css, /\.admin-invite-layout/);
 });
 
-test("admin-only promotion tools are hidden behind active admin state", async () => {
+test("admin tools are removed from the user feature hub and collected in the admin card hub", async () => {
   const tools = await read("components/phase-tools-page.tsx");
+  const adminHub = await read("app/admin/page.tsx");
+  const sections = await read("lib/admin-sections.ts");
+  const guard = await read("components/admin-route-guard.tsx");
   const promotion = await read("components/admin-promotion-page.tsx");
   const route = await read("app/admin/promotion/page.tsx");
-  for (const label of ["管理者専用", "テスト・公開予告", "紹介・販売記事作成", "SNSプロモーション", "キャンペーン設計", "製品情報管理"]) {
-    assert.match(tools, new RegExp(label));
+
+  assert.doesNotMatch(tools, /管理者専用/);
+  assert.doesNotMatch(tools, /\/admin\/promotion/);
+  assert.doesNotMatch(tools, /\/admin\/development-prompts/);
+
+  assert.match(adminHub, /className="tool-grid admin-tool-grid"/);
+  assert.match(adminHub, /className="tool-card admin-tool-card"/);
+  assert.match(adminHub, /ADMIN_SECTIONS\.map/);
+  assert.match(adminHub, /<span>\{section\.eyebrow\}<\/span>/);
+  assert.match(adminHub, /<h2>\{section\.title\}<\/h2>/);
+  assert.match(adminHub, /<p>\{section\.description\}<\/p>/);
+  assert.match(adminHub, /開く →/);
+
+  for (const label of ["販売・プロモーション", "開発依頼プロンプト", "ナレッジ管理", "アップデート管理", "セキュリティ・運用"]) {
+    assert.match(sections, new RegExp(label));
   }
-  assert.match(tools, /state\.profile\.role === "admin"/);
-  assert.match(tools, /state\.profile\.status === "active"/);
+  assert.match(guard, /profile\.role !== "admin"/);
+  assert.match(guard, /profile\.status !== "active"/);
   assert.match(promotion, /active管理者のみ利用できます/);
   assert.match(promotion, /販売・プロモーションセンター/);
   assert.match(route, /AdminPromotionPage/);
-  assert.doesNotMatch(`${tools}\n${promotion}`, /sb_secret_|service[_-]?role/i);
+  assert.doesNotMatch(`${tools}\n${adminHub}\n${promotion}`, /sb_secret_|service[_-]?role/i);
 });
 
 test("admin promotion prompts protect confirmed product facts and cover article plus social sales", async () => {
