@@ -146,7 +146,10 @@ test("workspace preset provider persists across routes and recomputes dependent 
   assert.match(provider, /useCallback/);
   assert.match(provider, /loadWorkspacePresetPreference/);
   assert.match(provider, /setRuntimeWorkspacePresetPreference/);
-  assert.match(provider, /\[preference, loading, saving, error, isAdmin, save, replaceLocal\]/);
+  assert.match(provider, /accountPresets/);
+  assert.match(provider, /accountPresetsLoading/);
+  assert.match(provider, /saveAccountPreset/);
+  assert.match(provider, /deleteAccountPreset/);
   assert.match(workflow, /\[preflightDetail, preflightReport, workspacePreference\]/);
   assert.match(workflow, /\[reuseDetail, enabledReuseChannels, workspacePreference\]/);
   assert.match(promotion, /\[facts, article, workspacePreference\]/);
