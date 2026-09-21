@@ -303,3 +303,12 @@
   .persistent-mobile-nav.admin-enabled { padding-left: 3px; padding-right: 3px; }
   .persistent-mobile-nav.admin-enabled button { padding-left: 0; padding-right: 0; font-size: 7px; }
 }
+
+
+/* On phones/tablets the admin shortcuts belong in the customizable bottom nav.
+   Keep the wide desktop shortcut strip, but do not push the mobile home content down. */
+@media (max-width: 899px) {
+  .admin-home-topbar {
+    display: none;
+  }
+}
