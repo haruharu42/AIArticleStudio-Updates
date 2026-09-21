@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
+import { workspacePresetSocialDefaults, workspacePresetWorkflowDefaults } from "@/features/presets/preset-adapters";
+import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { launchAiApp } from "@/lib/ai-app-links";
 import {
   buildArticleReusePrompt,
@@ -91,6 +94,7 @@ async function copyText(value: string): Promise<void> {
 
 export function ContentWorkflowPage() {
   const { state } = useSharedAccessState();
+  const { preference: workspacePreference } = useWorkspacePreset();
   const [tab, setTab] = useState<WorkflowTab>("today");
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [schedule, setSchedule] = useState<NoteScheduleItem[]>([]);
@@ -129,6 +133,7 @@ export function ContentWorkflowPage() {
   const [seriesCount, setSeriesCount] = useState(6);
   const [seriesResponse, setSeriesResponse] = useState("");
   const [seriesBusy, setSeriesBusy] = useState(false);
+  const workspacePresetAppliedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -145,6 +150,24 @@ export function ContentWorkflowPage() {
     });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (workspacePresetAppliedRef.current || !workspacePreference?.applyWorkflow) return;
+    workspacePresetAppliedRef.current = true;
+    const workflowDefaults = workspacePresetWorkflowDefaults(workspacePreference);
+    if (!workflowDefaults) return;
+    queueMicrotask(() => {
+      setSeriesCount(workflowDefaults.defaultSeriesCount);
+      setReuseChannels((current) => current.map((item) => {
+        const social = workspacePresetSocialDefaults(workspacePreference, item.platform);
+        return {
+          ...item,
+          targetChars: social?.targetCharacters ?? item.targetChars,
+          delayDays: workflowDefaults.reuseDelayDays[item.platform],
+        };
+      }));
+    });
+  }, [workspacePreference]);
 
   const ownerId = state.kind === "ready" ? state.profile.id : "";
 
@@ -237,7 +260,7 @@ export function ContentWorkflowPage() {
   );
   const preflightPrompt = useMemo(
     () => preflightDetail && preflightReport ? buildPrePublishReviewPrompt(preflightDetail, preflightReport) : "",
-    [preflightDetail, preflightReport],
+    [preflightDetail, preflightReport, workspacePreference],
   );
   const enabledReuseChannels = useMemo(
     () => reuseChannels.filter((item) => reuseEnabled[item.platform]),
@@ -245,7 +268,7 @@ export function ContentWorkflowPage() {
   );
   const reusePrompt = useMemo(
     () => reuseDetail ? buildArticleReusePrompt(reuseDetail, enabledReuseChannels) : "",
-    [reuseDetail, enabledReuseChannels],
+    [reuseDetail, enabledReuseChannels, workspacePreference],
   );
   const seriesPrompt = useMemo(
     () => buildSeriesPlanPrompt({
@@ -256,7 +279,7 @@ export function ContentWorkflowPage() {
       monetization: seriesMonetization,
       articleCount: seriesCount,
     }),
-    [seriesPlatform, seriesName, seriesAudience, seriesPurpose, seriesMonetization, seriesCount],
+    [seriesPlatform, seriesName, seriesAudience, seriesPurpose, seriesMonetization, seriesCount, workspacePreference],
   );
 
   const changeTab = (next: WorkflowTab) => {
@@ -365,6 +388,8 @@ export function ContentWorkflowPage() {
         </div>
         <Link className="route-back" href="/">← ホーム</Link>
       </header>
+
+      <ActiveWorkspacePresetBadge feature="workflow" />
 
       <nav className="workflow-tabs" aria-label="運営自動化メニュー">
         <button className={tab === "today" ? "active" : ""} type="button" onClick={() => changeTab("today")}>今日やること</button>
