@@ -32,7 +32,6 @@ import {
   buildArticlePrompt,
   buildTitlePrompt,
   createArticleFromWizard,
-  suggestLocalTitles,
   type ArticleCreationDraft,
   type ArticleType,
 } from "@/lib/phase11-create";
@@ -80,16 +79,13 @@ export function Phase11CreatePage() {
   const [magazinePlan, setMagazinePlan] = useState<MagazinePlanDraft>(() => ({ ...DEFAULT_MAGAZINE_PLAN, articleTitles: [] }));
   const [message, setMessage] = useState(() => initialMessageFromLocation());
   const [busy, setBusy] = useState(false);
-  const [titleBusy, setTitleBusy] = useState(false);
   const [articleBusy, setArticleBusy] = useState(false);
-  const [titlePromptAuthorized, setTitlePromptAuthorized] = useState("");
   const [articlePromptAuthorized, setArticlePromptAuthorized] = useState("");
   const [createdId, setCreatedId] = useState("");
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [wizardRestored, setWizardRestored] = useState<boolean | null>(null);
   const [accountDesigns, setAccountDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
   const progressOwnerIdRef = useRef("");
-  const titleQuotaInFlightRef = useRef(false);
   const articleQuotaInFlightRef = useRef(false);
   const workspacePresetAppliedRef = useRef(false);
 
@@ -219,7 +215,6 @@ export function Phase11CreatePage() {
 
   const displayStep = displayStepForInternalStep(step);
   const articleDraft = useMemo(() => withArticleTags(draft, tagsText), [draft, tagsText]);
-  const localTitles = useMemo(() => suggestLocalTitles(draft), [draft]);
   const activeAccountDesign = draft.publicationTarget === "blog"
     ? null
     : accountDesigns?.[draft.publicationTarget] ?? null;
@@ -234,7 +229,6 @@ export function Phase11CreatePage() {
     () => buildArticlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined),
     [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey],
   );
-  const titleCandidatesReady = titlePromptAuthorized === titlePrompt;
   const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
@@ -287,33 +281,6 @@ export function Phase11CreatePage() {
     setDraft(result.draft);
     setTagsText(result.draft.tags.join(", "));
     setMessage(`アカウント設計を記事条件へ反映しました。\n${result.summary.join(" / ")}`);
-  };
-
-  const generateTitleCandidates = async () => {
-    if (titleQuotaInFlightRef.current) return;
-    titleQuotaInFlightRef.current = true;
-    setTitleBusy(true);
-    setMessage("");
-    try {
-      const result = await consumeFreeTrialUsage(getSupabaseClient(), "title_generate");
-      if (!result.allowed) {
-        setTitlePromptAuthorized("");
-        setMessage(trialUsageMessage(result));
-        return;
-      }
-      setTitlePromptAuthorized(titlePrompt);
-      setMessage(
-        result.bypassLimits
-          ? "タイトル候補を生成しました。"
-          : `タイトル候補を1回生成しました。${trialUsageMessage(result)}`,
-      );
-    } catch (error) {
-      setTitlePromptAuthorized("");
-      setMessage(error instanceof Error ? error.message : "タイトル候補の利用回数を確認できませんでした。");
-    } finally {
-      titleQuotaInFlightRef.current = false;
-      setTitleBusy(false);
-    }
   };
 
   const generateArticlePrompt = async () => {
@@ -474,11 +441,7 @@ export function Phase11CreatePage() {
           <TitleStep
             draft={draft}
             patch={patch}
-            titleBusy={titleBusy}
-            titleCandidatesReady={titleCandidatesReady}
-            localTitles={localTitles}
             titlePrompt={titlePrompt}
-            onGenerate={generateTitleCandidates}
             onBeforeExternalLaunch={persistWizardProgress}
             setMessage={setMessage}
           />
@@ -501,8 +464,8 @@ export function Phase11CreatePage() {
         {message && <div className="route-notice" role="status" aria-live="polite">{message}</div>}
 
         <footer className="wizard-actions">
-          <button className="secondary-action" type="button" disabled={step === 0 || busy || titleBusy || articleBusy} onClick={back}>戻る</button>
-          {step < ARTICLE_CREATE_STEPS.length - 1 && <button className="primary-action" type="button" disabled={busy || titleBusy || articleBusy} onClick={next}>次へ →</button>}
+          <button className="secondary-action" type="button" disabled={step === 0 || busy || articleBusy} onClick={back}>戻る</button>
+          {step < ARTICLE_CREATE_STEPS.length - 1 && <button className="primary-action" type="button" disabled={busy || articleBusy} onClick={next}>次へ →</button>}
           {createdId && <a className="primary-action" href="/">ホームへ戻る</a>}
         </footer>
       </section>
