@@ -1,12 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { OPENAI_LINKS } from "@/lib/openai-links";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
-import { getSupabaseClient } from "@/lib/supabase";
-
-type State = AccessState | { kind: "loading" } | { kind: "unavailable" };
 
 type ToolCard = { href: string; category: string; title: string; description: string };
 
@@ -35,21 +32,7 @@ const adminTools: ToolCard[] = [
 ];
 
 export function PhaseToolsPage() {
-  const [state, setState] = useState<State>({ kind: "loading" });
-  useEffect(() => {
-    let active = true;
-    const boot = async () => {
-      try {
-        const client = getSupabaseClient();
-        const value = await loadAccessState(client);
-        if (active) setState(value);
-      } catch {
-        if (active) setState({ kind: "unavailable" });
-      }
-    };
-    void boot();
-    return () => { active = false; };
-  }, []);
+  const { state } = useSharedAccessState();
 
   const ready = state.kind === "ready";
   const admin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
@@ -60,27 +43,27 @@ export function PhaseToolsPage() {
     <main className="creator-page">
       <header className="creator-head">
         <div><p className="eyebrow">AI ARTICLE STUDIO</p><h1>機能一覧</h1><p>記事制作・画像・SNS・出力・公開・分析など、AASで使える機能をまとめています。</p></div>
-        <a className="route-back" href="/">← ホーム</a>
+        <Link className="route-back" href="/">← ホーム</Link>
       </header>
 
       {state.kind === "loading" && <div className="route-notice">利用可能な機能を確認しています…</div>}
       {state.kind === "unavailable" && <div className="route-notice error">アカウントとPWA利用権を確認できませんでした。</div>}
       {state.kind === "signed_out" && <div className="route-notice">ログインすると利用可能な機能が表示されます。</div>}
       {(state.kind === "suspended" || state.kind === "disabled") && <div className="route-notice error">現在のアカウント状態ではPWA機能を利用できません。</div>}
-      {invite && <div className="route-notice">PWA機能を使うには利用権が必要です。<a className="route-inline-link" href="/invite">招待コードを登録</a></div>}
+      {invite && <div className="route-notice">PWA機能を使うには利用権が必要です。<Link className="route-inline-link" href="/invite">招待コードを登録</Link></div>}
 
       {admin && (
         <section className="admin-only-tools-section" aria-labelledby="admin-only-tools-title">
           <div className="admin-only-tools-heading"><div><p>ADMIN ONLY</p><h2 id="admin-only-tools-title">管理者専用</h2></div><small>一般ユーザーには表示されません</small></div>
           <div className="admin-only-tools-grid">
-            {adminTools.map((tool) => <a key={tool.href} className="admin-only-tool-card" href={tool.href}><span>{tool.category}</span><h3>{tool.title}</h3><p>{tool.description}</p><strong>開く →</strong></a>)}
+            {adminTools.map((tool) => <Link key={tool.href} className="admin-only-tool-card" href={tool.href}><span>{tool.category}</span><h3>{tool.title}</h3><p>{tool.description}</p><strong>開く →</strong></Link>)}
           </div>
         </section>
       )}
 
       <section className="tool-grid">
-        {cards.map((tool) => <a key={tool.href} className="tool-card" href={tool.href}><span>{tool.category}</span><h2>{tool.title}</h2><p>{tool.description}</p><strong>開く →</strong></a>)}
-        {invite && <a className="tool-card" href="/invite"><span>PWA</span><h2>PWA招待</h2><p>購入・招待コードをPWA利用権へ登録します。</p><strong>開く →</strong></a>}
+        {cards.map((tool) => <Link key={tool.href} className="tool-card" href={tool.href}><span>{tool.category}</span><h2>{tool.title}</h2><p>{tool.description}</p><strong>開く →</strong></Link>)}
+        {invite && <Link className="tool-card" href="/invite"><span>PWA</span><h2>PWA招待</h2><p>購入・招待コードをPWA利用権へ登録します。</p><strong>開く →</strong></Link>}
       </section>
 
       {ready && (
