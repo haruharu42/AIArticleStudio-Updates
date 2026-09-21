@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildPlatformAccountPresetPromptContext } from "@/features/presets/platform-account-presets";
 import { buildWorkspacePresetPromptContext } from "@/features/presets/workspace-presets";
 import type { AiProvider } from "@/lib/user-personalization";
 import {
@@ -159,6 +160,7 @@ export function buildAccountStarterPrompt(design: PlatformAccountDesign, provide
   const topics = design.mainTopics.length ? design.mainTopics.join(" / ") : "未指定";
   const experience = design.experienceNote.trim() || "未指定";
   const workspacePresetContext = buildWorkspacePresetPromptContext("account_design");
+  const accountPresetContext = buildPlatformAccountPresetPromptContext(design.platform);
   return `あなたは日本の${platformName}運営に詳しい編集者・ブランド設計者です。
 目的は、これから${platformName}を始める初心者のために「アカウント作成直後から運営を開始できる一式」を設計し、AI Article Studio（AAS）が読み込めるJSONだけで返すことです。
 
@@ -181,6 +183,8 @@ export function buildAccountStarterPrompt(design: PlatformAccountDesign, provide
 - ユーザーが事実として入力した経験・資格・背景: ${experience}
 
 ${workspacePresetContext ? `${workspacePresetContext}
+
+` : ""}${accountPresetContext ? `${accountPresetContext}
 
 ` : ""}【必須で作るもの】
 1. アカウント表示名候補を3〜5個
