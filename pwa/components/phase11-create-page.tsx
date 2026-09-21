@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { applyAccountDesignToArticleDraft } from "@/lib/account-article-link";
 import { ArticlePresetPanel } from "@/components/article-create/article-preset-panel";
 import {
   ArticleConditionsStep,
@@ -221,6 +222,16 @@ export function Phase11CreatePage() {
     }));
   };
 
+  const applyActiveAccountDesign = () => {
+    if (!activeAccountDesign?.ready) return;
+    setDraft((current) => {
+      const result = applyAccountDesignToArticleDraft(current, activeAccountDesign);
+      setTagsText(result.draft.tags.join(", "));
+      setMessage(`アカウント設計を記事条件へ反映しました。\n${result.summary.join(" / ")}`);
+      return result.draft;
+    });
+  };
+
   const generateTitleCandidates = async () => {
     if (titleQuotaInFlightRef.current) return;
     titleQuotaInFlightRef.current = true;
@@ -375,9 +386,14 @@ export function Phase11CreatePage() {
                   : "設計なしでも記事作成はできます。設定すると読者・トーン・収益化方針をAI指示へ自動反映できます。"}
               </small>
             </div>
-            <a href={`/account-design?platform=${draft.publicationTarget}`}>
-              {activeAccountDesign?.ready ? "設計を確認" : "アカウント設計を設定"}
-            </a>
+            <div className="account-design-create-actions">
+              {activeAccountDesign?.ready && (
+                <button type="button" onClick={applyActiveAccountDesign}>記事条件にも反映</button>
+              )}
+              <a href={`/account-design?platform=${draft.publicationTarget}`}>
+                {activeAccountDesign?.ready ? "設計を確認" : "アカウント設計を設定"}
+              </a>
+            </div>
           </div>
         )}
 
