@@ -7,6 +7,7 @@ import { AasReferenceHeader } from "@/components/aas-reference-shell";
 import { launchAiApp } from "@/lib/ai-app-links";
 import { APP_RELEASE_STATE_EVENT, readEffectiveRelease, releaseVersionAtLeast } from "@/lib/app-release";
 import {
+  AAS_ADMIN_NOTE_PROFILE_PRESET,
   NOTE_ACCOUNT_GENRES,
   NOTE_ACCOUNT_STYLES,
   NOTE_AUDIENCE_PRESETS,
@@ -14,6 +15,7 @@ import {
   NOTE_OPERATION_GOALS,
   NOTE_SCHEDULE_TYPE_LABELS,
   NOTE_TONE_PRESETS,
+  applyAasAdminNoteProfilePreset,
   buildNoteAccountResearchPrompt,
   buildNoteProfileDraft,
   buildNoteScheduleResearchPrompt,
@@ -53,7 +55,7 @@ import {
 type Gate =
   | { kind: "loading" }
   | { kind: "signed_out" }
-  | { kind: "ready"; userId: string }
+  | { kind: "ready"; userId: string; isAdmin: boolean }
   | { kind: "error"; message: string };
 
 type Tab = "start" | "profile" | "plan" | "calendar";
@@ -175,7 +177,7 @@ export function NoteOperationsPage() {
         }
         const { data: account, error: profileError } = await client
           .from("profiles")
-          .select("id,status")
+          .select("id,status,role")
           .eq("id", user.id)
           .single();
         if (profileError || !account || account.id !== user.id || account.status !== "active") {
@@ -191,7 +193,7 @@ export function NoteOperationsPage() {
         if (active) {
           setScheduleResponse(savedScheduleResponse);
           setScheduleResponseLoaded(true);
-          setGate({ kind: "ready", userId: user.id });
+          setGate({ kind: "ready", userId: user.id, isAdmin: account.role === "admin" });
         }
       } catch (error) {
         if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "note運営を初期化できませんでした。" });
@@ -576,6 +578,43 @@ export function NoteOperationsPage() {
               <Link href="/account-design">note / Tips / Brain 共通設計へ ›</Link>
             </div>
             <p className="note-ops-hint">この画面はnote運営専用の既存設定です。3媒体をまとめて設計する場合は「note / Tips / Brain 共通設計」を使えます。まずプルダウンで近いものを選ぶだけで大丈夫です。「その他」を選んだ場合だけ自由入力できます。経験・資格・実績は、実際に事実として書ける内容だけ使用します。</p>
+
+            {gate.isAdmin && (
+              <section className="note-aas-admin-preset" aria-labelledby="aas-note-admin-preset-title">
+                <div className="note-aas-admin-preset-head">
+                  <div>
+                    <span>ADMIN ONLY</span>
+                    <h3 id="aas-note-admin-preset-title">AAS運営用プロフィール設定</h3>
+                    <p>AI Article Studio自体のnote運営に使う管理者専用プリセットです。一般ユーザーには表示されません。</p>
+                  </div>
+                  <b>管理者限定</b>
+                </div>
+                <div className="note-aas-admin-preset-grid">
+                  <div><small>主ジャンル</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.genre}</strong></div>
+                  <div><small>運営スタイル</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.style}</strong></div>
+                  <div><small>想定読者</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.audience}</strong></div>
+                  <div><small>文章の雰囲気</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.tone}</strong></div>
+                  <div><small>収益化方針</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.monetization}</strong></div>
+                  <div><small>運営目的</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.goal}</strong></div>
+                </div>
+                <div className="note-aas-admin-topics">
+                  <small>AAS向けの主なテーマ</small>
+                  <div>{AAS_ADMIN_NOTE_PROFILE_PRESET.mainTopics.map((topic) => <span key={topic}>{topic}</span>)}</div>
+                </div>
+                <p className="note-aas-admin-warning">既存の「経験・資格・背景」、投稿時間、投稿頻度、準備完了チェックは変更しません。プリセット反映後も各項目を自由に編集でき、自動保存はされません。</p>
+                <button
+                  className="primary-action"
+                  type="button"
+                  onClick={() => {
+                    const next = applyAasAdminNoteProfilePreset(profile);
+                    setProfile(next);
+                    setMessage("AAS運営用の管理者プリセットを反映しました。内容を確認し、「設定をAASに保存」で保存してください。");
+                  }}
+                >
+                  AAS運営用設定を反映
+                </button>
+              </section>
+            )}
 
             <div className="note-profile-choice-grid">
               <label><span>① どのジャンルで運営したい？</span><select value={profile.accountGenre} onChange={(event) => setProfile({ ...profile, accountGenre: event.target.value as NoteOperationProfile["accountGenre"] })}>{NOTE_ACCOUNT_GENRES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountGenre === "other" && <input value={profile.customGenre} maxLength={120} onChange={(event) => setProfile({ ...profile, customGenre: event.target.value })} placeholder="運営したいジャンルを入力" />}</label>
