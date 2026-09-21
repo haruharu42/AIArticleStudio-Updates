@@ -209,6 +209,59 @@ const OFFER_OPTIONS = [
   "割引なし・製品価値を中心に訴求",
 ];
 
+const PROMOTION_PHASE_OPTIONS = [
+  "実運用テスト中（販売前）",
+  "開発中・進捗共有",
+  "公開前予告",
+  "ベータ公開予定",
+  "公開日決定・カウントダウン",
+  "販売開始前",
+  "販売開始後",
+  "アップデート告知",
+];
+
+const TESTING_STATUS_OPTIONS = [
+  "未実施",
+  "運営者自身で実運用テスト中",
+  "noteで実運用テスト中",
+  "Tipsで実運用テスト中",
+  "Brainで実運用テスト中",
+  "複数媒体で実運用テスト中",
+  "テスト完了・改善中",
+  "公開準備中",
+];
+
+const PREVIEW_UPDATE_OPTIONS = [
+  "note実運用テスト報告",
+  "Tips実運用テスト報告",
+  "Brain実運用テスト報告",
+  "開発進捗の共有",
+  "改善内容の共有",
+  "公開前の予告",
+  "公開予定の案内",
+  "ベータ開始予告",
+  "正式公開予告",
+  "公開日決定のお知らせ",
+];
+
+const TESTED_PLATFORM_OPTIONS = ["note", "Tips", "Brain", "PWA版", "Windows版", "複数媒体"];
+
+const SOCIAL_PLATFORM_OPTIONS: readonly { key: AdminSocialPlatform; label: string }[] = [
+  { key: "x", label: "X" },
+  { key: "instagram", label: "Instagram" },
+  { key: "threads", label: "Threads" },
+  { key: "tiktok", label: "TikTok" },
+  { key: "youtube", label: "YouTube Shorts" },
+];
+
+const DEFAULT_SOCIAL_PRESET_IDS: Record<AdminSocialPlatform, string> = {
+  x: "x-standard",
+  instagram: "instagram-standard",
+  threads: "threads-standard",
+  tiktok: "tiktok-standard",
+  youtube: "youtube-standard",
+};
+
 function TextField({ label, value, onChange, placeholder = "", multiline = false }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; multiline?: boolean }) {
   return (
     <label className="admin-promo-field">
