@@ -462,6 +462,7 @@ export function Phase18BeginnerHome() {
           <div className="beginner-ai-grid"><AiLaunchCard appKey="chatgpt" /><AiLaunchCard appKey="claude" /><AiLaunchCard appKey="gemini" /></div>
           <p className="reference-ai-note">iPhone / iPadでは「アプリを開く」と「Web版を開く」を選べます。Androidはアプリを優先し、開けない場合はGoogle Playの公式ページへ移動します。PCではWeb版を開きます。</p>
           <div className="reference-feature-links">
+            <Link href="/workflow"><span>◎</span><strong>運営コックピット</strong><small>今日の作業・公開前チェック・再利用</small></Link>
             <Link href="/images"><span>▧</span><strong>画像作成</strong><small>アイキャッチ・挿絵を準備</small></Link>
             <Link href="/sns"><span>↗</span><strong>SNS投稿</strong><small>記事から投稿文を作成</small></Link>
           </div>
