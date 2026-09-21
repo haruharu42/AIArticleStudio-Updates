@@ -66,7 +66,7 @@ function SettingsAccordion({
 
 export function PwaSettingsPage() {
   const { state } = useSharedAccessState();
-  const [openSection, setOpenSection] = useState<SettingsSection>("preset");
+  const [openSection, setOpenSection] = useState<SettingsSection | null>("preset");
   const [alwaysShowNav, setAlwaysShowNav] = useState(true);
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
   const [writingBusy, setWritingBusy] = useState(false);
@@ -109,7 +109,7 @@ export function PwaSettingsPage() {
   }, [profileId]);
 
   const toggleSection = (id: SettingsSection) => {
-    setOpenSection((current) => current === id ? id : id);
+    setOpenSection((current) => current === id ? null : id);
   };
 
   const toggleAlwaysShowNav = () => {
