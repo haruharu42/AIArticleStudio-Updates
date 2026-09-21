@@ -118,7 +118,7 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /AAS内ではタイトル候補を生成しません/);
   assert.match(stepUi, /AIで生成したタイトルをここへ貼り付け/);
   assert.match(stepUi, /AI用タイトルプロンプト/);
-  assert.doesNotMatch(stepUi, /タイトル候補を生成|タイトル候補を作り直す/);
+  assert.doesNotMatch(stepUi, />タイトル候補を生成<|>タイトル候補を作り直す</);
   assert.doesNotMatch(page, /generateTitleCandidates|titleQuotaInFlightRef|titlePromptAuthorized|suggestLocalTitles/);
   assert.doesNotMatch(stepUi, /OPENAI_LINKS\.chatgpt/);
 
