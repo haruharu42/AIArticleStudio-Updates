@@ -221,7 +221,7 @@ export function buildAdminArticlePromotionPrompt(
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
   return `あなたは日本語のプロダクトマーケティング編集者です。
-AI Article Studioについて、現在の発信フェーズに合った完成記事を作成してください。販売前なら販売記事にせず、テスト状況・開発進捗・公開予告として自然に伝えてください。
+AI Article Studioの紹介・販売を含め、現在の発信フェーズに合った完成記事を作成してください。販売前なら販売記事にせず、テスト状況・開発進捗・公開予告として自然に伝えてください。
 
 ${FACT_SAFETY}
 
