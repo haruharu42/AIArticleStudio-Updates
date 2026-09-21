@@ -90,7 +90,7 @@ export function MobileNavCustomizer({
 
       {isAdmin && (
         <p className="nav-customizer-note admin-note">
-          管理者アカウントでは「管理 / ユーザー / 無料設定 / 販売 / 更新管理 / MFA / 運用」も選べます。これらはactiveな管理者にだけ表示されます。
+          管理者アカウントでは「問合せ確認 / 管理 / ユーザー / 無料設定 / 販売 / 更新管理 / MFA / 運用」も選べます。これらはactiveな管理者にだけ表示されます。
         </p>
       )}
       <p className="nav-customizer-note">初期状態は「ホーム / 作成 / ライブラリ / ランキング / プロフィール」です。この設定はこの端末のPWA／ブラウザ内で、ログイン中のユーザーごとに保存されます。</p>
