@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";\nimport { useEffect, useMemo, useState } from "react";
 
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import {
@@ -185,7 +185,7 @@ export function UserInquiriesPage() {
           <h1>お問い合わせ</h1>
           <p>追加機能の要望、不具合、使い方、アカウント・購入関連などをAAS運営へ送信できます。</p>
         </div>
-        <a className="route-back" href="/">← ホーム</a>
+        <Link className="route-back" href="/">← ホーム</Link>
       </header>
 
       {state.kind === "loading" && <div className="route-notice">アカウントを確認しています…</div>}
@@ -194,14 +194,14 @@ export function UserInquiriesPage() {
       {(state.kind === "pending" || state.kind === "entitlement_denied") && (
         <div className="route-notice">
           AAS内問い合わせを利用できる状態ではありません。アカウント承認・利用権を確認するか、
-          <a className="route-inline-link" href="/support">公開お問い合わせ案内</a>
+          <Link className="route-inline-link" href="/support">公開お問い合わせ案内</Link>
           をご確認ください。
         </div>
       )}
       {(state.kind === "suspended" || state.kind === "disabled") && (
         <div className="route-notice error">
           現在のアカウント状態ではAAS内問い合わせを利用できません。購入元の問い合わせ手段または
-          <a className="route-inline-link" href="/support">公開お問い合わせ案内</a>
+          <Link className="route-inline-link" href="/support">公開お問い合わせ案内</Link>
           をご確認ください。
         </div>
       )}
