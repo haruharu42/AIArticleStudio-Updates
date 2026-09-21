@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { PresetSelect } from "@/components/preset-select";
+import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
+import { workspacePresetSocialDefaults } from "@/features/presets/preset-adapters";
+import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { consumeFreeTrialUsage, trialUsageMessage } from "@/lib/free-trial";
 import { buildSocialPrompt, type SocialGoal, type SocialPlatform } from "@/lib/phase14-sns";
 import { getCloudArticleDetail, listCloudArticles, type ArticleDetail, type ArticleSummary } from "@/lib/phase7-articles";
@@ -28,6 +31,7 @@ const GOAL_OPTIONS: readonly { value: SocialGoal; label: string }[] = [
 ];
 
 export function Phase14SnsPage() {
+  const { preference: workspacePreference } = useWorkspacePreset();
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [articleId, setArticleId] = useState("");
@@ -43,6 +47,7 @@ export function Phase14SnsPage() {
   const [busy, setBusy] = useState(false);
   const [generateBusy, setGenerateBusy] = useState(false);
   const generateInFlightRef = useRef(false);
+  const workspacePresetAppliedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -66,6 +71,35 @@ export function Phase14SnsPage() {
     void boot();
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (workspacePresetAppliedRef.current || !workspacePreference?.applySns) return;
+    workspacePresetAppliedRef.current = true;
+    const preferred = ["x", "instagram", "threads", "tiktok", "youtube"].includes(
+      workspacePresetSocialDefaults(workspacePreference, "x")?.preferredPlatform ?? "",
+    )
+      ? workspacePresetSocialDefaults(workspacePreference, "x")?.preferredPlatform
+      : null;
+    const nextPlatform = (preferred ?? "x") as SocialPlatform;
+    const defaults = ["x", "instagram", "threads", "tiktok", "youtube"].includes(nextPlatform)
+      ? workspacePresetSocialDefaults(workspacePreference, nextPlatform as "x" | "instagram" | "threads" | "tiktok" | "youtube")
+      : null;
+    queueMicrotask(() => {
+      setPlatform(nextPlatform);
+      if (defaults) setMaxCharacters(String(defaults.targetCharacters));
+    });
+  }, [workspacePreference]);
+
+  const changePlatform = (next: SocialPlatform) => {
+    setPlatform(next);
+    if (!workspacePreference?.applySns) return;
+    if (!["x", "instagram", "threads", "tiktok", "youtube"].includes(next)) return;
+    const defaults = workspacePresetSocialDefaults(
+      workspacePreference,
+      next as "x" | "instagram" | "threads" | "tiktok" | "youtube",
+    );
+    if (defaults) setMaxCharacters(String(defaults.targetCharacters));
+  };
 
   const loadArticle = async (id: string) => {
     if (gate.kind !== "ready") return;
@@ -134,10 +168,11 @@ export function Phase14SnsPage() {
         <div><p className="eyebrow">SNS CONTENT</p><h1>記事からSNS投稿を作る</h1><p>{gate.aasId} / SNSごとの投稿プロンプトを選択式で作成できます</p></div>
         <a className="route-back" href="/tools">← 機能一覧</a>
       </header>
+      <ActiveWorkspacePresetBadge feature="sns" />
       <section className="creator-card">
         <div className="creator-form-grid">
           <label className="route-field full"><span>元記事</span><select value={articleId} onChange={(event) => void loadArticle(event.target.value)} disabled={busy || generateBusy}><option value="">記事を選択</option>{articles.map((article) => <option key={article.id} value={article.id}>{article.title}</option>)}</select></label>
-          <label className="route-field"><span>SNS</span><select value={platform} onChange={(event) => setPlatform(event.target.value as SocialPlatform)}>{SOCIAL_PLATFORM_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+          <label className="route-field"><span>SNS</span><select value={platform} onChange={(event) => changePlatform(event.target.value as SocialPlatform)}>{SOCIAL_PLATFORM_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
           <label className="route-field"><span>目的</span><select value={goal} onChange={(event) => setGoal(event.target.value as SocialGoal)}>{GOAL_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
           <PresetSelect label="トーン" value={tone} onChange={setTone} options={TONE_OPTIONS} customPlaceholder="例: 静かで落ち着いた専門家風" />
           <PresetSelect label="編集上の文字数目安" value={maxCharacters} onChange={setMaxCharacters} options={CHARACTER_LIMIT_OPTIONS} customPlaceholder="数字を入力（例: 2500）" customInputType="number" customMin={1} customMax={100000} />
