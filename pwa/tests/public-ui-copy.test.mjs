@@ -84,7 +84,7 @@ test("admin-only promotion tools are hidden behind active admin state", async ()
   const tools = await read("components/phase-tools-page.tsx");
   const promotion = await read("components/admin-promotion-page.tsx");
   const route = await read("app/admin/promotion/page.tsx");
-  for (const label of ["管理者専用", "販売・宣伝記事作成", "SNSプロモーション", "キャンペーン設計", "製品情報管理"]) {
+  for (const label of ["管理者専用", "テスト・公開予告", "紹介・販売記事作成", "SNSプロモーション", "キャンペーン設計", "製品情報管理"]) {
     assert.match(tools, new RegExp(label));
   }
   assert.match(tools, /state\.profile\.role === "admin"/);
