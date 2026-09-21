@@ -109,7 +109,7 @@ test("account design is reachable from tools settings note operations and manual
   assert.match(layout, /phase40-account-design\.css/);
   assert.match(css, /\.account-design-platforms/);
   assert.match(css, /@media \(max-width: 760px\)/);
-  assert.match(manual, /note \/ Tips \/ Brain アカウント設計/);
+  assert.match(manual, /note \/ Tips \/ Brain アカウント作成・設計/);
   assert.match(faq, /媒体ごとに別々の設計を保存できます/);
 });
 
