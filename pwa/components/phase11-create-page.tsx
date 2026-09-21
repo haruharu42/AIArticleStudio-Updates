@@ -6,7 +6,7 @@ import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-refe
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { applyWorkspacePresetToArticleDraft } from "@/features/presets/preset-adapters";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
-import { applyAccountDesignToArticleDraft } from "@/lib/account-article-link";
+import { applyAccountDesignToArticleDraft } from "@/features/account-design";
 import { ArticlePresetPanel } from "@/components/article-create/article-preset-panel";
 import {
   ArticleConditionsStep,
