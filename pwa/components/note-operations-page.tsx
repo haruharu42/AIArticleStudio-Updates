@@ -45,7 +45,7 @@ import {
   type NoteArticleOutputSnapshot,
   type NoteOperationProfile,
   type NoteScheduleItem,
-} from "@/lib/note-operations";
+} from "@/features/note";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   AI_PROVIDER_LABELS,
