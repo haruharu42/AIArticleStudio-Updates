@@ -103,8 +103,8 @@ test("active admins get an inquiry inbox, admin-only nav choice, and home unread
   assert.match(adminRoute, /AdminInquiriesPage/);
   assert.match(sections, /id: "inquiries"/);
   assert.match(sections, /href: "\/admin\/inquiries"/);
-  assert.match(tools, /href: "\/admin\/inquiries"/);
-  assert.match(tools, /問い合わせ確認/);
+  assert.match(sections, /問い合わせ確認/);
+  assert.doesNotMatch(tools, /href: "\/admin\/inquiries"/);
 
   assert.match(admin, /未確認/);
   assert.match(admin, /対応中/);
