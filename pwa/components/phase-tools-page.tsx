@@ -22,23 +22,10 @@ const memberTools: ToolCard[] = [
   { href: "/inquiries", category: "サポート", title: "お問い合わせ", description: "追加機能要望、不具合、使い方、アカウント・購入関連を送信し、管理者からの返信を確認します。" },
 ];
 
-const adminTools: ToolCard[] = [
-  { href: "/admin", category: "運用", title: "管理ダッシュボード", description: "ユーザー、利用権、招待コード、要対応項目をまとめて確認します。" },
-  { href: "/admin/inquiries", category: "サポート", title: "問い合わせ確認", description: "ユーザーから届いた要望・不具合・質問を確認し、返信・優先度・対応状況を管理します。" },
-  { href: "/admin/development-prompts", category: "開発支援", title: "AAS開発依頼プロンプト", description: "アップデート・修正・追加機能を対象画面まで選び、ChatGPTへそのまま渡せる依頼文を作成します。" },
-  { href: "/admin/knowledge", category: "ナレッジ", title: "AASナレッジ管理", description: "自由入力されたジャンル候補を匿名集計で確認し、正式Knowledgeへ承認します。" },
-  { href: "/admin/promotion?mode=preview", category: "公開前発信", title: "テスト・公開予告", description: "note等の実運用テスト、開発進捗、公開予定を販売前でも誤認なく記事・SNSへ展開します。" },
-  { href: "/admin/promotion?mode=article", category: "記事販促", title: "紹介・販売記事作成", description: "販売前のテスト共有・公開予告から販売開始後の記事まで発信フェーズに合わせて作成します。" },
-  { href: "/admin/promotion?mode=social", category: "SNS販促", title: "SNSプロモーション", description: "SNSごとに文字数を選び、X Premium長文を含む媒体別の発信素材を作成します。" },
-  { href: "/admin/promotion?mode=campaign", category: "販促設計", title: "キャンペーン設計", description: "販売前のテスト共有・公開予告から販売開始後まで、記事とSNSを連動した14日間の計画を作成します。" },
-  { href: "/admin/promotion?mode=product", category: "製品情報", title: "製品情報管理", description: "宣伝に使用する確認済みの機能、価格、販売URL、注意事項を管理します。" },
-];
-
 export function PhaseToolsPage() {
   const { state } = useSharedAccessState();
 
   const ready = state.kind === "ready";
-  const admin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
   const invite = state.kind === "pending" || state.kind === "entitlement_denied";
   const cards = ready ? memberTools : [];
 
@@ -54,15 +41,6 @@ export function PhaseToolsPage() {
       {state.kind === "signed_out" && <div className="route-notice">ログインすると利用可能な機能が表示されます。</div>}
       {(state.kind === "suspended" || state.kind === "disabled") && <div className="route-notice error">現在のアカウント状態ではPWA機能を利用できません。</div>}
       {invite && <div className="route-notice">PWA機能を使うには利用権が必要です。<Link className="route-inline-link" href="/invite">招待コードを登録</Link></div>}
-
-      {admin && (
-        <section className="admin-only-tools-section" aria-labelledby="admin-only-tools-title">
-          <div className="admin-only-tools-heading"><div><p>ADMIN ONLY</p><h2 id="admin-only-tools-title">管理者専用</h2></div><small>一般ユーザーには表示されません</small></div>
-          <div className="admin-only-tools-grid">
-            {adminTools.map((tool) => <Link key={tool.href} className="admin-only-tool-card" href={tool.href}><span>{tool.category}</span><h3>{tool.title}</h3><p>{tool.description}</p><strong>開く →</strong></Link>)}
-          </div>
-        </section>
-      )}
 
       <section className="tool-grid">
         {cards.map((tool) => <Link key={tool.href} className="tool-card" href={tool.href}><span>{tool.category}</span><h2>{tool.title}</h2><p>{tool.description}</p><strong>開く →</strong></Link>)}
