@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildWorkspacePresetPromptContext } from "@/features/presets/workspace-presets";
 
 import type { ArticleDetail, ArticleSummary } from "@/lib/phase7-articles";
 import type { NoteScheduleItem } from "@/lib/note-operations";
@@ -251,6 +252,7 @@ export function runPrePublishChecks(article: ArticleDetail): PrePublishReport {
 
 export function buildPrePublishReviewPrompt(article: ArticleDetail, report: PrePublishReport): string {
   const body = cleanBody(article);
+  const workspacePresetContext = buildWorkspacePresetPromptContext("workflow");
   const checks = report.checks
     .filter((check) => check.severity !== "pass")
     .map((check) => `- [${check.severity}] ${check.label}: ${check.detail}`)
@@ -265,7 +267,9 @@ export function buildPrePublishReviewPrompt(article: ArticleDetail, report: PreP
 - 本文を書き換えて完成させるのではなく、修正候補と理由を示す。
 - 個人情報、認証情報、秘密情報が含まれていないかも確認する。
 
-【記事情報】
+${workspacePresetContext ? `${workspacePresetContext}
+
+` : ""}【記事情報】
 タイトル: ${article.title}
 掲載先: ${article.publicationTarget}
 無料/有料: ${article.articleType}
@@ -290,6 +294,7 @@ ${body.slice(0, 22000)}
 
 export function buildArticleReusePrompt(article: ArticleDetail, channels: ReuseChannelPlan[]): string {
   const body = cleanBody(article);
+  const workspacePresetContext = buildWorkspacePresetPromptContext("workflow");
   const selected = channels
     .filter((item) => item.targetChars > 0)
     .slice(0, 8)
@@ -305,7 +310,9 @@ export function buildArticleReusePrompt(article: ArticleDetail, channels: ReuseC
 - 元記事の価値を先に少し提供し、過度な煽りや成果保証を使わない。
 - 公開URLが未設定なら、存在しないURLや「リンクから購入」等を作らない。
 
-【元記事】
+${workspacePresetContext ? `${workspacePresetContext}
+
+` : ""}【元記事】
 タイトル: ${article.title}
 掲載先: ${article.publicationTarget}
 記事タイプ: ${article.articleType}
@@ -460,6 +467,7 @@ export function buildSeriesPlanPrompt(input: {
 }): string {
   const count = Math.max(2, Math.min(30, Math.round(input.articleCount)));
   const accountContext = buildPlatformAccountPromptContext(input.platform);
+  const workspacePresetContext = buildWorkspacePresetPromptContext("workflow");
   return `あなたは日本語コンテンツのシリーズ編集者です。
 ${input.platform}で継続して読まれる記事シリーズを設計してください。
 
@@ -469,7 +477,9 @@ ${input.platform}で継続して読まれる記事シリーズを設計してく
 - 各記事が同じ内容の言い換えにならないよう、シリーズ全体で学習・理解が進む順番にする。
 - 未確認の価格・統計・最新仕様を前提にしない。
 
-【シリーズ条件】
+${workspacePresetContext ? `${workspacePresetContext}
+
+` : ""}【シリーズ条件】
 掲載先: ${input.platform}
 シリーズ名: ${input.name || "AIに提案してもらう"}
 想定読者: ${input.audience || "未指定"}
