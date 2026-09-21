@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { AccessStateProvider } from "@/components/access-state-provider";
 import { AdminHomeTopbar } from "@/components/admin-home-topbar";
 import { AppErrorReporter } from "@/components/app-error-reporter";
 import { FreeTrialBanner } from "@/components/free-trial-banner";
@@ -67,13 +68,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="ja">
       <body>
         <ReleaseAudienceGate>
-          <AppErrorReporter />
-          <KnowledgeRuntimeBootstrap />
-          <AdminHomeTopbar />
-          <div className="free-trial-global-shell"><FreeTrialBanner /></div>
-          <ReleaseUpdateManager />
-          {children}
-          <PersistentMobileNav />
+          <AccessStateProvider>
+            <AppErrorReporter />
+            <KnowledgeRuntimeBootstrap />
+            <AdminHomeTopbar />
+            <div className="free-trial-global-shell"><FreeTrialBanner /></div>
+            <ReleaseUpdateManager />
+            {children}
+            <PersistentMobileNav />
+          </AccessStateProvider>
         </ReleaseAudienceGate>
       </body>
     </html>
