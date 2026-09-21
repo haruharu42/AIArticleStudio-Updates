@@ -31,6 +31,7 @@ test("public feature surfaces do not expose development phase numbers", async ()
 test("active PWA access shell avoids frozen Windows and hands successful login back to the current home", async () => {
   const accessShell = await read("components/phase6-app.tsx");
   const home = await read("components/phase18-beginner-home.tsx");
+  const provider = await read("components/access-state-provider.tsx");
 
   assert.doesNotMatch(accessShell, /Windows版/);
   assert.doesNotMatch(accessShell, /PWA ARTICLE LIBRARY · PHASE|<p className="eyebrow">PHASE\s+\d/);
@@ -39,8 +40,9 @@ test("active PWA access shell avoids frozen Windows and hands successful login b
   assert.match(accessShell, /ホームを準備しています/);
   assert.match(accessShell, /navigateRoute\("\/create"\)/);
   assert.match(home, /<Phase7App onAccessReady=\{handleAccessReady\} \/>/);
-  assert.match(home, /const activeClient = nextClient \?\? getSupabaseClient\(\)/);
-  assert.match(home, /const refresh = useCallback[\s\S]*?\}, \[\]\);/);
+  assert.match(home, /useSharedAccessState\(\)/);
+  assert.match(provider, /const refresh = useCallback[\s\S]*?loadAccessState\(activeClient\)[\s\S]*?\}, \[\]\);/);
+  assert.match(provider, /onAuthStateChange/);
 });
 
 test("feature hub uses user-facing categories instead of phase badges", async () => {
