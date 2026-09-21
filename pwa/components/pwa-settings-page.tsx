@@ -3,10 +3,10 @@
 import Link from "next/link";
 
 import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { useEffect, useState } from "react";
 
 import { signOutCurrentBrowser } from "@/lib/auth-session";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { readMobileNavAlways, writeMobileNavAlways } from "@/lib/mobile-nav-preference";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
@@ -27,10 +27,9 @@ import {
   type WritingTone,
 } from "@/lib/user-personalization";
 
-type SettingsState = AccessState | { kind: "loading" } | { kind: "unavailable" };
 
 export function PwaSettingsPage() {
-  const [state, setState] = useState<SettingsState>({ kind: "loading" });
+  const { state } = useSharedAccessState();
   const [alwaysShowNav, setAlwaysShowNav] = useState(true);
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
   const [writingBusy, setWritingBusy] = useState(false);
@@ -44,28 +43,6 @@ export function PwaSettingsPage() {
     queueMicrotask(() => {
       if (active) setAlwaysShowNav(readMobileNavAlways());
     });
-
-    let client: ReturnType<typeof getSupabaseClient>;
-    try {
-      client = getSupabaseClient();
-    } catch {
-      queueMicrotask(() => {
-        if (active) setState({ kind: "unavailable" });
-      });
-      return () => {
-        active = false;
-      };
-    }
-
-    void loadAccessState(client).then(
-      (next) => {
-        if (active) setState(next);
-      },
-      () => {
-        if (active) setState({ kind: "unavailable" });
-      },
-    );
-
     return () => {
       active = false;
     };
