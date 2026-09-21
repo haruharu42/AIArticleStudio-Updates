@@ -93,6 +93,17 @@ export function Phase11CreatePage() {
   const articleQuotaInFlightRef = useRef(false);
   const workspacePresetAppliedRef = useRef(false);
 
+  const persistWizardProgress = useCallback(() => {
+    if (gate.kind !== "ready" || progressOwnerIdRef.current !== gate.ownerId || createdId) return;
+    saveArticleWizardProgress(gate.ownerId, {
+      step,
+      draft,
+      magazinePlan,
+      tagsText,
+      activePresetId,
+    });
+  }, [activePresetId, createdId, draft, gate, magazinePlan, step, tagsText]);
+
   useEffect(() => {
     let active = true;
     setRuntimePlatformAccountDesigns(null);
@@ -159,9 +170,28 @@ export function Phase11CreatePage() {
   }, []);
 
   useEffect(() => {
-    if (gate.kind !== "ready" || progressOwnerIdRef.current !== gate.ownerId || createdId) return;
-    saveArticleWizardProgress(gate.ownerId, { step, draft, magazinePlan, tagsText, activePresetId });
-  }, [gate, step, draft, magazinePlan, tagsText, activePresetId, createdId]);
+    persistWizardProgress();
+  }, [persistWizardProgress]);
+
+  useEffect(() => {
+    if (gate.kind !== "ready") return;
+
+    const persistBeforePageLeaves = () => {
+      persistWizardProgress();
+    };
+    const persistWhenHidden = () => {
+      if (document.visibilityState === "hidden") persistWizardProgress();
+    };
+
+    window.addEventListener("pagehide", persistBeforePageLeaves);
+    window.addEventListener("beforeunload", persistBeforePageLeaves);
+    document.addEventListener("visibilitychange", persistWhenHidden);
+    return () => {
+      window.removeEventListener("pagehide", persistBeforePageLeaves);
+      window.removeEventListener("beforeunload", persistBeforePageLeaves);
+      document.removeEventListener("visibilitychange", persistWhenHidden);
+    };
+  }, [gate.kind, persistWizardProgress]);
 
   useEffect(() => {
     if (
@@ -449,6 +479,7 @@ export function Phase11CreatePage() {
             localTitles={localTitles}
             titlePrompt={titlePrompt}
             onGenerate={generateTitleCandidates}
+            onBeforeExternalLaunch={persistWizardProgress}
             setMessage={setMessage}
           />
         )}
@@ -460,6 +491,7 @@ export function Phase11CreatePage() {
             articlePromptReady={articlePromptReady}
             articlePrompt={articlePrompt}
             onGenerate={generateArticlePrompt}
+            onBeforeExternalLaunch={persistWizardProgress}
             setMessage={setMessage}
           />
         )}
