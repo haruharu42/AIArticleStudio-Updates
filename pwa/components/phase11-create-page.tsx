@@ -224,12 +224,10 @@ export function Phase11CreatePage() {
 
   const applyActiveAccountDesign = () => {
     if (!activeAccountDesign?.ready) return;
-    setDraft((current) => {
-      const result = applyAccountDesignToArticleDraft(current, activeAccountDesign);
-      setTagsText(result.draft.tags.join(", "));
-      setMessage(`アカウント設計を記事条件へ反映しました。\n${result.summary.join(" / ")}`);
-      return result.draft;
-    });
+    const result = applyAccountDesignToArticleDraft(draft, activeAccountDesign);
+    setDraft(result.draft);
+    setTagsText(result.draft.tags.join(", "));
+    setMessage(`アカウント設計を記事条件へ反映しました。\n${result.summary.join(" / ")}`);
   };
 
   const generateTitleCandidates = async () => {
