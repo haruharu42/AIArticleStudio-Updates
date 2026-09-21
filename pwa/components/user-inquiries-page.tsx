@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
+import { useSharedAccessState } from "@/components/access-state-provider";
 import {
   SUPPORT_CATEGORY_OPTIONS,
   SUPPORT_STATUS_LABELS,
@@ -22,7 +22,6 @@ import {
 } from "@/lib/support-center";
 import { getSupabaseClient } from "@/lib/supabase";
 
-type PageState = AccessState | { kind: "loading" } | { kind: "unavailable" };
 
 function formatDate(value: string): string {
   if (!value) return "—";
@@ -40,7 +39,7 @@ function formatDate(value: string): string {
 }
 
 export function UserInquiriesPage() {
-  const [state, setState] = useState<PageState>({ kind: "loading" });
+  const { state } = useSharedAccessState();
   const [requests, setRequests] = useState<SupportRequest[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [messages, setMessages] = useState<SupportMessage[]>([]);
@@ -67,29 +66,26 @@ export function UserInquiriesPage() {
   };
 
   useEffect(() => {
+    if (state.kind !== "ready") return;
     let active = true;
-    const boot = async () => {
-      try {
-        const client = getSupabaseClient();
-        const next = await loadAccessState(client);
-        if (!active) return;
-        setState(next);
-        if (next.kind !== "ready") return;
-        setListBusy(true);
-        try {
-          const items = await listMySupportRequests(client, next.profile.id);
-          if (!active) return;
+    queueMicrotask(() => {
+      if (active) setListBusy(true);
+    });
+    void listMySupportRequests(getSupabaseClient(), state.profile.id).then(
+      (items) => {
+        if (active) {
           setRequests(items);
-        } finally {
-          if (active) setListBusy(false);
+          setMessage("");
         }
-      } catch {
-        if (active) setState({ kind: "unavailable" });
-      }
-    };
-    void boot();
+      },
+      (error) => {
+        if (active) setMessage(error instanceof Error ? error.message : "問い合わせ履歴を読み込めませんでした。");
+      },
+    ).finally(() => {
+      if (active) setListBusy(false);
+    });
     return () => { active = false; };
-  }, []);
+  }, [state]);
 
   useEffect(() => {
     if (!selectedId || state.kind !== "ready") return;
