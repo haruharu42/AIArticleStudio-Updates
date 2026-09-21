@@ -34,7 +34,8 @@ export type MobileNavItemKey =
   | "adminReleases"
   | "adminMfa"
   | "adminOperations"
-  | "adminInquiries";
+  | "adminInquiries"
+  | "adminDevPrompts";
 
 export type MobileNavItem = {
   key: MobileNavItemKey;
@@ -68,6 +69,7 @@ export const USER_MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
 
 export const ADMIN_MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   { key: "adminInquiries", label: "問合せ確認", icon: "✉", href: "/admin/inquiries" },
+  { key: "adminDevPrompts", label: "開発依頼", icon: "⌘", href: "/admin/development-prompts" },
   { key: "adminDashboard", label: "管理", icon: "◆", href: "/admin" },
   { key: "adminUsers", label: "ユーザー", icon: "♟", href: "/admin/users" },
   { key: "adminFree", label: "無料設定", icon: "◉", href: "/admin/free-trial" },
