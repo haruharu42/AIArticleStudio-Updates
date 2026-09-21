@@ -172,7 +172,11 @@ export function ContentWorkflowPage() {
 
   useEffect(() => {
     if (!ownerId) return;
-    void reload();
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void reload();
+    });
+    return () => { active = false; };
   }, [ownerId, reload]);
 
   useEffect(() => {
