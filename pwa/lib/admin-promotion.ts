@@ -221,12 +221,13 @@ export function buildAdminArticlePromotionPrompt(
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
   return `あなたは日本語のプロダクトマーケティング編集者です。
-AI Article Studioを紹介・販売するための完成記事を作成してください。
+AI Article Studioについて、現在の発信フェーズに合った完成記事を作成してください。販売前なら販売記事にせず、テスト状況・開発進捗・公開予告として自然に伝えてください。
 
 ${FACT_SAFETY}
 
 【掲載条件】
 掲載先: ${input.platform}
+発信フェーズ: ${input.phase || facts.releaseStage || "要確認"}
 目的: ${input.purpose}
 想定読者: ${input.audience || facts.targetAudience || "要確認"}
 特に紹介したい内容: ${input.focus || "製品全体"}
@@ -241,9 +242,10 @@ ${factsBlock(facts)}
 1. 一目で内容が伝わるタイトル候補を7案
 2. 採用推奨タイトルを1案
 3. そのまま掲載しやすいMarkdown完成記事
-4. 構成は「読者の悩み → 製品でできること → 主な機能 → 利用イメージ → 向いている人 → 注意事項 → CTA」を基本にする
-5. ${input.platform}の読者に合わせて見出し・文章量・CTAの強さを調整する
-6. 記事末尾に、確認が必要な情報があれば「公開前チェック」として列挙する`;
+4. 販売前・テスト中なら「何を試しているか → 現時点で確認できたこと → 改善中/準備中のこと → 公開予定 → 続報CTA」を基本にする
+5. 販売開始後なら「読者の悩み → 製品でできること → 主な機能 → 利用イメージ → 向いている人 → 注意事項 → CTA」を基本にする
+6. ${input.platform}の読者に合わせて見出し・文章量・CTAの強さを調整する
+7. 記事末尾に、確認が必要な情報があれば「公開前チェック」として列挙する`;
 }
 
 export function buildAdminSocialPromotionPrompt(
