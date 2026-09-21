@@ -23,19 +23,19 @@ import {
   type ReuseChannelPlan,
   type ReusePlatform,
   type SeriesPlatform,
-} from "@/lib/content-lifecycle";
+} from "@/features/workflow";
 import {
   listNoteSchedule,
   setNoteScheduleStatus,
   todayJstDateKey,
   type NoteScheduleItem,
-} from "@/lib/note-operations";
+} from "@/features/note";
 import {
   getCloudArticleDetail,
   listCloudArticles,
   type ArticleDetail,
   type ArticleSummary,
-} from "@/lib/phase7-articles";
+} from "@/features/article";
 import { getSupabaseClient } from "@/lib/supabase";
 import { AI_PROVIDER_LABELS, type AiProvider } from "@/lib/user-personalization";
 
