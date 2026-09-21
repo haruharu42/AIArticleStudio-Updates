@@ -24,7 +24,14 @@ export type MobileNavItemKey =
   | "profile"
   | "missions"
   | "manual"
-  | "settings";
+  | "settings"
+  | "adminDashboard"
+  | "adminUsers"
+  | "adminFree"
+  | "adminSales"
+  | "adminReleases"
+  | "adminMfa"
+  | "adminOperations";
 
 export type MobileNavItem = {
   key: MobileNavItemKey;
@@ -35,7 +42,7 @@ export type MobileNavItem = {
 
 const FALLBACK_MOBILE_NAV_ITEM: MobileNavItem = { key: "create", label: "作成", icon: "＋", href: "/create" };
 
-export const MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
+export const USER_MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   FALLBACK_MOBILE_NAV_ITEM,
   { key: "library", label: "ライブラリ", icon: "▤", href: "/?section=library" },
   { key: "noteOps", label: "note運営", icon: "▣", href: "/note-operations" },
@@ -54,10 +61,34 @@ export const MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   { key: "settings", label: "設定", icon: "⚙", href: "/settings" },
 ] as const;
 
+export const ADMIN_MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
+  { key: "adminDashboard", label: "管理", icon: "◆", href: "/admin" },
+  { key: "adminUsers", label: "ユーザー", icon: "♟", href: "/admin/users" },
+  { key: "adminFree", label: "無料設定", icon: "◉", href: "/admin/free-trial" },
+  { key: "adminSales", label: "販売", icon: "¥", href: "/admin/sales" },
+  { key: "adminReleases", label: "更新管理", icon: "↻", href: "/admin/releases" },
+  { key: "adminMfa", label: "MFA", icon: "◇", href: "/admin/security" },
+  { key: "adminOperations", label: "運用", icon: "⚑", href: "/admin/operations" },
+] as const;
+
+export const MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
+  ...USER_MOBILE_NAV_ITEM_OPTIONS,
+  ...ADMIN_MOBILE_NAV_ITEM_OPTIONS,
+] as const;
+
 export const DEFAULT_MOBILE_NAV_ITEMS: readonly MobileNavItemKey[] = ["create", "library", "ranking", "profile"];
 export const MAX_CUSTOM_MOBILE_NAV_ITEMS = 4;
 
-const VALID_MOBILE_NAV_KEYS = new Set<MobileNavItemKey>(MOBILE_NAV_ITEM_OPTIONS.map((item) => item.key));
+const USER_VALID_MOBILE_NAV_KEYS = new Set<MobileNavItemKey>(USER_MOBILE_NAV_ITEM_OPTIONS.map((item) => item.key));
+const ADMIN_VALID_MOBILE_NAV_KEYS = new Set<MobileNavItemKey>(ADMIN_MOBILE_NAV_ITEM_OPTIONS.map((item) => item.key));
+
+export function mobileNavOptionsFor(isAdmin: boolean): readonly MobileNavItem[] {
+  return isAdmin ? MOBILE_NAV_ITEM_OPTIONS : USER_MOBILE_NAV_ITEM_OPTIONS;
+}
+
+export function isAdminMobileNavItem(key: MobileNavItemKey): boolean {
+  return ADMIN_VALID_MOBILE_NAV_KEYS.has(key);
+}
 
 export function readMobileNavAlways(): boolean {
   if (typeof window === "undefined") return true;
@@ -70,11 +101,15 @@ export function writeMobileNavAlways(value: boolean): void {
   window.dispatchEvent(new CustomEvent<boolean>(MOBILE_NAV_PREFERENCE_EVENT, { detail: value }));
 }
 
-export function normalizeMobileNavItems(value: unknown): MobileNavItemKey[] {
+export function normalizeMobileNavItems(value: unknown, isAdmin = false): MobileNavItemKey[] {
   const next: MobileNavItemKey[] = [];
+  const allowedKeys = isAdmin
+    ? new Set<MobileNavItemKey>([...USER_VALID_MOBILE_NAV_KEYS, ...ADMIN_VALID_MOBILE_NAV_KEYS])
+    : USER_VALID_MOBILE_NAV_KEYS;
+
   if (Array.isArray(value)) {
     for (const raw of value) {
-      if (typeof raw !== "string" || !VALID_MOBILE_NAV_KEYS.has(raw as MobileNavItemKey)) continue;
+      if (typeof raw !== "string" || !allowedKeys.has(raw as MobileNavItemKey)) continue;
       const key = raw as MobileNavItemKey;
       if (!next.includes(key)) next.push(key);
       if (next.length >= MAX_CUSTOM_MOBILE_NAV_ITEMS) break;
@@ -86,7 +121,7 @@ export function normalizeMobileNavItems(value: unknown): MobileNavItemKey[] {
     if (!next.includes(fallback)) next.push(fallback);
   }
 
-  for (const option of MOBILE_NAV_ITEM_OPTIONS) {
+  for (const option of mobileNavOptionsFor(isAdmin)) {
     if (next.length >= MAX_CUSTOM_MOBILE_NAV_ITEMS) break;
     if (!next.includes(option.key)) next.push(option.key);
   }
@@ -99,7 +134,7 @@ export function mobileNavItemsStorageKey(userId?: string | null): string {
   return normalized ? `${MOBILE_NAV_ITEMS_KEY}:${normalized}` : MOBILE_NAV_ITEMS_KEY;
 }
 
-export function readMobileNavItems(userId?: string | null): MobileNavItemKey[] {
+export function readMobileNavItems(userId?: string | null, isAdmin = false): MobileNavItemKey[] {
   if (typeof window === "undefined") return [...DEFAULT_MOBILE_NAV_ITEMS];
   const scopedKey = mobileNavItemsStorageKey(userId);
   let stored = window.localStorage.getItem(scopedKey);
@@ -112,7 +147,7 @@ export function readMobileNavItems(userId?: string | null): MobileNavItemKey[] {
   if (stored === null) return [...DEFAULT_MOBILE_NAV_ITEMS];
 
   try {
-    return normalizeMobileNavItems(JSON.parse(stored));
+    return normalizeMobileNavItems(JSON.parse(stored), isAdmin);
   } catch {
     return [...DEFAULT_MOBILE_NAV_ITEMS];
   }
@@ -121,8 +156,9 @@ export function readMobileNavItems(userId?: string | null): MobileNavItemKey[] {
 export function writeMobileNavItems(
   value: readonly MobileNavItemKey[],
   userId?: string | null,
+  isAdmin = false,
 ): MobileNavItemKey[] {
-  const next = normalizeMobileNavItems([...value]);
+  const next = normalizeMobileNavItems([...value], isAdmin);
   if (typeof window === "undefined") return next;
 
   const normalizedUserId = userId?.trim() ?? "";
