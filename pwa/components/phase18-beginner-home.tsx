@@ -20,6 +20,7 @@ import {
 } from "@/lib/creator-system";
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { listCloudArticles, type ArticleStatus, type ArticleSummary } from "@/lib/phase7-articles";
+import { getSupportNotificationSummary } from "@/lib/support-center";
 import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
@@ -156,6 +157,7 @@ export function Phase18BeginnerHome() {
   const [rankingLoaded, setRankingLoaded] = useState(false);
   const [rankingError, setRankingError] = useState(false);
   const [quickSetup, setQuickSetup] = useState<QuickSetup>(QUICK_SETUP_INITIAL);
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
 
   const refresh = useCallback(async (nextClient?: SupabaseClient) => {
     try {
@@ -257,6 +259,14 @@ export function Phase18BeginnerHome() {
         setRankingError(true);
       },
     );
+    void getSupportNotificationSummary(client).then(
+      (value) => {
+        if (active) setSupportUnreadCount(value.unreadCount);
+      },
+      () => {
+        if (active) setSupportUnreadCount(0);
+      },
+    );
     return () => { active = false; };
   }, [client, state]);
 
@@ -293,6 +303,14 @@ export function Phase18BeginnerHome() {
 
   const profile = state.profile;
   const displayName = dashboard?.publicName || profile.display_name || "ユーザー";
+  const activeAdmin = profile.role === "admin" && profile.status === "active";
+  const supportNotificationHref = activeAdmin ? "/admin/inquiries" : "/inquiries";
+  const hasSupportNotification = supportUnreadCount > 0;
+  const headerNotificationHref = hasSupportNotification ? supportNotificationHref : "/missions";
+  const headerNotificationLabel = hasSupportNotification
+    ? `問い合わせ通知 ${supportUnreadCount}件`
+    : "ミッション・お知らせ";
+  const hasHeaderNotification = Boolean(dashboard?.claimableMissions) || hasSupportNotification;
   const mayLeave = () => !imageBusy && (!imageUnsaved || window.confirm("未保存の画像情報・選択した画像を破棄して移動しますか？"));
 
   const openSection = (next: Section) => {
@@ -313,7 +331,7 @@ export function Phase18BeginnerHome() {
   if (section === "library") {
     return (
       <div className="reference-home">
-        <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
+        <AasReferenceHeader hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
         <main className="reference-home-main beginner-library-main">
           <div className="beginner-library-toolbar">
             <button type="button" onClick={() => openSection("home")}>← ホーム</button>
@@ -333,7 +351,7 @@ export function Phase18BeginnerHome() {
 
   return (
     <div className="reference-home">
-      <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
+      <AasReferenceHeader hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
       <main className="reference-home-main">
         <div className="reference-home-heading">
           <h1>⌂ ホーム</h1>
