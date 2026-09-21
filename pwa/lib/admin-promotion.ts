@@ -343,3 +343,48 @@ ${factsBlock(facts)}
 - 同じ訴求を連投しないための切り口ローテーション
 - 公開前に人が確認すべき製品情報のチェックリスト`;
 }
+
+export function buildAdminPreviewPromotionPrompt(
+  facts: AdminProductFacts,
+  input: AdminPreviewPromotionInput,
+): string {
+  const knowledge = compileKnowledgeContext({
+    task: "promotion",
+    publicationTarget: input.testedPlatform === "note" ? "note" : undefined,
+    audience: input.audience || facts.targetAudience,
+    purpose: input.updateType,
+  }).promptBlock;
+  const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
+  return `あなたはAI Article Studioの開発・公開予告コンテンツ担当者です。
+まだ販売前の段階で、運営者自身が行っている実運用テストや開発進捗、今後の公開予定を誠実に伝えるコンテンツを作成してください。
+
+${FACT_SAFETY}
+
+【今回の発信】
+種類: ${input.updateType}
+テスト・掲載先: ${input.testedPlatform || "要確認"}
+今回共有してよい確認済み内容:
+${input.verifiedUpdate || "未入力。確認済み製品情報にある事実だけで構成し、具体的なテスト成果は作らない。"}
+公開予定: ${input.releasePlan || facts.releasePlan || "未定"}
+想定読者: ${input.audience || facts.targetAudience || "要確認"}
+使用媒体: ${input.channels}
+CTA: ${input.cta || "続報を待ってもらう"}
+
+【SNS文字数設定】
+${socialLengthPlanBlock(input.socialLengths)}
+
+${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
+
+【確認済み製品情報】
+${factsBlock(facts)}
+
+【出力】
+1. ${input.testedPlatform || "note"}向けの「開発・実運用テスト報告」記事タイトル候補を7案
+2. 読者が状況を誤解しない完成記事。販売前であること、何をテストしているか、現時点で確認できたこと、改善中の点、公開予定、続報の受け取り方を整理する
+3. 指定SNSそれぞれの投稿案。上記の文字数設定を守り、各投稿に概算文字数を添える
+4. Xでは設定が280文字を超える場合はPremium長文向けとして作成する
+5. Threadsで500文字を超える場合は長文テキスト添付向けとして作成する
+6. YouTube Shortsはタイトル100文字以内に加えて、設定文字数の概要欄を作る
+7. 公開日・価格・販売URLが未確定なら、それらを断定せず「公開前チェック」へ回す
+8. 実際に確認していない成果・PV・売上・反応・レビュー・感想を作らない`;
+}
