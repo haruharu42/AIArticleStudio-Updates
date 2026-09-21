@@ -200,3 +200,49 @@ test("mobile nav choices are isolated between accounts on the same device", asyn
   assert.match(customizer, /ログイン中のユーザーごとに保存されます/);
   assert.match(settings, /profile\s*\?\s*<MobileNavCustomizer userId=\{profile\.id\}/);
 });
+
+
+test("admin mobile navigation tools are selectable only for active admins and mobile top shortcuts are hidden", async () => {
+  const [prefs, shared, customizer, settings, topbar, css, guard] = await Promise.all([
+    read("lib/mobile-nav-preference.ts"),
+    read("components/shared-mobile-bottom-nav.tsx"),
+    read("components/mobile-nav-customizer.tsx"),
+    read("components/pwa-settings-page.tsx"),
+    read("components/admin-home-topbar.tsx"),
+    read("app/phase24-admin-promotion.css"),
+    read("components/admin-route-guard.tsx"),
+  ]);
+
+  for (const key of ["adminDashboard", "adminUsers", "adminFree", "adminSales", "adminReleases", "adminMfa", "adminOperations"]) {
+    assert.match(prefs, new RegExp(key));
+  }
+  for (const href of ["/admin", "/admin/users", "/admin/free-trial", "/admin/sales", "/admin/releases", "/admin/security", "/admin/operations"]) {
+    assert.match(prefs, new RegExp(href.replaceAll("/", "\\/")));
+  }
+
+  assert.match(prefs, /ADMIN_MOBILE_NAV_ITEM_OPTIONS/);
+  assert.match(prefs, /mobileNavOptionsFor\(isAdmin: boolean\)/);
+  assert.match(prefs, /normalizeMobileNavItems\(value: unknown, isAdmin = false\)/);
+  assert.match(prefs, /allowedKeys = isAdmin/);
+  assert.match(prefs, /return isAdmin \? MOBILE_NAV_ITEM_OPTIONS : USER_MOBILE_NAV_ITEM_OPTIONS/);
+
+  assert.match(shared, /select\("id,role,status"\)/);
+  assert.match(shared, /data\.role === "admin"/);
+  assert.match(shared, /data\.status === "active"/);
+  assert.match(shared, /readMobileNavItems\(userId, isAdmin\)/);
+  assert.match(shared, /setIsAdmin\(false\)/);
+
+  assert.match(customizer, /mobileNavOptionsFor\(isAdmin\)/);
+  assert.match(customizer, /管理者アカウントでは/);
+  assert.match(customizer, /activeな管理者にだけ表示されます/);
+  assert.match(settings, /profile\.role === "admin" && profile\.status === "active"/);
+
+  assert.match(topbar, /data\.role === "admin"/);
+  assert.match(topbar, /data\.status === "active"/);
+  assert.match(css, /@media \(max-width: 899px\)[\s\S]*\.admin-home-topbar[\s\S]*display: none/);
+
+  assert.match(guard, /role/);
+  assert.match(guard, /admin/);
+  assert.match(guard, /status/);
+  assert.doesNotMatch(`${prefs}\n${shared}\n${customizer}\n${settings}`, /sb_secret_|service[_-]?role|sk_(?:live|test)_|whsec_/i);
+});
