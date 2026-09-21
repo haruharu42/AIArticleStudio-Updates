@@ -3,6 +3,7 @@ import { AccessStateProvider } from "@/components/access-state-provider";
 import { AdminHomeTopbar } from "@/components/admin-home-topbar";
 import { AppErrorReporter } from "@/components/app-error-reporter";
 import { FreeTrialBanner } from "@/components/free-trial-banner";
+import { WorkspacePresetProvider } from "@/features/presets/workspace-preset-provider";
 import { KnowledgeRuntimeBootstrap } from "@/components/knowledge-runtime-bootstrap";
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
 import { ReleaseAudienceGate } from "@/components/release-audience-gate";
@@ -71,13 +72,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <ReleaseAudienceGate>
           <AccessStateProvider>
-            <AppErrorReporter />
-            <KnowledgeRuntimeBootstrap />
-            <AdminHomeTopbar />
-            <div className="free-trial-global-shell"><FreeTrialBanner /></div>
-            <ReleaseUpdateManager />
-            {children}
-            <PersistentMobileNav />
+            <WorkspacePresetProvider>
+              <AppErrorReporter />
+              <KnowledgeRuntimeBootstrap />
+              <AdminHomeTopbar />
+              <div className="free-trial-global-shell"><FreeTrialBanner /></div>
+              <ReleaseUpdateManager />
+              {children}
+              <PersistentMobileNav />
+            </WorkspacePresetProvider>
           </AccessStateProvider>
         </ReleaseAudienceGate>
       </body>
