@@ -547,6 +547,28 @@ export function AdminPromotionPage() {
         </section>
       )}
 
+      {mode === "preview" && (
+        <section className="admin-promo-panel admin-promo-builder">
+          <div className="admin-promo-section-title"><div><p className="eyebrow">PRE-LAUNCH UPDATE</p><h2>テスト・開発進捗・公開予告</h2></div></div>
+          <p className="admin-promo-help">まだ販売していない段階でも使えます。自分でnote等を実運用テストした内容、改善中の点、公開予定を「販売中」と誤解されない形で記事・SNSへ展開します。</p>
+          <div className="admin-promo-form-grid compact">
+            <SelectWithCustomField label="発信内容" value={preview.updateType} onChange={(value) => setPreview((current) => ({ ...current, updateType: value }))} options={PREVIEW_UPDATE_OPTIONS} customPlaceholder="今回の発信内容を入力" />
+            <SelectWithCustomField label="テスト・掲載先" value={preview.testedPlatform} onChange={(value) => setPreview((current) => ({ ...current, testedPlatform: value }))} options={TESTED_PLATFORM_OPTIONS} customPlaceholder="例: note / 自分のブログ" />
+            <TextField label="今回共有してよい確認済み内容" value={preview.verifiedUpdate} onChange={(value) => setPreview((current) => ({ ...current, verifiedUpdate: value }))} placeholder="例: AASで作った記事を自分のnoteへ掲載し、作成フローと公開までの操作を確認した。確認していない成果や反応は書かない。" multiline />
+            <TextField label="今回伝える公開予定" value={preview.releasePlan} onChange={(value) => setPreview((current) => ({ ...current, releasePlan: value }))} placeholder="未確定なら「時期未定」。確定済みの予定だけ入力" />
+            <SelectWithCustomField label="想定読者" value={preview.audience} onChange={(value) => setPreview((current) => ({ ...current, audience: value }))} options={AUDIENCE_OPTIONS} customPlaceholder="想定読者を入力" />
+            <SelectWithCustomField label="使用媒体" value={preview.channels} onChange={(value) => setPreview((current) => ({ ...current, channels: value }))} options={CHANNEL_PRESET_OPTIONS} customPlaceholder="例: note, X, Instagram" />
+            <SelectWithCustomField label="CTA・誘導先" value={preview.cta} onChange={(value) => setPreview((current) => ({ ...current, cta: value }))} options={CTA_OPTIONS} customPlaceholder="CTA・誘導先を入力" />
+          </div>
+          <div className="admin-promo-prelaunch-note">
+            <strong>販売前モード</strong>
+            <span>価格・販売URL・公開日が未確定なら断定しません。実際に確認していないPV、売上、反応、レビュー、感想も作成しません。</span>
+          </div>
+          <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
+          <PromptOutput prompt={previewPrompt} onCopy={() => void copyPrompt(previewPrompt)} />
+        </section>
+      )}
+
       {mode === "article" && (
         <section className="admin-promo-panel admin-promo-builder">
           <div className="admin-promo-section-title"><div><p className="eyebrow">SALES ARTICLE</p><h2>販売・宣伝記事作成</h2></div></div>
