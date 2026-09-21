@@ -388,7 +388,7 @@ function PromptOutput({ prompt, onCopy }: { prompt: string; onCopy: () => void }
       <div className="admin-promo-ai-actions">
         {(Object.keys(AI_APP_LINKS) as AiAppKey[]).map((key) => <button key={key} type="button" onClick={() => launchAiApp(key)}>{AI_APP_LINKS[key].name}を開く</button>)}
       </div>
-      <p>プロンプトをコピーしてAIへ渡すと、確認済み製品情報を基準に販売記事・SNS素材を作成できます。</p>
+      <p>プロンプトをコピーしてAIへ渡すと、確認済み情報だけを基準にテスト報告・公開予告・紹介記事・SNS素材を作成できます。</p>
     </section>
   );
 }
@@ -459,8 +459,27 @@ export function AdminPromotionPage() {
   }, [facts.features]);
 
   const articlePrompt = useMemo(() => buildAdminArticlePromotionPrompt(facts, article), [facts, article]);
-  const socialPrompt = useMemo(() => buildAdminSocialPromotionPrompt(facts, social), [facts, social]);
-  const campaignPrompt = useMemo(() => buildAdminCampaignPrompt(facts, campaign), [facts, campaign]);
+  const socialPrompt = useMemo(
+    () => buildAdminSocialPromotionPrompt(facts, {
+      ...social,
+      lengthPresetId: socialPresetIds[social.platform],
+      targetChars: socialLengths[social.platform],
+    }),
+    [facts, social, socialLengths, socialPresetIds],
+  );
+  const campaignPrompt = useMemo(
+    () => buildAdminCampaignPrompt(facts, { ...campaign, socialLengths }),
+    [facts, campaign, socialLengths],
+  );
+  const previewPrompt = useMemo(
+    () => buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths }),
+    [facts, preview, socialLengths],
+  );
+
+  const updateSocialLength = (platform: AdminSocialPlatform, presetId: string, targetChars: number) => {
+    setSocialPresetIds((current) => ({ ...current, [platform]: presetId }));
+    setSocialLengths((current) => ({ ...current, [platform]: sanitizeSocialTargetChars(targetChars) }));
+  };
 
   const saveFacts = () => {
     try {
