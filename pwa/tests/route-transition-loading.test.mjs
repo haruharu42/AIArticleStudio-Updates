@@ -59,3 +59,21 @@ test("compact route progress stays small and respects reduced motion", async () 
   assert.match(css, /@keyframes aas-route-loading/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
+
+
+test("settings, tools, and inquiries reuse the root access state instead of refetching it on mount", async () => {
+  const [settings, tools, inquiries] = await Promise.all([
+    read("components/pwa-settings-page.tsx"),
+    read("components/phase-tools-page.tsx"),
+    read("components/user-inquiries-page.tsx"),
+  ]);
+
+  for (const source of [settings, tools, inquiries]) {
+    assert.match(source, /useSharedAccessState\(\)/);
+    assert.doesNotMatch(source, /loadAccessState/);
+  }
+
+  assert.match(tools, /import Link from "next\/link"/);
+  assert.match(tools, /<Link className="route-back" href="\/"/);
+  assert.doesNotMatch(tools, /<a className="route-back" href="\/"/);
+});
