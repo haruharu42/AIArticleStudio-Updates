@@ -56,6 +56,8 @@ test("settings are compact accordion sections and include impact-preview preset 
   assert.match(settings, /openSection === "navigation"/);
   assert.match(settings, /openSection === "personalization"/);
   assert.match(settings, /openSection === "account"/);
+  assert.match(settings, /useState<SettingsSection \| null>\(null\)/);
+  assert.match(settings, /current === id \? null : id/);
 
   assert.match(control, /現在のプリセットで変わる内容/);
   assert.match(control, /FEATURE_SWITCHES/);
@@ -149,4 +151,33 @@ test("workspace preset provider persists across routes and recomputes dependent 
   assert.match(workflow, /\[reuseDetail, enabledReuseChannels, workspacePreference\]/);
   assert.match(promotion, /\[facts, article, workspacePreference\]/);
   assert.match(promotion, /\[facts, preview, socialLengths, workspacePreference\]/);
+});
+
+
+test("Phase 45 feature boundaries keep domain imports stable without deleting legacy contracts", async () => {
+  const [structure, readme, workflow, note, support, create, nav] = await Promise.all([
+    read("STRUCTURE.md"),
+    read("features/README.md"),
+    read("components/content-workflow-page.tsx"),
+    read("components/note-operations-page.tsx"),
+    read("components/user-inquiries-page.tsx"),
+    read("components/phase11-create-page.tsx"),
+    read("components/persistent-mobile-nav.tsx"),
+  ]);
+
+  assert.match(structure, /Phase 45 feature-oriented structure/);
+  for (const domain of ["article", "account-design", "note", "workflow", "social", "images", "presets", "support", "admin", "navigation"]) {
+    assert.match(readme, new RegExp(`\\`${domain}/\\``));
+  }
+
+  assert.match(workflow, /from "@\/features\/workflow"/);
+  assert.match(workflow, /from "@\/features\/note"/);
+  assert.match(workflow, /from "@\/features\/article"/);
+  assert.match(note, /from "@\/features\/note"/);
+  assert.match(support, /from "@\/features\/support"/);
+  assert.match(create, /from "@\/features\/account-design"/);
+  assert.match(nav, /from "@\/features\/navigation"/);
+
+  assert.match(structure, /Feature modules may temporarily re-export legacy implementation/);
+  assert.match(structure, /risky mass rename/);
 });
