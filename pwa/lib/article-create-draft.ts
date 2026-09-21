@@ -47,6 +47,12 @@ export function createInitialArticleDraft(
   };
   if (!params) return next;
 
+  const theme = params.get("theme");
+  if (theme) next.theme = theme.slice(0, 1000);
+
+  const title = params.get("title");
+  if (title) next.title = title.slice(0, 500);
+
   const publicationTarget = params.get("publicationTarget");
   if (publicationTarget === "note" || publicationTarget === "tips" || publicationTarget === "brain" || publicationTarget === "blog") {
     next.publicationTarget = publicationTarget;
@@ -104,9 +110,14 @@ export function initialDraftFromLocation(): ArticleCreationDraft {
 
 export function initialMessageFromLocation(): string {
   if (typeof window === "undefined") return "";
-  return new URLSearchParams(window.location.search).get("from") === "home-quick-setup"
-    ? "ホームで選んだ基本設定を引き継ぎました。順番に確認しながら進めてください。"
-    : "";
+  const source = new URLSearchParams(window.location.search).get("from");
+  if (source === "home-quick-setup") {
+    return "ホームで選んだ基本設定を引き継ぎました。順番に確認しながら進めてください。";
+  }
+  if (source === "series-plan") {
+    return "シリーズ計画からタイトル・テーマ・無料/有料設定を引き継ぎました。アカウント設計も必要に応じて反映できます。";
+  }
+  return "";
 }
 
 export function parseArticleTags(tagsText: string): string[] {
