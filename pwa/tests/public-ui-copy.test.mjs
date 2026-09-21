@@ -97,7 +97,7 @@ test("admin-only promotion tools are hidden behind active admin state", async ()
 
 test("admin promotion prompts protect confirmed product facts and cover article plus social sales", async () => {
   const api = await read("lib/admin-promotion.ts");
-  for (const label of ["確認済み製品情報", "紹介・販売", "Instagram", "Threads", "TikTok", "YouTube Shorts", "14日分の投稿カレンダー"]) {
+  for (const label of ["確認済み製品情報", "紹介・販売", "販売前", "実運用テスト", "Instagram", "Threads", "TikTok", "YouTube Shorts", "14日分の投稿カレンダー"]) {
     assert.match(api, new RegExp(label));
   }
   assert.match(api, /価格、実績、利用者数、売上、レビュー、キャンペーン/);
@@ -116,7 +116,7 @@ test("active admins keep admin access without changing the shared five-item mobi
   assert.match(topbar, /data\.role === "admin"/);
   assert.match(topbar, /管理ダッシュボード/);
   assert.match(topbar, /ADMIN_HOME_SHORTCUT_IDS/);
-  assert.match(sections, /販売促進・SNS/);
+  assert.match(sections, /販売・プロモーション/);
   assert.match(sections, /\/admin\/promotion/);
   assert.match(nav, /SharedMobileBottomNav/);
   assert.doesNotMatch(nav, />管理<\/button>|go\("\/admin"\)|admin-enabled|CANONICAL_NAV_ITEMS/);
