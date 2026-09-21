@@ -64,7 +64,7 @@ test("mobile navigation uses one shared customizable source across home and othe
   assert.match(shared, /MOBILE_NAV_ITEMS_EVENT/);
   assert.match(shared, /mobileNavItemsStorageKey\(userId\)/);
   assert.match(shared, /getSupabaseClient/);
-  assert.match(shared, /setUserId\(data\.session\?\.user\.id \?\? ""\)/);
+  assert.match(shared, /setUserId\(nextUserId\)/);
   assert.match(shared, /window\.addEventListener\("storage"/);
   assert.match(shared, /mobileNavItemFor/);
   assert.match(shared, /ホーム/);
@@ -230,6 +230,7 @@ test("admin mobile navigation tools are selectable only for active admins and mo
   assert.match(shared, /data\.role === "admin"/);
   assert.match(shared, /data\.status === "active"/);
   assert.match(shared, /readMobileNavItems\(userId, isAdmin\)/);
+  assert.match(shared, /normalizeMobileNavItems\(detail\.items, isAdmin\)/);
   assert.match(shared, /setIsAdmin\(false\)/);
 
   assert.match(customizer, /mobileNavOptionsFor\(isAdmin\)/);
