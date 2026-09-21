@@ -38,8 +38,12 @@ export function AccountStarterKitPanel({
 
   useEffect(() => {
     let active = true;
-    setKit(null);
-    setMessage("");
+    queueMicrotask(() => {
+      if (active) {
+        setKit(null);
+        setMessage("");
+      }
+    });
     void loadAccountStarterKits(getSupabaseClient(), design.userId).then(
       (kits) => {
         if (active) setKit(kits[design.platform] ?? null);
