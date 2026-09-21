@@ -5,22 +5,28 @@ import { useEffect, useState } from "react";
 import {
   DEFAULT_MOBILE_NAV_ITEMS,
   MAX_CUSTOM_MOBILE_NAV_ITEMS,
-  MOBILE_NAV_ITEM_OPTIONS,
   mobileNavItemFor,
+  mobileNavOptionsFor,
   readMobileNavItems,
   writeMobileNavItems,
   type MobileNavItemKey,
 } from "@/lib/mobile-nav-preference";
 
-export function MobileNavCustomizer({ userId = "" }: { userId?: string }) {
+export function MobileNavCustomizer({
+  userId = "",
+  isAdmin = false,
+}: {
+  userId?: string;
+  isAdmin?: boolean;
+}) {
   const [items, setItems] = useState<MobileNavItemKey[]>([...DEFAULT_MOBILE_NAV_ITEMS]);
 
   useEffect(() => {
-    queueMicrotask(() => setItems(readMobileNavItems(userId)));
-  }, [userId]);
+    queueMicrotask(() => setItems(readMobileNavItems(userId, isAdmin)));
+  }, [userId, isAdmin]);
 
   const save = (next: MobileNavItemKey[]) => {
-    setItems(writeMobileNavItems(next, userId));
+    setItems(writeMobileNavItems(next, userId, isAdmin));
   };
 
   const changeSlot = (index: number, key: MobileNavItemKey) => {
@@ -37,6 +43,8 @@ export function MobileNavCustomizer({ userId = "" }: { userId?: string }) {
     [next[index], next[target]] = [next[target], next[index]];
     save(next);
   };
+
+  const availableOptions = mobileNavOptionsFor(isAdmin);
 
   return (
     <section className="nav-customizer" aria-labelledby="nav-customizer-title">
@@ -70,7 +78,7 @@ export function MobileNavCustomizer({ userId = "" }: { userId?: string }) {
           <label key={`slot-${index}`}>
             <span>{index + 2}番目の枠</span>
             <select value={key} onChange={(event) => changeSlot(index, event.target.value as MobileNavItemKey)}>
-              {MOBILE_NAV_ITEM_OPTIONS.map((option) => (
+              {availableOptions.map((option) => (
                 <option key={option.key} value={option.key} disabled={option.key !== key && items.includes(option.key)}>
                   {option.label}
                 </option>
@@ -80,6 +88,11 @@ export function MobileNavCustomizer({ userId = "" }: { userId?: string }) {
         ))}
       </div>
 
+      {isAdmin && (
+        <p className="nav-customizer-note admin-note">
+          管理者アカウントでは「管理 / ユーザー / 無料設定 / 販売 / 更新管理 / MFA / 運用」も選べます。これらはactiveな管理者にだけ表示されます。
+        </p>
+      )}
       <p className="nav-customizer-note">初期状態は「ホーム / 作成 / ライブラリ / ランキング / プロフィール」です。この設定はこの端末のPWA／ブラウザ内で、ログイン中のユーザーごとに保存されます。</p>
     </section>
   );
