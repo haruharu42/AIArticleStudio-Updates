@@ -92,12 +92,14 @@ test("admin tools are removed from the user feature hub and collected in the adm
   assert.doesNotMatch(tools, /\/admin\/promotion/);
   assert.doesNotMatch(tools, /\/admin\/development-prompts/);
 
-  assert.match(adminHub, /className="tool-grid admin-tool-grid"/);
-  assert.match(adminHub, /className="tool-card admin-tool-card"/);
+  assert.match(adminHub, /className="admin-only-tools-section admin-management-hub"/);
+  assert.match(adminHub, /className="admin-only-tools-grid"/);
+  assert.match(adminHub, /className="admin-only-tool-card"/);
   assert.match(adminHub, /ADMIN_SECTIONS\.map/);
   assert.match(adminHub, /<span>\{section\.eyebrow\}<\/span>/);
-  assert.match(adminHub, /<h2>\{section\.title\}<\/h2>/);
+  assert.match(adminHub, /<h3>\{section\.title\}<\/h3>/);
   assert.match(adminHub, /<p>\{section\.description\}<\/p>/);
+  assert.match(adminHub, /管理機能/);
   assert.match(adminHub, /開く →/);
 
   for (const label of ["販売・プロモーション", "開発依頼プロンプト", "ナレッジ管理", "アップデート管理", "セキュリティ・運用"]) {
