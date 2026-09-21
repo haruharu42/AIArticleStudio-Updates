@@ -233,9 +233,6 @@ ${FACT_SAFETY}
 特に紹介したい内容: ${input.focus || "製品全体"}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
 
-【SNS文字数設定】
-${socialLengthPlanBlock(input.socialLengths)}
-
 ${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
 【確認済み製品情報】
@@ -328,6 +325,9 @@ ${FACT_SAFETY}
 販売条件・オファー: ${input.offer || facts.priceText || "要確認"}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
 
+【SNS文字数設定】
+${socialLengthPlanBlock(input.socialLengths)}
+
 ${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
 【確認済み製品情報】
@@ -339,7 +339,7 @@ ${factsBlock(facts)}
 - 指定SNS向けの投稿企画。上記のSNS文字数設定を守る
 - 販売前の場合は「テスト共有 → 改善内容 → 開発進捗 → 公開予告 → 続報」の流れを優先し、販売開始済みの表現を使わない
 - 販売開始後の場合のみ「予告 → 理解促進 → 機能紹介 → 販売開始 → FAQ → 再訴求」の流れを使う
-- 各日の目的、投稿テーマ、CTA、必要素材
+- 14日分の投稿カレンダー。各日の目的、投稿テーマ、CTA、必要素材を示す
 - 同じ訴求を連投しないための切り口ローテーション
 - 公開前に人が確認すべき製品情報のチェックリスト`;
 }
