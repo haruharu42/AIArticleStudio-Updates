@@ -135,6 +135,14 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(page, /loadArticleWizardProgress/);
   assert.match(page, /saveArticleWizardProgress/);
   assert.match(page, /clearArticleWizardProgress/);
+  assert.match(page, /persistWizardProgress/);
+  assert.match(page, /pagehide/);
+  assert.match(page, /beforeunload/);
+  assert.match(page, /visibilitychange/);
+  assert.match(page, /document\.visibilityState === "hidden"/);
+  assert.match(page, /onBeforeExternalLaunch=\{persistWizardProgress\}/);
+  assert.match(stepUi, /onBeforeExternalLaunch/);
+  assert.match(stepUi, /onBeforeExternalLaunch\(\); launchAiApp\(app\.key\)/);
   assert.match(page, /setStep\(saved\.step\)/);
   assert.match(page, /前回の作業内容を復元しました/);
   assert.match(progress, /aas:pwa:article-wizard-progress:v1:/);
