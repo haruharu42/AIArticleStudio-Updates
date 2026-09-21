@@ -34,7 +34,7 @@ import {
   type AccountDesignTone,
   type AccountDesignTrust,
   type PlatformAccountDesign,
-} from "@/lib/platform-account-design";
+} from "@/features/account-design";
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { getSupabaseClient } from "@/lib/supabase";
 
