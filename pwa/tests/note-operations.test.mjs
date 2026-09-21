@@ -378,3 +378,40 @@ test("AI schedule output is copy-only, multi-post times are explicit, and pasted
   assert.match(manual, /前置きや説明文を除いてコピーしやすくします/);
   assert.match(manual, /「貼り付け内容をクリア」を押した時だけ削除/);
 });
+
+
+test("AAS note operation preset is available only inside the active-admin UI path", async () => {
+  const [lib, page, css] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("app/phase38-note-operations.css"),
+  ]);
+
+  assert.match(lib, /AAS_ADMIN_NOTE_PROFILE_PRESET/);
+  assert.match(lib, /AI Article Studio（AAS）・AI記事制作・コンテンツ運営/);
+  assert.match(lib, /applyAasAdminNoteProfilePreset/);
+  assert.match(lib, /accountGenre: "other"/);
+  assert.match(lib, /accountStyle: "other"/);
+  assert.match(lib, /audiencePreset: "other"/);
+  assert.match(lib, /monetizationStyle: "other"/);
+  assert.match(lib, /operationGoal: "growth"/);
+  assert.match(lib, /experienceNote/);
+  assert.doesNotMatch(
+    lib.match(/export function applyAasAdminNoteProfilePreset[\s\S]*?\n}/)?.[0] ?? "",
+    /experienceNote:\s*"/,
+  );
+
+  assert.match(page, /select\("id,status,role"\)/);
+  assert.match(page, /isAdmin: account\.role === "admin"/);
+  assert.match(page, /\{gate\.isAdmin && \(/);
+  assert.match(page, /ADMIN ONLY/);
+  assert.match(page, /AAS運営用プロフィール設定/);
+  assert.match(page, /一般ユーザーには表示されません/);
+  assert.match(page, /applyAasAdminNoteProfilePreset\(profile\)/);
+  assert.match(page, /AAS運営用設定を反映/);
+  assert.match(page, /自動保存はされません/);
+
+  assert.match(css, /\.note-aas-admin-preset/);
+  assert.match(css, /\.note-aas-admin-preset-grid/);
+  assert.doesNotMatch(`${lib}\n${page}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+});
