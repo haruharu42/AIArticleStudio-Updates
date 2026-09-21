@@ -180,7 +180,7 @@ export function AccountStarterKitPanel({
             <div className="account-starter-copy-list">
               {kit.handleCandidates.map((handle) => <button key={handle} type="button" onClick={() => void copy(handle, "ID候補")}>{handle}<small>コピー</small></button>)}
             </div>
-            <small>候補の空き状況はAASでは確認・保証しません。登録画面で利用可能か確認してください。</small>
+            <small>ID候補の空き状況はAASでは確認・保証しません。登録画面で利用可能か確認してください。</small>
           </section>
 
           <div className="account-starter-result-grid">
