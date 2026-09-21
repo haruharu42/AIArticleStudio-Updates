@@ -67,6 +67,7 @@ export function AccountStarterKitPanel({
     setMessage("");
     try {
       const parsed = extractAccountStarterKit(raw, design.platform);
+      parsed.updatedAt = kit?.updatedAt ?? null;
       const saved = await saveAccountStarterKit(getSupabaseClient(), design.userId, parsed);
       setKit(saved);
       onApply(applyStarterKitToDesign(design, saved));
