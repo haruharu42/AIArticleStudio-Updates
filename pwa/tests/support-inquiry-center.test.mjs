@@ -9,7 +9,7 @@ const read = (relative) => readFile(path.join(root, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(root, "..", relative), "utf8");
 
 test("inquiry center keeps immutable messages, owner/admin RLS, and server-side workflow controls", async () => {
-  const migration = await readRepo("supabase/migrations/20260921010708_support_inquiry_center.sql");
+  const [migration, hardening] = await Promise.all([\n    readRepo("supabase/migrations/20260921010708_support_inquiry_center.sql"),\n    readRepo("supabase/migrations/20260921011458_support_inquiry_rpc_hardening.sql"),\n  ]);
 
   assert.match(migration, /create table if not exists public\.support_requests/);
   assert.match(migration, /create table if not exists public\.support_request_messages/);
@@ -43,7 +43,12 @@ test("inquiry center keeps immutable messages, owner/admin RLS, and server-side 
   assert.match(migration, /char_length\(body\) between 1 and 5000/);
   assert.match(migration, /status in \('new','reviewing','waiting_user','resolved','closed'\)/);
   assert.match(migration, /priority in \('normal','high','urgent'\)/);
-  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+  assert.match(hardening, /alter function public\.create_support_request\(text,text,text\) set schema private/);
+  assert.match(hardening, /alter function public\.admin_set_support_request\(uuid,text,text\) set schema private/);
+  assert.match(hardening, /create function public\.create_support_request/);
+  assert.match(hardening, /language sql security invoker/);
+  assert.match(hardening, /select private\.admin_set_support_request/);
+  assert.doesNotMatch(`${migration}\n${hardening}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
 });
 
 test("general users can submit categorized required inquiries and keep a reply history", async () => {
