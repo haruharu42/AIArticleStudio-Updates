@@ -189,3 +189,60 @@ test("all eight other selections require matching custom input before cloud save
     assert.match(lib, new RegExp(`design\\.${custom}\\.trim\\(\\)`));
   }
 });
+
+
+test("account starter kit covers first account setup through icon creation with owner-scoped storage", async () => {
+  const [migration, lib, panel, page, css] = await Promise.all([
+    readRepo("supabase/migrations/20260921002542_platform_account_starter_kits.sql"),
+    read("lib/platform-account-starter.ts"),
+    read("components/account-starter-kit-panel.tsx"),
+    read("components/platform-account-design-page.tsx"),
+    read("app/phase40-account-design.css"),
+  ]);
+
+  assert.match(migration, /create table if not exists public\.platform_account_starter_kits/);
+  assert.match(migration, /jsonb_typeof\(kit\) = 'object'/);
+  assert.match(migration, /enable row level security/);
+  assert.match(migration, /force row level security/);
+  for (const operation of ["select", "insert", "update", "delete"]) {
+    assert.match(migration, new RegExp("platform_account_starter_kits_" + operation + "_own_active"));
+    assert.match(migration, new RegExp("for " + operation + " to authenticated"));
+  }
+  assert.match(migration, /user_id = \(select auth\.uid\(\)\)/);
+  assert.match(migration, /private\.is_active_profile\(\)/);
+  assert.match(migration, /public\.can_access_product\('AAS-PWA-BETA'\)/);
+  assert.match(migration, /grant select, insert, update, delete on table public\.platform_account_starter_kits to authenticated/);
+
+  assert.match(lib, /aas-account-starter-v1/);
+  assert.match(lib, /buildAccountStarterPrompt/);
+  assert.match(lib, /extractAccountStarterKit/);
+  assert.match(lib, /account_name_candidates/);
+  assert.match(lib, /handle_candidates/);
+  assert.match(lib, /content_pillars/);
+  assert.match(lib, /free_post_ideas/);
+  assert.match(lib, /paid_post_ideas/);
+  assert.match(lib, /launch_checklist/);
+  assert.match(lib, /icon/);
+  assert.match(lib, /既存作品、特定作家、実在人物、企業ロゴ、商標、著名キャラクターに似せない/);
+  assert.match(lib, /メールアドレス、パスワード、Cookie、アクセストークン、認証コード等を要求しない/);
+  assert.match(lib, /\.from\("platform_account_starter_kits"\)/);
+  assert.match(lib, /\.eq\("user_id", userId\)/);
+  assert.match(lib, /applyStarterKitToDesign/);
+
+  assert.match(panel, /AIにアカウントを最初から一括作成してもらう/);
+  assert.match(panel, /表示名・ID候補・プロフィール・コンセプト・発信の柱・最初の記事案・開始手順・専用アイコン/);
+  assert.match(panel, /一括作成プロンプトをコピーしてAIを開く/);
+  assert.match(panel, /コピーしたAI回答を読み込んで一括反映/);
+  assert.match(panel, /ChatGPT Imagesでアイコンを作る/);
+  assert.match(panel, /PLATFORM_HOME/);
+  assert.match(panel, /note\.com/);
+  assert.match(panel, /tips\.jp/);
+  assert.match(panel, /brain-market\.com/);
+  assert.match(panel, /ID候補の空き状況はAASでは確認・保証しません/);
+  assert.match(page, /AccountStarterKitPanel/);
+  assert.match(page, /applyStarterDesign/);
+  assert.match(css, /\.account-starter-kit/);
+  assert.match(css, /\.account-starter-icon/);
+
+  assert.doesNotMatch(`${migration}\n${lib}\n${panel}\n${page}`, /sb_secret_|service[_-]?role|sk_(?:live|test)_|whsec_/i);
+});
