@@ -667,3 +667,41 @@
     align-self: flex-start;
   }
 }
+
+
+.account-design-create-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+}
+.account-design-create-actions button,
+.account-design-create-actions a {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #bcd4ee;
+  border-radius: 9px;
+  background: #fff;
+  color: #226bb8;
+  padding: 7px 10px;
+  font-size: 8px;
+  font-weight: 900;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.reference-feature-links {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 650px) {
+  .account-design-create-actions > * {
+    width: 100%;
+  }
+
+  .reference-feature-links {
+    grid-template-columns: 1fr;
+  }
+}
