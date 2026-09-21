@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { launchAiApp } from "@/lib/ai-app-links";
@@ -131,26 +131,33 @@ export function ContentWorkflowPage() {
   const [seriesBusy, setSeriesBusy] = useState(false);
 
   useEffect(() => {
+    let active = true;
     const params = new URLSearchParams(window.location.search);
     const requested = params.get("tab");
-    if (requested === "preflight" || requested === "reuse" || requested === "series" || requested === "today") {
-      setTab(requested);
-    }
     const article = params.get("article") ?? "";
-    if (requested === "preflight") setPreflightArticleId(article);
-    if (requested === "reuse") setReuseArticleId(article);
+    queueMicrotask(() => {
+      if (!active) return;
+      if (requested === "preflight" || requested === "reuse" || requested === "series" || requested === "today") {
+        setTab(requested);
+      }
+      if (requested === "preflight") setPreflightArticleId(article);
+      if (requested === "reuse") setReuseArticleId(article);
+    });
+    return () => { active = false; };
   }, []);
 
-  const reload = async () => {
-    if (state.kind !== "ready") return;
-    setLoading(true);
+  const ownerId = state.kind === "ready" ? state.profile.id : "";
+
+  const reload = useCallback(async () => {
+    if (!ownerId) return;
+    queueMicrotask(() => setLoading(true));
     try {
       const client = getSupabaseClient();
       const today = todayJstDateKey();
       const [nextArticles, nextSchedule, nextSeries] = await Promise.all([
-        listCloudArticles(client, state.profile.id, 200),
-        listNoteSchedule(client, state.profile.id, today, today),
-        listContentSeriesPlans(client, state.profile.id),
+        listCloudArticles(client, ownerId, 200),
+        listNoteSchedule(client, ownerId, today, today),
+        listContentSeriesPlans(client, ownerId),
       ]);
       setArticles(nextArticles);
       setSchedule(nextSchedule);
@@ -161,23 +168,25 @@ export function ContentWorkflowPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [ownerId]);
 
   useEffect(() => {
-    if (state.kind !== "ready") return;
+    if (!ownerId) return;
     void reload();
-  }, [state]);
+  }, [ownerId, reload]);
 
   useEffect(() => {
-    if (!preflightArticleId || state.kind !== "ready") {
-      setPreflightDetail(null);
-      return;
-    }
     let active = true;
+    if (!preflightArticleId || !ownerId) {
+      queueMicrotask(() => {
+        if (active) setPreflightDetail(null);
+      });
+      return () => { active = false; };
+    }
     queueMicrotask(() => {
       if (active) setPreflightBusy(true);
     });
-    void getCloudArticleDetail(getSupabaseClient(), state.profile.id, preflightArticleId).then(
+    void getCloudArticleDetail(getSupabaseClient(), ownerId, preflightArticleId).then(
       (detail) => {
         if (active) setPreflightDetail(detail);
       },
@@ -188,18 +197,20 @@ export function ContentWorkflowPage() {
       if (active) setPreflightBusy(false);
     });
     return () => { active = false; };
-  }, [preflightArticleId, state]);
+  }, [preflightArticleId, ownerId]);
 
   useEffect(() => {
-    if (!reuseArticleId || state.kind !== "ready") {
-      setReuseDetail(null);
-      return;
-    }
     let active = true;
+    if (!reuseArticleId || !ownerId) {
+      queueMicrotask(() => {
+        if (active) setReuseDetail(null);
+      });
+      return () => { active = false; };
+    }
     queueMicrotask(() => {
       if (active) setReuseBusy(true);
     });
-    void getCloudArticleDetail(getSupabaseClient(), state.profile.id, reuseArticleId).then(
+    void getCloudArticleDetail(getSupabaseClient(), ownerId, reuseArticleId).then(
       (detail) => {
         if (active) setReuseDetail(detail);
       },
@@ -210,7 +221,7 @@ export function ContentWorkflowPage() {
       if (active) setReuseBusy(false);
     });
     return () => { active = false; };
-  }, [reuseArticleId, state]);
+  }, [reuseArticleId, ownerId]);
 
   const tasks = useMemo(
     () => buildWorkflowTasks(articles, schedule, series, todayJstDateKey()),
