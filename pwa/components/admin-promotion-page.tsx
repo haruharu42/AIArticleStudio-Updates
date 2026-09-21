@@ -394,27 +394,47 @@ function PromptOutput({ prompt, onCopy }: { prompt: string; onCopy: () => void }
 }
 
 export function AdminPromotionPage() {
-  const [state, setState] = useState<State>({ kind: "loading" });
-  const [mode, setMode] = useState<Mode>("article");
+  const { state } = useSharedAccessState();
+  const [mode, setMode] = useState<Mode>("preview");
   const [message, setMessage] = useState("");
   const [facts, setFacts] = useState<AdminProductFacts>(DEFAULT_ADMIN_PRODUCT_FACTS);
-  const [article, setArticle] = useState({ platform: "note" as const, purpose: "新規紹介・販売", audience: "AI初心者", focus: "製品全体", cta: "販売URLへ誘導" });
-  const [social, setSocial] = useState({ platform: "x" as const, purpose: "新規紹介・販売", audience: "AI初心者", focus: "製品全体", cta: "販売URLへ誘導", variants: 3 });
-  const [campaign, setCampaign] = useState({ campaignName: "", goal: "販売開始・認知拡大", audience: "AI初心者", channels: "note, X, Instagram, Threads, TikTok, YouTube Shorts", offer: "未定・要確認", cta: "販売URLへ誘導" });
-
-  useEffect(() => {
-    let active = true;
-    const boot = async () => {
-      try {
-        const value = await loadAccessState(getSupabaseClient());
-        if (active) setState(value);
-      } catch {
-        if (active) setState({ kind: "unavailable" });
-      }
-    };
-    void boot();
-    return () => { active = false; };
-  }, []);
+  const [socialLengths, setSocialLengths] = useState<AdminSocialLengthPlan>({ ...DEFAULT_SOCIAL_LENGTH_PLAN });
+  const [socialPresetIds, setSocialPresetIds] = useState<Record<AdminSocialPlatform, string>>({ ...DEFAULT_SOCIAL_PRESET_IDS });
+  const [article, setArticle] = useState({
+    platform: "note" as const,
+    phase: "実運用テスト中（販売前）",
+    purpose: "実運用テスト状況の共有",
+    audience: "AI初心者",
+    focus: "製品全体",
+    cta: "フォローして続報を待ってもらう",
+  });
+  const [social, setSocial] = useState({
+    platform: "x" as AdminSocialPlatform,
+    phase: "実運用テスト中（販売前）",
+    purpose: "実運用テスト状況の共有",
+    audience: "AI初心者",
+    focus: "製品全体",
+    cta: "フォローして続報を待ってもらう",
+    variants: 3,
+  });
+  const [campaign, setCampaign] = useState({
+    campaignName: "",
+    phase: "実運用テスト中（販売前）",
+    goal: "実運用テストの共有",
+    audience: "AI初心者",
+    channels: "note, X, Instagram, Threads, TikTok, YouTube Shorts",
+    offer: "販売前・テスト運用中",
+    cta: "フォローして続報を待ってもらう",
+  });
+  const [preview, setPreview] = useState({
+    updateType: "note実運用テスト報告",
+    testedPlatform: "note",
+    verifiedUpdate: "",
+    releasePlan: "",
+    audience: "AI初心者",
+    channels: "note, X, Instagram, Threads",
+    cta: "フォローして続報を待ってもらう",
+  });
 
   useEffect(() => {
     queueMicrotask(() => {
