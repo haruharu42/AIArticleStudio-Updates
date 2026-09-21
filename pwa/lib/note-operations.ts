@@ -334,6 +334,55 @@ export function defaultNoteOperationProfile(userId: string): NoteOperationProfil
   };
 }
 
+
+export const AAS_ADMIN_NOTE_PROFILE_PRESET = {
+  label: "AI Article Studio（AAS）運営",
+  genre: "AI Article Studio（AAS）・AI記事制作・コンテンツ運営",
+  style: "AASの使い方・開発進捗・実運用テスト・記事制作ノウハウを分かりやすく整理する",
+  audience: "note・Tips・BrainなどでAIを使って記事制作・コンテンツ運営を始めたい初心者〜個人クリエイター",
+  tone: "落ち着いた・信頼感重視",
+  monetization: "販売前は無料発信で使い方・開発進捗・実運用テストを共有し、公開後は製品案内や必要に応じた有料コンテンツへ自然につなぐ",
+  goal: "読者を増やしたい",
+  displayName: "AI Article Studio（AAS）",
+  bioDraft: "AI Article Studio（AAS）の使い方・開発進捗・アップデート情報を中心に、AIを活用した記事制作・note運営・コンテンツ運営を分かりやすく発信します。",
+  targetReader: "AIで記事を作りたい人、note・Tips・Brainを運営したい人、コンテンツ制作を効率化したい初心者〜個人クリエイター",
+  mainTopics: [
+    "AI Article Studio",
+    "AASアップデート",
+    "AI記事作成",
+    "note運営",
+    "Tips・Brain運営",
+    "プロンプト活用",
+    "記事ライブラリ",
+    "画像計画",
+    "公開前チェック",
+    "SNS再利用",
+    "実運用テスト",
+    "コンテンツ運営",
+  ] as const,
+} as const;
+
+export function applyAasAdminNoteProfilePreset(profile: NoteOperationProfile): NoteOperationProfile {
+  return {
+    ...profile,
+    noteDisplayName: AAS_ADMIN_NOTE_PROFILE_PRESET.displayName,
+    bioDraft: AAS_ADMIN_NOTE_PROFILE_PRESET.bioDraft,
+    targetReader: AAS_ADMIN_NOTE_PROFILE_PRESET.targetReader,
+    mainTopics: [...AAS_ADMIN_NOTE_PROFILE_PRESET.mainTopics],
+    accountGenre: "other",
+    customGenre: AAS_ADMIN_NOTE_PROFILE_PRESET.genre,
+    accountStyle: "other",
+    customAccountStyle: AAS_ADMIN_NOTE_PROFILE_PRESET.style,
+    audiencePreset: "other",
+    customAudience: AAS_ADMIN_NOTE_PROFILE_PRESET.audience,
+    tonePreset: "professional",
+    customTone: "",
+    monetizationStyle: "other",
+    customMonetizationStyle: AAS_ADMIN_NOTE_PROFILE_PRESET.monetization,
+    operationGoal: "growth",
+  };
+}
+
 function parseProfileRow(row: Record<string, unknown>, userId: string): NoteOperationProfile {
   return {
     userId,
