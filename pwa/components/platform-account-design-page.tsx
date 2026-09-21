@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { AccountStarterKitPanel } from "@/components/account-starter-kit-panel";
 import {
   ACCOUNT_DESIGN_AUDIENCES,
   ACCOUNT_DESIGN_CONTENT_FOCUS,
@@ -132,6 +133,14 @@ export function PlatformAccountDesignPage() {
     setMessage("");
   };
 
+  const applyStarterDesign = (nextDesign: PlatformAccountDesign) => {
+    if (!designs || nextDesign.platform !== platform || nextDesign.userId !== designs[platform].userId) return;
+    setDesigns({ ...designs, [platform]: nextDesign });
+    saveLocalAccountDesignDraft(nextDesign);
+    setDirtyPlatforms((current) => current.includes(platform) ? current : [...current, platform]);
+    setMessage("");
+  };
+
   const save = async () => {
     if (!design) return;
     setBusy(true);
@@ -220,6 +229,8 @@ export function PlatformAccountDesignPage() {
         </nav>
 
         {message && <div className="route-notice account-design-message" role="status">{message}</div>}
+
+        <AccountStarterKitPanel design={design} onApply={applyStarterDesign} />
 
         <section className="account-design-panel">
           <div className="account-design-section-head">
