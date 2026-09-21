@@ -175,7 +175,7 @@ export async function listMySupportRequests(client: SupabaseClient, userId: stri
     .order("updated_at", { ascending: false })
     .limit(100);
   if (error) throw new Error("問い合わせ履歴を読み込めませんでした。");
-  return (data ?? []).map((row) => requestFromRow(row as Record<string, unknown>));
+  return (data ?? []).map((row) => requestFromRow(row as unknown as Record<string, unknown>));
 }
 
 export async function listAdminSupportRequests(client: SupabaseClient): Promise<SupportRequest[]> {
@@ -185,7 +185,7 @@ export async function listAdminSupportRequests(client: SupabaseClient): Promise<
     .order("updated_at", { ascending: false })
     .limit(200);
   if (error) throw new Error("問い合わせ一覧を読み込めませんでした。");
-  return (data ?? []).map((row) => requestFromRow(row as Record<string, unknown>));
+  return (data ?? []).map((row) => requestFromRow(row as unknown as Record<string, unknown>));
 }
 
 export async function listSupportMessages(client: SupabaseClient, requestId: string): Promise<SupportMessage[]> {
@@ -196,7 +196,7 @@ export async function listSupportMessages(client: SupabaseClient, requestId: str
     .order("created_at", { ascending: true })
     .limit(500);
   if (error) throw new Error("問い合わせの会話履歴を読み込めませんでした。");
-  return (data ?? []).map((row) => messageFromRow(row as Record<string, unknown>));
+  return (data ?? []).map((row) => messageFromRow(row as unknown as Record<string, unknown>));
 }
 
 export async function replySupportRequest(client: SupabaseClient, requestId: string, message: string): Promise<void> {
