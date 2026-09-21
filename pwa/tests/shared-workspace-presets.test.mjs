@@ -167,7 +167,7 @@ test("Phase 45 feature boundaries keep domain imports stable without deleting le
 
   assert.match(structure, /Phase 45 feature-oriented structure/);
   for (const domain of ["article", "account-design", "note", "workflow", "social", "images", "presets", "support", "admin", "navigation"]) {
-    assert.match(readme, new RegExp(`\\`${domain}/\\``));
+    assert.ok(readme.includes("`" + domain + "/`"));
   }
 
   assert.match(workflow, /from "@\/features\/workflow"/);
