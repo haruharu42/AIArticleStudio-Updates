@@ -9,6 +9,7 @@ type ToolCard = { href: string; category: string; title: string; description: st
 
 const memberTools: ToolCard[] = [
   { href: "/create", category: "記事制作", title: "記事を作る", description: "7ステップで条件設定から本文・画像計画・保存まで進められます。" },
+  { href: "/workflow", category: "運営自動化", title: "AAS運営コックピット", description: "今日やること、公開前チェック、記事→SNS再利用、シリーズ設計を1つの流れで管理します。" },
   { href: "/account-design", category: "アカウント設計", title: "note / Tips / Brain アカウント作成", description: "ゼロから表示名・ID候補・プロフィール・発信軸・初期投稿・専用アイコンまでAIで一括作成し、媒体別に保存します。" },
   { href: "/note-operations", category: "note運営", title: "note運営アシスタント", description: "アカウント準備、プロフィール、無料・有料noteの投稿計画、カレンダーと今日のToDoを管理します。" },
   { href: "/images", category: "画像", title: "画像生成計画", description: "記事条件からアイキャッチ・挿絵用の統一画像プロンプトを作成します。" },
