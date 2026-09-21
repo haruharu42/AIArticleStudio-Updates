@@ -313,6 +313,73 @@ function SelectWithCustomField({ label, value, onChange, options, placeholder = 
   );
 }
 
+function SocialLengthSettings({
+  presetIds,
+  plan,
+  onChange,
+}: {
+  presetIds: Record<AdminSocialPlatform, string>;
+  plan: AdminSocialLengthPlan;
+  onChange: (platform: AdminSocialPlatform, presetId: string, targetChars: number) => void;
+}) {
+  return (
+    <section className="admin-promo-length-settings" aria-labelledby="admin-promo-length-title">
+      <div className="admin-promo-length-head">
+        <div>
+          <span>SNS LENGTH</span>
+          <h3 id="admin-promo-length-title">SNSごとの文字数設定</h3>
+        </div>
+        <small>選んだ設定はSNS販促・テスト公開予告・キャンペーンで共通利用します。</small>
+      </div>
+      <div className="admin-promo-length-grid">
+        {SOCIAL_PLATFORM_OPTIONS.map((platform) => {
+          const presets = socialLengthPresetsFor(platform.key);
+          const presetId = presetIds[platform.key];
+          const selected = presets.find((item) => item.id === presetId);
+          const custom = presetId === "__custom__";
+          return (
+            <div className="admin-promo-length-card" key={platform.key}>
+              <strong>{platform.label}</strong>
+              <select
+                value={presetId}
+                onChange={(event) => {
+                  const nextId = event.target.value;
+                  if (nextId === "__custom__") {
+                    onChange(platform.key, nextId, plan[platform.key]);
+                    return;
+                  }
+                  const preset = presets.find((item) => item.id === nextId);
+                  if (preset) onChange(platform.key, preset.id, preset.targetChars);
+                }}
+              >
+                {presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>{preset.label}</option>
+                ))}
+                <option value="__custom__">その他・自由入力</option>
+              </select>
+              {custom && (
+                <label>
+                  <span>目標文字数</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={25000}
+                    inputMode="numeric"
+                    value={plan[platform.key]}
+                    onChange={(event) => onChange(platform.key, "__custom__", sanitizeSocialTargetChars(Number(event.target.value)))}
+                  />
+                </label>
+              )}
+              <small>{selected?.note ?? `カスタム: 約${plan[platform.key]}文字。投稿前に各SNSの最新仕様を確認してください。`}</small>
+            </div>
+          );
+        })}
+      </div>
+      <p className="admin-promo-length-footnote">Xは標準投稿とPremium長文を分けて選択できます。Threadsは通常投稿500文字と最大10,000文字の添付テキストを分けています。YouTube Shortsはタイトル100文字以内＋概要欄文字数として扱います。</p>
+    </section>
+  );
+}
+
 function PromptOutput({ prompt, onCopy }: { prompt: string; onCopy: () => void }) {
   return (
     <section className="admin-promo-output" aria-label="生成用プロンプト">
