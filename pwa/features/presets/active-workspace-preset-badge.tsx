@@ -28,7 +28,7 @@ export function ActiveWorkspacePresetBadge({ feature }: { feature: PresetFeature
   if (loading || !preference || !preference[FEATURE_KEYS[feature]]) return null;
   const preset = WORKSPACE_PRESETS[preference.presetKey];
   return (
-    <div className={\`active-workspace-preset \${preset.adminOnly ? "admin" : ""}\`} role="status">
+    <div className={`active-workspace-preset ${preset.adminOnly ? "admin" : ""}`} role="status">
       <span>✦ 共通プリセット</span>
       <strong>{preset.label}</strong>
       <small>この機能へ反映中</small>
