@@ -233,6 +233,9 @@ ${FACT_SAFETY}
 特に紹介したい内容: ${input.focus || "製品全体"}
 CTA: ${input.cta || facts.salesUrl || "要確認"}
 
+【SNS文字数設定】
+${socialLengthPlanBlock(input.socialLengths)}
+
 ${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}
 
 【確認済み製品情報】
@@ -311,13 +314,14 @@ export function buildAdminCampaignPrompt(
     purpose: input.goal,
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
-  return `あなたはAI Article Studioの販売キャンペーン設計担当者です。
-単発投稿ではなく、記事とSNSを連動させた販売・紹介キャンペーンを設計してください。
+  return `あなたはAI Article Studioのプロモーション設計担当者です。
+販売開始後だけでなく、販売前の実運用テスト・開発進捗・公開予告も含めて、記事とSNSを連動させた発信計画を設計してください。
 
 ${FACT_SAFETY}
 
 【キャンペーン】
 名称: ${input.campaignName || "AASプロモーション"}
+発信フェーズ: ${input.phase || facts.releaseStage || "要確認"}
 目的: ${input.goal}
 想定読者: ${input.audience || facts.targetAudience || "要確認"}
 使用媒体: ${input.channels}
@@ -332,8 +336,9 @@ ${factsBlock(facts)}
 【出力】
 - キャンペーンの中心メッセージを1つ
 - note / Brain / Tips等の長文記事テーマを3案
-- X / Instagram / Threads / TikTok / YouTube Shortsのうち指定媒体向けの投稿企画
-- 「予告 → 理解促進 → 機能紹介 → 販売開始 → FAQ → 再訴求」の流れを使った14日分の投稿カレンダー
+- 指定SNS向けの投稿企画。上記のSNS文字数設定を守る
+- 販売前の場合は「テスト共有 → 改善内容 → 開発進捗 → 公開予告 → 続報」の流れを優先し、販売開始済みの表現を使わない
+- 販売開始後の場合のみ「予告 → 理解促進 → 機能紹介 → 販売開始 → FAQ → 再訴求」の流れを使う
 - 各日の目的、投稿テーマ、CTA、必要素材
 - 同じ訴求を連投しないための切り口ローテーション
 - 公開前に人が確認すべき製品情報のチェックリスト`;
