@@ -1037,3 +1037,129 @@
     gap: 3px;
   }
 }
+
+
+/* Admin-only AAS note operation preset. */
+.note-aas-admin-preset {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  border: 1px solid #c9c5f1;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fbfaff, #f2f3ff);
+  padding: 15px;
+  box-shadow: 0 8px 24px rgb(68 63 151 / 7%);
+}
+
+.note-aas-admin-preset-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.note-aas-admin-preset-head > div > span {
+  color: #6b63c7;
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: .12em;
+}
+
+.note-aas-admin-preset-head h3 {
+  margin: 4px 0 5px;
+  color: #303767;
+  font-size: 15px;
+}
+
+.note-aas-admin-preset-head p {
+  margin: 0;
+  max-width: 760px;
+  color: #74789a;
+  font-size: 9px;
+  line-height: 1.7;
+}
+
+.note-aas-admin-preset-head > b {
+  flex: 0 0 auto;
+  border: 1px solid #c7c1ef;
+  border-radius: 999px;
+  background: #fff;
+  color: #655cc3;
+  padding: 6px 9px;
+  font-size: 8px;
+}
+
+.note-aas-admin-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.note-aas-admin-preset-grid > div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #dedcf4;
+  border-radius: 11px;
+  background: rgb(255 255 255 / 82%);
+  padding: 10px;
+}
+
+.note-aas-admin-preset-grid small,
+.note-aas-admin-topics > small {
+  color: #8587a2;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.note-aas-admin-preset-grid strong {
+  color: #444c78;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.note-aas-admin-topics {
+  display: grid;
+  gap: 7px;
+}
+
+.note-aas-admin-topics > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.note-aas-admin-topics span {
+  border: 1px solid #d9d5f2;
+  border-radius: 999px;
+  background: #fff;
+  color: #5c5f8a;
+  padding: 5px 7px;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.note-aas-admin-warning {
+  margin: 0;
+  border: 1px solid #e5e3f5;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 65%);
+  color: #777b98;
+  padding: 9px 10px;
+  font-size: 8px;
+  line-height: 1.65;
+}
+
+.note-aas-admin-preset > .primary-action {
+  min-height: 44px;
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  .note-aas-admin-preset-head {
+    flex-direction: column;
+  }
+
+  .note-aas-admin-preset-grid {
+    grid-template-columns: 1fr;
+  }
+}
