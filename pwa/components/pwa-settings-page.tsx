@@ -66,7 +66,7 @@ function SettingsAccordion({
 
 export function PwaSettingsPage() {
   const { state } = useSharedAccessState();
-  const [openSection, setOpenSection] = useState<SettingsSection | null>("preset");
+  const [openSection, setOpenSection] = useState<SettingsSection | null>(null);
   const [alwaysShowNav, setAlwaysShowNav] = useState(true);
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
   const [writingBusy, setWritingBusy] = useState(false);
