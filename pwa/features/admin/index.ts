@@ -4,3 +4,4 @@ export * from "@/lib/admin-sections";
 export * from "@/lib/admin-users-view";
 export * from "@/lib/operations-admin";
 export * from "@/lib/sales-settings";
+export * from "@/features/admin/development-prompts";
