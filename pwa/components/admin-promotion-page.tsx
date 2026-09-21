@@ -514,11 +514,11 @@ export function AdminPromotionPage() {
   return (
     <main className="admin-promo-page">
       <header className="admin-promo-head">
-        <div><p className="eyebrow">ADMIN MARKETING</p><h1>販売・プロモーションセンター</h1><p>AI Article Studioの紹介記事、SNS投稿、販売キャンペーンを管理者専用で作成します。</p></div>
+        <div><p className="eyebrow">ADMIN MARKETING</p><h1>販売・プロモーションセンター</h1><p>販売前の実運用テスト・開発進捗・公開予告から、販売開始後の記事・SNS・キャンペーンまで管理者専用で作成します。</p></div>
         <div><Link href="/admin">管理ダッシュボード</Link><Link href="/">ホーム</Link></div>
       </header>
 
-      <div className="admin-promo-safety"><strong>確認済み情報を基準に作成</strong><span>未入力の価格・実績・レビュー・キャンペーンをAIに作らせない設計です。製品情報は現在この端末だけに保存されます。</span></div>
+      <div className="admin-promo-safety"><strong>確認済み情報を基準に作成</strong><span>販売前は「テスト中・準備中・公開予定」として扱い、未入力の価格・実績・レビュー・公開日をAIに作らせません。製品情報は現在この端末だけに保存されます。</span></div>
       {message && <div className="route-notice">{message}</div>}
 
       <nav className="admin-promo-tabs" aria-label="管理者プロモーション機能">
@@ -539,6 +539,10 @@ export function AdminPromotionPage() {
             <TextField label="販売URL" value={facts.salesUrl} onChange={(value) => setFacts((current) => ({ ...current, salesUrl: value }))} placeholder="未確定なら空欄" />
             <SelectWithCustomField label="サポート" value={facts.support} onChange={(value) => setFacts((current) => ({ ...current, support: value }))} options={SUPPORT_OPTIONS} customPlaceholder="確認済みのサポート方法を入力" />
             <SelectWithCustomField label="制限・注意事項" value={facts.limitations} onChange={(value) => setFacts((current) => ({ ...current, limitations: value }))} options={LIMITATION_OPTIONS} customPlaceholder="確認済みの制限・注意事項を入力" />
+            <SelectWithCustomField label="実運用・テスト状況" value={facts.testingStatus} onChange={(value) => setFacts((current) => ({ ...current, testingStatus: value }))} options={TESTING_STATUS_OPTIONS} customPlaceholder="現在のテスト状況を入力" />
+            <TextField label="確認済みテスト内容・観察結果" value={facts.testingNotes} onChange={(value) => setFacts((current) => ({ ...current, testingNotes: value }))} placeholder="実際に試した内容・確認できたことだけを入力。PV・売上・効果など未確認の数値は書かない" multiline />
+            <TextField label="公開・販売予定" value={facts.releasePlan} onChange={(value) => setFacts((current) => ({ ...current, releasePlan: value }))} placeholder="例: 2026年10月にPWAテスト版を公開予定。未確定なら「時期未定」" />
+            <TextField label="テスト記事・案内URL" value={facts.referenceUrl} onChange={(value) => setFacts((current) => ({ ...current, referenceUrl: value }))} placeholder="note等で公開した確認済みURL。未公開なら空欄" />
           </div>
         </section>
       )}
