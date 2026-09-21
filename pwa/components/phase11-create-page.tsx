@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
+import { applyWorkspacePresetToArticleDraft } from "@/features/presets/preset-adapters";
+import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { applyAccountDesignToArticleDraft } from "@/lib/account-article-link";
 import { ArticlePresetPanel } from "@/components/article-create/article-preset-panel";
 import {
@@ -69,6 +72,7 @@ type Gate =
   | { kind: "error"; message: string };
 
 export function Phase11CreatePage() {
+  const { preference: workspacePreference } = useWorkspacePreset();
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ArticleCreationDraft>(() => initialDraftFromLocation());
@@ -87,6 +91,7 @@ export function Phase11CreatePage() {
   const progressOwnerIdRef = useRef("");
   const titleQuotaInFlightRef = useRef(false);
   const articleQuotaInFlightRef = useRef(false);
+  const workspacePresetAppliedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -157,6 +162,30 @@ export function Phase11CreatePage() {
     if (gate.kind !== "ready" || progressOwnerIdRef.current !== gate.ownerId || createdId) return;
     saveArticleWizardProgress(gate.ownerId, { step, draft, magazinePlan, tagsText, activePresetId });
   }, [gate, step, draft, magazinePlan, tagsText, activePresetId, createdId]);
+
+  useEffect(() => {
+    if (
+      workspacePresetAppliedRef.current
+      || wizardRestored !== false
+      || !workspacePreference?.applyArticle
+    ) return;
+    workspacePresetAppliedRef.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("from") || params.has("publicationTarget") || params.has("title") || params.has("theme")) return;
+
+    const next = applyWorkspacePresetToArticleDraft(draft, workspacePreference);
+    const subgenres = subgenreOptionsFor(next.genre);
+    const normalized = {
+      ...next,
+      subgenre: subgenres.includes(next.subgenre) ? next.subgenre : subgenres[0] ?? "AIおまかせ",
+    };
+    queueMicrotask(() => {
+      setDraft(normalized);
+      setTagsText(normalized.tags.join(", "));
+      setMessage("設定画面の共通プリセットを新規記事の初期条件へ反映しました。個別条件はこの画面で変更できます。");
+    });
+  }, [draft, wizardRestored, workspacePreference]);
 
   const displayStep = displayStepForInternalStep(step);
   const articleDraft = useMemo(() => withArticleTags(draft, tagsText), [draft, tagsText]);
@@ -349,6 +378,8 @@ export function Phase11CreatePage() {
         </div>
         <a className="reference-help-link" href="/manual">? ヘルプ</a>
       </header>
+
+      <ActiveWorkspacePresetBadge feature="article" />
 
       <ol className="wizard-steps" aria-label="記事作成の進行状況">
         {ARTICLE_CREATE_UI_STEPS.map((label, index) => (
