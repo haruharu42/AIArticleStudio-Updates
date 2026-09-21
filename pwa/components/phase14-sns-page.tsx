@@ -7,7 +7,7 @@ import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-
 import { workspacePresetSocialDefaults } from "@/features/presets/preset-adapters";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { consumeFreeTrialUsage, trialUsageMessage } from "@/lib/free-trial";
-import { buildSocialPrompt, type SocialGoal, type SocialPlatform } from "@/lib/phase14-sns";
+import { buildSocialPrompt, type SocialGoal, type SocialPlatform } from "@/features/social";
 import { getCloudArticleDetail, listCloudArticles, type ArticleDetail, type ArticleSummary } from "@/lib/phase7-articles";
 import { SOCIAL_PLATFORM_OPTIONS, socialLaunchHint, socialPlatformLabel, socialPlatformUrl } from "@/lib/social-links";
 import { getSupabaseClient } from "@/lib/supabase";
