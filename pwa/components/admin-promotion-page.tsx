@@ -3,29 +3,40 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import {
   ADMIN_PRODUCT_FACTS_STORAGE_KEY,
   DEFAULT_ADMIN_PRODUCT_FACTS,
+  DEFAULT_SOCIAL_LENGTH_PLAN,
   buildAdminArticlePromotionPrompt,
   buildAdminCampaignPrompt,
+  buildAdminPreviewPromotionPrompt,
   buildAdminSocialPromotionPrompt,
+  sanitizeSocialTargetChars,
+  socialLengthPresetsFor,
   type AdminProductFacts,
+  type AdminSocialLengthPlan,
+  type AdminSocialPlatform,
 } from "@/lib/admin-promotion";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
-import { getSupabaseClient } from "@/lib/supabase";
-
-type State = AccessState | { kind: "loading" } | { kind: "unavailable" };
-type Mode = "product" | "article" | "social" | "campaign";
+type Mode = "product" | "preview" | "article" | "social" | "campaign";
 
 const MODES: Array<{ key: Mode; label: string; description: string }> = [
   { key: "product", label: "製品情報", description: "宣伝で使う確認済み情報" },
-  { key: "article", label: "販売記事", description: "note・Brain・Tips向け" },
+  { key: "preview", label: "テスト・公開予告", description: "実運用テスト・開発進捗・公開予定" },
+  { key: "article", label: "紹介・販売記事", description: "販売前〜販売後の長文発信" },
   { key: "social", label: "SNS販促", description: "X・Instagram・動画SNS向け" },
   { key: "campaign", label: "キャンペーン", description: "記事とSNSをまとめて設計" },
 ];
 
 const PURPOSE_OPTIONS = [
+  "実運用テスト状況の共有",
+  "note実運用テスト報告",
+  "開発進捗の共有",
+  "改善内容の共有",
+  "公開前の予告",
+  "公開予定の案内",
+  "ベータ開始予告",
   "新規紹介・販売",
   "販売開始告知",
   "認知拡大",
@@ -72,6 +83,12 @@ const AUDIENCE_OPTIONS = [
 ];
 
 const CTA_OPTIONS = [
+  "フォローして続報を待ってもらう",
+  "公開予定を知らせる",
+  "テスト記事を読んでもらう",
+  "開発状況を見てもらう",
+  "先行案内を確認してもらう",
+  "販売前なのでCTAなし",
   "販売URLへ誘導",
   "公式ページへ誘導",
   "詳細記事へ誘導",
@@ -137,6 +154,11 @@ const LIMITATION_OPTIONS = [
 ];
 
 const CAMPAIGN_GOAL_OPTIONS = [
+  "実運用テストの共有",
+  "開発進捗の認知拡大",
+  "公開前の期待形成",
+  "公開予定の周知",
+  "ベータ開始予告",
   "販売開始・認知拡大",
   "新規ユーザー獲得",
   "ベータ参加者募集",
@@ -171,6 +193,9 @@ const CHANNEL_PRESET_OPTIONS = [
 ];
 
 const OFFER_OPTIONS = [
+  "販売前・テスト運用中",
+  "公開予定のみ・販売未開始",
+  "価格未定・販売前",
   "未定・要確認",
   "通常販売",
   "新規販売開始",
