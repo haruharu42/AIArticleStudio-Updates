@@ -187,6 +187,13 @@ export function UserInquiriesPage() {
       {state.kind === "loading" && <div className="route-notice">アカウントを確認しています…</div>}
       {state.kind === "unavailable" && <div className="route-notice error">問い合わせ機能へ接続できませんでした。</div>}
       {state.kind === "signed_out" && <div className="route-notice">ログインするとAAS内の問い合わせ機能を利用できます。</div>}
+      {(state.kind === "pending" || state.kind === "entitlement_denied") && (
+        <div className="route-notice">
+          AAS内問い合わせを利用できる状態ではありません。アカウント承認・利用権を確認するか、
+          <a className="route-inline-link" href="/support">公開お問い合わせ案内</a>
+          をご確認ください。
+        </div>
+      )}
       {(state.kind === "suspended" || state.kind === "disabled") && (
         <div className="route-notice error">
           現在のアカウント状態ではAAS内問い合わせを利用できません。購入元の問い合わせ手段または
