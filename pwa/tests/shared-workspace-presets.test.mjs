@@ -29,7 +29,7 @@ test("shared presets include an admin-only AAS official operating profile", asyn
   const presets = await read("features/presets/workspace-presets.ts");
 
   for (const key of ["balanced", "note_growth", "longform", "sns_growth", "aas_official"]) {
-    assert.match(presets, new RegExp(key + ": \\\\{"));
+    assert.match(presets, new RegExp(key + ": \\{"));
   }
   assert.match(presets, /label: "AI Article Studio（AAS）公式運営"/);
   assert.match(presets, /adminOnly: true/);
