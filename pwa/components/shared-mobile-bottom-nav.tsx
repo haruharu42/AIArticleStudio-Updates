@@ -35,6 +35,7 @@ export function SharedMobileBottomNav({
 }: SharedMobileBottomNavProps) {
   const pathname = usePathname();
   const [userId, setUserId] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [items, setItems] = useState<MobileNavItemKey[]>([...DEFAULT_MOBILE_NAV_ITEMS]);
 
   useEffect(() => {
@@ -46,12 +47,36 @@ export function SharedMobileBottomNav({
       return;
     }
 
-    void client.auth.getSession().then(({ data }) => {
-      if (active) setUserId(data.session?.user.id ?? "");
-    });
+    const syncAccount = async (session: Awaited<ReturnType<typeof client.auth.getSession>>["data"]["session"]) => {
+      if (!active) return;
+      const nextUserId = session?.user.id ?? "";
+      setUserId(nextUserId);
+      setIsAdmin(false);
+      if (!nextUserId) return;
+
+      try {
+        const { data } = await client
+          .from("profiles")
+          .select("id,role,status")
+          .eq("id", nextUserId)
+          .single();
+        if (active) {
+          setIsAdmin(Boolean(
+            data &&
+            data.id === nextUserId &&
+            data.role === "admin" &&
+            data.status === "active"
+          ));
+        }
+      } catch {
+        if (active) setIsAdmin(false);
+      }
+    };
+
+    void client.auth.getSession().then(({ data }) => syncAccount(data.session));
     const { data } = client.auth.onAuthStateChange((_event, session) => {
       window.setTimeout(() => {
-        if (active) setUserId(session?.user.id ?? "");
+        if (active) void syncAccount(session);
       }, 0);
     });
 
@@ -62,7 +87,7 @@ export function SharedMobileBottomNav({
   }, []);
 
   useEffect(() => {
-    const sync = () => setItems(readMobileNavItems(userId));
+    const sync = () => setItems(readMobileNavItems(userId, isAdmin));
     const onPreference = (event: Event) => {
       const custom = event as CustomEvent<MobileNavItemsPreferenceEventDetail>;
       const detail = custom.detail;
@@ -81,7 +106,7 @@ export function SharedMobileBottomNav({
       window.removeEventListener(MOBILE_NAV_ITEMS_EVENT, onPreference);
       window.removeEventListener("storage", onStorage);
     };
-  }, [userId]);
+  }, [userId, isAdmin]);
 
   const homeActive = activeKey ? activeKey === "home" : pathname === "/";
   const navClass = ["aas-reference-bottom-nav", className].filter(Boolean).join(" ");
