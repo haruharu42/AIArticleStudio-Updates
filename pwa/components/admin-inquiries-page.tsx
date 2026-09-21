@@ -20,7 +20,7 @@ import {
   type SupportRequest,
   type SupportStatus,
   type SupportUserSummary,
-} from "@/lib/support-center";
+} from "@/features/support";
 import { getSupabaseClient } from "@/lib/supabase";
 
 function formatDate(value: string): string {
