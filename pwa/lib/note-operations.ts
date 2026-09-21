@@ -887,6 +887,8 @@ export function buildNoteAccountResearchPrompt(profile: NoteOperationProfile, ai
 
 ${workspacePresetContext ? `${workspacePresetContext}
 
+` : ""}${accountPresetContext ? `${accountPresetContext}
+
 ` : ""}【絶対ルール】
 - ユーザーが入力していない経歴、年齢、職業、収入、実績、資格、利用経験、成功体験を作らない。
 - 「稼げる」「伸びる」「この時間が正解」など成果を保証しない。
@@ -1005,6 +1007,7 @@ ${formatArticleOutputForPrompt(articleOutput, articleOutputMonth)}
 ${performanceSection}
 ${articleOutputSection}
 ${workspacePresetContext ? `${workspacePresetContext}
+` : ""}${accountPresetContext ? `${accountPresetContext}
 ` : ""}【スケジュール設計】
 - あなた自身が、平均の週投稿数・有料noteの週平均・1日の最大投稿数・無料/有料の本数を決定する。
 - scheduleに入れてよいtypeは free_note と paid_note の2種類だけ。review / sns_share / profile_setup は出力しない。
