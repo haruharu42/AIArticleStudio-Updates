@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { PlatformAccountPresetSettings } from "@/features/presets/platform-account-preset-settings";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import {
   WORKSPACE_PRESETS,
@@ -125,6 +126,8 @@ export function WorkspacePresetSettings() {
           <p>AASの使い方、開発進捗、実運用テスト、アップデート、公開予告を発信しやすい条件を各機能へ共有します。販売前の段階では、未確認の実績・価格・公開日を作らない指示も自動で追加します。</p>
         </div>
       )}
+
+      <PlatformAccountPresetSettings />
 
       {(message || error) && <p className="personalization-message" role="status">{message || error}</p>}
 
