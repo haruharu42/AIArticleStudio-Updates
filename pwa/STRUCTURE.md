@@ -40,3 +40,46 @@ AI Article Studio PWA keeps responsibilities separated so UI changes, business l
 12. New boundaries must be protected by regression tests before old code is removed.
 
 This document describes the active PWA code organization only; it does not change database contracts or release infrastructure.
+
+
+## Phase 45 feature-oriented structure
+
+New development should prefer the `features/` boundary before reaching directly into legacy `lib/` files.
+
+```text
+pwa/
+├─ app/                 # route entry points and route-level CSS
+├─ components/          # reusable/view-controller UI
+├─ features/            # product-domain import boundaries
+│  ├─ article/
+│  ├─ account-design/
+│  ├─ note/
+│  ├─ workflow/
+│  ├─ social/
+│  ├─ images/
+│  ├─ presets/
+│  ├─ support/
+│  ├─ admin/
+│  └─ navigation/
+├─ lib/                 # legacy/shared implementation modules kept for compatibility
+├─ tests/               # regression/contract tests
+└─ worker/              # Cloudflare Worker integration
+```
+
+### Import direction
+
+Preferred direction:
+
+`app -> components -> features -> lib/shared infrastructure -> Supabase`
+
+Feature modules may temporarily re-export legacy implementation from `lib/`.
+This is intentional. It lets AAS move away from historical `phaseXX-*.ts` names without a risky mass rename in one release.
+
+### Migration rule
+
+1. New domain logic should be created under `features/<domain>/` when practical.
+2. Existing stable `lib/` implementations are not deleted only to make the tree look cleaner.
+3. A legacy module is moved only when its call sites and regression tests can be migrated in one small batch.
+4. Old paths may remain as compatibility shims until the following release.
+5. Security/auth/database boundaries stay independent of cosmetic folder moves.
+6. Large feature moves require the same Typecheck, Lint, regression, Preview and RLS verification as behavior changes.
