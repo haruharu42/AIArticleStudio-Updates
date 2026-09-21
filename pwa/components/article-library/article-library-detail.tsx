@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { noteMagazineFromWorkspace } from "@/lib/article-library-v2";
@@ -44,6 +45,8 @@ export function ArticleLibraryDetailView({
           {desktopDownloads && (
             <button className="secondary-action" type="button" onClick={onDownload} disabled={busy}>PCへMarkdown保存</button>
           )}
+          <Link className="secondary-action" href={`/workflow?tab=preflight&article=${encodeURIComponent(detail.id)}`}>公開前チェック</Link>
+          <Link className="secondary-action" href={`/workflow?tab=reuse&article=${encodeURIComponent(detail.id)}`}>SNS再利用</Link>
           <button className="secondary-action" type="button" onClick={onDuplicate} disabled={busy}>複製</button>
           <button className="secondary-action" type="button" onClick={onArchiveToggle} disabled={busy}>
             {detail.status === "archived" ? "アーカイブから戻す" : "アーカイブ"}
