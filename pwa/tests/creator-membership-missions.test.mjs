@@ -21,7 +21,9 @@ test("reference home owns creator presentation without duplicating global banner
   assert.match(home, /getMyCreatorDashboard/);
   assert.match(home, /今日のミッション/);
   assert.match(home, /記事ライブラリ \/ noteマガジン/);
-  assert.match(home, /hasUnreadNotifications=\{Boolean\(dashboard\?\.claimableMissions\)\}/);
+  assert.match(home, /getSupportNotificationSummary/);
+  assert.match(home, /const hasHeaderNotification = Boolean\(dashboard\?\.claimableMissions\) \|\| hasSupportNotification/);
+  assert.match(home, /hasUnreadNotifications=\{hasHeaderNotification\}/);
   assert.match(home, /ranking\.length \? "圏外" : "未集計"/);
   assert.match(mobileNav, /ホーム/);
   assert.match(mobilePrefs, /ランキング/);
