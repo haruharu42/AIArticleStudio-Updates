@@ -25,6 +25,7 @@ type SharedMobileBottomNavProps = {
 function routeMatches(pathname: string, href: string): boolean {
   const path = href.split("?")[0] || "/";
   if (path === "/") return pathname === "/";
+  if (path === "/admin") return pathname === "/admin";
   return pathname === path || pathname.startsWith(path + "/");
 }
 
