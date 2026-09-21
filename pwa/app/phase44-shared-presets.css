@@ -429,3 +429,55 @@
     width: 100%;
   }
 }
+
+
+.account-design-preset-apply {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #d3e1ef;
+  border-radius: 11px;
+  background: #f8fbff;
+  padding: 10px 11px;
+}
+
+.account-design-preset-apply > div {
+  display: grid;
+  gap: 3px;
+}
+
+.account-design-preset-apply strong {
+  color: #315574;
+  font-size: 9px;
+}
+
+.account-design-preset-apply small {
+  color: #8192a5;
+  font-size: 7.5px;
+  line-height: 1.55;
+}
+
+.account-design-preset-apply button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  border: 1px solid #2d7bd5;
+  border-radius: 9px;
+  background: #fff;
+  color: #2269b5;
+  padding: 7px 9px;
+  font-size: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .account-design-preset-apply {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .account-design-preset-apply button {
+    width: 100%;
+  }
+}
