@@ -25,6 +25,7 @@ const memberTools: ToolCard[] = [
 const adminTools: ToolCard[] = [
   { href: "/admin", category: "運用", title: "管理ダッシュボード", description: "ユーザー、利用権、招待コード、要対応項目をまとめて確認します。" },
   { href: "/admin/inquiries", category: "サポート", title: "問い合わせ確認", description: "ユーザーから届いた要望・不具合・質問を確認し、返信・優先度・対応状況を管理します。" },
+  { href: "/admin/development-prompts", category: "開発支援", title: "AAS開発依頼プロンプト", description: "アップデート・修正・追加機能を対象画面まで選び、ChatGPTへそのまま渡せる依頼文を作成します。" },
   { href: "/admin/knowledge", category: "ナレッジ", title: "AASナレッジ管理", description: "自由入力されたジャンル候補を匿名集計で確認し、正式Knowledgeへ承認します。" },
   { href: "/admin/promotion?mode=preview", category: "公開前発信", title: "テスト・公開予告", description: "note等の実運用テスト、開発進捗、公開予定を販売前でも誤認なく記事・SNSへ展開します。" },
   { href: "/admin/promotion?mode=article", category: "記事販促", title: "紹介・販売記事作成", description: "販売前のテスト共有・公開予告から販売開始後の記事まで発信フェーズに合わせて作成します。" },
