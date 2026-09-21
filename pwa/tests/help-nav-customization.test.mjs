@@ -60,7 +60,7 @@ test("mobile navigation uses one shared customizable source across home and othe
     assert.match(prefs, new RegExp(label));
   }
 
-  assert.match(shared, /readMobileNavItems\(userId\)/);
+  assert.match(shared, /readMobileNavItems\(userId, isAdmin\)/);
   assert.match(shared, /MOBILE_NAV_ITEMS_EVENT/);
   assert.match(shared, /mobileNavItemsStorageKey\(userId\)/);
   assert.match(shared, /getSupabaseClient/);
@@ -77,12 +77,12 @@ test("mobile navigation uses one shared customizable source across home and othe
   assert.match(customizer, /残り\{MAX_CUSTOM_MOBILE_NAV_ITEMS\}枠/);
   assert.match(customizer, /全画面のスマホ下部ナビへ共通反映/);
   assert.match(customizer, /userId = ""/);
-  assert.match(customizer, /readMobileNavItems\(userId\)/);
-  assert.match(customizer, /writeMobileNavItems\(next, userId\)/);
+  assert.match(customizer, /readMobileNavItems\(userId, isAdmin\)/);
+  assert.match(customizer, /writeMobileNavItems\(next, userId, isAdmin\)/);
   assert.match(customizer, /changeSlot/);
   assert.match(customizer, /move\(index, -1\)/);
   assert.match(customizer, /初期状態に戻す/);
-  assert.match(settings, /<MobileNavCustomizer userId=\{profile\.id\} \/>/);
+  assert.match(settings, /<MobileNavCustomizer userId=\{profile\.id\} isAdmin=\{profile\.role === "admin" && profile\.status === "active"\} \/>/);
   assert.match(settings, /ナビ設定を読み込んでいます/);
   assert.match(settings, /ホームは固定、残り4枠/);
   assert.match(manual, /残り4枠を好きな機能へ入れ替え/);
@@ -198,7 +198,7 @@ test("mobile nav choices are isolated between accounts on the same device", asyn
   assert.match(prefs, /MobileNavItemsPreferenceEventDetail/);
   assert.match(shared, /detail\.userId !== userId/);
   assert.match(customizer, /ログイン中のユーザーごとに保存されます/);
-  assert.match(settings, /profile\s*\?\s*<MobileNavCustomizer userId=\{profile\.id\}/);
+  assert.match(settings, /profile\s*\?\s*<MobileNavCustomizer userId=\{profile\.id\} isAdmin=/);
 });
 
 
