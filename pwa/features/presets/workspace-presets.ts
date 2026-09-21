@@ -414,8 +414,10 @@ export function buildWorkspacePresetPromptContext(task: string): string {
   const feature =
     task === "image" ? "images"
       : task === "sns" || task === "promotion" ? "sns"
-        : task === "article" || task === "title" ? "article"
-          : "workflow";
+        : task === "note" ? "note"
+          : task === "account_design" ? "account_design"
+            : task === "article" || task === "title" ? "article"
+              : "workflow";
   if (!workspacePresetAppliesTo(feature)) return "";
   return [
     "【AAS共通プリセット】",
