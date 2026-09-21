@@ -115,9 +115,13 @@ export function AdminInquiriesPage() {
   useEffect(() => {
     if (!selectedId) return;
     let active = true;
+    queueMicrotask(() => {
+      if (active) {
+        setDetailBusy(true);
+        setMessage("");
+      }
+    });
     const loadDetail = async () => {
-      setDetailBusy(true);
-      setMessage("");
       try {
         const client = getSupabaseClient();
         await markSupportRequestSeen(client, selectedId);
