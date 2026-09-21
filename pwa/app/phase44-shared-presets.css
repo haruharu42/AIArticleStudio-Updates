@@ -338,3 +338,43 @@
     width: 100%;
   }
 }
+
+
+.active-workspace-preset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 9px;
+  align-items: center;
+  border: 1px solid #c8dcf2;
+  border-radius: 11px;
+  background: #f4f9ff;
+  color: #52708e;
+  padding: 8px 10px;
+}
+
+.active-workspace-preset > span {
+  color: #2e79cf;
+  font-size: 7.5px;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+
+.active-workspace-preset > strong {
+  color: #315574;
+  font-size: 9px;
+}
+
+.active-workspace-preset > small {
+  color: #8393a5;
+  font-size: 7.5px;
+}
+
+.active-workspace-preset.admin {
+  border-color: #cfc8ef;
+  background: #f8f6ff;
+}
+
+.active-workspace-preset.admin > span,
+.active-workspace-preset.admin > strong {
+  color: #625ab8;
+}
