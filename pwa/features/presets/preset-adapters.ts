@@ -1,4 +1,5 @@
 import type { ArticleCreationDraft } from "@/lib/phase11-create";
+import type { PlatformAccountDesign } from "@/lib/platform-account-design";
 
 import {
   WORKSPACE_PRESETS,
@@ -46,4 +47,34 @@ export function workspacePresetSocialDefaults(
 export function workspacePresetWorkflowDefaults(preference: WorkspacePresetPreference | null) {
   if (!preference?.applyWorkflow) return null;
   return WORKSPACE_PRESETS[preference.presetKey].workflow;
+}
+
+
+export function applyWorkspacePresetToAccountDesign(
+  design: PlatformAccountDesign,
+  preference: WorkspacePresetPreference,
+): PlatformAccountDesign {
+  if (!preference.applyAccountDesign) return design;
+  const preset = WORKSPACE_PRESETS[preference.presetKey];
+  const note = preset.note;
+  const topics = [...new Set([
+    ...design.mainTopics,
+    ...(note.topics ?? preset.article.tags ?? []),
+  ])].slice(0, 12);
+
+  return {
+    ...design,
+    genrePreset: note.genre ? "other" : design.genrePreset,
+    customGenre: note.genre ?? design.customGenre,
+    accountStylePreset: note.style ? "other" : design.accountStylePreset,
+    customAccountStyle: note.style ?? design.customAccountStyle,
+    audiencePreset: note.audience ? "other" : design.audiencePreset,
+    customAudience: note.audience ?? design.customAudience,
+    tonePreset: note.tone ? "other" : design.tonePreset,
+    customTone: note.tone ?? design.customTone,
+    monetizationPreset: note.monetization ? "other" : design.monetizationPreset,
+    customMonetization: note.monetization ?? design.customMonetization,
+    goalPreset: note.goal?.includes("読者") ? "growth" : design.goalPreset,
+    mainTopics: topics,
+  };
 }
