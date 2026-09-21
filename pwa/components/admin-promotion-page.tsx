@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
+import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
+import { WORKSPACE_PRESETS } from "@/features/presets/workspace-presets";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import {
   ADMIN_PRODUCT_FACTS_STORAGE_KEY,
@@ -395,6 +398,7 @@ function PromptOutput({ prompt, onCopy }: { prompt: string; onCopy: () => void }
 
 export function AdminPromotionPage() {
   const { state } = useSharedAccessState();
+  const { preference: workspacePreference } = useWorkspacePreset();
   const [mode, setMode] = useState<Mode>("preview");
   const [message, setMessage] = useState("");
   const [facts, setFacts] = useState<AdminProductFacts>(DEFAULT_ADMIN_PRODUCT_FACTS);
@@ -435,6 +439,7 @@ export function AdminPromotionPage() {
     channels: "note, X, Instagram, Threads",
     cta: "フォローして続報を待ってもらう",
   });
+  const workspacePresetAppliedRef = useRef(false);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -449,6 +454,25 @@ export function AdminPromotionPage() {
     });
   }, []);
 
+  useEffect(() => {
+    if (workspacePresetAppliedRef.current || !workspacePreference?.applySns) return;
+    workspacePresetAppliedRef.current = true;
+    const preset = WORKSPACE_PRESETS[workspacePreference.presetKey];
+    const nextLengths = { ...preset.social.targetCharacters };
+    const nextPresetIds = { ...DEFAULT_SOCIAL_PRESET_IDS };
+    for (const platform of Object.keys(nextLengths) as AdminSocialPlatform[]) {
+      const match = socialLengthPresetsFor(platform).find((item) => item.targetChars === nextLengths[platform]);
+      nextPresetIds[platform] = match?.id ?? "__custom__";
+    }
+    queueMicrotask(() => {
+      setSocialLengths(nextLengths);
+      setSocialPresetIds(nextPresetIds);
+      if (workspacePreference.presetKey === "aas_official") {
+        setMode((current) => current === "product" ? current : "preview");
+      }
+    });
+  }, [workspacePreference]);
+
   const isAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
   const featureOptions = useMemo(() => {
     const confirmed = facts.features
@@ -458,22 +482,22 @@ export function AdminPromotionPage() {
     return Array.from(new Set(["製品全体", ...confirmed]));
   }, [facts.features]);
 
-  const articlePrompt = useMemo(() => buildAdminArticlePromotionPrompt(facts, article), [facts, article]);
+  const articlePrompt = useMemo(() => buildAdminArticlePromotionPrompt(facts, article), [facts, article, workspacePreference]);
   const socialPrompt = useMemo(
     () => buildAdminSocialPromotionPrompt(facts, {
       ...social,
       lengthPresetId: socialPresetIds[social.platform],
       targetChars: socialLengths[social.platform],
     }),
-    [facts, social, socialLengths, socialPresetIds],
+    [facts, social, socialLengths, socialPresetIds, workspacePreference],
   );
   const campaignPrompt = useMemo(
     () => buildAdminCampaignPrompt(facts, { ...campaign, socialLengths }),
-    [facts, campaign, socialLengths],
+    [facts, campaign, socialLengths, workspacePreference],
   );
   const previewPrompt = useMemo(
     () => buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths }),
-    [facts, preview, socialLengths],
+    [facts, preview, socialLengths, workspacePreference],
   );
 
   const updateSocialLength = (platform: AdminSocialPlatform, presetId: string, targetChars: number) => {
@@ -518,6 +542,7 @@ export function AdminPromotionPage() {
         <div><Link href="/admin">管理ダッシュボード</Link><Link href="/">ホーム</Link></div>
       </header>
 
+      <ActiveWorkspacePresetBadge feature="sns" />
       <div className="admin-promo-safety"><strong>確認済み情報を基準に作成</strong><span>販売前は「テスト中・準備中・公開予定」として扱い、未入力の価格・実績・レビュー・公開日をAIに作らせません。製品情報は現在この端末だけに保存されます。</span></div>
       {message && <div className="route-notice">{message}</div>}
 
