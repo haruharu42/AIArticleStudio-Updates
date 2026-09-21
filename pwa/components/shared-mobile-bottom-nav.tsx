@@ -10,6 +10,7 @@ import {
   MOBILE_NAV_ITEMS_KEY,
   mobileNavItemFor,
   mobileNavItemsStorageKey,
+  normalizeMobileNavItems,
   readMobileNavItems,
   type MobileNavItemKey,
   type MobileNavItemsPreferenceEventDetail,
@@ -93,7 +94,7 @@ export function SharedMobileBottomNav({
       const custom = event as CustomEvent<MobileNavItemsPreferenceEventDetail>;
       const detail = custom.detail;
       if (!detail || detail.userId !== userId || !Array.isArray(detail.items)) return;
-      setItems(detail.items);
+      setItems(normalizeMobileNavItems(detail.items, isAdmin));
     };
     const onStorage = (event: StorageEvent) => {
       const scopedKey = mobileNavItemsStorageKey(userId);
