@@ -571,10 +571,11 @@ export function AdminPromotionPage() {
 
       {mode === "article" && (
         <section className="admin-promo-panel admin-promo-builder">
-          <div className="admin-promo-section-title"><div><p className="eyebrow">SALES ARTICLE</p><h2>販売・宣伝記事作成</h2></div></div>
-          <p className="admin-promo-help">基本は選ぶだけで作成できます。想定読者・目的・訴求機能・CTAは候補を多めに用意しています。</p>
+          <div className="admin-promo-section-title"><div><p className="eyebrow">ARTICLE PROMOTION</p><h2>紹介・販売記事作成</h2></div></div>
+          <p className="admin-promo-help">販売前のテスト共有・公開予告から販売開始後の記事まで、発信フェーズを選んで作成できます。</p>
           <div className="admin-promo-form-grid compact">
             <label className="admin-promo-field"><span>掲載先</span><select value={article.platform} onChange={(event) => setArticle((current) => ({ ...current, platform: event.target.value as typeof article.platform }))}><option value="note">note</option><option value="brain">Brain</option><option value="tips">Tips</option><option value="blog">ブログ</option></select></label>
+            <SelectWithCustomField label="発信フェーズ" value={article.phase} onChange={(value) => setArticle((current) => ({ ...current, phase: value }))} options={PROMOTION_PHASE_OPTIONS} customPlaceholder="現在の発信フェーズを入力" />
             <SelectWithCustomField label="目的" value={article.purpose} onChange={(value) => setArticle((current) => ({ ...current, purpose: value }))} options={PURPOSE_OPTIONS} customPlaceholder="記事の目的を入力" />
             <SelectWithCustomField label="想定読者" value={article.audience} onChange={(value) => setArticle((current) => ({ ...current, audience: value }))} options={AUDIENCE_OPTIONS} customPlaceholder="想定読者を入力" />
             <SelectWithCustomField label="特に紹介したい内容" value={article.focus} onChange={(value) => setArticle((current) => ({ ...current, focus: value }))} options={featureOptions} customPlaceholder="紹介したい内容を入力" />
@@ -587,31 +588,35 @@ export function AdminPromotionPage() {
       {mode === "social" && (
         <section className="admin-promo-panel admin-promo-builder">
           <div className="admin-promo-section-title"><div><p className="eyebrow">SOCIAL PROMOTION</p><h2>SNSプロモーション作成</h2></div></div>
-          <p className="admin-promo-help">SNSと目的を選び、読者・紹介テーマ・CTAを候補から指定するだけで生成用プロンプトを作れます。</p>
+          <p className="admin-promo-help">販売前のテスト共有・公開予告にも対応します。X Premiumなど契約・媒体ごとの文字数も下で選べます。</p>
           <div className="admin-promo-form-grid compact">
             <label className="admin-promo-field"><span>SNS</span><select value={social.platform} onChange={(event) => setSocial((current) => ({ ...current, platform: event.target.value as typeof social.platform }))}><option value="x">X</option><option value="instagram">Instagram</option><option value="threads">Threads</option><option value="tiktok">TikTok</option><option value="youtube">YouTube Shorts</option></select></label>
+            <SelectWithCustomField label="発信フェーズ" value={social.phase} onChange={(value) => setSocial((current) => ({ ...current, phase: value }))} options={PROMOTION_PHASE_OPTIONS} customPlaceholder="現在の発信フェーズを入力" />
             <SelectWithCustomField label="目的" value={social.purpose} onChange={(value) => setSocial((current) => ({ ...current, purpose: value }))} options={PURPOSE_OPTIONS} customPlaceholder="SNS投稿の目的を入力" />
             <SelectWithCustomField label="想定読者" value={social.audience} onChange={(value) => setSocial((current) => ({ ...current, audience: value }))} options={AUDIENCE_OPTIONS} customPlaceholder="想定読者を入力" />
             <SelectWithCustomField label="紹介テーマ" value={social.focus} onChange={(value) => setSocial((current) => ({ ...current, focus: value }))} options={featureOptions} customPlaceholder="紹介テーマを入力" />
             <SelectWithCustomField label="CTA・誘導先" value={social.cta} onChange={(value) => setSocial((current) => ({ ...current, cta: value }))} options={CTA_OPTIONS} customPlaceholder="CTA・誘導先を入力" />
             <SelectField label="作成数" value={String(social.variants)} onChange={(value) => setSocial((current) => ({ ...current, variants: Number(value) || 1 }))} options={["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]} />
           </div>
+          <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
           <PromptOutput prompt={socialPrompt} onCopy={() => void copyPrompt(socialPrompt)} />
         </section>
       )}
 
       {mode === "campaign" && (
         <section className="admin-promo-panel admin-promo-builder">
-          <div className="admin-promo-section-title"><div><p className="eyebrow">CAMPAIGN</p><h2>販売キャンペーン設計</h2></div></div>
-          <p className="admin-promo-help">キャンペーン名だけ必要に応じて入力し、目的・対象・使用媒体・オファー・CTAは候補から選択できます。</p>
+          <div className="admin-promo-section-title"><div><p className="eyebrow">CAMPAIGN</p><h2>プロモーションキャンペーン設計</h2></div></div>
+          <p className="admin-promo-help">販売前のテスト共有・公開予告から販売開始後まで、記事とSNSをまとめた14日間の発信計画を作れます。</p>
           <div className="admin-promo-form-grid compact">
             <TextField label="キャンペーン名" value={campaign.campaignName} onChange={(value) => setCampaign((current) => ({ ...current, campaignName: value }))} placeholder="例: PWAベータ販売開始" />
+            <SelectWithCustomField label="発信フェーズ" value={campaign.phase} onChange={(value) => setCampaign((current) => ({ ...current, phase: value }))} options={PROMOTION_PHASE_OPTIONS} customPlaceholder="現在の発信フェーズを入力" />
             <SelectWithCustomField label="目的" value={campaign.goal} onChange={(value) => setCampaign((current) => ({ ...current, goal: value }))} options={CAMPAIGN_GOAL_OPTIONS} customPlaceholder="キャンペーンの目的を入力" />
             <SelectWithCustomField label="想定読者" value={campaign.audience} onChange={(value) => setCampaign((current) => ({ ...current, audience: value }))} options={AUDIENCE_OPTIONS} customPlaceholder="想定読者を入力" />
             <SelectWithCustomField label="使用媒体" value={campaign.channels} onChange={(value) => setCampaign((current) => ({ ...current, channels: value }))} options={CHANNEL_PRESET_OPTIONS} customPlaceholder="例: note, X, Instagram" />
             <SelectWithCustomField label="販売条件・オファー" value={campaign.offer} onChange={(value) => setCampaign((current) => ({ ...current, offer: value }))} options={OFFER_OPTIONS} customPlaceholder="確認済みの販売条件・オファーを入力" />
             <SelectWithCustomField label="CTA・誘導先" value={campaign.cta} onChange={(value) => setCampaign((current) => ({ ...current, cta: value }))} options={CTA_OPTIONS} customPlaceholder="CTA・誘導先を入力" />
           </div>
+          <SocialLengthSettings presetIds={socialPresetIds} plan={socialLengths} onChange={updateSocialLength} />
           <PromptOutput prompt={campaignPrompt} onCopy={() => void copyPrompt(campaignPrompt)} />
         </section>
       )}
