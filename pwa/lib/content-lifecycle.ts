@@ -253,6 +253,7 @@ export function runPrePublishChecks(article: ArticleDetail): PrePublishReport {
 export function buildPrePublishReviewPrompt(article: ArticleDetail, report: PrePublishReport): string {
   const body = cleanBody(article);
   const workspacePresetContext = buildWorkspacePresetPromptContext("workflow");
+  const accountPresetContext = buildPlatformAccountPromptContext(article.publicationTarget);
   const checks = report.checks
     .filter((check) => check.severity !== "pass")
     .map((check) => `- [${check.severity}] ${check.label}: ${check.detail}`)
@@ -268,6 +269,8 @@ export function buildPrePublishReviewPrompt(article: ArticleDetail, report: PreP
 - 個人情報、認証情報、秘密情報が含まれていないかも確認する。
 
 ${workspacePresetContext ? `${workspacePresetContext}
+
+` : ""}${accountPresetContext ? `${accountPresetContext}
 
 ` : ""}【記事情報】
 タイトル: ${article.title}
@@ -295,6 +298,7 @@ ${body.slice(0, 22000)}
 export function buildArticleReusePrompt(article: ArticleDetail, channels: ReuseChannelPlan[]): string {
   const body = cleanBody(article);
   const workspacePresetContext = buildWorkspacePresetPromptContext("workflow");
+  const accountPresetContext = buildPlatformAccountPromptContext(article.publicationTarget);
   const selected = channels
     .filter((item) => item.targetChars > 0)
     .slice(0, 8)
@@ -311,6 +315,8 @@ export function buildArticleReusePrompt(article: ArticleDetail, channels: ReuseC
 - 公開URLが未設定なら、存在しないURLや「リンクから購入」等を作らない。
 
 ${workspacePresetContext ? `${workspacePresetContext}
+
+` : ""}${accountPresetContext ? `${accountPresetContext}
 
 ` : ""}【元記事】
 タイトル: ${article.title}
