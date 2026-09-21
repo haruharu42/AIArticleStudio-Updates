@@ -162,6 +162,25 @@ export function sanitizeSocialTargetChars(value: number): number {
   return Math.max(1, Math.min(25000, Math.round(value)));
 }
 
+function socialPlatformLabel(platform: AdminSocialPlatform): string {
+  return {
+    x: "X",
+    instagram: "Instagram",
+    threads: "Threads",
+    tiktok: "TikTok",
+    youtube: "YouTube Shorts",
+  }[platform];
+}
+
+function socialLengthPlanBlock(plan: AdminSocialLengthPlan): string {
+  return (Object.keys(plan) as AdminSocialPlatform[])
+    .map((platform) => {
+      const value = sanitizeSocialTargetChars(plan[platform]);
+      if (platform === "youtube") return `- YouTube Shorts: 概要欄 約${value}文字 / タイトル100文字以内`;
+      return `- ${socialPlatformLabel(platform)}: 約${value}文字`;
+    })
+    .join("\n");
+}
 function factsBlock(facts: AdminProductFacts): string {
   return [
     `製品名: ${facts.productName || "未設定"}`,
@@ -173,11 +192,18 @@ function factsBlock(facts: AdminProductFacts): string {
     `販売URL: ${facts.salesUrl || "未設定"}`,
     `サポート: ${facts.support || "未設定"}`,
     `制限・注意事項: ${facts.limitations || "未設定"}`,
+    `実運用・テスト状況: ${facts.testingStatus || "未設定"}`,
+    `確認済みテスト内容・観察結果:\n${facts.testingNotes || "未設定"}`,
+    `公開・販売予定: ${facts.releasePlan || "未設定"}`,
+    `テスト記事・案内URL: ${facts.referenceUrl || "未設定"}`,
   ].join("\n");
 }
 
 const FACT_SAFETY = `【絶対ルール】
 - 下記の「確認済み製品情報」に書かれていない機能、価格、実績、利用者数、売上、レビュー、キャンペーンを事実として作らない。
+- テスト結果・使った感想・改善効果・数値は、確認済みテスト内容に書かれた事実だけを使う。運営者の体験を推測で作らない。
+- 公開日・販売開始日・価格が未確定なら、具体的な日付・価格・購入可能という表現を作らない。
+- 販売前・テスト中の段階では「販売中」「購入できます」「正式リリース済み」などと誤認させない。
 - 未入力・未確認の情報は推測で補完せず、必要なら「要確認」と明示する。
 - 「必ず稼げる」「絶対に売れる」などの成果保証や過度な煽りを使わない。
 - 架空の購入者レビュー、体験談、ランキング、権威づけを作らない。
