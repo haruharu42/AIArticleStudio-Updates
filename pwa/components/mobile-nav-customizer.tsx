@@ -10,7 +10,7 @@ import {
   readMobileNavItems,
   writeMobileNavItems,
   type MobileNavItemKey,
-} from "@/lib/mobile-nav-preference";
+} from "@/features/navigation";
 
 export function MobileNavCustomizer({
   userId = "",
