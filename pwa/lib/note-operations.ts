@@ -856,6 +856,7 @@ export function buildNoteAccountResearchPrompt(profile: NoteOperationProfile, ai
   const factualBackground = profile.experienceNote.trim() || "未入力。経歴・実績・資格を推測して追加しない";
   const readerExtra = profile.targetReader.trim() || "なし";
   const displayName = profile.noteDisplayName.trim() || "未定";
+  const workspacePresetContext = buildWorkspacePresetPromptContext("note");
 
   return `あなたは日本のnote運営に詳しい編集者・コンテンツ戦略担当です。
 目的は、初心者でも継続しやすい「noteアカウント構成案」を、最新情報と直近トレンドを調査したうえで3案作ることです。
@@ -882,7 +883,9 @@ export function buildNoteAccountResearchPrompt(profile: NoteOperationProfile, ai
 - 希望表示名: ${displayName}
 - ユーザーが事実として入力した経験・資格・背景: ${factualBackground}
 
-【絶対ルール】
+${workspacePresetContext ? `${workspacePresetContext}
+
+` : ""}【絶対ルール】
 - ユーザーが入力していない経歴、年齢、職業、収入、実績、資格、利用経験、成功体験を作らない。
 - 「稼げる」「伸びる」「この時間が正解」など成果を保証しない。
 - 有料noteを提案する場合も、無料部分で十分な価値を提供し、誇張や不安煽りを使わない。
@@ -929,6 +932,7 @@ export function buildNoteScheduleResearchPrompt(
 ): string {
   const { start, end } = noteMonthBounds(targetMonth);
   const selected = noteProfileSelectionLabels(profile);
+  const workspacePresetContext = buildWorkspacePresetPromptContext("note");
   const providerName = aiProviderName(aiProvider);
   const topics = profile.mainTopics.length ? profile.mainTopics.join(" / ") : "未指定（最新調査から候補を決める）";
   const readerExtra = profile.targetReader.trim() || "なし";
@@ -997,7 +1001,8 @@ ${formatArticleOutputForPrompt(articleOutput, articleOutputMonth)}
 - ユーザーが事実として入力した経験・資格・背景: ${factualBackground}
 ${performanceSection}
 ${articleOutputSection}
-【スケジュール設計】
+${workspacePresetContext ? `${workspacePresetContext}
+` : ""}【スケジュール設計】
 - あなた自身が、平均の週投稿数・有料noteの週平均・1日の最大投稿数・無料/有料の本数を決定する。
 - scheduleに入れてよいtypeは free_note と paid_note の2種類だけ。review / sns_share / profile_setup は出力しない。
 - free_note / paid_note には、実際に記事作成へ進める具体的なテーマとタイトルを入れる。
