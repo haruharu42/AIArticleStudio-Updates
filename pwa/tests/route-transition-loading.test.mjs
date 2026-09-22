@@ -147,6 +147,38 @@ test("free trial usage verification stays invisible while loading", async () => 
   assert.doesNotMatch(gate, /利用回数を確認しています/);
 });
 
+test("member and admin route shells stay hidden until shared access verification settles", async () => {
+  const accessStateRoutes = await Promise.all([
+    read("components/phase13-image-page.tsx"),
+    read("components/phase14-sns-page.tsx"),
+    read("components/article-export-page.tsx"),
+  ]);
+
+  for (const source of accessStateRoutes) {
+    assert.match(source, /if \(accessState\.kind === "loading"\) return null/);
+  }
+
+  const localGateRoutes = await Promise.all([
+    read("components/phase11-create-page.tsx"),
+    read("components/phase10-admin-page.tsx"),
+    read("components/free-trial-admin-page.tsx"),
+    read("components/operations-admin-page.tsx"),
+    read("components/sales-settings-admin-page.tsx"),
+  ]);
+
+  for (const source of localGateRoutes) {
+    assert.match(source, /if \(gate\.kind === "loading"\) return null/);
+  }
+
+  const [accountDesign, invite] = await Promise.all([
+    read("components/platform-account-design-page.tsx"),
+    read("components/phase9-invite-page.tsx"),
+  ]);
+
+  assert.match(accountDesign, /if \(state\.kind === "loading"\) return null/);
+  assert.match(invite, /if \(state\.kind === "loading"\) return null/);
+});
+
 test("admin surfaces reuse root access state instead of starting page-level account checks", async () => {
   const sources = await Promise.all([
     read("components/phase10-admin-page.tsx"),
