@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
 
 import {
   loadOpsSnapshot,
@@ -74,7 +77,8 @@ function capacityClass(percent: number | null, warning: number, danger: number, 
 }
 
 export function OperationsAdminPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState, client } = useSharedAccessState();
+  const [initError, setInitError] = useState("");
   const [snapshot, setSnapshot] = useState<OpsSnapshot | null>(null);
   const [worker, setWorker] = useState<{ ok: boolean; latencyMs: number; checkedAt: string } | null>(null);
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
@@ -85,34 +89,44 @@ export function OperationsAdminPage() {
   const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({});
   const [capacityDraft, setCapacityDraft] = useState<CapacityDraft | null>(null);
 
+  const gate = useMemo<Gate>(() => {
+    if (accessState.kind === "ready") {
+      if (accessState.profile.role !== "admin" || accessState.profile.status !== "active") return { kind: "denied" };
+      if (initError) return { kind: "error", message: initError };
+      return { kind: "ready", aasId: accessState.profile.aas_user_id };
+    }
+    if (accessState.kind === "loading") return { kind: "loading" };
+    if (accessState.kind === "signed_out") return { kind: "signed_out" };
+    if (accessState.kind === "unavailable") {
+      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
+    }
+    return { kind: "denied" };
+  }, [accessState, initError]);
+
   const refresh = useCallback(async () => {
-    const client = getSupabaseClient();
+    if (!client) return;
     const [nextSnapshot, nextWorker] = await Promise.all([loadOpsSnapshot(client), probeWorkerHealth()]);
     setSnapshot(nextSnapshot);
     setWorker(nextWorker);
-  }, []);
+  }, [client]);
 
   useEffect(() => {
+    if (accessState.kind !== "ready" || accessState.profile.role !== "admin" || accessState.profile.status !== "active" || !client) return;
     let active = true;
+    queueMicrotask(() => {
+      if (active) setInitError("");
+    });
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) { setGate({ kind: "signed_out" }); return; }
-        const { data: profile, error: profileError } = await client.from("profiles").select("id,aas_user_id,role,status").eq("id", user.id).single();
-        if (profileError || !profile || profile.id !== user.id) throw new Error("管理者プロフィールを確認できません。");
-        if (profile.role !== "admin" || profile.status !== "active") { setGate({ kind: "denied" }); return; }
         await refresh();
-        if (active) setGate({ kind: "ready", aasId: profile.aas_user_id });
       } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "Security & Operationsを初期化できませんでした。" });
+        if (active) setInitError(error instanceof Error ? error.message : "Security & Operationsを初期化できませんでした。");
       }
     };
     void boot();
     const timer = window.setInterval(() => { if (active) void refresh().catch(() => undefined); }, 60_000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [refresh]);
+  }, [accessState, client, refresh]);
 
   const sources = useMemo(() => [...new Set((snapshot?.events ?? []).map((event) => event.source))].sort(), [snapshot]);
   const events = useMemo(() => (snapshot?.events ?? []).filter((event) => {
@@ -147,11 +161,10 @@ export function OperationsAdminPage() {
   if (gate.kind !== "ready") {
     return <main className="standalone-page"><section className="standalone-card">
       <p className="eyebrow">SECURITY & OPERATIONS</p><h1>セキュリティ・運用</h1>
-      {gate.kind === "loading" && <p className="route-notice">管理者権限と監視状態を確認しています…</p>}
       {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
       {gate.kind === "denied" && <p className="route-notice error">active管理者のみ利用できます。</p>}
       {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-      <a className="route-back" href="/admin">← 管理ダッシュボード</a>
+      <Link className="route-back" href="/admin">← 管理ダッシュボード</Link>
     </section></main>;
   }
 
@@ -213,7 +226,7 @@ export function OperationsAdminPage() {
     <main className="admin-page ops-admin-page">
       <header className="admin-head admin-dashboard-head">
         <div><p className="eyebrow">SECURITY & OPERATIONS CENTER</p><h1>セキュリティ・運用</h1><p>{gate.aasId} / エラー・セキュリティイベント・定期監査・Supabase容量をまとめて確認します。</p></div>
-        <div className="admin-head-actions"><button className="primary-action" disabled={busy} type="button" onClick={() => void runAudit()}>{busy ? "監査中…" : "今すぐ監査"}</button><a className="route-back" href="/admin">← 管理ダッシュボード</a></div>
+        <div className="admin-head-actions"><button className="primary-action" disabled={busy} type="button" onClick={() => void runAudit()}>{busy ? "監査中…" : "今すぐ監査"}</button><Link className="route-back" href="/admin">← 管理ダッシュボード</Link></div>
       </header>
       {message && <div className="route-notice" role="status">{message}</div>}
 
