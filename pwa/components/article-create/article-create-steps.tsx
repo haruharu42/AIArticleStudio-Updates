@@ -302,11 +302,13 @@ export function BodyStep({
 export function PreviewStep({
   draft,
   imagePrompts,
+  combinedImagePrompt,
   onBeforeExternalLaunch,
   setMessage,
 }: {
   draft: ArticleCreationDraft;
   imagePrompts: ImagePromptItem[];
+  combinedImagePrompt: string;
   onBeforeExternalLaunch: () => void;
   setMessage: MessageSetter;
 }) {
