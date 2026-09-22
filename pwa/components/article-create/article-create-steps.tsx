@@ -546,6 +546,7 @@ export function SaveStep({
   onSave: () => Promise<void>;
   setMessage: MessageSetter;
 }) {
+  const [publicationCopied, setPublicationCopied] = useState(false);
   const publicationBody = publicationBodyForCopy(draft.body, draft.title);
   const editorLink = publicationEditorLink(draft.publicationTarget);
   const publicationLabel = draft.publicationTarget === "note"
@@ -559,10 +560,13 @@ export function SaveStep({
   const copyPublicationBody = async () => {
     if (!publicationBody) return;
     try {
-      await copyNoteRichText(publicationBody);
-      setMessage(publicationLabel + "へ貼り付ける装飾付き本文をコピーしました。タイトルは含めていません。");
-    } catch {
-      copyText(publicationBody, setMessage);
+      const mode = await copyNoteRichText(publicationBody);
+      setPublicationCopied(true);
+      window.setTimeout(() => setPublicationCopied(false), 2600);
+      setMessage(publicationLabel + "へ貼り付ける装飾付き本文をコピーしました（" + (mode === "rich" ? "HTML形式" : "リッチテキスト形式") + "）。");
+    } catch (error) {
+      setPublicationCopied(false);
+      setMessage(error instanceof Error ? error.message : "装飾付きコピーに失敗しました。");
     }
   };
   return (
@@ -571,11 +575,23 @@ export function SaveStep({
       <p className="panel-muted">タグは記事内容が完成してから決めます。ジャンル・サブジャンルに合わせて投稿前の最終設定として入力してください。</p>
       <section className="creator-publish-copy" aria-label="掲載用コピー">
         <h3>完成記事を掲載先へコピー</h3>
-        <p className="panel-muted">タイトルと本文を分けてコピーします。本文は記事タイトルと画像差し込みマーカーを除き、見出し・太字・引用・リスト等の装飾を保てる形式でコピーします。</p>
+        <p className="panel-muted">タイトルと本文を分けてコピーします。本文は見出し・太字・引用・リスト等をHTMLのリッチテキストとしてコピーし、挿絵位置と有料エリア位置はnoteへ貼り付けても見える目印として残します。</p>
         <div className="openai-prompt-actions">
           <CopyButton value={draft.title} label="タイトルをコピー" setMessage={setMessage} />
-          <button className="primary-action" type="button" disabled={!publicationBody} onClick={() => void copyPublicationBody()}>完成本文を装飾付きコピー</button>
+          <button className="primary-action" type="button" disabled={!publicationBody} onClick={() => void copyPublicationBody()}>{publicationCopied ? "装飾付きでコピーしました ✓" : "完成本文を装飾付きコピー"}</button>
         </div>
+        {draft.publicationTarget === "note" && draft.articleType === "paid" && (
+          <div className="note-paid-area-guide">
+            <strong>有料noteの仕上げ</strong>
+            <small>本文をnoteへ貼り付けると「【ここから有料エリア】」が残ります。noteの「有料エリア設定」でその位置に有料ラインを設定し、設定後に目印の文字だけ削除してください。</small>
+          </div>
+        )}
+        {draft.inlineEnabled && (
+          <div className="note-image-marker-guide">
+            <strong>挿絵の差し込み</strong>
+            <small>「【挿絵1をここに挿入】」などの目印位置へ画像を挿入し、画像配置後に目印の文字だけ削除してください。</small>
+          </div>
+        )}
         {editorLink
           ? <a className="openai-launch-action creator-publication-link" href={editorLink} target="_blank" rel="noreferrer">{publicationLabel}の投稿先を開く ↗</a>
           : <p className="beginner-help">「ブログ」は特定サービスを指さないため外部URLを固定していません。利用中のブログ管理画面を開いて貼り付けてください。</p>}
