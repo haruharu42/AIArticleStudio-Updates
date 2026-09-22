@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -398,13 +399,14 @@ function Dashboard({
   onRetry: () => Promise<void>;
   onLogout: () => Promise<void>;
 }) {
+  const router = useRouter();
   const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
   const [section, setSection] = useState<"home" | "library">("home");
   const [imageUnsaved,setImageUnsaved] = useState(false);
   const [imageBusy,setImageBusy] = useState(false);
   const mayLeave = () => !imageBusy && (!imageUnsaved || window.confirm("未保存の画像情報・選択した画像を破棄して移動しますか？"));
   const navigate = (next: "home" | "library") => { if (next === section || mayLeave()) setSection(next); };
-  const navigateRoute = (path: string) => { if (mayLeave()) window.location.assign(path); };
+  const navigateRoute = (path: string) => { if (mayLeave()) router.push(path); };
   const logout = async () => { if (mayLeave()) await onLogout(); };
 
   useEffect(() => {
