@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { KnowledgeRefreshPanel } from "@/components/knowledge-refresh-panel";
 
 import {
@@ -10,10 +11,8 @@ import {
   adminReviewKnowledgeCandidate,
   type KnowledgeCandidate,
 } from "@/lib/knowledge-catalog";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { getSupabaseClient } from "@/lib/supabase";
 
-type State = AccessState | { kind: "loading" } | { kind: "unavailable" };
 type Filter = "all" | "pending" | "approved" | "rejected";
 type CatalogRow = {
   key: string;
@@ -54,7 +53,7 @@ function formatDate(value: string): string {
 }
 
 export function AdminKnowledgePage() {
-  const [state, setState] = useState<State>({ kind: "loading" });
+  const { state, client } = useSharedAccessState();
   const [candidates, setCandidates] = useState<KnowledgeCandidate[]>([]);
   const [catalog, setCatalog] = useState<CatalogRow[]>([]);
   const [filter, setFilter] = useState<Filter>("pending");
@@ -74,28 +73,28 @@ export function AdminKnowledgePage() {
     setCatalog((catalogResult.data ?? []) as CatalogRow[]);
   };
 
+  const isAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
+
   useEffect(() => {
+    if (!isAdmin || !client) return;
     let active = true;
     const boot = async () => {
       try {
-        const value = await loadAccessState(getSupabaseClient());
+        const [nextCandidates, catalogResult] = await Promise.all([
+          adminListKnowledgeCandidates(client, null),
+          client.from("knowledge_catalog").select("key,kind,label,parent_label,status,priority,updated_at").order("updated_at", { ascending: false }).limit(300),
+        ]);
         if (!active) return;
-        setState(value);
-        if (value.kind === "ready" && value.profile.role === "admin" && value.profile.status === "active") {
-          await reload();
-        }
+        if (catalogResult.error) throw new Error("正式ナレッジ一覧を取得できませんでした。");
+        setCandidates(nextCandidates);
+        setCatalog((catalogResult.data ?? []) as CatalogRow[]);
       } catch (error) {
-        if (active) {
-          setState({ kind: "unavailable" });
-          setMessage(error instanceof Error ? error.message : "ナレッジ管理を初期化できませんでした。");
-        }
+        if (active) setMessage(error instanceof Error ? error.message : "ナレッジ管理を初期化できませんでした。");
       }
     };
     void boot();
     return () => { active = false; };
-  }, []);
-
-  const isAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
+  }, [client, isAdmin]);
   const visible = useMemo(() => candidates.filter((candidate) => filter === "all" || candidate.decisionStatus === filter), [candidates, filter]);
   const stats = useMemo(() => ({
     pending: candidates.filter((item) => item.decisionStatus === "pending").length,
@@ -150,7 +149,6 @@ export function AdminKnowledgePage() {
     return (
       <main className="standalone-page"><section className="standalone-card">
         <p className="eyebrow">KNOWLEDGE CONTROL</p><h1>ナレッジ管理</h1>
-        {state.kind === "loading" && <p className="route-notice">管理者権限を確認しています…</p>}
         {state.kind === "signed_out" && <p className="route-notice">先にログインしてください。</p>}
         {state.kind !== "loading" && state.kind !== "signed_out" && <p className="route-notice error">この機能はactive管理者のみ利用できます。</p>}
         <Link className="route-back" href="/">← ホームへ戻る</Link>
