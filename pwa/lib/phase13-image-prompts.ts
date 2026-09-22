@@ -12,6 +12,7 @@ export type ImagePromptPlanInput = {
   subgenre: string;
   ageGroup: string;
   gender: string;
+  body?: string;
   coverEnabled: boolean;
   inlineEnabled: boolean;
   inlineCount: number;
@@ -43,6 +44,42 @@ const avoid = [
   "記事に根拠のない数字・ランキング・価格・評価を画像内へ書かない",
 ].join("。") + "。";
 
+function articleBodyContext(body: string | undefined): string {
+  const normalized = (body ?? "").replace(/\r\n?/g, "\n").trim();
+  if (!normalized) return "";
+  const lines = normalized.split("\n").map((line) => line.trim()).filter(Boolean);
+  const headings = lines
+    .filter((line) => /^#{1,6}\s+/.test(line))
+    .map((line) => line.replace(/^#{1,6}\s+/, ""))
+    .slice(0, 12);
+  const lead = lines
+    .filter((line) => !/^#{1,6}\s+/.test(line) && !/^<!--\s*IMAGE:\d+\s*-->$/i.test(line))
+    .join(" ")
+    .slice(0, 900);
+  return [
+    headings.length ? `記事の主な見出し: ${headings.join(" / ")}` : "",
+    lead ? `本文冒頭・要点: ${lead}` : "",
+  ].filter(Boolean).join("\n");
+}
+
+function inlineBodyContext(body: string | undefined, order: number): string {
+  const normalized = (body ?? "").replace(/\r\n?/g, "\n").trim();
+  if (!normalized) return "";
+  const number = String(order).padStart(2, "0");
+  const marker = `<!-- IMAGE:${number} -->`;
+  const index = normalized.indexOf(marker);
+  if (index >= 0) {
+    const start = Math.max(0, index - 500);
+    const end = Math.min(normalized.length, index + marker.length + 500);
+    return normalized.slice(start, end).replace(marker, "").trim();
+  }
+  const sections = normalized
+    .split(/(?=^#{1,6}\s+)/m)
+    .map((section) => section.trim())
+    .filter(Boolean);
+  return (sections[Math.min(order, Math.max(0, sections.length - 1))] ?? normalized).slice(0, 900);
+}
+
 function common(input: ImagePromptPlanInput): string {
   const knowledge = compileKnowledgeContext({
     task: "image",
@@ -60,7 +97,8 @@ function common(input: ImagePromptPlanInput): string {
   const selectedStyle = presetStyle
     ? `${presetStyle} この記事ではこの共通プリセットの画風指定を既定画風より優先する。`
     : style;
-  return `記事タイトル: ${input.title || "未定"}\n掲載先: ${input.publicationTarget}\nジャンル: ${input.genre || "未指定"}\nサブジャンル: ${input.subgenre || "AIおまかせ"}\n対象読者: ${input.ageGroup || "AIおまかせ"} / ${input.gender || "AIおまかせ"}\n記事テーマ: ${input.theme || "タイトルから推定"}\n画風: ${selectedStyle}。\n禁止・回避: ${avoid}\n\n${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}${accountContext}`;
+  const bodyContext = articleBodyContext(input.body);
+  return `記事タイトル: ${input.title || "未定"}\n掲載先: ${input.publicationTarget}\nジャンル: ${input.genre || "未指定"}\nサブジャンル: ${input.subgenre || "AIおまかせ"}\n対象読者: ${input.ageGroup || "AIおまかせ"} / ${input.gender || "AIおまかせ"}\n記事テーマ: ${input.theme || input.title || "タイトルから推定"}\n${bodyContext ? `${bodyContext}\n` : ""}画風: ${selectedStyle}。\n禁止・回避: ${avoid}\n\n${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}${accountContext}`;
 }
 
 export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptItem[] {
@@ -89,7 +127,7 @@ export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptIt
         insertionMarker: `IMAGE:${number}`,
         suggestedFilename,
         altText,
-        prompt: `次の記事の挿絵${index + 1}を1枚作成してください。\n${common(input)}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、同じ構図を繰り返さない。\n差し込みマーカー: <!-- IMAGE:${number} -->\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASへアップロードせず、端末へこのファイル名で保存してください。`,
+        prompt: `次の記事の挿絵${index + 1}を1枚作成してください。\n${common(input)}\nこの挿絵が対応する本文周辺: ${inlineBodyContext(input.body, index + 1) || "本文全体から最適な場面を選ぶ"}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、同じ構図を繰り返さない。\n差し込みマーカー: <!-- IMAGE:${number} -->\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASへアップロードせず、端末へこのファイル名で保存してください。`,
       });
     }
   }
