@@ -10,7 +10,7 @@ test("all /admin routes keep the active-admin boundary while MFA is temporarily 
 
   assert.match(layout, /AdminRouteGuard/);
   assert.match(layout, /<AdminRouteGuard>\{children\}<\/AdminRouteGuard>/);
-  assert.match(guard, /profile\.role !== "admin" \|\| profile\.status !== "active"/);
+  assert.match(guard, /accessState\.profile\.role !== "admin" \|\|[\s\S]*?accessState\.profile\.status !== "active"/);
   assert.match(guard, /ADMIN_MFA_REQUIRED = false/);
   assert.match(guard, /if \(!ADMIN_MFA_REQUIRED\)/);
   assert.match(guard, /setGate\(\{ kind: "ready" \}\)/);
@@ -72,8 +72,8 @@ test("admin home is navigation-only and sections are centralized", () => {
 test("public home admin shortcut stays hidden until active-admin state is verified", () => {
   const topbar = read("components/admin-home-topbar.tsx");
 
-  assert.match(topbar, /useState\(false\)/);
-  assert.match(topbar, /data\.role === "admin" && data\.status === "active"/);
-  assert.match(topbar, /!admin\) return null/);
+  assert.match(topbar, /useSharedAccessState\(\)/);
+  assert.match(topbar, /state\.kind === "ready" && state\.profile\.role === "admin" && state\.profile\.status === "active"/);
+  assert.match(topbar, /pathname !== "\/" \|\| !admin\) return null/);
   assert.match(topbar, /ADMIN_HOME_SHORTCUT_IDS/);
 });
