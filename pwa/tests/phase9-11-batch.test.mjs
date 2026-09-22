@@ -143,7 +143,8 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(setup, /loadCoreAccessState/);
   assert.match(setup, /loadArticleWizardProgress/);
   assert.match(setup, /setRuntimeWritingProfile\(writingProfile\)/);
-  assert.match(setup, /if \(wizardProgress\) setConfirmed\(true\)/);
+  assert.match(setup, /if \(wizardProgress \|\| writingProfile\.updatedAt\) setConfirmed\(true\)/);
+  assert.match(setup, /保存後はタブやアプリを切り替えても記事作成の進行画面へ直接戻ります/);
   assert.doesNotMatch(page, /\.from\("profiles"\)|can_access_product/);
   assert.doesNotMatch(setup, /\.from\("profiles"\)|can_access_product/);
   assert.match(accessControl, /\.from\("profiles"\)/);
