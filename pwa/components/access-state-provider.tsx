@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -31,17 +32,27 @@ const BACKGROUND_RECHECK_MIN_INTERVAL_MS = 30_000;
 export function AccessStateProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SharedAccessState>({ kind: "loading" });
   const [client, setClient] = useState<SupabaseClient | null>(null);
+  const inFlightRef = useRef<Promise<AccessState> | null>(null);
+
+  const loadAccessStateOnce = useCallback((activeClient: SupabaseClient) => {
+    if (inFlightRef.current) return inFlightRef.current;
+    const request = loadAccessState(activeClient).finally(() => {
+      if (inFlightRef.current === request) inFlightRef.current = null;
+    });
+    inFlightRef.current = request;
+    return request;
+  }, []);
 
   const refresh = useCallback(async () => {
     let activeClient: SupabaseClient;
     try {
       activeClient = getSupabaseClient();
       setClient(activeClient);
-      setState(await loadAccessState(activeClient));
+      setState(await loadAccessStateOnce(activeClient));
     } catch {
       setState({ kind: "unavailable" });
     }
-  }, []);
+  }, [loadAccessStateOnce]);
 
   useEffect(() => {
     let active = true;
@@ -58,7 +69,7 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
 
     const applyAccessState = async (mode: "strict" | "background") => {
       try {
-        const next = await loadAccessState(activeClient);
+        const next = await loadAccessStateOnce(activeClient);
         if (active) {
           if (mode === "strict") lastBackgroundCheckAt = Date.now();
           setState(next);
@@ -111,7 +122,7 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", recheckInBackground);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, []);
+  }, [loadAccessStateOnce]);
 
   const value = useMemo<AccessStateContextValue>(
     () => ({ state, client, refresh }),
