@@ -228,20 +228,21 @@ test("admin mobile navigation tools are selectable only for active admins and mo
   assert.match(prefs, /allowedKeys = isAdmin/);
   assert.match(prefs, /return isAdmin \? MOBILE_NAV_ITEM_OPTIONS : USER_MOBILE_NAV_ITEM_OPTIONS/);
 
-  assert.match(shared, /select\("id,role,status"\)/);
-  assert.match(shared, /data\.role === "admin"/);
-  assert.match(shared, /data\.status === "active"/);
+  assert.match(shared, /useSharedAccessState\(\)/);
+  assert.match(shared, /const userId = state\.kind === "ready" \? state\.profile\.id : ""/);
+  assert.match(shared, /const isAdmin = state\.kind === "ready" && state\.profile\.role === "admin" && state\.profile\.status === "active"/);
   assert.match(shared, /readMobileNavItems\(userId, isAdmin\)/);
   assert.match(shared, /normalizeMobileNavItems\(detail\.items, isAdmin\)/);
-  assert.match(shared, /setIsAdmin\(false\)/);
+  assert.doesNotMatch(shared, /select\("id,role,status"\)|setIsAdmin\(/);
 
   assert.match(customizer, /mobileNavOptionsFor\(isAdmin\)/);
   assert.match(customizer, /管理者アカウントでは/);
   assert.match(customizer, /activeな管理者にだけ表示されます/);
   assert.match(settings, /profile\.role === "admin" && profile\.status === "active"/);
 
-  assert.match(topbar, /data\.role === "admin"/);
-  assert.match(topbar, /data\.status === "active"/);
+  assert.match(topbar, /useSharedAccessState\(\)/);
+  assert.match(topbar, /state\.profile\.role === "admin"/);
+  assert.match(topbar, /state\.profile\.status === "active"/);
   assert.match(css, /@media \(max-width: 899px\)[\s\S]*\.admin-home-topbar[\s\S]*display: none/);
 
   assert.match(guard, /role/);
