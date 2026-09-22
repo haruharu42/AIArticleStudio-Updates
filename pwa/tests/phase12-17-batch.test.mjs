@@ -36,12 +36,16 @@ test("Phase 13 builds cover and inline prompt plans and stores them in the artic
   assert.match(imagePrompts, /IMAGE:\$\{number\}/);
   assert.match(imagePrompts, /coverEnabled/);
   assert.match(imagePrompts, /inlineEnabled/);
+  assert.match(imagePrompts, /imageStyle/);
+  assert.match(imagePrompts, /imageStylePrompt/);
   assert.match(creator, /buildImagePromptPlan/);
   assert.match(creator, /prompt_plan: imagePrompts/);
   assert.match(creator, /image_prompt_version: 13/);
   assert.match(page, /buildImagePromptPlan/);
   assert.match(page, /アイキャッチ/);
   assert.match(page, /挿絵/);
+  assert.match(page, /IMAGE_STYLE_OPTIONS/);
+  assert.match(page, /画像の画風/);
   assert.match(route, /Phase13ImagePromptPage/);
 });
 
