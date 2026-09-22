@@ -118,12 +118,12 @@ export function PlatformAccountPresetSettings() {
   };
 
   return (
-    <section className="platform-account-preset-settings" aria-labelledby="platform-account-preset-title">
+    <section id="platform-account-presets" className="platform-account-preset-settings" aria-labelledby="platform-account-preset-title">
       <div className="workspace-preset-intro compact">
         <div>
           <p className="eyebrow">ACCOUNT PRESETS</p>
-          <h3 id="platform-account-preset-title">note / Tips / Brain アカウント別プリセット</h3>
-          <p>同じ掲載先で複数アカウントを運営する場合も、アカウント名・ジャンル・読者・発信方針を個別に保存できます。「既定」にしたプリセットは、その掲載先の記事・画像・SNS・シリーズ等へ自動で共有されます。</p>
+          <h3 id="platform-account-preset-title">投稿ジャンル別のアカウントプリセット</h3>
+          <p>ユーザー名と主な投稿ジャンルなど、記事ごとに変えない内容を一度だけ登録します。サブジャンル・対象年齢・性別・文字数・価格は記事作成時に決め、タグは記事完成後の最終工程で設定します。</p>
         </div>
         <span>{accountPresets.length}件</span>
       </div>
@@ -144,22 +144,32 @@ export function PlatformAccountPresetSettings() {
       {accountPresetsLoading && <p className="persistent-settings-status">アカウント別プリセットを更新しています…</p>}
 
       <div className="platform-account-preset-grid">
-        <label><span>プリセット名 *</span><input value={draft.presetName} maxLength={80} onChange={(event) => patch("presetName", event.target.value)} placeholder="例: AI副業note / ガジェットBrain" /></label>
-        <label><span>アカウント名</span><input value={draft.accountName} maxLength={120} onChange={(event) => patch("accountName", event.target.value)} placeholder="実際に使う表示名" /></label>
-        <label><span>アカウントID・補足</span><input value={draft.accountHandle} maxLength={120} onChange={(event) => patch("accountHandle", event.target.value)} placeholder="@IDや識別用メモ。パスワードは保存しない" /></label>
-        <label><span>ジャンル</span><input value={draft.genre} maxLength={160} onChange={(event) => patch("genre", event.target.value)} placeholder="例: AI副業 / 子育て / ガジェット" /></label>
-        <label className="wide"><span>アカウント型・発信スタイル</span><input value={draft.accountStyle} maxLength={240} onChange={(event) => patch("accountStyle", event.target.value)} placeholder="例: 初心者向け手順＋実践記録" /></label>
-        <label className="wide"><span>想定読者</span><textarea value={draft.audience} maxLength={400} onChange={(event) => patch("audience", event.target.value)} placeholder="誰に読んでもらうアカウントか" /></label>
-        <label><span>文章・発信トーン</span><input value={draft.tone} maxLength={180} onChange={(event) => patch("tone", event.target.value)} placeholder="例: やさしく具体的" /></label>
-        <label><span>運営目的</span><input value={draft.operationGoal} maxLength={240} onChange={(event) => patch("operationGoal", event.target.value)} placeholder="例: 読者獲得 / 販売 / 専門性" /></label>
-        <label className="wide"><span>収益化方針</span><textarea value={draft.monetization} maxLength={320} onChange={(event) => patch("monetization", event.target.value)} placeholder="無料中心、有料への導線など" /></label>
-        <label className="wide"><span>主なテーマ・キーワード</span><textarea value={draft.mainTopics.join("\n")} onChange={(event) => patch("mainTopics", event.target.value.split(/[\n,、]/).map((item) => item.trim()).filter(Boolean).slice(0, 16))} placeholder={"AI活用\n記事作成\nnote運営"} /></label>
-        <label className="wide"><span>プロフィール・運営メモ</span><textarea value={draft.profileNote} maxLength={1600} onChange={(event) => patch("profileNote", event.target.value)} placeholder="このアカウントで事実として扱ってよい方針や補足。パスワード・Cookie・トークンは保存しないでください。" /></label>
+        <label><span>プリセット名 *</span><input value={draft.presetName} maxLength={80} onChange={(event) => patch("presetName", event.target.value)} placeholder="例: 恋愛・人間関係 / AI副業" /></label>
+        <label><span>{PLATFORM_LABELS[platform]}ユーザー名 / 表示名</span><input value={draft.accountName} maxLength={120} onChange={(event) => patch("accountName", event.target.value)} placeholder="実際に使っているユーザー名" /></label>
+        <label><span>アカウントID（任意）</span><input value={draft.accountHandle} maxLength={120} onChange={(event) => patch("accountHandle", event.target.value)} placeholder="@IDなど。パスワードは保存しない" /></label>
+        <label><span>主な投稿ジャンル *</span><input value={draft.genre} maxLength={160} onChange={(event) => patch("genre", event.target.value)} placeholder="例: 恋愛・人間関係" /></label>
+        <label className="wide"><span>主なテーマ・キーワード（任意）</span><textarea value={draft.mainTopics.join("\n")} onChange={(event) => patch("mainTopics", event.target.value.split(/[\n,、]/).map((item) => item.trim()).filter(Boolean).slice(0, 16))} placeholder={"職場の人間関係\n恋愛\nコミュニケーション"} /></label>
       </div>
+
+      <p className="platform-account-preset-scope-note">
+        このプリセットでは、記事ごとに変わる「サブジャンル・対象年齢・性別・文字数・価格・タグ」は固定しません。
+      </p>
+
+      <details className="platform-account-preset-advanced">
+        <summary>必要な場合だけ、発信方針も固定する</summary>
+        <div className="platform-account-preset-grid">
+          <label className="wide"><span>アカウント型・発信スタイル</span><input value={draft.accountStyle} maxLength={240} onChange={(event) => patch("accountStyle", event.target.value)} placeholder="例: 初心者向け解説＋実践記録" /></label>
+          <label className="wide"><span>想定読者</span><textarea value={draft.audience} maxLength={400} onChange={(event) => patch("audience", event.target.value)} placeholder="アカウント全体として想定する読者" /></label>
+          <label><span>文章・発信トーン</span><input value={draft.tone} maxLength={180} onChange={(event) => patch("tone", event.target.value)} placeholder="例: やさしく具体的" /></label>
+          <label><span>運営目的</span><input value={draft.operationGoal} maxLength={240} onChange={(event) => patch("operationGoal", event.target.value)} placeholder="例: 読者獲得 / 販売 / 専門性" /></label>
+          <label className="wide"><span>収益化方針</span><textarea value={draft.monetization} maxLength={320} onChange={(event) => patch("monetization", event.target.value)} placeholder="無料中心、有料への導線など" /></label>
+          <label className="wide"><span>プロフィール・運営メモ</span><textarea value={draft.profileNote} maxLength={1600} onChange={(event) => patch("profileNote", event.target.value)} placeholder="このアカウントで事実として扱ってよい方針や補足。パスワード・Cookie・トークンは保存しないでください。" /></label>
+        </div>
+      </details>
 
       <label className="platform-account-default-toggle">
         <input type="checkbox" checked={draft.isDefault} onChange={(event) => patch("isDefault", event.target.checked)} />
-        <span><strong>{PLATFORM_LABELS[platform]}の既定アカウントとして使う</strong><small>ONにすると、この掲載先の記事・画像・SNS・シリーズ等でこのアカウント設定を自動参照します。</small></span>
+        <span><strong>{PLATFORM_LABELS[platform]}の記事作成で既定として使う</strong><small>ONにすると、記事作成時にこのプリセットの固定ジャンルを初期値として使い、ユーザー名などの固定設定をAI指示へ反映します。</small></span>
       </label>
 
       <div className="workspace-preset-actions">
