@@ -42,7 +42,8 @@ test("title creation stays external while article quota is consumed only by expl
   const creator = await read("components/phase11-create-page.tsx");
   const stepUi = await read("components/article-create/article-create-steps.tsx");
 
-  assert.match(stepUi, /AAS内ではタイトル候補を生成しません/);
+  assert.match(stepUi, /タイトルを5候補から選んでください/);
+  assert.match(stepUi, /AIが生成した5候補をまとめて貼り付け/);
   assert.match(stepUi, /AIで生成したタイトルをここへ貼り付け/);
   assert.match(stepUi, /AI用タイトルプロンプト/);
   assert.match(stepUi, /完成記事プロンプトを作成/);
