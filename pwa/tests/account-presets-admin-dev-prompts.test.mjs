@@ -44,13 +44,15 @@ test("account-specific note Tips Brain presets support names, genres, defaults, 
   assert.match(lib, /buildPlatformAccountPresetPromptContext/);
   assert.match(lib, /今回の画面でユーザーが明示した条件と衝突する場合は、今回の明示条件を優先する/);
 
-  assert.match(ui, /note \/ Tips \/ Brain アカウント別プリセット/);
+  assert.match(ui, /投稿ジャンル別のアカウントプリセット/);
   assert.match(ui, /プリセット名 \*/);
-  assert.match(ui, /アカウント名/);
-  assert.match(ui, /ジャンル/);
+  assert.match(ui, /ユーザー名 \/ 表示名/);
+  assert.match(ui, /主な投稿ジャンル/);
   assert.match(ui, /想定読者/);
   assert.match(ui, /主なテーマ・キーワード/);
-  assert.match(ui, /既定アカウントとして使う/);
+  assert.match(ui, /サブジャンル・対象年齢・性別・文字数・価格・タグ/);
+  assert.match(ui, /必要な場合だけ、発信方針も固定する/);
+  assert.match(ui, /記事作成で既定として使う/);
   assert.match(ui, /AAS公式案を反映/);
   assert.match(ui, /isAdmin &&/);
   assert.match(ui, /パスワード・Cookie・トークンは保存しない/);
