@@ -13,6 +13,7 @@ import {
   type SaveStatus,
 } from "@/lib/phase11-create";
 import { copyNoteRichText } from "@/lib/note-rich-text";
+import { getRuntimeWritingProfile } from "@/lib/user-personalization";
 import type { ImagePromptItem } from "@/lib/phase13-image-prompts";
 import {
   AGE_GROUP_OPTIONS,
@@ -39,6 +40,11 @@ const AI_LAUNCH_OPTIONS = [
   { key: "claude", label: "Claude" },
   { key: "gemini", label: "Gemini" },
 ] as const;
+
+function currentAiLaunchOptions() {
+  const selected = getRuntimeWritingProfile()?.preferredAi;
+  return selected ? AI_LAUNCH_OPTIONS.filter((option) => option.key === selected) : AI_LAUNCH_OPTIONS;
+}
 
 async function copyText(value: string, setMessage: MessageSetter): Promise<boolean> {
   if (!navigator.clipboard?.writeText) {
@@ -182,6 +188,8 @@ export function ImagePlanStep({
   draft: ArticleCreationDraft;
   patch: ArticleDraftPatch;
 }) {
+  const aiLaunchOptions = currentAiLaunchOptions();
+
   return (
     <div className="wizard-pane">
       <p className="eyebrow">STEP 2</p><h2>記事に画像を入れますか？</h2>
@@ -288,6 +296,15 @@ export function TitleStep({
   setMessage: MessageSetter;
 }) {
   const titleCandidates = parseTitleCandidates(titleCandidatesText);
+  const aiLaunchOptions = currentAiLaunchOptions();
+
+  const clearTitleContent = () => {
+    if (!titleCandidatesText.trim() && !draft.title.trim()) return;
+    if (!window.confirm("貼り付けたタイトル候補と選択中のタイトルをクリアしますか？")) return;
+    setTitleCandidatesText("");
+    patch("title", "");
+    setMessage("タイトル候補と選択タイトルをクリアしました。");
+  };
 
   return (
     <div className="wizard-pane">
@@ -297,7 +314,7 @@ export function TitleStep({
         <label className="route-field"><span>AI用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
         <div className="openai-prompt-actions">
           <CopyButton value={titlePrompt} label="タイトルプロンプトをコピー" setMessage={setMessage} />
-          {AI_LAUNCH_OPTIONS.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>{app.label}を開く ↗</button>)}
+          {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>選択中の{app.label}を開く ↗</button>)}
         </div>
         <label className="route-field title-candidate-paste">
           <span>AIが生成した5候補をまとめて貼り付け</span>
@@ -307,15 +324,25 @@ export function TitleStep({
             placeholder={"1. タイトル候補A\n2. タイトル候補B\n3. タイトル候補C\n4. タイトル候補D\n5. タイトル候補E"}
           />
         </label>
-        <button
-          className="secondary-action clipboard-paste-action"
-          type="button"
-          onClick={() => void readClipboardText(setMessage).then((value) => {
-            if (value !== null) setTitleCandidatesText(value.slice(0, 10000));
-          })}
-        >
-          クリップボードから5候補を貼り付け
-        </button>
+        <div className="clipboard-edit-actions">
+          <button
+            className="secondary-action clipboard-paste-action"
+            type="button"
+            onClick={() => void readClipboardText(setMessage).then((value) => {
+              if (value !== null) setTitleCandidatesText(value.slice(0, 10000));
+            })}
+          >
+            クリップボードから5候補を貼り付け
+          </button>
+          <button
+            className="secondary-action clear-content-action"
+            type="button"
+            disabled={!titleCandidatesText.trim() && !draft.title.trim()}
+            onClick={clearTitleContent}
+          >
+            タイトル候補をクリア
+          </button>
+        </div>
         {titleCandidates.length > 0 && (
           <div className="title-candidates" aria-label="貼り付けたタイトル候補">
             {titleCandidates.map((title, index) => (
@@ -363,6 +390,7 @@ export function BodyStep({
   setMessage: MessageSetter;
 }) {
   const [bodyCursor, setBodyCursor] = useState(() => draft.body.length);
+  const aiLaunchOptions = currentAiLaunchOptions();
   const paidAreaPresent = /<!--\s*PAID_AREA\s*-->/i.test(draft.body);
   const missingImageMarkers = draft.inlineEnabled
     ? Array.from({ length: draft.inlineCount }, (_unused, index) => index + 1).filter((order) => {
@@ -378,6 +406,14 @@ export function BodyStep({
     setMessage(cleaned !== value.trimStart()
       ? "先頭に含まれていた記事タイトルを除外し、本文だけを貼り付けました。"
       : "本文を貼り付けました。");
+  };
+
+  const clearBody = () => {
+    if (!draft.body.trim()) return;
+    if (!window.confirm("貼り付けた本文をすべてクリアしますか？")) return;
+    patch("body", "");
+    setBodyCursor(0);
+    setMessage("本文をクリアしました。");
   };
 
   const insertMarkerAtCursor = (marker: string, label: string) => {
@@ -400,7 +436,7 @@ export function BodyStep({
           <label className="route-field"><span>AI用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
           <div className="openai-prompt-actions">
             <CopyButton value={articlePrompt} label="完成記事プロンプトをコピー" setMessage={setMessage} />
-            {AI_LAUNCH_OPTIONS.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>{app.label}を開く ↗</button>)}
+            {aiLaunchOptions.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>選択中の{app.label}を開く ↗</button>)}
           </div>
           <p className="beginner-help">生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
         </>}
@@ -436,6 +472,14 @@ export function BodyStep({
           })}
         >
           クリップボードから本文を貼り付け
+        </button>
+        <button
+          className="secondary-action clear-content-action"
+          type="button"
+          disabled={!draft.body.trim()}
+          onClick={clearBody}
+        >
+          本文をクリア
         </button>
       </div>
       <p className="beginner-help">タイトルはSTEP 4で管理するため、この欄には本文だけを入れます。AIが先頭に同じタイトルを付けた場合はAASが除外します。</p>
@@ -504,9 +548,9 @@ export function PreviewStep({
             <textarea className="prompt-area large" readOnly value={combinedImagePrompt} />
             <div className="openai-prompt-actions">
               <CopyButton value={combinedImagePrompt} label="まとめて画像プロンプトをコピー" setMessage={setMessage} />
-              {AI_LAUNCH_OPTIONS.map((app) => (
+              {aiLaunchOptions.map((app) => (
                 <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>
-                  {app.label}を開く ↗
+                  選択中の{app.label}を開く ↗
                 </button>
               ))}
             </div>
