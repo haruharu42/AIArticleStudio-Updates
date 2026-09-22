@@ -158,6 +158,8 @@ export function OperationsAdminPage() {
     } finally { setBusy(false); }
   };
 
+  if (gate.kind === "loading") return null;
+
   if (gate.kind !== "ready") {
     return <main className="standalone-page"><section className="standalone-card">
       <p className="eyebrow">SECURITY & OPERATIONS</p><h1>セキュリティ・運用</h1>
