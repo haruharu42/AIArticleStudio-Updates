@@ -19,6 +19,10 @@ test("root layout keeps verified access state alive across client-side route cha
   assert.match(provider, /onAuthStateChange/);
   assert.match(provider, /if \(!session\) \{[\s\S]*?setState\(\{ kind: "signed_out" \}\)/);
   assert.match(provider, /useSharedAccessState/);
+  assert.match(provider, /window\.addEventListener\("focus", recheckInBackground\)/);
+  assert.match(provider, /document\.addEventListener\("visibilitychange", onVisibilityChange\)/);
+  assert.match(provider, /BACKGROUND_RECHECK_MIN_INTERVAL_MS = 30_000/);
+  assert.match(provider, /current\.kind === "ready" \? current : \{ kind: "unavailable" \}/);
 });
 
 test("home keeps background access verification invisible", async () => {
