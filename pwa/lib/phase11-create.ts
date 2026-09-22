@@ -95,6 +95,13 @@ export function publicationEditorLink(target: PublicationTarget): string | null 
   return null;
 }
 
+export function publicationBodyForCopy(body: string, title: string): string {
+  return stripLeadingArticleTitle(body, title)
+    .replace(/^\s*<!--\s*IMAGE:\d+\s*-->\s*$/gim, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function compactTags(tags: string[]): string[] {
   return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))].slice(0, 50);
 }
