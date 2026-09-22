@@ -44,6 +44,7 @@ test("magazine creation is dropdown-first, validated and persisted without a new
   const plannerUi = await read("components/article-create/magazine-planner.tsx");
   const page = await read("components/phase11-create-page.tsx");
   const steps = await read("components/article-create/article-create-steps.tsx");
+  const draftHelpers = await read("lib/article-create-draft.ts");
   const api = await read("lib/phase11-create.ts");
   const progress = await read("lib/phase11-wizard-progress.ts");
 
@@ -72,10 +73,11 @@ test("magazine creation is dropdown-first, validated and persisted without a new
   assert.match(plannerUi, /その他の記事の並び方/);
   assert.match(plannerUi, /その他の補足・目的/);
   assert.match(plannerUi, /条件が変更されました。マガジン構成をもう一度生成してください。/);
-  for (const label of ["種類の選択", "条件の入力", "タイトルの選択", "記事の生成"]) {
-    assert.match(page, new RegExp(label));
+  for (const label of ["記事の種類", "画像設定", "記事条件", "タイトル", "本文", "内容確認", "保存・タグ"]) {
+    assert.match(draftHelpers, new RegExp(label));
   }
-  assert.match(page, /displayStepForInternalStep/);
+  assert.match(page, /ARTICLE_CREATE_STEPS\.map/);
+  assert.doesNotMatch(page, /displayStepForInternalStep|ARTICLE_CREATE_UI_STEPS/);
   assert.match(steps, /マガジンモード/);
   assert.match(steps, /disabled=\{draft\.magazineEnabled\}/);
   assert.match(page, /magazinePlan\.name\.trim\(\)/);
@@ -139,13 +141,13 @@ test("tools hub exposes output and SNS planning with public-facing categories", 
 });
 
 
-test("article creator UI v2 keeps the four-step rail readable and preserves two-column mobile planning", async () => {
+test("article creator UI v2 keeps the seven-step rail readable and preserves two-column mobile planning", async () => {
   const css = await read("app/phase33-reference-ui.css");
   const plannerUi = await read("components/article-create/magazine-planner.tsx");
 
   assert.match(plannerUi, /マガジンタイトル一括生成/);
-  assert.match(css, /Article creator UI v2: reference density, readable type, and 390-430px two-column layout/);
-  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /Article creator UI v2: seven-step progress, readable type, and 390-430px two-column layout/);
+  assert.match(css, /grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: 1fr/);
 });
