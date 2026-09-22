@@ -179,7 +179,7 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(page, /buildCombinedImagePrompt/);
   assert.match(page, /combinedImagePrompt/);
   assert.match(stepUi, /onBeforeExternalLaunch/);
-  assert.match(stepUi, /アイキャッチ・挿絵を作成/);
+  assert.match(stepUi, /アイキャッチ・挿絵をまとめて作成/);
   assert.match(stepUi, /画像プロンプトをコピー/);
   assert.match(stepUi, /生成した本文だけをここへ貼り付け/);
   assert.match(stepUi, /stripLeadingArticleTitle/);
