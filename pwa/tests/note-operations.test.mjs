@@ -152,10 +152,11 @@ test("note beginner profile builder uses dropdown presets and current-web resear
 
 
 test("AI monthly note schedule uses month-based research, validation, and owner-scoped plan storage", async () => {
-  const [migration, lib, page, css] = await Promise.all([
+  const [migration, lib, page, helpers, css] = await Promise.all([
     readRepo("supabase/migrations/20260919131121_note_ai_monthly_schedule_plans.sql"),
     readPwa("lib/note-operations.ts"),
     readPwa("components/note-operations-page.tsx"),
+    readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
   ]);
 
@@ -248,7 +249,7 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /反映前に内容だけ確認/);
   assert.match(page, /importAndApplyAiSchedule/);
   assert.match(page, /navigator\.clipboard\?\.readText/);
-  assert.match(page, /NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX/);
+  assert.match(helpers, /NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX/);
   assert.match(page, /window\.localStorage\.getItem/);
   assert.match(page, /window\.localStorage\.setItem/);
   assert.match(page, /window\.localStorage\.removeItem/);
@@ -266,10 +267,11 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /AAS用JSONをコピー/);
   assert.match(page, /JSONファイルで保存/);
   assert.match(page, /今日以降の予定を組み直して反映/);
-  assert.match(page, /NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0\.1\.1"/);
-  assert.match(page, /releaseVersionAtLeast/);
-  assert.match(page, /readEffectiveRelease/);
-  assert.match(page, /ai-article-studio-pwa-preview/);
+  assert.match(helpers, /NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0\.1\.1"/);
+  assert.match(helpers, /releaseVersionAtLeast/);
+  assert.match(helpers, /readEffectiveRelease/);
+  assert.match(helpers, /ai-article-studio-pwa-preview/);
+  assert.match(helpers, /noteOperationsGateFor/);
   assert.match(page, /performanceLoopEnabled \? referencePerformance : undefined/);
   assert.match(page, /loadNoteArticleOutputSnapshot/);
   assert.match(page, /schedulePreview\.sources/);
