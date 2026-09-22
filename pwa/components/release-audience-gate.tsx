@@ -64,7 +64,11 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
     void refresh();
     const { data } = client.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
-      if (session) setGate({ kind: "loading" });
+      if (!session) {
+        clearEffectiveRelease();
+        setGate({ kind: "signed_out" });
+        return;
+      }
       window.setTimeout(() => { if (active) void refresh(); }, 0);
     });
     return () => {
@@ -95,7 +99,7 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
           <Link className="primary-action" href="/">ログイン画面へ</Link>
         ) : (
           <div className="status-actions">
-            <a className="primary-action" href="/logout">ログアウトして別のアカウントでログイン</a>
+            <Link className="primary-action" href="/logout">ログアウトして別のアカウントでログイン</Link>
             <Link className="route-back" href="/">← ホームへ戻る</Link>
           </div>
         )}
