@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { launchAiApp } from "@/lib/ai-app-links";
@@ -136,8 +137,9 @@ function createHref(item: NoteScheduleItem): string {
 }
 
 export function NoteOperationsPage() {
+  const { state: accessState, client } = useSharedAccessState();
   const { preference: workspacePreference } = useWorkspacePreset();
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const [initError, setInitError] = useState("");
   const [tab, setTab] = useState<Tab>("start");
   const [profile, setProfile] = useState<NoteOperationProfile | null>(null);
   const [schedule, setSchedule] = useState<NoteScheduleItem[]>([]);
@@ -155,57 +157,64 @@ export function NoteOperationsPage() {
   const [performanceLoopEnabled, setPerformanceLoopEnabled] = useState(false);
   const [articleOutput, setArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
 
-  const reload = async (userId: string) => {
-    const client = getSupabaseClient();
-    const [nextProfile, nextSchedule, nextWritingProfile] = await Promise.all([
-      loadNoteOperationProfile(client, userId),
-      listNoteSchedule(client, userId),
-      loadWritingProfile(client, userId),
-    ]);
-    setProfile(nextProfile);
-    setSchedule(nextSchedule);
-    setWritingProfile(nextWritingProfile);
-    setSelectedAi(nextWritingProfile.preferredAi);
-  };
+  const gate = useMemo<Gate>(() => {
+    if (initError) return { kind: "error", message: initError };
+    if (accessState.kind === "ready") {
+      return {
+        kind: "ready",
+        userId: accessState.profile.id,
+        isAdmin: accessState.profile.role === "admin",
+      };
+    }
+    if (accessState.kind === "loading") return { kind: "loading" };
+    if (accessState.kind === "signed_out") return { kind: "signed_out" };
+    if (accessState.kind === "unavailable") {
+      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
+    }
+    if (accessState.kind === "pending") {
+      return { kind: "error", message: "アカウント承認後に利用できます。" };
+    }
+    if (accessState.kind === "entitlement_denied") {
+      return { kind: "error", message: "PWA利用権が必要です。" };
+    }
+    return { kind: "error", message: "現在のアカウント状態では利用できません。" };
+  }, [accessState, initError]);
 
   useEffect(() => {
+    if (accessState.kind !== "ready" || !client) return;
     let active = true;
+    const userId = accessState.profile.id;
+    queueMicrotask(() => {
+      if (active) setInitError("");
+    });
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) {
-          setGate({ kind: "signed_out" });
-          return;
-        }
-        const { data: account, error: profileError } = await client
-          .from("profiles")
-          .select("id,status,role")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !account || account.id !== user.id || account.status !== "active") {
-          throw new Error("activeアカウントを確認できません。");
-        }
-        await reload(user.id);
+        const [nextProfile, nextSchedule, nextWritingProfile] = await Promise.all([
+          loadNoteOperationProfile(client, userId),
+          listNoteSchedule(client, userId),
+          loadWritingProfile(client, userId),
+        ]);
         let savedScheduleResponse = "";
         try {
-          savedScheduleResponse = window.localStorage.getItem(noteScheduleResponseStorageKey(user.id)) ?? "";
+          savedScheduleResponse = window.localStorage.getItem(noteScheduleResponseStorageKey(userId)) ?? "";
         } catch {
           // Device storage is optional. The current session still works without it.
         }
         if (active) {
+          setProfile(nextProfile);
+          setSchedule(nextSchedule);
+          setWritingProfile(nextWritingProfile);
+          setSelectedAi(nextWritingProfile.preferredAi);
           setScheduleResponse(savedScheduleResponse);
           setScheduleResponseLoaded(true);
-          setGate({ kind: "ready", userId: user.id, isAdmin: account.role === "admin" });
         }
       } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "note運営を初期化できませんでした。" });
+        if (active) setInitError(error instanceof Error ? error.message : "note運営を初期化できませんでした。");
       }
     };
     void boot();
     return () => { active = false; };
-  }, []);
+  }, [accessState, client]);
 
   const referenceMonth = useMemo(
     () => targetMonth === currentJstMonth() ? targetMonth : previousJstMonth(targetMonth),
@@ -517,7 +526,6 @@ export function NoteOperationsPage() {
         <main className="note-ops-gate">
           <p className="eyebrow">NOTE OPERATIONS</p>
           <h1>note運営アシスタント</h1>
-          {gate.kind === "loading" && <p>アカウントと運営データを確認しています…</p>}
           {gate.kind === "signed_out" && <p>先にログインしてください。</p>}
           {gate.kind === "error" && <p>{gate.message}</p>}
           <Link href="/">← ホームへ戻る</Link>
