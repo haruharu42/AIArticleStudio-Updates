@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { AdminSelectWithCustom } from "@/components/admin-form-controls";
 
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import {
@@ -80,38 +80,16 @@ export function SelectWithCustomField({
   placeholder?: string;
   customPlaceholder?: string;
 }) {
-  const isPreset = options.includes(value);
-  const [customMode, setCustomMode] = useState(false);
-  const showCustom = customMode || (Boolean(value) && !isPreset);
-
   return (
-    <label className="admin-promo-field">
-      <span>{label}</span>
-      <select
-        value={showCustom ? "__custom__" : isPreset ? value : ""}
-        onChange={(event) => {
-          const next = event.target.value;
-          if (next === "__custom__") {
-            setCustomMode(true);
-            if (isPreset) onChange("");
-            return;
-          }
-          setCustomMode(false);
-          onChange(next);
-        }}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
-        <option value="__custom__">その他・自由入力</option>
-      </select>
-      {showCustom && (
-        <input
-          value={isPreset ? "" : value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={customPlaceholder}
-        />
-      )}
-    </label>
+    <AdminSelectWithCustom
+      className="admin-promo-field"
+      label={label}
+      value={value}
+      onChange={onChange}
+      options={options}
+      placeholder={placeholder}
+      customPlaceholder={customPlaceholder}
+    />
   );
 }
 
