@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AdminSelectWithCustom } from "@/components/admin-form-controls";
 import {
   DEVELOPMENT_AREAS,
   DEVELOPMENT_REQUEST_TYPES,
@@ -73,6 +74,8 @@ export function AdminDevelopmentPromptsPage() {
     launchAiApp("chatgpt");
   };
 
+  if (state.kind === "loading") return null;
+
   if (!isAdmin) {
     return (
       <main className="standalone-page">
@@ -117,19 +120,23 @@ export function AdminDevelopmentPromptsPage() {
             </select>
           </label>
 
-          <label>
-            <span>3. 対象画面・機能</span>
-            <select value={target} onChange={(event) => changeTarget(event.target.value)}>
-              {targetOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
+          <AdminSelectWithCustom
+            label="3. 対象画面・機能"
+            value={target}
+            onChange={changeTarget}
+            options={targetOptions}
+            placeholder="対象を選択"
+            customPlaceholder="一覧にない画面・機能を入力"
+          />
 
-          <label>
-            <span>4. 詳細箇所</span>
-            <select value={subTarget} onChange={(event) => setSubTarget(event.target.value)}>
-              {subTargetOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-            </select>
-          </label>
+          <AdminSelectWithCustom
+            label="4. 詳細箇所"
+            value={subTarget}
+            onChange={setSubTarget}
+            options={subTargetOptions}
+            placeholder="詳細箇所を選択"
+            customPlaceholder="一覧にない詳細箇所を入力"
+          />
         </div>
 
         <label className="admin-dev-prompt-wide">
