@@ -8,10 +8,9 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 test("admin promotion supports verified prelaunch test and release updates", async () => {
-  const [lib, page, fields] = await Promise.all([
+  const [lib, page] = await Promise.all([
     read("lib/admin-promotion.ts"),
     read("components/admin-promotion-page.tsx"),
-    read("components/admin-promotion/admin-promotion-fields.tsx"),
   ]);
 
   assert.match(lib, /testingStatus: string/);
@@ -32,9 +31,10 @@ test("admin promotion supports verified prelaunch test and release updates", asy
 });
 
 test("SNS promotion exposes per-platform length presets including paid X long posts", async () => {
-  const [lib, page] = await Promise.all([
+  const [lib, page, fields] = await Promise.all([
     read("lib/admin-promotion.ts"),
     read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-fields.tsx"),
   ]);
 
   assert.match(lib, /x-premium-25000/);
