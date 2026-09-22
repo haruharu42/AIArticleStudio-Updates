@@ -410,6 +410,8 @@ export function Phase10AdminPage() {
     setAccessFilter("all");
   };
 
+  if (gate.kind === "loading") return null;
+
   if (gate.kind !== "ready") {
     return (
       <main className="standalone-page">
