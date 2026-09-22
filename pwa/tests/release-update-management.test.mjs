@@ -150,6 +150,8 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(gate, /pathname === "\/"/);
   assert.match(gate, /第1段階の管理者確認中/);
   assert.match(gate, /管理者が指定した一般ユーザーテスター/);
+  assert.match(gate, /if \(!session\) \{[\s\S]*?setGate\(\{ kind: "signed_out" \}\)/);
+  assert.doesNotMatch(gate, /if \(session\) setGate\(\{ kind: "loading" \}\)/);
   assert.match(layout, /ReleaseAudienceGate/);
 
   assert.match(manager, /is_admin_preview \|\| state\.is_tester_preview/);
