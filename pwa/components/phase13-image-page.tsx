@@ -25,8 +25,6 @@ function objectValue(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 function stringValue(value: unknown): string { return typeof value === "string" ? value : ""; }
-function boolValue(value: unknown, fallback: boolean): boolean { return typeof value === "boolean" ? value : fallback; }
-function integerValue(value: unknown, fallback: number): number { return typeof value === "number" && Number.isSafeInteger(value) ? value : fallback; }
 function publicationTarget(value: string): PublicationTarget { return value === "note" || value === "tips" || value === "brain" || value === "blog" ? value : "note"; }
 
 export function Phase13ImagePromptPage() {
