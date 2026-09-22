@@ -90,10 +90,10 @@ export function markdownToNoteHtml(markdown: string): string {
       continue;
     }
 
-    const heading = /^(#{1,3})\s+(.+)$/.exec(line);
+    const heading = /^(#{1,6})\s+(.+)$/.exec(line);
     if (heading) {
       flushAll();
-      const level = heading[1].length;
+      const level = heading[1].length <= 2 ? 2 : 3;
       html.push(`<h${level}>${renderInline(heading[2])}</h${level}>`);
       continue;
     }
@@ -187,14 +187,19 @@ export async function copyNoteRichText(markdown: string): Promise<"rich" | "fall
   if (!html) throw new Error("コピーする本文がありません。");
 
   if (typeof navigator !== "undefined" && navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
-    const item = new ClipboardItem({
-      "text/html": new Blob([html], { type: "text/html" }),
-      "text/plain": new Blob([plain], { type: "text/plain" }),
-    });
-    await navigator.clipboard.write([item]);
-    return "rich";
+    try {
+      const item = new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([plain], { type: "text/plain" }),
+      });
+      await navigator.clipboard.write([item]);
+      return "rich";
+    } catch {
+      // Safari/iOSなど、APIは存在してもHTML ClipboardItemの書き込みが拒否される環境では
+      // 選択範囲コピーへフォールバックする。
+    }
   }
 
   if (fallbackRichCopy(html)) return "fallback";
-  throw new Error("このブラウザでは装飾付きコピーを利用できません。Chrome / Edgeの最新版でお試しください。");
+  throw new Error("装飾付きコピーに失敗しました。ブラウザーのクリップボード許可を確認して、もう一度お試しください。");
 }
