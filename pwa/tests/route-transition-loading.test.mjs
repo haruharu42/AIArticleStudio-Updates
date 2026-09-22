@@ -136,3 +136,23 @@ test("auth and preview gates keep mandatory verification invisible while it runs
   assert.match(releaseGate, /if \(gate\.kind === "loading"\) return null/);
   assert.doesNotMatch(releaseGate, /候補版の利用権を確認しています/);
 });
+
+
+test("admin surfaces reuse root access state instead of starting page-level account checks", async () => {
+  const sources = await Promise.all([
+    read("components/phase10-admin-page.tsx"),
+    read("components/operations-admin-page.tsx"),
+    read("components/admin-home-topbar.tsx"),
+    read("components/admin-route-guard.tsx"),
+    read("components/admin-knowledge-page.tsx"),
+    read("components/free-trial-admin-page.tsx"),
+    read("components/sales-settings-admin-page.tsx"),
+    read("components/admin-development-prompts-page.tsx"),
+  ]);
+
+  for (const source of sources) {
+    assert.match(source, /useSharedAccessState\(\)/);
+    assert.doesNotMatch(source, /auth\.getUser\(\)|\.from\("profiles"\)|loadCoreAccessState|loadAccessState/);
+    assert.doesNotMatch(source, /管理者権限を確認しています|権限を確認しています/);
+  }
+});
