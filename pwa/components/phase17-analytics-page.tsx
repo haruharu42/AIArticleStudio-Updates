@@ -1,15 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import { loadContentAnalytics, type ContentAnalytics } from "@/lib/phase17-analytics";
-import { getSupabaseClient } from "@/lib/supabase";
+import { useSharedAccessState } from "@/components/access-state-provider";
 
-type Gate =
-  | { kind: "loading" }
-  | { kind: "signed_out" }
-  | { kind: "ready"; aasId: string; analytics: ContentAnalytics }
-  | { kind: "error"; message: string };
+import { loadContentAnalytics, type ContentAnalytics } from "@/lib/phase17-analytics";
 
 const statusLabel: Record<string, string> = {
   draft: "下書き",
@@ -22,55 +18,60 @@ const statusLabel: Record<string, string> = {
 };
 
 export function Phase17AnalyticsPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState, client } = useSharedAccessState();
+  const [analytics, setAnalytics] = useState<ContentAnalytics | null>(null);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
+    if (accessState.kind !== "ready" || !client) return;
     let active = true;
-    const boot = async () => {
-      try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) {
-          setGate({ kind: "signed_out" });
-          return;
-        }
-        const { data: profile, error: profileError } = await client
-          .from("profiles")
-          .select("id,aas_user_id,status")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !profile || profile.id !== user.id || profile.status !== "active") {
-          throw new Error("activeプロフィールを確認できません。");
-        }
-        const analytics = await loadContentAnalytics(client, user.id);
-        if (active) setGate({ kind: "ready", aasId: profile.aas_user_id, analytics });
-      } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "集計を取得できませんでした。" });
+    queueMicrotask(() => {
+      if (active) {
+        setLoadError("");
+        setAnalytics(null);
       }
-    };
-    void boot();
+    });
+    void loadContentAnalytics(client, accessState.profile.id).then(
+      (next) => {
+        if (active) setAnalytics(next);
+      },
+      (error) => {
+        if (active) setLoadError(error instanceof Error ? error.message : "集計を取得できませんでした。");
+      },
+    );
     return () => { active = false; };
-  }, []);
+  }, [accessState, client]);
 
-  if (gate.kind !== "ready") {
+  if (accessState.kind !== "ready" || !client) {
+    if (accessState.kind === "loading") return null;
     return (
       <main className="standalone-page"><section className="standalone-card">
         <p className="eyebrow">CONTENT ANALYTICS</p><h1>コンテンツ分析</h1>
-        {gate.kind === "loading" && <p className="route-notice">記事集計を作成しています…</p>}
-        {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
-        {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-        <a className="route-back" href="/tools">← 機能一覧へ戻る</a>
+        {accessState.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
+        {accessState.kind === "unavailable" && <p className="route-notice error">AASへ接続できませんでした。通信状態を確認してください。</p>}
+        {accessState.kind !== "signed_out" && accessState.kind !== "unavailable" && <p className="route-notice error">現在のアカウント状態では利用できません。</p>}
+        <Link className="route-back" href="/tools">← 機能一覧へ戻る</Link>
       </section></main>
     );
   }
 
-  const a = gate.analytics;
+  if (!analytics) {
+    if (!loadError) return null;
+    return (
+      <main className="standalone-page"><section className="standalone-card">
+        <p className="eyebrow">CONTENT ANALYTICS</p><h1>コンテンツ分析</h1>
+        <p className="route-notice error">{loadError}</p>
+        <Link className="route-back" href="/tools">← 機能一覧へ戻る</Link>
+      </section></main>
+    );
+  }
+
+  const a = analytics;
   return (
     <main className="creator-page">
       <header className="creator-head">
-        <div><p className="eyebrow">CONTENT ANALYTICS</p><h1>コンテンツ分析</h1><p>{gate.aasId} / AASに保存されている記事の状態を分かりやすく集計します</p></div>
-        <a className="route-back" href="/tools">← 機能一覧</a>
+        <div><p className="eyebrow">CONTENT ANALYTICS</p><h1>コンテンツ分析</h1><p>{accessState.profile.aas_user_id} / AASに保存されている記事の状態を分かりやすく集計します</p></div>
+        <Link className="route-back" href="/tools">← 機能一覧</Link>
       </header>
       <section className="analytics-grid">
         <article className="metric-card"><span>記事ストック</span><strong>{a.currentArticles}</strong><small>{a.unlimited ? "上限なし" : `上限 ${a.maxArticles ?? "—"} / 残り ${a.remainingArticles ?? "—"}`}</small></article>
