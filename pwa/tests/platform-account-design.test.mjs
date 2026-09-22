@@ -114,7 +114,7 @@ test("account design is reachable from tools settings note operations and manual
 });
 
 
-test("saved account design is injected into article prompts only when ready", async () => {
+test("saved account design remains prompt-only while article UI uses account presets", async () => {
   const [designLib, createLib, createPage] = await Promise.all([
     read("lib/platform-account-design.ts"),
     read("lib/phase11-create.ts"),
@@ -132,9 +132,9 @@ test("saved account design is injected into article prompts only when ready", as
   assert.match(createLib, /account_design_updated_at/);
   assert.match(createPage, /loadPlatformAccountDesigns/);
   assert.match(createPage, /setRuntimePlatformAccountDesigns\(loadedDesigns\)/);
-  assert.match(createPage, /アカウント設計を自動反映/);
-  assert.match(createPage, /アカウント設計は未完了/);
-  assert.match(createPage, /\/account-design\?platform=/);
+  assert.doesNotMatch(createPage, /アカウント設計を自動反映|アカウント設計は未完了|\/account-design\?platform=/);
+  assert.match(createPage, /activeAccountPreset/);
+  assert.match(createPage, /投稿アカウントプリセット/);
 });
 
 test("account design protects unsaved edits and rejects stale cross-device updates", async () => {
