@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
 
 import { getSupabaseClient } from "@/lib/supabase";
 import {
@@ -142,7 +145,8 @@ async function loadEntitlementOverview(users: AdminUser[]): Promise<{
 }
 
 export function Phase10AdminPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState } = useSharedAccessState();
+  const [initError, setInitError] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [entitlementsByUser, setEntitlementsByUser] = useState<Record<string, AdminEntitlement[]>>({});
@@ -164,6 +168,25 @@ export function Phase10AdminPage() {
   const [inviteExpiry, setInviteExpiry] = useState("");
   const [inviteEntitlementExpiry, setInviteEntitlementExpiry] = useState("");
   const [maxUses, setMaxUses] = useState(1);
+
+  const activeAdminId =
+    accessState.kind === "ready" && accessState.profile.role === "admin" && accessState.profile.status === "active"
+      ? accessState.profile.id
+      : "";
+
+  const gate = useMemo<Gate>(() => {
+    if (accessState.kind === "ready") {
+      if (accessState.profile.role !== "admin" || accessState.profile.status !== "active") return { kind: "denied" };
+      if (initError) return { kind: "error", message: initError };
+      return { kind: "ready", aasId: accessState.profile.aas_user_id };
+    }
+    if (accessState.kind === "loading") return { kind: "loading" };
+    if (accessState.kind === "signed_out") return { kind: "signed_out" };
+    if (accessState.kind === "unavailable") {
+      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
+    }
+    return { kind: "denied" };
+  }, [accessState, initError]);
 
   const selected = useMemo(
     () => users.find((user) => user.id === selectedId) ?? null,
@@ -199,39 +222,17 @@ export function Phase10AdminPage() {
   }, []);
 
   useEffect(() => {
+    if (!activeAdminId) return;
     let active = true;
+    queueMicrotask(() => {
+      if (active) setInitError("");
+    });
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const {
-          data: { user },
-          error,
-        } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) {
-          setGate({ kind: "signed_out" });
-          return;
-        }
-        const { data, error: profileError } = await client
-          .from("profiles")
-          .select("id,aas_user_id,role,status")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !data || data.id !== user.id) {
-          throw new Error("管理者プロフィールを確認できません。");
-        }
-        if (data.role !== "admin" || data.status !== "active") {
-          setGate({ kind: "denied" });
-          return;
-        }
         await reloadBase();
-        if (active) setGate({ kind: "ready", aasId: data.aas_user_id });
       } catch (error) {
         if (active) {
-          setGate({
-            kind: "error",
-            message: error instanceof Error ? error.message : "管理画面の初期化に失敗しました。",
-          });
+          setInitError(error instanceof Error ? error.message : "管理画面の初期化に失敗しました。");
         }
       }
     };
@@ -239,7 +240,7 @@ export function Phase10AdminPage() {
     return () => {
       active = false;
     };
-  }, [reloadBase]);
+  }, [activeAdminId, reloadBase]);
 
   const reload = async () => {
     setBusy(true);
@@ -415,11 +416,10 @@ export function Phase10AdminPage() {
         <section className="standalone-card">
           <p className="eyebrow">ADMINISTRATION</p>
           <h1>管理ダッシュボード</h1>
-          {gate.kind === "loading" && <p className="route-notice">管理者権限を確認しています…</p>}
           {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
           {gate.kind === "denied" && <p className="route-notice error">active管理者のみ利用できます。</p>}
           {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-          <a className="route-back" href="/">← ホームへ戻る</a>
+          <Link className="route-back" href="/">← ホームへ戻る</Link>
         </section>
       </main>
     );
@@ -439,7 +439,7 @@ export function Phase10AdminPage() {
           <button disabled={busy} type="button" className="secondary-action" onClick={() => void reload()}>
             最新情報に更新
           </button>
-          <a className="route-back" href="/">← ホーム</a>
+          <Link className="route-back" href="/">← ホーム</Link>
         </div>
       </header>
 
