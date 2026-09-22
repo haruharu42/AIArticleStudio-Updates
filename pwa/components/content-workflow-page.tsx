@@ -260,7 +260,7 @@ export function ContentWorkflowPage() {
   );
   const preflightPrompt = useMemo(
     () => preflightDetail && preflightReport ? buildPrePublishReviewPrompt(preflightDetail, preflightReport) : "",
-    [preflightDetail, preflightReport],
+    [preflightDetail, preflightReport, workspacePreference],
   );
   const enabledReuseChannels = useMemo(
     () => reuseChannels.filter((item) => reuseEnabled[item.platform]),
@@ -268,7 +268,7 @@ export function ContentWorkflowPage() {
   );
   const reusePrompt = useMemo(
     () => reuseDetail ? buildArticleReusePrompt(reuseDetail, enabledReuseChannels) : "",
-    [reuseDetail, enabledReuseChannels],
+    [reuseDetail, enabledReuseChannels, workspacePreference],
   );
   const seriesPrompt = useMemo(
     () => buildSeriesPlanPrompt({
@@ -279,7 +279,7 @@ export function ContentWorkflowPage() {
       monetization: seriesMonetization,
       articleCount: seriesCount,
     }),
-    [seriesPlatform, seriesName, seriesAudience, seriesPurpose, seriesMonetization, seriesCount],
+    [seriesPlatform, seriesName, seriesAudience, seriesPurpose, seriesMonetization, seriesCount, workspacePreference],
   );
 
   const changeTab = (next: WorkflowTab) => {
