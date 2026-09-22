@@ -2,56 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
 
 import { ADMIN_HOME_SHORTCUT_IDS, ADMIN_SECTIONS } from "@/lib/admin-sections";
-import { getSupabaseClient } from "@/lib/supabase";
 
 export function AdminHomeTopbar() {
   const pathname = usePathname();
-  const [admin, setAdmin] = useState(false);
+  const { state } = useSharedAccessState();
+  const admin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
   const shortcuts = useMemo(
     () => ADMIN_HOME_SHORTCUT_IDS.map((id) => ADMIN_SECTIONS.find((section) => section.id === id)).filter(Boolean),
     [],
   );
-
-  useEffect(() => {
-    if (pathname !== "/") {
-      queueMicrotask(() => setAdmin(false));
-      return;
-    }
-
-    let active = true;
-    let client: ReturnType<typeof getSupabaseClient>;
-    try {
-      client = getSupabaseClient();
-    } catch {
-      return;
-    }
-
-    const sync = async () => {
-      try {
-        const { data: { user } } = await client.auth.getUser();
-        if (!user) {
-          if (active) setAdmin(false);
-          return;
-        }
-        const { data } = await client.from("profiles").select("id,role,status").eq("id", user.id).single();
-        if (active) setAdmin(Boolean(data && data.id === user.id && data.role === "admin" && data.status === "active"));
-      } catch {
-        if (active) setAdmin(false);
-      }
-    };
-
-    void sync();
-    const { data } = client.auth.onAuthStateChange(() => {
-      window.setTimeout(() => { if (active) void sync(); }, 0);
-    });
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-    };
-  }, [pathname]);
 
   if (pathname !== "/" || !admin) return null;
 
