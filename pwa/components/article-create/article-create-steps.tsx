@@ -276,7 +276,25 @@ export function BodyStep({
           <p className="beginner-help">生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
         </>}
       </>}
-      <label className="route-field"><span>{draft.generationMode === "prompt_export" ? "生成した本文をここへ貼り付け" : "本文"}</span><textarea className="body-area" value={draft.body} onChange={(event) => patch("body", event.target.value)} placeholder="# 見出し\n本文…" /></label>
+      <label className="route-field">
+        <span>{draft.generationMode === "prompt_export" ? "生成した本文だけをここへ貼り付け" : "本文"}</span>
+        <textarea
+          className="body-area"
+          value={draft.body}
+          onPaste={(event) => {
+            if (draft.body.trim()) return;
+            const pasted = event.clipboardData.getData("text/plain");
+            if (!pasted) return;
+            event.preventDefault();
+            const cleaned = stripLeadingArticleTitle(pasted, draft.title);
+            patch("body", cleaned);
+            setMessage(cleaned !== pasted.trimStart() ? "先頭に含まれていた記事タイトルを除外し、本文だけを貼り付けました。" : "本文を貼り付けました。");
+          }}
+          onChange={(event) => patch("body", event.target.value)}
+          placeholder="## 見出し\n本文…"
+        />
+      </label>
+      <p className="beginner-help">タイトルはSTEP 4で管理するため、この欄には本文だけを入れます。AIが先頭に同じタイトルを付けた場合は、空欄への貼り付け時にAASが自動で除外します。</p>
     </div>
   );
 }
