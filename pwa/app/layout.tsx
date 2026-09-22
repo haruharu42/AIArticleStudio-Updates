@@ -42,6 +42,7 @@ import "./phase42-route-transition.css";
 import "./phase43-content-workflow.css";
 import "./phase44-shared-presets.css";
 import "./phase46-account-presets-dev-prompts.css";
+import "./phase47-admin-usability.css";
 
 export const metadata: Metadata = {
   title: "AI記事スタジオ PWA",
