@@ -21,7 +21,7 @@ test("root layout keeps verified access state alive across client-side route cha
   assert.match(provider, /useSharedAccessState/);
 });
 
-test("home no longer shows the large account access loading card on every navigation", async () => {
+test("home keeps background access verification invisible", async () => {
   const home = await read("components/phase18-beginner-home.tsx");
 
   assert.match(home, /useSharedAccessState\(\)/);
@@ -29,8 +29,8 @@ test("home no longer shows the large account access loading card on every naviga
   assert.doesNotMatch(home, /onAuthStateChange/);
   assert.doesNotMatch(home, />LOADING</);
   assert.doesNotMatch(home, /アカウントと利用権を確認しています/);
-  assert.match(home, /reference-route-loading/);
-  assert.match(home, /準備中/);
+  assert.doesNotMatch(home, /reference-route-loading/);
+  assert.doesNotMatch(home, /準備中/);
   assert.match(home, /接続状態を確認できませんでした/);
 });
 
@@ -47,7 +47,7 @@ test("home internal navigation uses Next Link instead of document reload anchors
   assert.doesNotMatch(home, /<a\b[^>]*href=(?:"\/|\{quickCreateHref\})/);
 });
 
-test("compact route progress stays small and respects reduced motion", async () => {
+test("compact progress remains available for real content operations", async () => {
   const [layout, css] = await Promise.all([
     read("app/layout.tsx"),
     read("app/phase42-route-transition.css"),
@@ -60,19 +60,32 @@ test("compact route progress stays small and respects reduced motion", async () 
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-
-test("settings, tools, and inquiries reuse the root access state instead of refetching it on mount", async () => {
-  const [settings, tools, inquiries] = await Promise.all([
+test("member routes reuse root access state and keep access verification invisible", async () => {
+  const sources = await Promise.all([
     read("components/pwa-settings-page.tsx"),
     read("components/phase-tools-page.tsx"),
     read("components/user-inquiries-page.tsx"),
+    read("components/phase11-create-page.tsx"),
+    read("components/phase13-image-page.tsx"),
+    read("components/phase14-sns-page.tsx"),
+    read("components/note-operations-page.tsx"),
+    read("components/platform-account-design-page.tsx"),
+    read("components/phase15-member-gate.tsx"),
   ]);
 
-  for (const source of [settings, tools, inquiries]) {
+  for (const source of sources) {
     assert.match(source, /useSharedAccessState\(\)/);
-    assert.doesNotMatch(source, /loadAccessState/);
+    assert.doesNotMatch(
+      source,
+      /アカウントと利用権を確認しています|アカウント情報を確認しています|利用可能な機能を確認しています|アカウントと運営データを確認しています|アカウントと保存データを確認しています/,
+    );
   }
 
+  for (const source of sources.slice(3)) {
+    assert.doesNotMatch(source, /auth\.getUser\(\)|\.from\("profiles"\)/);
+  }
+
+  const tools = sources[1];
   assert.match(tools, /import Link from "next\/link"/);
   assert.match(tools, /<Link className="route-back" href="\/"/);
   assert.doesNotMatch(tools, /<a className="route-back" href="\/"/);
