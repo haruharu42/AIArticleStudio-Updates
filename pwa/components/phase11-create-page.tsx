@@ -271,7 +271,7 @@ export function Phase11CreatePage() {
     setDraft((current) => ({
       ...current,
       articleType: value,
-      price: value === "free" ? null : current.price !== null && current.price > 0 ? current.price : 1,
+      price: value === "free" ? null : current.price !== null && current.price > 0 ? current.price : 980,
     }));
   };
 
