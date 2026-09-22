@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { Phase11CreatePage } from "@/components/phase11-create-page";
 import { loadArticleWizardProgress } from "@/lib/phase11-wizard-progress";
-import { getSupabaseClient } from "@/lib/supabase";
 import {
   AI_PLAN_LABELS,
   AI_PROVIDER_LABELS,
@@ -115,10 +114,11 @@ export function CreateAiSetup() {
   };
 
   const confirm = async () => {
+    if (!client) return;
     setBusy(true);
     setMessage("");
     try {
-      const saved = await saveWritingProfile(getSupabaseClient(), profile);
+      const saved = await saveWritingProfile(client, profile);
       setRuntimeWritingProfile(saved);
       setState({ kind: "setup", profile: saved });
       setConfirmed(true);
