@@ -355,9 +355,10 @@ test("note schedule can be recovered from a plain markdown table without JSON", 
 
 
 test("AI schedule output is copy-only, multi-post times are explicit, and pasted text persists until clear", async () => {
-  const [lib, page, css, manual] = await Promise.all([
+  const [lib, page, helpers, css, manual] = await Promise.all([
     readPwa("lib/note-operations.ts"),
     readPwa("components/note-operations-page.tsx"),
+    readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase39-readability.css"),
     readPwa("app/manual/page.tsx"),
   ]);
@@ -369,7 +370,7 @@ test("AI schedule output is copy-only, multi-post times are explicit, and pasted
   assert.match(lib, /ensureDistinctDailyPostingTimes\(items\)/);
   assert.match(lib, /ensureDistinctDailyPostingTimes\(/);
 
-  assert.match(page, /aas\.note\.schedule\.response\.v1/);
+  assert.match(helpers, /aas\.note\.schedule\.response\.v1/);
   assert.match(page, /scheduleResponseLoaded/);
   assert.match(page, /localStorage\.setItem\(key, scheduleResponse\)/);
   assert.match(page, /clearScheduleResponse/);
@@ -383,9 +384,10 @@ test("AI schedule output is copy-only, multi-post times are explicit, and pasted
 
 
 test("AAS note operation preset is available only inside the active-admin UI path", async () => {
-  const [lib, page, css] = await Promise.all([
+  const [lib, page, helpers, css] = await Promise.all([
     readPwa("lib/note-operations.ts"),
     readPwa("components/note-operations-page.tsx"),
+    readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
   ]);
 
@@ -405,7 +407,7 @@ test("AAS note operation preset is available only inside the active-admin UI pat
 
   assert.match(page, /useSharedAccessState/);
   assert.doesNotMatch(page, /auth\.getUser\(\)|\.from\("profiles"\)/);
-  assert.match(page, /isAdmin: accessState\.profile\.role === "admin"/);
+  assert.match(helpers, /isAdmin: accessState\.profile\.role === "admin"/);
   assert.match(page, /\{gate\.isAdmin && \(/);
   assert.match(page, /ADMIN ONLY/);
   assert.match(page, /AAS運営用プロフィール設定/);
