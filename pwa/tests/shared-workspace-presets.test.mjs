@@ -61,7 +61,8 @@ test("settings are compact accordion sections and include impact-preview preset 
 
   assert.match(control, /現在のプリセットで変わる内容/);
   assert.match(control, /FEATURE_SWITCHES/);
-  assert.match(control, /記事作成/);
+  assert.doesNotMatch(control, /key: "applyArticle"/);
+  assert.match(control, /記事作成のジャンルは下の投稿アカウントプリセット/);
   assert.match(control, /画像計画/);
   assert.match(control, /note運営/);
   assert.match(control, /運営コックピット/);
@@ -91,8 +92,11 @@ test("shared preset is injected into prompt generation and visible across featur
   assert.match(personalization, /buildWorkspacePresetPromptContext/);
   assert.match(personalization, /if \(!profile\) return workspacePresetContext/);
 
-  assert.match(create, /applyWorkspacePresetToArticleDraft/);
-  assert.match(create, /ActiveWorkspacePresetBadge feature="article"/);
+  assert.doesNotMatch(create, /applyWorkspacePresetToArticleDraft/);
+  assert.doesNotMatch(create, /ActiveWorkspacePresetBadge feature="article"/);
+  assert.match(create, /accountPresets/);
+  assert.match(create, /activeAccountPreset/);
+  assert.match(create, /投稿アカウントプリセット/);
 
   assert.match(imageLib, /getRuntimeWorkspacePresetDefinition/);
   assert.match(imageLib, /styleContext/);
@@ -118,7 +122,7 @@ test("shared preset is injected into prompt generation and visible across featur
   assert.match(promotion, /ActiveWorkspacePresetBadge feature="sns"/);
 });
 
-test("explicit feature settings remain editable and shared presets use a safe precedence rule", async () => {
+test("explicit feature settings remain editable and article choices stay outside shared presets", async () => {
   const [presets, adapters, create] = await Promise.all([
     read("features/presets/workspace-presets.ts"),
     read("features/presets/preset-adapters.ts"),
@@ -126,12 +130,14 @@ test("explicit feature settings remain editable and shared presets use a safe pr
   ]);
 
   assert.match(presets, /今回の画面でユーザーが明示的に指定した条件がある場合は、その指定をプリセットより優先する/);
+  assert.match(presets, /if \(feature === "article"\) return false/);
   assert.match(adapters, /if \(!preference\.applyArticle\) return draft/);
   assert.match(adapters, /if \(!preference\?\.applyImages\) return null/);
   assert.match(adapters, /if \(!preference\?\.applySns\) return null/);
   assert.match(adapters, /if \(!preference\?\.applyWorkflow\) return null/);
   assert.match(adapters, /if \(!preference\.applyAccountDesign\) return design/);
-  assert.match(create, /if \(params\.has\("from"\) \|\| params\.has\("publicationTarget"\) \|\| params\.has\("title"\) \|\| params\.has\("theme"\)\) return/);
+  assert.match(create, /activeAccountPreset/);
+  assert.match(create, /params\.has\("from"\) \|\| params\.has\("genre"\) \|\| params\.has\("title"\)/);
 });
 
 test("workspace preset provider persists across routes and recomputes dependent prompts safely", async () => {
