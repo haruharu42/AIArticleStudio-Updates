@@ -401,8 +401,9 @@ test("AAS note operation preset is available only inside the active-admin UI pat
     /experienceNote:\s*"/,
   );
 
-  assert.match(page, /select\("id,status,role"\)/);
-  assert.match(page, /isAdmin: account\.role === "admin"/);
+  assert.match(page, /useSharedAccessState/);
+  assert.doesNotMatch(page, /auth\.getUser\(\)|\.from\("profiles"\)/);
+  assert.match(page, /isAdmin: accessState\.profile\.role === "admin"/);
   assert.match(page, /\{gate\.isAdmin && \(/);
   assert.match(page, /ADMIN ONLY/);
   assert.match(page, /AAS運営用プロフィール設定/);
