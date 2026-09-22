@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -187,7 +188,7 @@ export function AdminInquiriesPage() {
           <p>ユーザーから届いた要望・不具合・質問を確認し、返信と対応状況を管理します。</p>
         </div>
         <div className="admin-head-actions">
-          <a className="route-back" href="/admin">← 管理ダッシュボード</a>
+          <Link className="route-back" href="/admin">← 管理ダッシュボード</Link>
         </div>
       </header>
 
