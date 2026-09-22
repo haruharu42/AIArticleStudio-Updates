@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { launchAiApp } from "@/lib/ai-app-links";
 import { MagazinePlannerPanel } from "@/components/article-create/magazine-planner";
 import type { MagazinePlanDraft } from "@/lib/magazine-planner";
@@ -17,6 +18,7 @@ import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
   GENRE_OPTIONS,
+  IMAGE_STYLE_OPTIONS,
   PAID_ARTICLE_PRICE_OPTIONS,
   TARGET_LENGTH_OPTIONS,
   genreSelectionValue,
@@ -38,14 +40,64 @@ const AI_LAUNCH_OPTIONS = [
   { key: "gemini", label: "Gemini" },
 ] as const;
 
-function copyText(value: string, setMessage: MessageSetter) {
-  if (!navigator.clipboard) {
+async function copyText(value: string, setMessage: MessageSetter): Promise<boolean> {
+  if (!navigator.clipboard?.writeText) {
     setMessage("このブラウザーでは自動コピーできません。テキストを選択してコピーしてください。");
-    return;
+    return false;
   }
-  void navigator.clipboard.writeText(value).then(
-    () => setMessage("クリップボードへコピーしました。"),
-    () => setMessage("コピーできませんでした。テキストを選択してコピーしてください。"),
+  try {
+    await navigator.clipboard.writeText(value);
+    setMessage("クリップボードへコピーしました。");
+    return true;
+  } catch {
+    setMessage("コピーできませんでした。テキストを選択してコピーしてください。");
+    return false;
+  }
+}
+
+async function readClipboardText(setMessage: MessageSetter): Promise<string | null> {
+  if (!navigator.clipboard?.readText) {
+    setMessage("このブラウザーでは貼り付けボタンを利用できません。入力欄を長押しして貼り付けてください。");
+    return null;
+  }
+  try {
+    const value = await navigator.clipboard.readText();
+    if (!value) {
+      setMessage("クリップボードに貼り付けられる文章がありません。");
+      return null;
+    }
+    setMessage("クリップボードから貼り付けました。");
+    return value;
+  } catch {
+    setMessage("クリップボードを読み取れませんでした。ブラウザーの許可を確認するか、入力欄を長押しして貼り付けてください。");
+    return null;
+  }
+}
+
+function CopyButton({
+  value,
+  label,
+  setMessage,
+  className = "secondary-action",
+}: {
+  value: string;
+  label: string;
+  setMessage: MessageSetter;
+  className?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const ok = await copyText(value, setMessage);
+    if (!ok) return;
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2200);
+  };
+
+  return (
+    <button className={className} type="button" disabled={!value} onClick={() => void handleCopy()}>
+      {copied ? "コピーしました ✓" : label}
+    </button>
   );
 }
 
