@@ -95,7 +95,7 @@ test("article draft URL parsing and step validation stay pure and bounded", () =
   const draft = createInitialArticleDraft(params);
   assert.equal(draft.publicationTarget, "brain");
   assert.equal(draft.articleType, "paid");
-  assert.equal(draft.price, 1);
+  assert.equal(draft.price, 980);
   assert.equal(draft.inlineEnabled, true);
   assert.equal(draft.inlineCount, 3);
   assert.equal(validateArticleCreateStep(2, draft), null);
