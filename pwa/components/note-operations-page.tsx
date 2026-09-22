@@ -158,8 +158,8 @@ export function NoteOperationsPage() {
   const [articleOutput, setArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
 
   const gate = useMemo<Gate>(() => {
-    if (initError) return { kind: "error", message: initError };
     if (accessState.kind === "ready") {
+      if (initError) return { kind: "error", message: initError };
       return {
         kind: "ready",
         userId: accessState.profile.id,
