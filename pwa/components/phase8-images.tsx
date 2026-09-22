@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -136,7 +137,7 @@ export function Phase8Images({
         </div>
         <div className="image-actions">
           <button type="button" className="secondary-action" onClick={() => void reload()} disabled={loading}>旧クラウド画像を再確認</button>
-          <a className="primary-action" href="/images">画像生成プロンプトを作る</a>
+          <Link className="primary-action" href="/images">画像生成プロンプトを作る</Link>
         </div>
       </div>
 
