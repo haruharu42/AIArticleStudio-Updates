@@ -434,6 +434,8 @@ export function NoteOperationsPage() {
     return () => { active = false; };
   }, [gate, targetMonth]);
 
+  if (gate.kind === "loading" || (gate.kind === "ready" && !profile)) return null;
+
   if (gate.kind !== "ready" || !profile) {
     return (
       <div className="note-ops-shell">
