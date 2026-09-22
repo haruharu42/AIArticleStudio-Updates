@@ -120,6 +120,8 @@ export function Phase13ImagePromptPage() {
     catch { setMessage("自動コピーできません。表示欄から手動でコピーしてください。"); }
   };
 
+  if (accessState.kind === "loading") return null;
+
   if (accessState.kind !== "ready" || !client) return (
     <main className="standalone-page"><section className="standalone-card">
       <p className="eyebrow">IMAGE CREATION</p><h1>画像生成計画</h1>
