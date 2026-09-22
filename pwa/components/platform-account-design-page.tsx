@@ -177,6 +177,8 @@ export function PlatformAccountDesignPage() {
     }
   };
 
+  if (state.kind === "loading") return null;
+
   if (state.kind !== "ready" || !client || !designs || !design || !labels) {
     return (
       <div className="account-design-shell">
