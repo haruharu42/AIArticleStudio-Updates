@@ -59,6 +59,11 @@ test("Phase 10 admin surface uses existing account and entitlement RPCs plus inv
   assert.match(api, /AAS-PWA-BETA/);
   assert.match(page, /accessState\.profile\.role !== "admin" \|\| accessState\.profile\.status !== "active"/);
   assert.match(page, /useSharedAccessState\(\)/);
+  assert.match(page, /phase10-admin\/phase10-admin-page-helpers/);
+  assert.doesNotMatch(page, /async function loadEntitlementOverview|function statusLabel|function fmt\(/);
+  assert.match(helpers, /export async function loadEntitlementOverview/);
+  assert.match(helpers, /export function statusLabel/);
+  assert.match(helpers, /export function isCurrentEntitlement/);
   assert.doesNotMatch(page, /auth\.getUser\(\)|\.from\("profiles"\)/);
   assert.match(page, /Windowsを付与/);
   assert.match(page, /PWAを付与/);
