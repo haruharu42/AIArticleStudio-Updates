@@ -7,13 +7,13 @@ import {
 } from "@/lib/phase18-content-options";
 
 export const ARTICLE_CREATE_STEPS = [
-  "生成方法",
-  "画像計画",
-  "本文条件",
+  "記事の種類",
+  "画像設定",
+  "記事条件",
   "タイトル",
-  "本文生成",
-  "プレビュー",
-  "保存",
+  "本文",
+  "内容確認",
+  "保存・タグ",
 ] as const;
 
 export const DEFAULT_ARTICLE_DRAFT: ArticleCreationDraft = {
@@ -115,7 +115,7 @@ export function initialMessageFromLocation(): string {
     return "ホームで選んだ基本設定を引き継ぎました。順番に確認しながら進めてください。";
   }
   if (source === "series-plan") {
-    return "シリーズ計画からタイトル・テーマ・無料/有料設定を引き継ぎました。アカウント設計も必要に応じて反映できます。";
+    return "シリーズ計画からタイトル・無料/有料設定を引き継ぎました。アカウント設定も必要に応じて反映します。";
   }
   return "";
 }
