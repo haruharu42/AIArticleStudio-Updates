@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { ArticleLibraryItem } from "@/lib/article-library-v2";
 import type { ArticleStatus } from "@/lib/phase7-articles";
 import {
@@ -140,7 +142,7 @@ export function ArticleLibraryListView({
         <div className="wizard-actions full">
           <button className="secondary-action" type="button" onClick={onResetFilters} disabled={!filtersActive}>条件をリセット</button>
           <button className="secondary-action" type="button" onClick={onReload} disabled={loading}>一覧を更新</button>
-          {desktopDownloads && <a className="secondary-action" href="/export">PC一括保存へ</a>}
+          {desktopDownloads && <Link className="secondary-action" href="/export">PC一括保存へ</Link>}
         </div>
       </div>
 
