@@ -8,9 +8,10 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 test("admin promotion supports verified prelaunch test and release updates", async () => {
-  const [lib, page] = await Promise.all([
+  const [lib, page, fields] = await Promise.all([
     read("lib/admin-promotion.ts"),
     read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-fields.tsx"),
   ]);
 
   assert.match(lib, /testingStatus: string/);
@@ -46,13 +47,14 @@ test("SNS promotion exposes per-platform length presets including paid X long po
   assert.match(lib, /目標文字数: 1案あたり約\$\{targetChars\}文字/);
   assert.match(lib, /各投稿本文は目標文字数を超えない/);
 
-  assert.match(page, /SNSごとの文字数設定/);
-  assert.match(page, /SOCIAL_PLATFORM_OPTIONS/);
-  assert.match(page, /その他・自由入力/);
-  assert.match(page, /sanitizeSocialTargetChars/);
-  assert.match(page, /Xは標準投稿とPremium長文/);
-  assert.match(page, /Threadsは通常投稿500文字と最大10,000文字/);
-  assert.match(page, /YouTube Shortsはタイトル100文字以内/);
+  assert.match(page, /from "@\/components\/admin-promotion\/admin-promotion-fields"/);
+  assert.match(fields, /SNSごとの文字数設定/);
+  assert.match(fields, /SOCIAL_PLATFORM_OPTIONS/);
+  assert.match(fields, /その他・自由入力/);
+  assert.match(fields, /sanitizeSocialTargetChars/);
+  assert.match(fields, /Xは標準投稿とPremium長文/);
+  assert.match(fields, /Threadsは通常投稿500文字と最大10,000文字/);
+  assert.match(fields, /YouTube Shortsはタイトル100文字以内/);
 });
 
 test("campaign and preview prompts inherit the same SNS length plan", async () => {
