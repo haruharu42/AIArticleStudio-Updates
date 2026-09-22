@@ -115,6 +115,8 @@ test("active admins get an inquiry inbox, admin-only nav choice, and home unread
   assert.match(admin, /SUPPORT_PRIORITY_LABELS/);
   assert.match(admin, /adminSetSupportRequest/);
   assert.match(admin, /replySupportRequest/);
+  assert.match(admin, /この問い合わせを終了しますか/);
+  assert.match(admin, /この問い合わせを解決済みにしますか/);
 
   assert.match(nav, /key: "adminInquiries".*href: "\/admin\/inquiries"/);
   assert.match(nav, /ADMIN_MOBILE_NAV_ITEM_OPTIONS/);
