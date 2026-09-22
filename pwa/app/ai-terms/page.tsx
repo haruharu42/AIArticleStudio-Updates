@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { Metadata } from "next";
 import { LegalDocument } from "@/components/legal-document";
 
@@ -76,7 +78,7 @@ export default function AiTermsPage() {
 
       <h2>13. お問い合わせ</h2>
       <p>
-        AI機能や本条件に関する問い合わせは、<a href="/support">お問い合わせ・開示請求ページ</a>をご確認ください。
+        AI機能や本条件に関する問い合わせは、<Link href="/support">お問い合わせ・開示請求ページ</Link>をご確認ください。
       </p>
     </LegalDocument>
   );
