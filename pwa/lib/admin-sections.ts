@@ -10,8 +10,11 @@ export type AdminSectionId =
   | "operations"
   | "inquiries";
 
+export type AdminSectionGroupId = "daily" | "sales" | "creation" | "system";
+
 export type AdminSection = {
   id: AdminSectionId;
+  group: AdminSectionGroupId;
   href: `/admin/${string}`;
   eyebrow: string;
   title: string;
@@ -19,9 +22,22 @@ export type AdminSection = {
   description: string;
 };
 
+export const ADMIN_SECTION_GROUPS: readonly {
+  id: AdminSectionGroupId;
+  eyebrow: string;
+  title: string;
+  description: string;
+}[] = [
+  { id: "daily", eyebrow: "DAILY OPERATIONS", title: "日常の管理", description: "問い合わせ対応、ユーザー承認、無料枠など、普段よく使う管理です。" },
+  { id: "sales", eyebrow: "SALES & PROMOTION", title: "販売・告知", description: "販売受付、アップグレード導線、告知や販促素材を管理します。" },
+  { id: "creation", eyebrow: "CONTENT & DEVELOPMENT", title: "制作・開発支援", description: "開発依頼プロンプトと、AASが参照するナレッジを整えます。" },
+  { id: "system", eyebrow: "SYSTEM CONTROL", title: "システム・安全管理", description: "アップデート、管理者認証、監査・容量・障害対応を管理します。" },
+] as const;
+
 export const ADMIN_SECTIONS: readonly AdminSection[] = [
   {
     id: "inquiries",
+    group: "daily",
     href: "/admin/inquiries",
     eyebrow: "SUPPORT INBOX",
     title: "問い合わせ確認",
@@ -30,6 +46,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   },
   {
     id: "users",
+    group: "daily",
     href: "/admin/users",
     eyebrow: "USERS & ACCESS",
     title: "ユーザー・利用権",
@@ -38,6 +55,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   },
   {
     id: "free-plan",
+    group: "daily",
     href: "/admin/free-trial",
     eyebrow: "FREE PLAN",
     title: "無料利用・回数制限",
@@ -46,6 +64,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   },
   {
     id: "sales",
+    group: "sales",
     href: "/admin/sales",
     eyebrow: "SALES",
     title: "販売・アップグレード導線",
@@ -54,6 +73,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   },
   {
     id: "promotion",
+    group: "sales",
     href: "/admin/promotion",
     eyebrow: "PROMOTION",
     title: "販売・プロモーション",
@@ -62,6 +82,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   },
   {
     id: "development-prompts",
+    group: "creation",
     href: "/admin/development-prompts",
     eyebrow: "DEV PROMPT BUILDER",
     title: "開発依頼プロンプト",
@@ -70,6 +91,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   },
   {
     id: "knowledge",
+    group: "creation",
     href: "/admin/knowledge",
     eyebrow: "KNOWLEDGE",
     title: "ナレッジ管理",
@@ -78,6 +100,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   },
   {
     id: "releases",
+    group: "system",
     href: "/admin/releases",
     eyebrow: "RELEASE CONTROL",
     title: "アップデート管理",
@@ -86,6 +109,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   },
   {
     id: "security",
+    group: "system",
     href: "/admin/security",
     eyebrow: "ADMIN MFA",
     title: "管理者MFA・認証器",
@@ -94,6 +118,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
   },
   {
     id: "operations",
+    group: "system",
     href: "/admin/operations",
     eyebrow: "SECURITY & OPS",
     title: "セキュリティ・運用",
