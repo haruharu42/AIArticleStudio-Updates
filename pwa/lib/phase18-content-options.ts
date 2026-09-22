@@ -80,6 +80,35 @@ export const AGE_GROUP_OPTIONS = [
 
 export const GENDER_OPTIONS = ["AIおまかせ", "男性", "女性", "どちらでも", "性別を限定しない"] as const;
 
+export const PAID_ARTICLE_PRICE_OPTIONS = [
+  { value: 100, label: "100円（お試し・先行販売）" },
+  { value: 300, label: "300円（低価格の入口）" },
+  { value: 500, label: "500円（手に取りやすい価格）" },
+  { value: 980, label: "980円（読み物系の目安に近い）" },
+  { value: 1480, label: "1,480円" },
+  { value: 1980, label: "1,980円（実用ノウハウ系の目安に近い）" },
+  { value: 2480, label: "2,480円" },
+  { value: 2980, label: "2,980円" },
+  { value: 3480, label: "3,480円" },
+  { value: 3980, label: "3,980円" },
+  { value: 4980, label: "4,980円" },
+  { value: 5980, label: "5,980円" },
+  { value: 7980, label: "7,980円" },
+  { value: 9800, label: "9,800円" },
+  { value: 14800, label: "14,800円" },
+  { value: 19800, label: "19,800円" },
+  { value: 29800, label: "29,800円" },
+  { value: 39800, label: "39,800円" },
+  { value: 49800, label: "49,800円" },
+] as const;
+
+export function paidArticlePriceSelectionValue(price: number | null): string {
+  if (price !== null && PAID_ARTICLE_PRICE_OPTIONS.some((option) => option.value === price)) {
+    return String(price);
+  }
+  return "custom";
+}
+
 export const TARGET_LENGTH_OPTIONS = [
   { value: 800, label: "約800文字（かなり短め）" },
   { value: 1000, label: "約1,000文字（短め）" },
