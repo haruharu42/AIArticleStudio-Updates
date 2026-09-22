@@ -3,11 +3,15 @@ import { MagazinePlannerPanel } from "@/components/article-create/magazine-plann
 import type { MagazinePlanDraft } from "@/lib/magazine-planner";
 import {
   parseTitleCandidates,
+  publicationBodyForCopy,
+  publicationEditorLink,
+  stripLeadingArticleTitle,
   type ArticleCreationDraft,
   type ArticleType,
   type PublicationTarget,
   type SaveStatus,
 } from "@/lib/phase11-create";
+import { copyNoteRichText } from "@/lib/note-rich-text";
 import type { ImagePromptItem } from "@/lib/phase13-image-prompts";
 import {
   AGE_GROUP_OPTIONS,
