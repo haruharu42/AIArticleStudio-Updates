@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
 import {
   COMMERCE_PLAN_COPY,
   loadMyBillingState,
@@ -9,10 +11,7 @@ import {
   type BillingSubscription,
   type MyBillingState,
 } from "@/lib/commerce";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { getSupabaseClient } from "@/lib/supabase";
-
-type PageState = AccessState | { kind: "loading" } | { kind: "unavailable" };
 
 const STATUS_LABELS: Record<string, string> = {
   incomplete: "決済未完了",
@@ -45,7 +44,7 @@ function subscriptionName(subscription: BillingSubscription): string {
 }
 
 export function BillingAccountPage() {
-  const [state, setState] = useState<PageState>({ kind: "loading" });
+  const { state, client, refresh: refreshAccess } = useSharedAccessState();
   const [billing, setBilling] = useState<MyBillingState | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -62,29 +61,34 @@ export function BillingAccountPage() {
     return null;
   }, [state]);
 
-  const refresh = async () => {
+  const refreshBilling = async () => {
+    if (!client) return;
     setMessage("");
     try {
-      const client = getSupabaseClient();
-      const access = await loadAccessState(client);
-      setState(access);
-      if (access.kind === "signed_out") {
-        setBilling(null);
-        return;
-      }
+      await refreshAccess();
       const next = await loadMyBillingState(client);
       setBilling(next);
     } catch (error) {
-      setState({ kind: "unavailable" });
       setMessage(error instanceof Error ? error.message : "契約情報を取得できませんでした。");
     }
   };
 
   useEffect(() => {
-    queueMicrotask(() => {
-      void refresh();
-    });
-  }, []);
+    if (!profile || !client) {
+      if (state.kind === "signed_out") queueMicrotask(() => setBilling(null));
+      return;
+    }
+    let active = true;
+    void loadMyBillingState(client).then(
+      (next) => {
+        if (active) setBilling(next);
+      },
+      (error) => {
+        if (active) setMessage(error instanceof Error ? error.message : "契約情報を取得できませんでした。");
+      },
+    );
+    return () => { active = false; };
+  }, [client, profile, state.kind]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -121,7 +125,6 @@ export function BillingAccountPage() {
 
       {message && <p className="commerce-message" role="status">{message}</p>}
 
-      {state.kind === "loading" && <section className="commerce-empty"><p>契約情報を確認しています…</p></section>}
       {state.kind === "signed_out" && (
         <section className="commerce-empty">
           <h2>ログインが必要です</h2>
@@ -151,7 +154,7 @@ export function BillingAccountPage() {
                 <p className="eyebrow">SUBSCRIPTIONS</p>
                 <h2>月額契約</h2>
               </div>
-              <button type="button" onClick={() => void refresh()}>最新状態に更新</button>
+              <button type="button" onClick={() => void refreshBilling()}>最新状態に更新</button>
             </div>
 
             {billing?.subscriptions.length ? (
