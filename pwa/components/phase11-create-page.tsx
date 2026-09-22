@@ -236,6 +236,7 @@ export function Phase11CreatePage() {
       coverEnabled: draft.coverEnabled,
       inlineEnabled: draft.inlineEnabled,
       inlineCount: draft.inlineCount,
+      imageStyle: draft.imageStyle,
     }),
     [draft, accountDesignPromptKey, accountPresetPromptKey],
   );
