@@ -3,6 +3,7 @@ import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
   TARGET_LENGTH_OPTIONS,
+  isImageStyleValue,
   subgenreOptionsFor,
 } from "@/lib/phase18-content-options";
 
@@ -34,6 +35,7 @@ export const DEFAULT_ARTICLE_DRAFT: ArticleCreationDraft = {
   coverEnabled: true,
   inlineEnabled: false,
   inlineCount: 2,
+  imageStyle: "auto",
   body: "",
   saveStatus: "writing",
 };
@@ -61,7 +63,7 @@ export function createInitialArticleDraft(
   const articleType = params.get("articleType");
   if (articleType === "free" || articleType === "paid") {
     next.articleType = articleType;
-    next.price = articleType === "paid" ? 1 : null;
+    next.price = articleType === "paid" ? 980 : null;
   }
 
   const genre = params.get("genre");
@@ -90,6 +92,11 @@ export function createInitialArticleDraft(
   const targetLength = Number(params.get("targetLength"));
   if (TARGET_LENGTH_OPTIONS.some((option) => option.value === targetLength)) {
     next.targetLength = targetLength;
+  }
+
+  const imageStyle = params.get("imageStyle");
+  if (imageStyle && isImageStyleValue(imageStyle)) {
+    next.imageStyle = imageStyle;
   }
 
   const inlineCount = Number(params.get("inlineCount"));
@@ -144,6 +151,17 @@ export function validateArticleCreateStep(
   if (step === 2 && (!draft.subgenre.trim() || draft.subgenre === "その他")) {
     return "「その他」を選んだ場合はサブジャンル名を入力してください。";
   }
+  if (step === 4 && draft.articleType === "paid" && draft.body.trim() && !/<!--\s*PAID_AREA\s*-->/i.test(draft.body)) {
+    return "有料記事には有料エリア開始位置が必要です。本文に「<!-- PAID_AREA -->」を入れてください。";
+  }
+  if (step === 4 && draft.inlineEnabled) {
+    for (let index = 1; index <= draft.inlineCount; index += 1) {
+      const marker = new RegExp(`<!--\\s*IMAGE:0?${index}\\s*-->`, "i");
+      if (!marker.test(draft.body)) {
+        return `挿絵${index}の差し込み位置が本文にありません。「<!-- IMAGE:${String(index).padStart(2, "0")} -->」を入れてください。`;
+      }
+    }
+  }
   return null;
 }
 
@@ -165,6 +183,9 @@ export function parseStoredArticleDraft(value: unknown): ArticleCreationDraft | 
   const targetLength = value.targetLength;
   const price = value.price;
   const inlineCount = value.inlineCount;
+  const imageStyle = typeof value.imageStyle === "string" && isImageStyleValue(value.imageStyle)
+    ? value.imageStyle
+    : "auto";
 
   if (
     (generationMode !== "prompt_export" && generationMode !== "manual")
@@ -214,6 +235,7 @@ export function parseStoredArticleDraft(value: unknown): ArticleCreationDraft | 
     coverEnabled: value.coverEnabled,
     inlineEnabled: value.inlineEnabled,
     inlineCount,
+    imageStyle,
     body: value.body,
     saveStatus,
   };
