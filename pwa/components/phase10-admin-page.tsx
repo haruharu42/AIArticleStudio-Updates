@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AdminPresetNumberField, AdminSelectWithCustom } from "@/components/admin-form-controls";
 import {
   entitlementStatusLabel,
   expiresWithin,
@@ -47,6 +48,29 @@ type RoleFilter = "all" | AdminUser["role"];
 type AccessFilter = "all" | "pwa" | "windows" | "both" | "none";
 type InviteFilter = "all" | "usable" | "expired" | "exhausted" | "revoked";
 type OverviewState = "idle" | "loading" | "ready" | "partial";
+
+const SALES_CHANNEL_OPTIONS = [
+  { value: "admin", label: "管理者による直接付与", note: "個別対応やテスト利用など、管理者が直接付与する場合。" },
+  { value: "admin-invite", label: "管理者発行の招待コード" },
+  { value: "note", label: "note販売" },
+  { value: "tips", label: "Tips販売" },
+  { value: "brain", label: "Brain販売" },
+  { value: "stripe", label: "Stripe決済" },
+  { value: "campaign", label: "キャンペーン・配布" },
+  { value: "support", label: "問い合わせ対応・補填" },
+  { value: "migration", label: "移行・既存ユーザー対応" },
+] as const;
+
+const INVITE_LABEL_OPTIONS = [
+  "βテスター",
+  "note購入者",
+  "Tips購入者",
+  "Brain購入者",
+  "キャンペーン配布",
+  "サポート個別対応",
+  "期間限定テスト",
+  "運営確認用",
+] as const;
 
 type AccessFlags = {
   pwa: boolean;
@@ -177,14 +201,19 @@ export function Phase10AdminPage() {
     }
   };
 
-  const runUserAction = async (action: () => Promise<void>) => {
+  const runUserAction = async (
+    action: () => Promise<void>,
+    successMessage: string,
+    confirmation?: string,
+  ) => {
     if (!selected) return;
+    if (confirmation && !window.confirm(confirmation)) return;
     setBusy(true);
     setMessage("");
     try {
       await action();
       await reloadBase();
-      setMessage("更新しました。");
+      setMessage(successMessage);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "更新に失敗しました。");
     } finally {
@@ -221,6 +250,7 @@ export function Phase10AdminPage() {
   };
 
   const disableInvite = async (inviteId: string) => {
+    if (!window.confirm("この招待コードを無効化しますか？\n無効化後は新規利用できません。")) return;
     setBusy(true);
     setMessage("");
     try {
@@ -515,9 +545,9 @@ export function Phase10AdminPage() {
               {accessFor(selected).implicitAdmin && <p className="admin-inline-note">管理者はactive状態の間、個別利用権がなくてもPWA・Windowsの両方を利用できます。</p>}
 
               <div className="admin-actions admin-primary-actions">
-                {selected.status === "pending" && <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "active"))}>承認する</button>}
-                {selected.status === "active" && !(selected.role === "admin" && selected.aasUserId === gate.aasId) && <button disabled={busy} className="danger-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "suspended"))}>利用を停止</button>}
-                {selected.status === "suspended" && <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "active"))}>利用を再開</button>}
+                {selected.status === "pending" && <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "active"), "ユーザーを承認しました。", `${selected.aasUserId} を承認して利用可能にしますか？`)}>承認する</button>}
+                {selected.status === "active" && !(selected.role === "admin" && selected.aasUserId === gate.aasId) && <button disabled={busy} className="danger-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "suspended"), "ユーザーの利用を停止しました。", `${selected.aasUserId} の利用を一時停止しますか？`)}>利用を停止</button>}
+                {selected.status === "suspended" && <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "active"), "ユーザーの利用を再開しました。", `${selected.aasUserId} の利用を再開しますか？`)}>利用を再開</button>}
               </div>
 
               {selected.role === "user" && (
@@ -537,15 +567,21 @@ export function Phase10AdminPage() {
                   <div className="admin-grant-section">
                     <div className="admin-subsection-heading"><h3>利用権を変更</h3><small>一般ユーザーのみ</small></div>
                     <div className="admin-form-grid admin-grant-form">
-                      <label className="route-field"><span>販売チャネル</span><input value={grantSalesChannel} onChange={(event) => setGrantSalesChannel(event.target.value)} /></label>
+                      <AdminSelectWithCustom
+                        label="販売チャネル"
+                        value={grantSalesChannel}
+                        onChange={setGrantSalesChannel}
+                        options={SALES_CHANNEL_OPTIONS}
+                        description="通常は候補から選択します。独自の販売経路だけ「その他・自由入力」を使ってください。"
+                      />
                       <label className="route-field"><span>利用期限（任意）</span><input type="datetime-local" value={grantExpiry} onChange={(event) => setGrantExpiry(event.target.value)} /></label>
-                      <label className="route-field full"><span>外部参照（任意）</span><input value={grantExternalReference} onChange={(event) => setGrantExternalReference(event.target.value)} /></label>
+                      <label className="route-field full"><span>外部参照（任意）</span><input value={grantExternalReference} onChange={(event) => setGrantExternalReference(event.target.value)} placeholder="注文番号・問い合わせ番号など、必要な場合だけ入力" /></label>
                     </div>
                     <div className="admin-actions admin-entitlement-actions">
-                      <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => grantEntitlement(getSupabaseClient(), selected.id, PWA_PRODUCT, { salesChannel: grantSalesChannel, externalReference: grantExternalReference, expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined }))}>PWAを付与</button>
-                      <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => grantEntitlement(getSupabaseClient(), selected.id, WINDOWS_PRODUCT, { salesChannel: grantSalesChannel, externalReference: grantExternalReference, expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined }))}>Windowsを付与</button>
-                      <button disabled={busy} className="secondary-action" type="button" onClick={() => void runUserAction(() => revokeEntitlement(getSupabaseClient(), selected.id, PWA_PRODUCT))}>PWAを取消</button>
-                      <button disabled={busy} className="secondary-action" type="button" onClick={() => void runUserAction(() => revokeEntitlement(getSupabaseClient(), selected.id, WINDOWS_PRODUCT))}>Windowsを取消</button>
+                      <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => grantEntitlement(getSupabaseClient(), selected.id, PWA_PRODUCT, { salesChannel: grantSalesChannel, externalReference: grantExternalReference, expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined }), "PWA利用権を付与しました。")}>PWAを付与</button>
+                      <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => grantEntitlement(getSupabaseClient(), selected.id, WINDOWS_PRODUCT, { salesChannel: grantSalesChannel, externalReference: grantExternalReference, expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined }), "Windows利用権を付与しました。")}>Windowsを付与</button>
+                      <button disabled={busy} className="secondary-action" type="button" onClick={() => void runUserAction(() => revokeEntitlement(getSupabaseClient(), selected.id, PWA_PRODUCT), "PWA利用権を取り消しました。", "このユーザーのPWA利用権を取り消しますか？")}>PWAを取消</button>
+                      <button disabled={busy} className="secondary-action" type="button" onClick={() => void runUserAction(() => revokeEntitlement(getSupabaseClient(), selected.id, WINDOWS_PRODUCT), "Windows利用権を取り消しました。", "このユーザーのWindows利用権を取り消しますか？")}>Windowsを取消</button>
                     </div>
                   </div>
                 </>
@@ -564,10 +600,10 @@ export function Phase10AdminPage() {
           <div className="admin-invite-create">
             <h3>新しい招待コードを作成</h3>
             <div className="admin-form-grid">
-              <label className="route-field"><span>ラベル</span><input value={inviteLabel} onChange={(event) => setInviteLabel(event.target.value)} placeholder="note購入者 2026-09" /></label>
-              <label className="route-field"><span>販売チャネル</span><input value={inviteSalesChannel} onChange={(event) => setInviteSalesChannel(event.target.value)} /></label>
-              <label className="route-field"><span>外部参照</span><input value={inviteExternalReference} onChange={(event) => setInviteExternalReference(event.target.value)} /></label>
-              <label className="route-field"><span>最大利用回数</span><input type="number" min={1} max={10000} value={maxUses} onChange={(event) => setMaxUses(Math.max(1, Number(event.target.value) || 1))} /></label>
+              <AdminSelectWithCustom label="ラベル" value={inviteLabel} onChange={setInviteLabel} options={INVITE_LABEL_OPTIONS} customPlaceholder="例: note購入者 2026-09" />
+              <AdminSelectWithCustom label="販売チャネル" value={inviteSalesChannel} onChange={setInviteSalesChannel} options={SALES_CHANNEL_OPTIONS} />
+              <label className="route-field"><span>外部参照（任意）</span><input value={inviteExternalReference} onChange={(event) => setInviteExternalReference(event.target.value)} placeholder="注文番号・キャンペーン名など" /></label>
+              <AdminPresetNumberField label="最大利用回数" value={maxUses} onChange={setMaxUses} presets={[1, 5, 10, 50, 100, 1000]} min={1} max={10000} description="1人用なら1、複数配布なら人数に近い候補を選びます。" suffix="回" />
               <label className="route-field"><span>コード期限</span><input type="datetime-local" value={inviteExpiry} onChange={(event) => setInviteExpiry(event.target.value)} /></label>
               <label className="route-field"><span>付与利用権期限</span><input type="datetime-local" value={inviteEntitlementExpiry} onChange={(event) => setInviteEntitlementExpiry(event.target.value)} /></label>
             </div>
