@@ -87,7 +87,7 @@ test('html export renders structured article html and txt export is plain', () =
   };
   const html = exporter.articleExportHtml(detail);
   const text = exporter.articleExportText(detail);
-  assert.match(html, /<h1>大見出し<\/h1>/);
+  assert.match(html, /<h2>大見出し<\/h2>/);
   assert.match(html, /<strong>重要<\/strong>/);
   assert.doesNotMatch(html, /<pre style="white-space:pre-wrap;font:inherit">/);
   assert.doesNotMatch(text, /\*\*重要\*\*/);
