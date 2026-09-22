@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { Phase11CreatePage } from "@/components/phase11-create-page";
-import { loadCoreAccessState } from "@/lib/access-control";
 import { loadArticleWizardProgress } from "@/lib/phase11-wizard-progress";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
@@ -26,26 +26,25 @@ type SetupState =
   | { kind: "error"; message: string };
 
 export function CreateAiSetup() {
+  const { state: accessState, client } = useSharedAccessState();
   const [state, setState] = useState<SetupState>({ kind: "loading" });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
+    if (accessState.kind === "loading") return;
+    if (accessState.kind !== "ready" || !client) {
+      queueMicrotask(() => setState({ kind: "bypass" }));
+      return;
+    }
+
     let active = true;
     setRuntimeWritingProfile(null);
 
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const access = await loadCoreAccessState(client);
-        if (!active) return;
-        if (access.kind !== "ready") {
-          setState({ kind: "bypass" });
-          return;
-        }
-
-        const writingProfile = await loadWritingProfile(client, access.user.id);
+        const writingProfile = await loadWritingProfile(client, accessState.profile.id);
         if (!active) return;
 
         // Keep the saved AI profile active while resuming or reopening article creation.
@@ -53,7 +52,7 @@ export function CreateAiSetup() {
         // them back through the setup gate. In-progress wizard data is an additional
         // resume signal for older/default profiles.
         setRuntimeWritingProfile(writingProfile);
-        const wizardProgress = loadArticleWizardProgress(access.user.id);
+        const wizardProgress = loadArticleWizardProgress(accessState.profile.id);
         setState({ kind: "setup", profile: writingProfile });
         if (wizardProgress || writingProfile.updatedAt) setConfirmed(true);
       } catch (error) {
@@ -70,21 +69,11 @@ export function CreateAiSetup() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [accessState, client]);
 
   if (state.kind === "bypass") return <Phase11CreatePage />;
 
-  if (state.kind === "loading") {
-    return (
-      <main className="creator-page beginner-creator-page ai-setup-page">
-        <section className="creator-card ai-setup-card">
-          <p className="eyebrow">AI SETUP</p>
-          <h1>使用AIを確認しています</h1>
-          <p className="panel-muted">あなたのAI設定を安全に読み込んでいます…</p>
-        </section>
-      </main>
-    );
-  }
+  if (state.kind === "loading") return null;
 
   if (state.kind === "error") {
     return (
