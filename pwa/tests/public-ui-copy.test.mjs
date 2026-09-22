@@ -36,13 +36,14 @@ test("active PWA access shell avoids frozen Windows and hands successful login b
   assert.doesNotMatch(accessShell, /Windows版/);
   assert.doesNotMatch(accessShell, /PWA ARTICLE LIBRARY · PHASE|<p className="eyebrow">PHASE\s+\d/);
   assert.match(accessShell, /PWA ACCESS/);
-  assert.match(accessShell, /onAccessReady/);
+  assert.doesNotMatch(accessShell, /onAccessReady/);
   assert.match(accessShell, /useSharedAccessState\(\)/);
   assert.doesNotMatch(accessShell, /loadAccessState|アカウントと利用権を確認しています/);
   assert.doesNotMatch(accessShell, /recoveryRef/);
   assert.match(accessShell, /setAuthMode\("login"\);[\s\S]*?await refreshAccess\(\)/);
   assert.match(accessShell, /navigateRoute\("\/create"\)/);
-  assert.match(home, /<Phase7App onAccessReady=\{handleAccessReady\} \/>/);
+  assert.match(home, /<Phase7App \/>/);
+  assert.doesNotMatch(home, /handleAccessReady|onAccessReady/);
   assert.match(home, /useSharedAccessState\(\)/);
   assert.match(provider, /const loadAccessStateOnce = useCallback/);
   assert.match(provider, /inFlightRef/);
