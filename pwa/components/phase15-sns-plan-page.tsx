@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { PresetSelect, type PresetOption } from "@/components/preset-select";
@@ -84,7 +85,7 @@ export function Phase15SnsPlanPage() {
           <h1>SNSアカウント立ち上げ設計</h1>
           <p>副業テーマからプロフィール、投稿の柱、収益導線、改善方針まで、選択肢を中心に設計します。</p>
         </div>
-        <a className="route-back" href="/tools">← 機能一覧</a>
+        <Link className="route-back" href="/tools">← 機能一覧</Link>
       </header>
 
       <section className="creator-card">
