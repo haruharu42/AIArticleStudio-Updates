@@ -527,7 +527,6 @@ export function AdminPromotionPage() {
     return (
       <main className="standalone-page"><section className="standalone-card">
         <p className="eyebrow">ADMIN ONLY</p><h1>販売・プロモーション</h1>
-        {state.kind === "loading" && <p className="route-notice">管理者権限を確認しています…</p>}
         {state.kind === "signed_out" && <p className="route-notice">先にログインしてください。</p>}
         {state.kind !== "loading" && state.kind !== "signed_out" && <p className="route-notice error">この機能はactive管理者のみ利用できます。</p>}
         <Link className="route-back" href="/">← ホームへ戻る</Link>
