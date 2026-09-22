@@ -89,6 +89,15 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(api, /ユーザーが入力していない実体験・実績・レビュー/);
   assert.match(api, /競合記事の文章をコピー・近似模倣しない/);
   assert.match(api, /Markdown見出し/);
+  assert.match(api, /H1（#）は使わない/);
+  assert.match(api, /\*\*太字\*\*/);
+  assert.match(api, /完成記事の本文だけを返す/);
+  assert.match(api, /stripLeadingArticleTitle/);
+  assert.match(api, /publicationBodyForCopy/);
+  assert.match(api, /publicationEditorLink/);
+  assert.match(api, /https:\/\/note\.com\/new/);
+  assert.match(api, /https:\/\/tips\.jp\//);
+  assert.match(api, /https:\/\/brain-market\.com\//);
   assert.match(api, /<!-- IMAGE:01 -->/);
   assert.doesNotMatch(api, /service[_-]?role|sb_secret_/i);
 
@@ -167,9 +176,18 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(page, /onBeforeExternalLaunch=\{persistWizardProgress\}/);
   assert.match(page, /titleCandidatesText/);
   assert.match(page, /buildImagePromptPlan/);
+  assert.match(page, /buildCombinedImagePrompt/);
+  assert.match(page, /combinedImagePrompt/);
   assert.match(stepUi, /onBeforeExternalLaunch/);
   assert.match(stepUi, /アイキャッチ・挿絵を作成/);
   assert.match(stepUi, /画像プロンプトをコピー/);
+  assert.match(stepUi, /生成した本文だけをここへ貼り付け/);
+  assert.match(stepUi, /stripLeadingArticleTitle/);
+  assert.match(stepUi, /アイキャッチ・挿絵をまとめて作成/);
+  assert.match(stepUi, /まとめて画像プロンプトをコピー/);
+  assert.match(stepUi, /完成本文を装飾付きコピー/);
+  assert.match(stepUi, /copyNoteRichText/);
+  assert.match(stepUi, /投稿先を開く/);
   assert.match(stepUi, /imagePrompts/);
   assert.match(stepUi, /onBeforeExternalLaunch\(\); launchAiApp\(app\.key\)/);
   assert.match(page, /setStep\(saved\.step\)/);
