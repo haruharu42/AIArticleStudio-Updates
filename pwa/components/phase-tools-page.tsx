@@ -36,7 +36,6 @@ export function PhaseToolsPage() {
         <Link className="route-back" href="/">← ホーム</Link>
       </header>
 
-      {state.kind === "loading" && <div className="route-notice">利用可能な機能を確認しています…</div>}
       {state.kind === "unavailable" && <div className="route-notice error">アカウントとPWA利用権を確認できませんでした。</div>}
       {state.kind === "signed_out" && <div className="route-notice">ログインすると利用可能な機能が表示されます。</div>}
       {(state.kind === "suspended" || state.kind === "disabled") && <div className="route-notice error">現在のアカウント状態ではPWA機能を利用できません。</div>}
