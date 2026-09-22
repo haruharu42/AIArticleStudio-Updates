@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
 import {
@@ -64,7 +65,7 @@ export function FreeTrialFeatureGate({ feature, children }: { feature: TrialFeat
         <h1>{LABELS[feature]}</h1>
         <p className="route-notice error" role="alert">{loadError}</p>
         <button className="primary-action" type="button" onClick={() => window.location.reload()}>再読み込み</button>
-        <div className="trial-gate-actions"><a href="/plans">料金プランを見る</a><a href="/">ホームへ戻る</a></div>
+        <div className="trial-gate-actions"><Link href="/plans">料金プランを見る</Link><Link href="/">ホームへ戻る</Link></div>
       </section></main>
     );
   }
@@ -78,8 +79,8 @@ export function FreeTrialFeatureGate({ feature, children }: { feature: TrialFeat
       <main className="standalone-page"><section className="standalone-card">
         <p className="eyebrow">FREE TRIAL</p><h1>{LABELS[feature]}</h1>
         <p className="route-notice error">無料トライアルを利用できません。料金プランまたは招待コードをご確認ください。</p>
-        <a className="primary-action" href="/plans">料金プラン・招待コードへ</a>
-        <a className="route-back" href="/">← ホームへ戻る</a>
+        <Link className="primary-action" href="/plans">料金プラン・招待コードへ</Link>
+        <Link className="route-back" href="/">← ホームへ戻る</Link>
       </section></main>
     );
   }
@@ -120,7 +121,7 @@ export function FreeTrialFeatureGate({ feature, children }: { feature: TrialFeat
       {message && <p className="route-notice error" role="status">{message}</p>}
       <button className="primary-action" type="button" disabled={busy || !canStart} onClick={() => void start()}>{busy ? "確認中…" : `1回使用して${LABELS[feature]}を開始`}</button>
       {!canStart && <p className="route-notice error">本日の利用上限に達しています。リセット後に利用するか、料金プランをご確認ください。</p>}
-      <div className="trial-gate-actions"><a href="/plans">料金プランを見る</a><a href="/">ホームへ戻る</a></div>
+      <div className="trial-gate-actions"><Link href="/plans">料金プランを見る</Link><Link href="/">ホームへ戻る</Link></div>
     </section></main>
   );
 }
