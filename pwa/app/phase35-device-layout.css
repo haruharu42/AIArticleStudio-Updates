@@ -244,3 +244,119 @@
     justify-self: start;
   }
 }
+
+
+/* Article creator: keep the current shell while restoring the paste/select workflow. */
+.reference-create-shell .title-candidate-paste textarea {
+  min-height: 150px;
+}
+
+.reference-create-shell .title-candidates {
+  display: grid;
+  gap: 8px;
+}
+
+.reference-create-shell .title-candidates button {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #c9dbef;
+  border-radius: 11px;
+  background: #fff;
+  color: #173557;
+  padding: 9px 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reference-create-shell .title-candidates button > span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #edf5ff;
+  color: #176fd9;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.reference-create-shell .title-candidates button.active {
+  border-color: #6da9ee;
+  background: #f2f8ff;
+  box-shadow: 0 0 0 2px rgba(23, 111, 217, .08);
+}
+
+.reference-create-shell .creator-image-prompts {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  border-top: 1px solid #dce7f3;
+  padding-top: 18px;
+}
+
+.reference-create-shell .creator-image-prompts-head h3 {
+  margin: 0 0 5px;
+  color: #173557;
+}
+
+.reference-create-shell .creator-image-prompt-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #d3e2f1;
+  border-radius: 14px;
+  background: #f9fcff;
+  padding: 12px;
+}
+
+.reference-create-shell .creator-image-prompt-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reference-create-shell .creator-image-prompt-title strong {
+  color: #173557;
+  font-size: 13px;
+}
+
+.reference-create-shell .creator-image-prompt-title span,
+.reference-create-shell .creator-image-prompt-meta small {
+  color: #70849c;
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+
+.reference-create-shell .creator-image-prompt-meta {
+  display: grid;
+  gap: 4px;
+}
+
+.reference-create-shell .creator-image-prompt-card .prompt-area {
+  min-height: 190px;
+}
+
+@media (max-width: 700px) {
+  .reference-create-shell .title-candidates button {
+    min-height: 48px;
+  }
+
+  .reference-create-shell .creator-image-prompt-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .reference-create-shell .creator-image-prompt-card .openai-prompt-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .reference-create-shell .creator-image-prompt-card .openai-prompt-actions button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
