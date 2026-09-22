@@ -144,7 +144,7 @@ export function PlatformAccountPresetSettings() {
       {accountPresetsLoading && <p className="persistent-settings-status">アカウント別プリセットを更新しています…</p>}
 
       <div className="platform-account-preset-grid">
-        <label><span>プリセット名 *</span><input value={draft.presetName} maxLength={80} onChange={(event) => patch("presetName", event.target.value)} placeholder="例: 恋愛・人間関係 / AI副業" /></label>
+        <label><span>プリセット名（投稿ジャンル名） *</span><input value={draft.presetName} maxLength={80} onChange={(event) => patch("presetName", event.target.value)} placeholder="例: 恋愛・人間関係" /></label>
         <label><span>{PLATFORM_LABELS[platform]}ユーザー名 / 表示名</span><input value={draft.accountName} maxLength={120} onChange={(event) => patch("accountName", event.target.value)} placeholder="実際に使っているユーザー名" /></label>
         <label><span>アカウントID（任意）</span><input value={draft.accountHandle} maxLength={120} onChange={(event) => patch("accountHandle", event.target.value)} placeholder="@IDなど。パスワードは保存しない" /></label>
         <label><span>主な投稿ジャンル *</span><input value={draft.genre} maxLength={160} onChange={(event) => patch("genre", event.target.value)} placeholder="例: 恋愛・人間関係" /></label>
