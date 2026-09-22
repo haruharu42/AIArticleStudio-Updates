@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { loadActiveKnowledgeCatalog } from "@/lib/knowledge-catalog";
 import { setRuntimeKnowledgeCatalog } from "@/lib/knowledge-engine";
 import {
@@ -10,22 +11,20 @@ import {
   setRuntimeKnowledgeState,
   setRuntimePromptOptimizations,
 } from "@/lib/prompt-optimization";
-import { getSupabaseClient } from "@/lib/supabase";
 
 export function KnowledgeRuntimeBootstrap() {
+  const { state, client } = useSharedAccessState();
+
   useEffect(() => {
+    if (state.kind !== "ready" || !client) {
+      setRuntimeKnowledgeCatalog([]);
+      setRuntimePromptOptimizations([]);
+      return;
+    }
+
     let active = true;
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const { data: { user } } = await client.auth.getUser();
-        if (!active || !user) {
-          if (active) {
-            setRuntimeKnowledgeCatalog([]);
-            setRuntimePromptOptimizations([]);
-          }
-          return;
-        }
         const [rules, promptRules, runtimeState] = await Promise.all([
           loadActiveKnowledgeCatalog(client),
           loadActivePromptOptimizations(client),
@@ -45,6 +44,7 @@ export function KnowledgeRuntimeBootstrap() {
     };
     void boot();
     return () => { active = false; };
-  }, []);
+  }, [client, state]);
+
   return null;
 }
