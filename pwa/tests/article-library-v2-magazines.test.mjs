@@ -64,6 +64,18 @@ test('article library exposes filters, sorting, paging, archive, duplicate and P
   assert.match(libraryListUi, /PWAで作成した記事や、これまでに同期済みの記事/);
 });
 
+test('article library detail can copy title and rich publication body', () => {
+  assert.match(libraryDetailUi, /掲載用コピー/);
+  assert.match(libraryDetailUi, /タイトルをコピー/);
+  assert.match(libraryDetailUi, /完成本文を装飾付きコピー/);
+  assert.match(libraryDetailUi, /articleExportBody\(detail\)/);
+  assert.match(libraryDetailUi, /publicationBodyForCopy/);
+  assert.match(libraryDetailUi, /copyNoteRichText\(publicationBody\)/);
+  assert.match(libraryDetailUi, /navigator\.clipboard\?\.writeText/);
+  assert.match(libraryDetailUi, /【ここから有料エリア】/);
+  assert.match(libraryDetailUi, /【挿絵/);
+});
+
 test('article library edit validation matches the positive-price database contract', () => {
   const detail = {
     id: '10000000-0000-4000-8000-000000000001', userId: '00000000-0000-4000-8000-000000000002',
