@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -500,12 +500,11 @@ function FeatureCard({ mark, title, description, ready = false }: { mark: string
 }
 
 export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Promise<void> }) {
-  const recoveryRef = useRef(false);
   const { state, client, refresh: refreshAccess } = useSharedAccessState();
   const [authMode, setAuthMode] = useState<AuthMode>("login");
 
   const refresh = useCallback(async () => {
-    recoveryRef.current = false;
+    setAuthMode("login");
     await refreshAccess();
   }, [refreshAccess]);
 
@@ -516,9 +515,7 @@ export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Prom
   }, [client]);
 
   useEffect(() => {
-    recoveryRef.current =
-      new URLSearchParams(window.location.search).get("mode") === "recovery";
-    if (recoveryRef.current) {
+    if (new URLSearchParams(window.location.search).get("mode") === "recovery") {
       queueMicrotask(() => setAuthMode("recovery"));
     }
   }, []);
@@ -527,10 +524,8 @@ export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Prom
     if (!client) return;
     const { data } = client.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        recoveryRef.current = true;
         setAuthMode("recovery");
       } else if (event === "SIGNED_OUT") {
-        recoveryRef.current = false;
         setAuthMode("login");
       }
     });
