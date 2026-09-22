@@ -38,9 +38,11 @@ test("Phase 9 invite route redeems entitlement without requiring existing PWA ac
   const route = await read("app/invite/page.tsx");
   assert.match(api, /"redeem_pwa_invite"/);
   assert.match(api, /p_invite_code/);
-  assert.match(page, /status !== "pending" && data\.status !== "active"/);
+  assert.match(page, /useSharedAccessState\(\)/);
+  assert.match(page, /profile\.status !== "pending" && profile\.status !== "active"/);
   assert.match(page, /redeemPwaInvite/);
-  assert.doesNotMatch(page, /can_access_product/);
+  assert.doesNotMatch(page, /auth\.getUser\(\)|\.from\("profiles"\)|can_access_product/);
+  assert.doesNotMatch(page, /アカウントを確認しています/);
   assert.match(route, /Phase9InvitePage/);
 });
 
