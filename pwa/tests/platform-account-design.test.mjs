@@ -83,7 +83,8 @@ test("account designs load and save per user and platform without external crede
   assert.match(lib, /defaultPlatformAccountDesign\(userId, "note"\)/);
   assert.match(lib, /defaultPlatformAccountDesign\(userId, "tips"\)/);
   assert.match(lib, /defaultPlatformAccountDesign\(userId, "brain"\)/);
-  assert.match(page, /loadAccessState/);
+  assert.match(page, /useSharedAccessState/);
+  assert.doesNotMatch(page, /loadAccessState/);
   assert.match(page, /loadPlatformAccountDesigns/);
   assert.match(page, /savePlatformAccountDesign/);
   assert.match(page, /外部サービスのログイン情報は保存しません/);
