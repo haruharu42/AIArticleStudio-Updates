@@ -282,7 +282,7 @@ export function PwaSettingsPage() {
                     </>
                   )}
                 </section>
-              ) : <div className="persistent-settings-status">アカウント情報を確認しています…</div>}
+              ) : state.kind === "loading" ? null : <div className="persistent-settings-status">アカウント情報を取得できませんでした。</div>}
             </SettingsAccordion>
 
             <SettingsAccordion
@@ -298,9 +298,9 @@ export function PwaSettingsPage() {
                   <div><strong>{profile.display_name || "ユーザー"}</strong><span>{profile.aas_user_id}</span><small>{profile.role} / {profile.status}</small></div>
                   <span className="beginner-access-badge">● PWA利用可能</span>
                 </div>
-              ) : (
+              ) : state.kind === "loading" ? null : (
                 <div className="persistent-settings-status" role="status">
-                  {state.kind === "loading" ? "アカウント情報を確認しています…" : state.kind === "signed_out" ? "ログイン状態を確認できませんでした。" : "アカウント情報を取得できませんでした。"}
+                  {state.kind === "signed_out" ? "ログイン状態を確認できませんでした。" : "アカウント情報を取得できませんでした。"}
                 </div>
               )}
 
