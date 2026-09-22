@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
-import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
-import { applyWorkspacePresetToArticleDraft } from "@/features/presets/preset-adapters";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
-import { applyAccountDesignToArticleDraft } from "@/features/account-design";
-import { ArticlePresetPanel } from "@/components/article-create/article-preset-panel";
 import {
   ArticleConditionsStep,
   BodyStep,
@@ -19,7 +15,6 @@ import {
 } from "@/components/article-create/article-create-steps";
 import { loadCoreAccessState } from "@/lib/access-control";
 import { DEFAULT_MAGAZINE_PLAN, type MagazinePlanDraft } from "@/lib/magazine-planner";
-import { applyArticlePreset, type ArticlePreset } from "@/lib/article-presets";
 import {
   ARTICLE_CREATE_STEPS,
   initialDraftFromLocation,
@@ -49,20 +44,6 @@ import {
 } from "@/lib/platform-account-design";
 import { getSupabaseClient } from "@/lib/supabase";
 
-const ARTICLE_CREATE_UI_STEPS = [
-  "種類の選択",
-  "条件の入力",
-  "タイトルの選択",
-  "記事の生成",
-] as const;
-
-function displayStepForInternalStep(step: number): number {
-  if (step <= 0) return 0;
-  if (step <= 2) return 1;
-  if (step === 3) return 2;
-  return 3;
-}
-
 type Gate =
   | { kind: "loading" }
   | { kind: "signed_out" }
@@ -71,7 +52,7 @@ type Gate =
   | { kind: "error"; message: string };
 
 export function Phase11CreatePage() {
-  const { preference: workspacePreference } = useWorkspacePreset();
+  const { accountPresets } = useWorkspacePreset();
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ArticleCreationDraft>(() => initialDraftFromLocation());
@@ -87,7 +68,7 @@ export function Phase11CreatePage() {
   const [accountDesigns, setAccountDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
   const progressOwnerIdRef = useRef("");
   const articleQuotaInFlightRef = useRef(false);
-  const workspacePresetAppliedRef = useRef(false);
+  const accountPresetAppliedRef = useRef(false);
 
   const persistWizardProgress = useCallback(() => {
     if (gate.kind !== "ready" || progressOwnerIdRef.current !== gate.ownerId || createdId) return;
@@ -189,31 +170,37 @@ export function Phase11CreatePage() {
     };
   }, [gate.kind, persistWizardProgress]);
 
+  const activeAccountPreset = draft.publicationTarget === "blog"
+    ? null
+    : accountPresets.find((preset) => preset.platform === draft.publicationTarget && preset.isDefault) ?? null;
+
   useEffect(() => {
-    if (
-      workspacePresetAppliedRef.current
-      || wizardRestored !== false
-      || !workspacePreference?.applyArticle
-    ) return;
-    workspacePresetAppliedRef.current = true;
+    if (accountPresetAppliedRef.current || wizardRestored !== false || !activeAccountPreset) return;
 
     const params = new URLSearchParams(window.location.search);
-    if (params.has("from") || params.has("publicationTarget") || params.has("title") || params.has("theme")) return;
+    if (params.has("from") || params.has("genre") || params.has("title")) {
+      accountPresetAppliedRef.current = true;
+      return;
+    }
 
-    const next = applyWorkspacePresetToArticleDraft(draft, workspacePreference);
-    const subgenres = subgenreOptionsFor(next.genre);
-    const normalized = {
-      ...next,
-      subgenre: subgenres.includes(next.subgenre) ? next.subgenre : subgenres[0] ?? "AIおまかせ",
-    };
+    const presetGenre = activeAccountPreset.genre.trim();
+    accountPresetAppliedRef.current = true;
+    if (!presetGenre) return;
+
     queueMicrotask(() => {
-      setDraft(normalized);
-      setTagsText(normalized.tags.join(", "));
-      setMessage("設定画面の共通プリセットを新規記事の初期条件へ反映しました。個別条件はこの画面で変更できます。");
+      setDraft((current) => {
+        const subgenres = subgenreOptionsFor(presetGenre);
+        return {
+          ...current,
+          genre: presetGenre,
+          subgenre: subgenres.includes(current.subgenre) ? current.subgenre : subgenres[0] ?? "AIおまかせ",
+        };
+      });
+      setMessage(`投稿アカウントプリセット「${activeAccountPreset.presetName}」の固定ジャンルを初期値へ反映しました。サブジャンル・年齢・性別・文字数・価格はこの記事ごとに設定できます。`);
     });
-  }, [draft, wizardRestored, workspacePreference]);
+  }, [activeAccountPreset, wizardRestored]);
 
-  const displayStep = displayStepForInternalStep(step);
+  const displayStep = step;
   const articleDraft = useMemo(() => withArticleTags(draft, tagsText), [draft, tagsText]);
   const activeAccountDesign = draft.publicationTarget === "blog"
     ? null
@@ -221,30 +208,22 @@ export function Phase11CreatePage() {
   const accountDesignPromptKey = activeAccountDesign?.ready
     ? `${activeAccountDesign.platform}:${activeAccountDesign.updatedAt ?? "unsaved"}`
     : "none";
+  const accountPresetPromptKey = activeAccountPreset
+    ? `${activeAccountPreset.id}:${activeAccountPreset.updatedAt}`
+    : "none";
   const titlePrompt = useMemo(
     () => buildTitlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined),
-    [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey],
+    [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey, accountPresetPromptKey],
   );
   const articlePrompt = useMemo(
     () => buildArticlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined),
-    [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey],
+    [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey, accountPresetPromptKey],
   );
   const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
   };
-
-  const applyPreset = useCallback((preset: ArticlePreset) => {
-    setDraft((current) => {
-      const next = applyArticlePreset(current, preset);
-      return current.magazineEnabled
-        ? { ...next, publicationTarget: "note", magazineEnabled: true }
-        : next;
-    });
-    setTagsText(preset.tags.join(", "));
-    setActivePresetId(preset.id);
-  }, []);
 
   const setGenre = (genre: string) => {
     if (genre === "その他") {
@@ -273,14 +252,6 @@ export function Phase11CreatePage() {
       articleType: value,
       price: value === "free" ? null : current.price !== null && current.price > 0 ? current.price : 1,
     }));
-  };
-
-  const applyActiveAccountDesign = () => {
-    if (!activeAccountDesign?.ready) return;
-    const result = applyAccountDesignToArticleDraft(draft, activeAccountDesign);
-    setDraft(result.draft);
-    setTagsText(result.draft.tags.join(", "));
-    setMessage(`アカウント設計を記事条件へ反映しました。\n${result.summary.join(" / ")}`);
   };
 
   const generateArticlePrompt = async () => {
@@ -379,7 +350,7 @@ export function Phase11CreatePage() {
       <ActiveWorkspacePresetBadge feature="article" />
 
       <ol className="wizard-steps" aria-label="記事作成の進行状況">
-        {ARTICLE_CREATE_UI_STEPS.map((label, index) => (
+        {ARTICLE_CREATE_STEPS.map((label, index) => (
           <li
             key={label}
             className={index === displayStep ? "active" : index < displayStep ? "done" : ""}
@@ -391,34 +362,22 @@ export function Phase11CreatePage() {
       </ol>
 
       <section className="creator-card">
-        <ArticlePresetPanel
-          ownerId={gate.ownerId}
-          draft={draft}
-          tagsText={tagsText}
-          activePresetId={activePresetId}
-          autoApplyDefault={wizardRestored === false && typeof window !== "undefined" && window.location.search.length === 0}
-          onApply={applyPreset}
-          onActivePresetChange={setActivePresetId}
-          setMessage={setMessage}
-        />
-
         {draft.publicationTarget !== "blog" && (
-          <div className={`account-design-create-status ${activeAccountDesign?.ready ? "ready" : "missing"}`}>
+          <div className={`account-design-create-status ${activeAccountPreset ? "ready" : "missing"}`}>
             <div>
-              <strong>{activeAccountDesign?.ready ? "✓ アカウント設計を自動反映" : "アカウント設計は未完了"}</strong>
+              <strong>
+                {activeAccountPreset
+                  ? `✓ 投稿アカウントプリセット「${activeAccountPreset.presetName}」を使用`
+                  : `${draft.publicationTarget === "note" ? "note" : draft.publicationTarget === "tips" ? "Tips" : "Brain"}の投稿アカウントプリセットは未設定`}
+              </strong>
               <small>
-                {activeAccountDesign?.ready
-                  ? `${draft.publicationTarget === "note" ? "note" : draft.publicationTarget === "tips" ? "Tips" : "Brain"}の保存済み設計をタイトル・本文プロンプトへ反映します。`
-                  : "設計なしでも記事作成はできます。設定すると読者・トーン・収益化方針をAI指示へ自動反映できます。"}
+                {activeAccountPreset
+                  ? `${activeAccountPreset.accountName || "ユーザー名未設定"} / 固定ジャンル: ${activeAccountPreset.genre || "未設定"}。サブジャンル・年齢・性別・文字数・価格はこの記事で決め、タグは最後に設定します。`
+                  : "設定でユーザー名と主な投稿ジャンルを一度登録すると、記事作成時の固定設定として自動参照します。"}
               </small>
             </div>
             <div className="account-design-create-actions">
-              {activeAccountDesign?.ready && (
-                <button type="button" onClick={applyActiveAccountDesign}>記事条件にも反映</button>
-              )}
-              <a href={`/account-design?platform=${draft.publicationTarget}`}>
-                {activeAccountDesign?.ready ? "設計を確認" : "アカウント設計を設定"}
-              </a>
+              <a href="/settings">{activeAccountPreset ? "プリセットを確認" : "プリセットを登録"}</a>
             </div>
           </div>
         )}
@@ -429,8 +388,6 @@ export function Phase11CreatePage() {
           <ArticleConditionsStep
             draft={draft}
             patch={patch}
-            tagsText={tagsText}
-            setTagsText={setTagsText}
             setGenre={setGenre}
             setCustomGenre={setCustomGenre}
             setSubgenre={setSubgenre}
@@ -459,7 +416,7 @@ export function Phase11CreatePage() {
           />
         )}
         {step === 5 && <PreviewStep draft={draft} />}
-        {step === 6 && <SaveStep draft={draft} patch={patch} busy={busy} createdId={createdId} onSave={save} />}
+        {step === 6 && <SaveStep draft={draft} patch={patch} tagsText={tagsText} setTagsText={setTagsText} busy={busy} createdId={createdId} onSave={save} />}
 
         {message && <div className="route-notice" role="status" aria-live="polite">{message}</div>}
 
