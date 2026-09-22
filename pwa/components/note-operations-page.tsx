@@ -8,7 +8,7 @@ import { useSharedAccessState } from "@/components/access-state-provider";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { launchAiApp } from "@/lib/ai-app-links";
-import { APP_RELEASE_STATE_EVENT, readEffectiveRelease, releaseVersionAtLeast } from "@/lib/app-release";
+import { APP_RELEASE_STATE_EVENT } from "@/lib/app-release";
 import {
   AAS_ADMIN_NOTE_PROFILE_PRESET,
   NOTE_ACCOUNT_GENRES,
@@ -47,6 +47,16 @@ import {
   type NoteOperationProfile,
   type NoteScheduleItem,
 } from "@/features/note";
+import {
+  createHref,
+  downloadText,
+  monthCells,
+  moveMonth,
+  noteOperationsGateFor,
+  notePerformanceLoopAvailable,
+  noteScheduleResponseStorageKey,
+  typeClass,
+} from "@/components/note-operations/note-operations-page-helpers";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   AI_PROVIDER_LABELS,
@@ -56,86 +66,12 @@ import {
   type UserWritingProfile,
 } from "@/lib/user-personalization";
 
-type Gate =
-  | { kind: "loading" }
-  | { kind: "signed_out" }
-  | { kind: "ready"; userId: string; isAdmin: boolean }
-  | { kind: "error"; message: string };
-
 type Tab = "start" | "profile" | "plan" | "calendar";
 
 const NOTE_HOME_URL = "https://note.com/";
 const NOTE_PROFILE_OFFICIAL = "https://note.com/info/n/n27cb842c7737";
 const NOTE_PAID_OFFICIAL = "https://note.com/info/n/na5f43ec69740";
 const NOTE_RESERVATION_OFFICIAL = "https://note.com/info/n/nc84e9a40b092";
-const NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0.1.1";
-const NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX = "aas.note.schedule.response.v1";
-
-function noteScheduleResponseStorageKey(userId: string): string {
-  return `${NOTE_SCHEDULE_RESPONSE_STORAGE_PREFIX}:${userId}`;
-}
-
-function notePerformanceLoopAvailable(): boolean {
-  if (typeof window === "undefined") return false;
-  const isGuardedPreview = window.location.hostname.includes("ai-article-studio-pwa-preview");
-  return isGuardedPreview || releaseVersionAtLeast(readEffectiveRelease()?.version, NOTE_PERFORMANCE_LOOP_MIN_RELEASE);
-}
-
-function downloadText(filename: string, text: string, type: string) {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
-function monthStart(value: string): string {
-  return /^\d{4}-\d{2}$/.test(value) ? value + "-01" : todayJstDateKey().slice(0, 7) + "-01";
-}
-
-function moveMonth(value: string, delta: number): string {
-  const [year, month] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1 + delta, 1));
-  return date.toISOString().slice(0, 7);
-}
-
-function monthCells(value: string): Array<{ date: string; current: boolean }> {
-  const start = monthStart(value);
-  const [year, month] = start.split("-").map(Number);
-  const first = new Date(Date.UTC(year, month - 1, 1));
-  const lead = first.getUTCDay();
-  const base = new Date(Date.UTC(year, month - 1, 1 - lead));
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(base);
-    date.setUTCDate(base.getUTCDate() + index);
-    return {
-      date: date.toISOString().slice(0, 10),
-      current: date.getUTCMonth() === month - 1,
-    };
-  });
-}
-
-function typeClass(item: NoteScheduleItem): string {
-  if (item.itemType === "paid_note") return "paid";
-  if (item.itemType === "free_note") return "free";
-  if (item.itemType === "review") return "review";
-  return "setup";
-}
-
-function createHref(item: NoteScheduleItem): string {
-  const params = new URLSearchParams({
-    publicationTarget: "note",
-    articleType: item.itemType === "paid_note" ? "paid" : "free",
-    theme: item.theme || "",
-    from: "note-operations",
-  });
-  return "/create?" + params.toString();
-}
-
 export function NoteOperationsPage() {
   const { state: accessState, client } = useSharedAccessState();
   const { preference: workspacePreference } = useWorkspacePreset();
@@ -157,28 +93,7 @@ export function NoteOperationsPage() {
   const [performanceLoopEnabled, setPerformanceLoopEnabled] = useState(false);
   const [articleOutput, setArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
 
-  const gate = useMemo<Gate>(() => {
-    if (accessState.kind === "ready") {
-      if (initError) return { kind: "error", message: initError };
-      return {
-        kind: "ready",
-        userId: accessState.profile.id,
-        isAdmin: accessState.profile.role === "admin",
-      };
-    }
-    if (accessState.kind === "loading") return { kind: "loading" };
-    if (accessState.kind === "signed_out") return { kind: "signed_out" };
-    if (accessState.kind === "unavailable") {
-      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
-    }
-    if (accessState.kind === "pending") {
-      return { kind: "error", message: "アカウント承認後に利用できます。" };
-    }
-    if (accessState.kind === "entitlement_denied") {
-      return { kind: "error", message: "PWA利用権が必要です。" };
-    }
-    return { kind: "error", message: "現在のアカウント状態では利用できません。" };
-  }, [accessState, initError]);
+  const gate = useMemo(() => noteOperationsGateFor(accessState, initError), [accessState, initError]);
 
   useEffect(() => {
     if (accessState.kind !== "ready" || !client) return;
