@@ -370,7 +370,6 @@ export function ContentWorkflowPage() {
       <main className="standalone-page"><section className="standalone-card">
         <p className="eyebrow">CONTENT WORKFLOW</p>
         <h1>AAS運営自動化</h1>
-        {state.kind === "loading" && <div className="reference-route-loading"><span /><small>準備中</small></div>}
         {state.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
         {state.kind !== "loading" && state.kind !== "signed_out" && <p className="route-notice error">activeなAASアカウントと利用権が必要です。</p>}
         <Link className="route-back" href="/">← ホーム</Link>
