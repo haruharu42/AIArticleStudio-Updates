@@ -170,13 +170,17 @@ test("member and admin route shells stay hidden until shared access verification
     assert.match(source, /if \(gate\.kind === "loading"\) return null/);
   }
 
-  const [accountDesign, invite] = await Promise.all([
+  const [accountDesign, invite, inquiries, noteOperations] = await Promise.all([
     read("components/platform-account-design-page.tsx"),
     read("components/phase9-invite-page.tsx"),
+    read("components/user-inquiries-page.tsx"),
+    read("components/note-operations-page.tsx"),
   ]);
 
   assert.match(accountDesign, /if \(state\.kind === "loading"\) return null/);
   assert.match(invite, /if \(state\.kind === "loading"\) return null/);
+  assert.match(inquiries, /if \(state\.kind === "loading"\) return null/);
+  assert.match(noteOperations, /if \(gate\.kind === "loading" \|\| \(gate\.kind === "ready" && !profile\)\) return null/);
 });
 
 test("admin surfaces reuse root access state instead of starting page-level account checks", async () => {
