@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { Metadata } from "next";
 import { LegalDocument } from "@/components/legal-document";
 
@@ -99,7 +101,7 @@ export default function TermsPage() {
 
       <h2>17. お問い合わせ</h2>
       <p>
-        本サービスに関する問い合わせ、個人販売者の情報開示請求、個人情報に関する請求は、<a href="/support">お問い合わせ・開示請求ページ</a>をご確認ください。特定商取引法に基づく販売条件は、<a href="/commercial-transactions">特定商取引法に基づく表記</a>に表示します。
+        本サービスに関する問い合わせ、個人販売者の情報開示請求、個人情報に関する請求は、<Link href="/support">お問い合わせ・開示請求ページ</Link>をご確認ください。特定商取引法に基づく販売条件は、<Link href="/commercial-transactions">特定商取引法に基づく表記</Link>に表示します。
       </p>
     </LegalDocument>
   );
