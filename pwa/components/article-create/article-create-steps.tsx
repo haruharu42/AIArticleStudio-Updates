@@ -362,6 +362,34 @@ export function BodyStep({
   onBeforeExternalLaunch: () => void;
   setMessage: MessageSetter;
 }) {
+  const [bodyCursor, setBodyCursor] = useState(() => draft.body.length);
+  const paidAreaPresent = /<!--\s*PAID_AREA\s*-->/i.test(draft.body);
+  const missingImageMarkers = draft.inlineEnabled
+    ? Array.from({ length: draft.inlineCount }, (_unused, index) => index + 1).filter((order) => {
+        const marker = new RegExp(`<!--\\s*IMAGE:0?${order}\\s*-->`, "i");
+        return !marker.test(draft.body);
+      })
+    : [];
+
+  const applyPastedBody = (value: string) => {
+    const cleaned = stripLeadingArticleTitle(value, draft.title);
+    patch("body", cleaned);
+    setBodyCursor(cleaned.length);
+    setMessage(cleaned !== value.trimStart()
+      ? "先頭に含まれていた記事タイトルを除外し、本文だけを貼り付けました。"
+      : "本文を貼り付けました。");
+  };
+
+  const insertMarkerAtCursor = (marker: string, label: string) => {
+    const safeCursor = Math.max(0, Math.min(bodyCursor, draft.body.length));
+    const before = draft.body.slice(0, safeCursor).replace(/\s*$/, "");
+    const after = draft.body.slice(safeCursor).replace(/^\s*/, "");
+    const next = [before, marker, after].filter(Boolean).join("\n\n");
+    patch("body", next);
+    setBodyCursor(Math.min(next.length, before.length + marker.length + 2));
+    setMessage(label + "を本文へ追加しました。");
+  };
+
   return (
     <div className="wizard-pane">
       <p className="eyebrow">STEP 5</p><h2>本文を準備します</h2>
@@ -387,15 +415,57 @@ export function BodyStep({
             const pasted = event.clipboardData.getData("text/plain");
             if (!pasted) return;
             event.preventDefault();
-            const cleaned = stripLeadingArticleTitle(pasted, draft.title);
-            patch("body", cleaned);
-            setMessage(cleaned !== pasted.trimStart() ? "先頭に含まれていた記事タイトルを除外し、本文だけを貼り付けました。" : "本文を貼り付けました。");
+            applyPastedBody(pasted);
           }}
-          onChange={(event) => patch("body", event.target.value)}
+          onSelect={(event) => setBodyCursor(event.currentTarget.selectionStart)}
+          onClick={(event) => setBodyCursor(event.currentTarget.selectionStart)}
+          onKeyUp={(event) => setBodyCursor(event.currentTarget.selectionStart)}
+          onChange={(event) => {
+            patch("body", event.target.value);
+            setBodyCursor(event.target.selectionStart);
+          }}
           placeholder="## 見出し\n本文…"
         />
       </label>
-      <p className="beginner-help">タイトルはSTEP 4で管理するため、この欄には本文だけを入れます。AIが先頭に同じタイトルを付けた場合は、空欄への貼り付け時にAASが自動で除外します。</p>
+      <div className="body-clipboard-actions">
+        <button
+          className="secondary-action"
+          type="button"
+          onClick={() => void readClipboardText(setMessage).then((value) => {
+            if (value !== null) applyPastedBody(value);
+          })}
+        >
+          クリップボードから本文を貼り付け
+        </button>
+      </div>
+      <p className="beginner-help">タイトルはSTEP 4で管理するため、この欄には本文だけを入れます。AIが先頭に同じタイトルを付けた場合はAASが除外します。</p>
+      {draft.articleType === "paid" && (
+        <div className={paidAreaPresent ? "marker-status marker-status-ok" : "marker-status marker-status-warning"}>
+          <strong>{paidAreaPresent ? "✓ 有料エリア開始位置があります" : "有料エリア開始位置がまだありません"}</strong>
+          <small>AI生成時は <!-- PAID_AREA --> を自動で含めるよう指示しています。手動で追加する場合は本文欄の希望位置へカーソルを置いてください。</small>
+          {!paidAreaPresent && (
+            <button className="secondary-action" type="button" onClick={() => insertMarkerAtCursor("<!-- PAID_AREA -->", "有料エリア開始位置")}>
+              カーソル位置に有料エリアを追加
+            </button>
+          )}
+        </div>
+      )}
+      {draft.inlineEnabled && (
+        <div className={missingImageMarkers.length === 0 ? "marker-status marker-status-ok" : "marker-status marker-status-warning"}>
+          <strong>{missingImageMarkers.length === 0 ? "✓ 挿絵の差し込み位置がそろっています" : `挿絵位置が${missingImageMarkers.length}か所不足しています`}</strong>
+          <small>AI生成時は挿絵枚数ぶんの <!-- IMAGE:01 --> 形式を本文へ入れるよう指示しています。足りない場合はカーソル位置へ追加できます。</small>
+          {missingImageMarkers.map((order) => (
+            <button
+              key={order}
+              className="secondary-action"
+              type="button"
+              onClick={() => insertMarkerAtCursor(`<!-- IMAGE:${String(order).padStart(2, "0")} -->`, `挿絵${order}の差し込み位置`)}
+            >
+              カーソル位置に挿絵{order}を追加
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
