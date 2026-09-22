@@ -445,7 +445,7 @@ export function Phase11CreatePage() {
             setMessage={setMessage}
           />
         )}
-        {step === 6 && <SaveStep draft={draft} patch={patch} tagsText={tagsText} setTagsText={setTagsText} busy={busy} createdId={createdId} onSave={save} />}
+        {step === 6 && <SaveStep draft={draft} patch={patch} tagsText={tagsText} setTagsText={setTagsText} busy={busy} createdId={createdId} onSave={save} setMessage={setMessage} />}
 
         {message && <div className="route-notice" role="status" aria-live="polite">{message}</div>}
 
