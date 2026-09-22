@@ -95,6 +95,8 @@ export function FreeTrialAdminPage() {
     }
   };
 
+  if (gate.kind === "loading") return null;
+
   if (gate.kind !== "ready") {
     return (
       <main className="standalone-page"><section className="standalone-card">
