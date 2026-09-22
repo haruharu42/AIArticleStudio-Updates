@@ -73,7 +73,9 @@ test("mobile navigation uses one shared customizable source across home and othe
 
   assert.match(shell, /SharedMobileBottomNav/);
   assert.doesNotMatch(shell, /className="aas-reference-bottom-nav aas-reference-mobile-main-nav"/);
-  assert.match(nav, /SharedMobileBottomNav/);
+  assert.match(nav, /AasReferenceBottomNav/);
+  assert.match(nav, /MOBILE_NAV_ITEM_OPTIONS/);
+  assert.match(nav, /activeKeyForPathname/);
   assert.doesNotMatch(nav, /CANONICAL_NAV_ITEMS/);
 
   assert.match(customizer, /残り\{MAX_CUSTOM_MOBILE_NAV_ITEMS\}枠/);
@@ -93,20 +95,24 @@ test("mobile navigation uses one shared customizable source across home and othe
 });
 
 
-test("shared mobile navigation keeps five equal slots and stays mobile-only", async () => {
-  const [layout, flexCss, shared] = await Promise.all([
+test("shared mobile navigation keeps five equal slots and the unified shell switches to desktop navigation", async () => {
+  const [layout, flexCss, desktopCss, shared, persistent] = await Promise.all([
     read("app/layout.tsx"),
     read("app/phase31-nav-flex.css"),
+    read("app/phase36-desktop-nav.css"),
     read("components/shared-mobile-bottom-nav.tsx"),
+    read("components/persistent-mobile-nav.tsx"),
   ]);
   assert.match(layout, /phase31-help-nav\.css/);
   assert.match(layout, /phase31-nav-flex\.css/);
   assert.ok(layout.indexOf("phase31-help-nav.css") < layout.indexOf("phase31-nav-flex.css"));
   assert.match(flexCss, /grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\)/);
-  assert.match(flexCss, /@media \(min-width: 900px\)/);
-  assert.match(flexCss, /\.unified-reference-mobile-nav/);
+  assert.match(desktopCss, /@media \(min-width: 900px\)/);
+  assert.match(desktopCss, /\.aas-reference-mobile-main-nav \{\s*display: none;/);
+  assert.match(desktopCss, /\.aas-reference-desktop-nav/);
   assert.match(shared, /items\.map/);
-  assert.match(shared, /<Link className=\{homeActive/);
+  assert.match(shared, /onHome/);
+  assert.match(persistent, /AasReferenceBottomNav/);
 });
 
 
@@ -179,12 +185,27 @@ test("home and feature screens cannot diverge because both render the same share
     assert.match(source, /AasReferenceBottomNav/);
   }
   assert.match(shell, /<SharedMobileBottomNav/);
-  assert.match(persistent, /<SharedMobileBottomNav/);
+  assert.match(persistent, /<AasReferenceBottomNav/);
   assert.equal((shared.match(/<nav className=\{navClass\}/g) ?? []).length, 1);
   assert.doesNotMatch(home, /CANONICAL_NAV_ITEMS|DEFAULT_MOBILE_NAV_ITEMS/);
   assert.doesNotMatch(create, /CANONICAL_NAV_ITEMS|DEFAULT_MOBILE_NAV_ITEMS/);
   assert.doesNotMatch(ranking, /CANONICAL_NAV_ITEMS|DEFAULT_MOBILE_NAV_ITEMS/);
   assert.doesNotMatch(profile, /CANONICAL_NAV_ITEMS|DEFAULT_MOBILE_NAV_ITEMS/);
+});
+
+test("article library home action clears the internal library section instead of only changing the URL", async () => {
+  const [home, shell, shared] = await Promise.all([
+    read("components/phase18-beginner-home.tsx"),
+    read("components/aas-reference-shell.tsx"),
+    read("components/shared-mobile-bottom-nav.tsx"),
+  ]);
+
+  assert.match(home, /onHome=\{\(\) => openSection\("home"\)\}/);
+  assert.match(home, /window\.history\.replaceState\(\{\}, "", next === "library" \? "\/\?section=library" : "\/"\)/);
+  assert.match(shell, /onHome\?: \(\) => void/);
+  assert.match(shell, /onClick=\{onHome\}/);
+  assert.match(shared, /onHome\?: \(\) => void/);
+  assert.match(shared, /onClick=\{onHome\}/);
 });
 
 test("mobile nav choices are isolated between accounts on the same device", async () => {
