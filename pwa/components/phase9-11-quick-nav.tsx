@@ -1,30 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
-import { getSupabaseClient } from "@/lib/supabase";
-
-type QuickState = AccessState | { kind: "unavailable" } | { kind: "loading" };
+import { useSharedAccessState } from "@/components/access-state-provider";
 
 export function Phase9To11QuickNav() {
-  const [state, setState] = useState<QuickState>({ kind: "loading" });
-
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const next = await loadAccessState(getSupabaseClient());
-        if (active) setState(next);
-      } catch {
-        if (active) setState({ kind: "unavailable" });
-      }
-    };
-    void load();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { state } = useSharedAccessState();
 
   const showInvite =
     state.kind === "pending" || state.kind === "entitlement_denied";
@@ -34,26 +15,26 @@ export function Phase9To11QuickNav() {
   return (
     <nav className="phase-quick-nav" aria-label="追加機能">
       {showCreate && (
-        <a className="quick-primary" href="/create">
+        <Link className="quick-primary" href="/create">
           <span>✦</span>
           記事を作る
-        </a>
+        </Link>
       )}
-      <a href="/tools">
+      <Link href="/tools">
         <span>▦</span>
         機能
-      </a>
+      </Link>
       {showInvite && (
-        <a href="/invite">
+        <Link href="/invite">
           <span>⌁</span>
           PWA招待
-        </a>
+        </Link>
       )}
       {showAdmin && (
-        <a href="/admin">
+        <Link href="/admin">
           <span>⚙</span>
           管理
-        </a>
+        </Link>
       )}
     </nav>
   );
