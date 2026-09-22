@@ -188,8 +188,6 @@ export function ImagePlanStep({
   draft: ArticleCreationDraft;
   patch: ArticleDraftPatch;
 }) {
-  const aiLaunchOptions = currentAiLaunchOptions();
-
   return (
     <div className="wizard-pane">
       <p className="eyebrow">STEP 2</p><h2>記事に画像を入れますか？</h2>
@@ -527,6 +525,8 @@ export function PreviewStep({
   onBeforeExternalLaunch: () => void;
   setMessage: MessageSetter;
 }) {
+  const aiLaunchOptions = currentAiLaunchOptions();
+
   return (
     <div className="wizard-pane">
       <p className="eyebrow">STEP 6</p><h2>内容を確認しましょう</h2>
