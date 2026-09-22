@@ -27,6 +27,7 @@ test("root layout keeps verified access state alive across client-side route cha
   assert.match(provider, /event === "INITIAL_SESSION"/);
   assert.match(provider, /event === "TOKEN_REFRESHED" \? "background" : "strict"/);
   assert.match(provider, /current\.kind === "ready" \? current : \{ kind: "unavailable" \}/);
+  assert.match(provider, /current\.kind === "ready"[\s\S]*?next\.kind === "ready"[\s\S]*?current\.profile\.status === next\.profile\.status[\s\S]*?return current/);
 });
 
 test("home keeps background access verification invisible", async () => {
