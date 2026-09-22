@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
 
 import {
   getCloudArticleDetail,
@@ -11,12 +14,6 @@ import {
 import { savePublicationState, type PublicationUpdate } from "@/lib/phase16-publish";
 import { getSupabaseClient } from "@/lib/supabase";
 
-type Gate =
-  | { kind: "loading" }
-  | { kind: "signed_out" }
-  | { kind: "ready"; ownerId: string; aasId: string }
-  | { kind: "error"; message: string };
-
 function localInput(value: string | null): string {
   if (!value) return "";
   const date = new Date(value);
@@ -26,7 +23,8 @@ function localInput(value: string | null): string {
 }
 
 export function Phase16PublishPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState, client } = useSharedAccessState();
+  const [loadError, setLoadError] = useState("");
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
   const [status, setStatus] = useState<PublicationUpdate["status"]>("ready");
@@ -36,47 +34,36 @@ export function Phase16PublishPage() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const reloadList = async (ownerId: string) => {
-    setArticles(await listCloudArticles(getSupabaseClient(), ownerId, 200));
+  const reloadList = async () => {
+    if (accessState.kind !== "ready" || !client) return;
+    setArticles(await listCloudArticles(client, accessState.profile.id, 200));
   };
 
   useEffect(() => {
+    if (accessState.kind !== "ready" || !client) return;
     let active = true;
-    const boot = async () => {
-      try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) {
-          setGate({ kind: "signed_out" });
-          return;
-        }
-        const { data: profile, error: profileError } = await client
-          .from("profiles")
-          .select("id,aas_user_id,status")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !profile || profile.id !== user.id || profile.status !== "active") {
-          throw new Error("activeプロフィールを確認できません。");
-        }
-        await reloadList(user.id);
-        if (active) setGate({ kind: "ready", ownerId: user.id, aasId: profile.aas_user_id });
-      } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "初期化に失敗しました。" });
-      }
-    };
-    void boot();
+    queueMicrotask(() => {
+      if (active) setLoadError("");
+    });
+    void listCloudArticles(client, accessState.profile.id, 200).then(
+      (next) => {
+        if (active) setArticles(next);
+      },
+      (error) => {
+        if (active) setLoadError(error instanceof Error ? error.message : "記事一覧を読み込めませんでした。");
+      },
+    );
     return () => { active = false; };
-  }, []);
+  }, [accessState, client]);
 
   const choose = async (articleId: string) => {
-    if (gate.kind !== "ready") return;
+    if (accessState.kind !== "ready" || !client) return;
     setDetail(null);
     setMessage("");
     if (!articleId) return;
     setBusy(true);
     try {
-      const next = await getCloudArticleDetail(getSupabaseClient(), gate.ownerId, articleId);
+      const next = await getCloudArticleDetail(client, accessState.profile.id, articleId);
       setDetail(next);
       setStatus(
         next.status === "published" || next.status === "waiting_publish"
@@ -94,22 +81,22 @@ export function Phase16PublishPage() {
   };
 
   const save = async () => {
-    if (gate.kind !== "ready" || !detail) return;
+    if (accessState.kind !== "ready" || !client || !detail) return;
     setBusy(true);
     setMessage("");
     try {
-      await savePublicationState(getSupabaseClient(), gate.ownerId, detail, {
+      await savePublicationState(client, accessState.profile.id, detail, {
         status,
         scheduledAt: scheduledAt || null,
         publishedAt: publishedAt || null,
         publishedUrl: publishedUrl || null,
       });
-      const refreshed = await getCloudArticleDetail(getSupabaseClient(), gate.ownerId, detail.id);
+      const refreshed = await getCloudArticleDetail(client, accessState.profile.id, detail.id);
       setDetail(refreshed);
       setScheduledAt(localInput(refreshed.scheduledAt));
       setPublishedAt(localInput(refreshed.publishedAt));
       setPublishedUrl(refreshed.publishedUrl || "");
-      await reloadList(gate.ownerId);
+      await reloadList();
       setMessage(`公開状態を保存しました。revision ${refreshed.revision}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "公開状態を保存できませんでした。");
@@ -118,14 +105,15 @@ export function Phase16PublishPage() {
     }
   };
 
-  if (gate.kind !== "ready") {
+  if (accessState.kind !== "ready" || !client) {
+    if (accessState.kind === "loading") return null;
     return (
       <main className="standalone-page"><section className="standalone-card">
         <p className="eyebrow">PUBLISHING</p><h1>公開管理</h1>
-        {gate.kind === "loading" && <p className="route-notice">記事を確認しています…</p>}
-        {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
-        {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-        <a className="route-back" href="/tools">← 機能一覧へ戻る</a>
+        {accessState.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
+        {accessState.kind === "unavailable" && <p className="route-notice error">AASへ接続できませんでした。通信状態を確認してください。</p>}
+        {accessState.kind !== "signed_out" && accessState.kind !== "unavailable" && <p className="route-notice error">現在のアカウント状態では利用できません。</p>}
+        <Link className="route-back" href="/tools">← 機能一覧へ戻る</Link>
       </section></main>
     );
   }
@@ -133,9 +121,10 @@ export function Phase16PublishPage() {
   return (
     <main className="creator-page">
       <header className="creator-head">
-        <div><p className="eyebrow">PUBLISHING</p><h1>記事の公開状態を管理</h1><p>{gate.aasId} / note・Tips・Brain・ブログの公開情報を記事ライブラリと一緒に管理できます</p></div>
-        <a className="route-back" href="/tools">← 機能一覧</a>
+        <div><p className="eyebrow">PUBLISHING</p><h1>記事の公開状態を管理</h1><p>{accessState.profile.aas_user_id} / note・Tips・Brain・ブログの公開情報を記事ライブラリと一緒に管理できます</p></div>
+        <Link className="route-back" href="/tools">← 機能一覧</Link>
       </header>
+      {loadError && <div className="route-notice error" role="alert">{loadError}</div>}
       <section className="creator-card">
         <label className="route-field"><span>記事</span><select defaultValue="" onChange={(event) => void choose(event.target.value)} disabled={busy}><option value="">選択してください</option>{articles.map((article) => <option key={article.id} value={article.id}>{article.title} / {article.status}</option>)}</select></label>
         {detail && (
