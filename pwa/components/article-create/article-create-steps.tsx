@@ -1,12 +1,14 @@
 import { launchAiApp } from "@/lib/ai-app-links";
 import { MagazinePlannerPanel } from "@/components/article-create/magazine-planner";
 import type { MagazinePlanDraft } from "@/lib/magazine-planner";
-import type {
-  ArticleCreationDraft,
-  ArticleType,
-  PublicationTarget,
-  SaveStatus,
+import {
+  parseTitleCandidates,
+  type ArticleCreationDraft,
+  type ArticleType,
+  type PublicationTarget,
+  type SaveStatus,
 } from "@/lib/phase11-create";
+import type { ImagePromptItem } from "@/lib/phase13-image-prompts";
 import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
@@ -176,30 +178,61 @@ export function TitleStep({
   draft,
   patch,
   titlePrompt,
+  titleCandidatesText,
+  setTitleCandidatesText,
   onBeforeExternalLaunch,
   setMessage,
 }: {
   draft: ArticleCreationDraft;
   patch: ArticleDraftPatch;
   titlePrompt: string;
+  titleCandidatesText: string;
+  setTitleCandidatesText: (value: string) => void;
   onBeforeExternalLaunch: () => void;
   setMessage: MessageSetter;
 }) {
+  const titleCandidates = parseTitleCandidates(titleCandidatesText);
+
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 4</p><h2>タイトルを作成して貼り付けてください</h2>
+      <p className="eyebrow">STEP 4</p><h2>タイトルを5候補から選んでください</h2>
       {draft.generationMode === "prompt_export" && <>
-        <p className="panel-muted">AAS内ではタイトル候補を生成しません。下のプロンプトをChatGPT・Claude・Geminiへ渡し、生成されたタイトルをAASへ貼り付けてください。</p>
+        <p className="panel-muted">下のプロンプトをChatGPT・Claude・Geminiへ渡すと、タイトル候補を5個作成します。AIの回答5候補をまとめてAASへ貼り付けると、候補ボタンから選択できます。</p>
         <label className="route-field"><span>AI用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
         <div className="openai-prompt-actions">
           <button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button>
           {AI_LAUNCH_OPTIONS.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>{app.label}を開く ↗</button>)}
         </div>
-        <p className="beginner-help">外部AIを開く直前に現在の作成状況を保存します。AASへ戻ったら、このタイトル工程と入力内容を復元します。</p>
+        <label className="route-field title-candidate-paste">
+          <span>AIが生成した5候補をまとめて貼り付け</span>
+          <textarea
+            value={titleCandidatesText}
+            onChange={(event) => setTitleCandidatesText(event.target.value.slice(0, 10000))}
+            placeholder={"1. タイトル候補A\n2. タイトル候補B\n3. タイトル候補C\n4. タイトル候補D\n5. タイトル候補E"}
+          />
+        </label>
+        {titleCandidates.length > 0 && (
+          <div className="title-candidates" aria-label="貼り付けたタイトル候補">
+            {titleCandidates.map((title, index) => (
+              <button
+                type="button"
+                key={`${index}-${title}`}
+                onClick={() => patch("title", title)}
+                className={draft.title === title ? "active" : ""}
+              >
+                <span>{index + 1}</span>{title}
+              </button>
+            ))}
+          </div>
+        )}
+        {titleCandidatesText.trim() && titleCandidates.length < 5 && (
+          <p className="beginner-help">現在 {titleCandidates.length}候補を認識しています。番号付きで1行に1候補ずつ貼り付けると最大5候補まで選択できます。</p>
+        )}
+        <p className="beginner-help">外部AIを開く直前と候補貼り付け後の内容は途中保存されます。AASへ戻ってもこの工程から続けられます。</p>
       </>}
       <label className="route-field">
-        <span>{draft.generationMode === "prompt_export" ? "AIで生成したタイトルをここへ貼り付け" : "タイトル"}</span>
-        <input value={draft.title} onChange={(event) => patch("title", event.target.value)} placeholder={draft.generationMode === "prompt_export" ? "ChatGPTなどで生成したタイトルを貼り付け" : "記事タイトルを入力"} />
+        <span>{draft.generationMode === "prompt_export" ? "AIで生成したタイトルをここへ貼り付け（候補選択で自動入力）" : "タイトル"}</span>
+        <input value={draft.title} onChange={(event) => patch("title", event.target.value)} placeholder={draft.generationMode === "prompt_export" ? "候補を選ぶか、タイトルを直接入力" : "記事タイトルを入力"} />
       </label>
     </div>
   );
@@ -244,13 +277,54 @@ export function BodyStep({
   );
 }
 
-export function PreviewStep({ draft }: { draft: ArticleCreationDraft }) {
+export function PreviewStep({
+  draft,
+  imagePrompts,
+  onBeforeExternalLaunch,
+  setMessage,
+}: {
+  draft: ArticleCreationDraft;
+  imagePrompts: ImagePromptItem[];
+  onBeforeExternalLaunch: () => void;
+  setMessage: MessageSetter;
+}) {
   return (
     <div className="wizard-pane">
       <p className="eyebrow">STEP 6</p><h2>内容を確認しましょう</h2>
       <div className="preview-meta"><span>{draft.publicationTarget}</span><span>{draft.articleType === "paid" ? "有料" : "無料"}</span><span>{draft.genre || "ジャンル未指定"}</span><span>{draft.subgenre || "サブジャンル未指定"}</span><span>{draft.body.length.toLocaleString()}文字</span></div>
       <h3>{draft.title || "タイトル未入力"}</h3>
       <pre className="creator-preview">{draft.body || "本文がまだありません。"}</pre>
+
+      {imagePrompts.length > 0 && (
+        <section className="creator-image-prompts" aria-label="記事画像生成プロンプト">
+          <div className="creator-image-prompts-head">
+            <h3>アイキャッチ・挿絵を作成</h3>
+            <p className="panel-muted">STEP 2で選んだ画像設定と完成した記事本文を確認して、AASが画像生成用プロンプトを作成しています。各プロンプトをコピーして画像生成AIへ貼り付けてください。</p>
+          </div>
+          {imagePrompts.map((item) => (
+            <article className="creator-image-prompt-card" key={`${item.kind}-${item.order}`}>
+              <div className="creator-image-prompt-title">
+                <strong>{item.kind === "cover" ? "アイキャッチ" : `挿絵 ${item.order}`}</strong>
+                {item.insertionMarker && <span>{`<!-- ${item.insertionMarker} -->`}</span>}
+              </div>
+              <textarea className="prompt-area" readOnly value={item.prompt} />
+              <div className="openai-prompt-actions">
+                <button className="secondary-action" type="button" onClick={() => copyText(item.prompt, setMessage)}>画像プロンプトをコピー</button>
+                {AI_LAUNCH_OPTIONS.map((app) => (
+                  <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>
+                    {app.label}を開く ↗
+                  </button>
+                ))}
+              </div>
+              <div className="creator-image-prompt-meta">
+                <small>推奨ファイル名: {item.suggestedFilename}</small>
+                <small>alt候補: {item.altText}</small>
+              </div>
+            </article>
+          ))}
+          <p className="beginner-help">挿絵プロンプトは本文中の「&lt;!-- IMAGE:01 --&gt;」などの差し込み位置と周辺内容を優先して作成します。画像生成後は端末へ保存し、記事へ投稿する際に該当位置へ挿入してください。</p>
+        </section>
+      )}
     </div>
   );
 }
