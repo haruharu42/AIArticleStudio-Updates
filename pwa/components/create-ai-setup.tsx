@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Phase11CreatePage } from "@/components/phase11-create-page";
 import { loadCoreAccessState } from "@/lib/access-control";
+import { loadArticleWizardProgress } from "@/lib/phase11-wizard-progress";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   AI_PLAN_LABELS,
@@ -46,7 +47,15 @@ export function CreateAiSetup() {
 
         const writingProfile = await loadWritingProfile(client, access.user.id);
         if (!active) return;
+
+        // Keep the saved AI profile active while resuming an in-progress article.
+        // The article wizard itself is already persisted in localStorage; if that
+        // progress exists, skip the setup gate so returning from ChatGPT/Claude/
+        // Gemini lands directly on the saved wizard step.
+        setRuntimeWritingProfile(writingProfile);
+        const wizardProgress = loadArticleWizardProgress(access.user.id);
         setState({ kind: "setup", profile: writingProfile });
+        if (wizardProgress) setConfirmed(true);
       } catch (error) {
         if (active) {
           setState({
