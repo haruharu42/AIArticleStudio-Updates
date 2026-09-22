@@ -77,7 +77,7 @@ function inlineBodyContext(body: string | undefined, order: number): string {
     .split(/(?=^#{1,6}\s+)/m)
     .map((section) => section.trim())
     .filter(Boolean);
-  return (sections[Math.min(order, Math.max(0, sections.length - 1))] ?? normalized).slice(0, 900);
+  return (sections[Math.min(Math.max(0, order - 1), Math.max(0, sections.length - 1))] ?? normalized).slice(0, 900);
 }
 
 function common(input: ImagePromptPlanInput): string {
