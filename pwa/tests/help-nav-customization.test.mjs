@@ -63,8 +63,10 @@ test("mobile navigation uses one shared customizable source across home and othe
   assert.match(shared, /readMobileNavItems\(userId, isAdmin\)/);
   assert.match(shared, /MOBILE_NAV_ITEMS_EVENT/);
   assert.match(shared, /mobileNavItemsStorageKey\(userId\)/);
-  assert.match(shared, /getSupabaseClient/);
-  assert.match(shared, /setUserId\(nextUserId\)/);
+  assert.match(shared, /useSharedAccessState\(\)/);
+  assert.match(shared, /const userId = state\.kind === "ready" \? state\.profile\.id : ""/);
+  assert.match(shared, /const isAdmin = state\.kind === "ready" && state\.profile\.role === "admin"/);
+  assert.doesNotMatch(shared, /getSupabaseClient|auth\.getSession|onAuthStateChange|\.from\("profiles"\)/);
   assert.match(shared, /window\.addEventListener\("storage"/);
   assert.match(shared, /mobileNavItemFor/);
   assert.match(shared, /ホーム/);
