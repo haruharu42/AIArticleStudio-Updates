@@ -210,7 +210,7 @@ export function AasReferenceBottomNav({
             />
           );
         })}
-        <NavItem active={false} href="/settings" icon="⚙" label="設定" />
+        <NavItem active={active === "settings"} href="/settings" icon="⚙" label="設定" />
         <button
           className={customizing ? "customize active" : "customize"}
           type="button"
