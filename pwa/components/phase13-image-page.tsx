@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { PresetSelect, type PresetOption } from "@/components/preset-select";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { workspacePresetImageDefaults } from "@/features/presets/preset-adapters";
@@ -12,12 +14,6 @@ import { buildImagePromptPlan, type ImagePromptItem } from "@/lib/phase13-image-
 import { AGE_GROUP_OPTIONS, GENDER_OPTIONS, IMAGE_STYLE_OPTIONS, isImageStyleValue } from "@/lib/phase18-content-options";
 import { getCloudArticleDetail, listCloudArticles, type ArticleDetail, type ArticleSummary } from "@/lib/phase7-articles";
 import { getSupabaseClient } from "@/lib/supabase";
-
-type Gate =
-  | { kind: "loading" }
-  | { kind: "signed_out" }
-  | { kind: "ready"; ownerId: string; aasId: string }
-  | { kind: "error"; message: string };
 
 type PublicationTarget = "note" | "tips" | "brain" | "blog";
 
@@ -34,8 +30,9 @@ function integerValue(value: unknown, fallback: number): number { return typeof 
 function publicationTarget(value: string): PublicationTarget { return value === "note" || value === "tips" || value === "brain" || value === "blog" ? value : "note"; }
 
 export function Phase13ImagePromptPage() {
+  const { state: accessState, client } = useSharedAccessState();
   const { preference: workspacePreference } = useWorkspacePreset();
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const [loadError, setLoadError] = useState("");
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
   const [theme, setTheme] = useState("");
@@ -53,34 +50,29 @@ export function Phase13ImagePromptPage() {
   const generateInFlightRef = useRef(false);
 
   useEffect(() => {
+    if (accessState.kind !== "ready" || !client) return;
     let active = true;
-    const boot = async () => {
-      try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) { setGate({ kind: "signed_out" }); return; }
-        const { data: profile, error: profileError } = await client.from("profiles").select("id,aas_user_id,status").eq("id", user.id).single();
-        if (profileError || !profile || profile.id !== user.id || profile.status !== "active") throw new Error("activeプロフィールを確認できません。");
-        const next = await listCloudArticles(client, user.id, 200);
-        if (!active) return;
-        setArticles(next);
-        setGate({ kind: "ready", ownerId: user.id, aasId: profile.aas_user_id });
-      } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "初期化に失敗しました。" });
-      }
-    };
-    void boot();
+    queueMicrotask(() => {
+      if (active) setLoadError("");
+    });
+    void listCloudArticles(client, accessState.profile.id, 200).then(
+      (next) => {
+        if (active) setArticles(next);
+      },
+      (error) => {
+        if (active) setLoadError(error instanceof Error ? error.message : "記事ライブラリを読み込めませんでした。");
+      },
+    );
     return () => { active = false; };
-  }, []);
+  }, [accessState, client]);
 
   const choose = async (articleId: string) => {
-    if (gate.kind !== "ready") return;
+    if (accessState.kind !== "ready" || !client) return;
     setDetail(null); setGeneratedPrompts([]); setGeneratedFingerprint(""); setMessage("");
     if (!articleId) return;
     setBusy(true);
     try {
-      const next = await getCloudArticleDetail(getSupabaseClient(), gate.ownerId, articleId);
+      const next = await getCloudArticleDetail(client, accessState.profile.id, articleId);
       const request = next.workspace.requestJson;
       const plan = next.workspace.imagePlanJson;
       const cover = objectValue(plan.cover);
@@ -130,24 +122,28 @@ export function Phase13ImagePromptPage() {
     catch { setMessage("自動コピーできません。表示欄から手動でコピーしてください。"); }
   };
 
-  if (gate.kind !== "ready") return (
+  if (accessState.kind !== "ready" || !client) return (
     <main className="standalone-page"><section className="standalone-card">
       <p className="eyebrow">IMAGE CREATION</p><h1>画像生成計画</h1>
-      {gate.kind === "loading" && <p className="route-notice">記事ライブラリを確認しています…</p>}
-      {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
-      {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-      <a className="route-back" href="/tools">← 機能一覧へ戻る</a>
+      {accessState.kind === "unavailable" && <p className="route-notice error">AASへ接続できませんでした。通信状態を確認してください。</p>}
+      {accessState.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
+      {accessState.kind === "pending" && <p className="route-notice">アカウント承認後に利用できます。</p>}
+      {(accessState.kind === "suspended" || accessState.kind === "disabled") && <p className="route-notice error">現在のアカウント状態では利用できません。</p>}
+      {accessState.kind === "entitlement_denied" && <p className="route-notice error">PWA利用権が必要です。</p>}
+      <Link className="route-back" href="/tools">← 機能一覧へ戻る</Link>
     </section></main>
   );
 
   return (
     <main className="creator-page">
       <header className="creator-head">
-        <div><p className="eyebrow">IMAGE CREATION</p><h1>記事から画像生成プロンプトを作る</h1><p>{gate.aasId} / アイキャッチと挿絵を同じ世界観で設計できます</p></div>
-        <a className="route-back" href="/tools">← 機能一覧</a>
+        <div><p className="eyebrow">IMAGE CREATION</p><h1>記事から画像生成プロンプトを作る</h1><p>{accessState.profile.aas_user_id} / アイキャッチと挿絵を同じ世界観で設計できます</p></div>
+        <Link className="route-back" href="/tools">← 機能一覧</Link>
       </header>
 
       <ActiveWorkspacePresetBadge feature="images" />
+
+      {loadError && <div className="route-notice error" role="alert">{loadError}</div>}
 
       <section className="creator-card">
         <div className="route-notice" role="note">画像本体はAASのSupabase Storageへアップロードしません。ChatGPT Images等で生成した画像はスマホ・PCへ保存し、AASが表示する推奨ファイル名で管理してください。</div>
