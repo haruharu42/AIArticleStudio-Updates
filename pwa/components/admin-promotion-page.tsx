@@ -349,22 +349,22 @@ export function AdminPromotionPage() {
     return Array.from(new Set(["製品全体", ...confirmed]));
   }, [facts.features]);
 
-  const articlePrompt = useMemo(() => buildAdminArticlePromotionPrompt(facts, article), [facts, article, workspacePreference]);
+  const articlePrompt = useMemo(() => buildAdminArticlePromotionPrompt(facts, article), [facts, article]);
   const socialPrompt = useMemo(
     () => buildAdminSocialPromotionPrompt(facts, {
       ...social,
       lengthPresetId: socialPresetIds[social.platform],
       targetChars: socialLengths[social.platform],
     }),
-    [facts, social, socialLengths, socialPresetIds, workspacePreference],
+    [facts, social, socialLengths, socialPresetIds],
   );
   const campaignPrompt = useMemo(
     () => buildAdminCampaignPrompt(facts, { ...campaign, socialLengths }),
-    [facts, campaign, socialLengths, workspacePreference],
+    [facts, campaign, socialLengths],
   );
   const previewPrompt = useMemo(
     () => buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths }),
-    [facts, preview, socialLengths, workspacePreference],
+    [facts, preview, socialLengths],
   );
 
   const updateSocialLength = (platform: AdminSocialPlatform, presetId: string, targetChars: number) => {
