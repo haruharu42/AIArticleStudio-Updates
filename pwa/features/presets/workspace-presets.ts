@@ -398,8 +398,14 @@ export function workspacePresetAppliesTo(
   feature: "article" | "images" | "sns" | "note" | "workflow" | "account_design",
 ): boolean {
   if (!runtimePreference) return false;
+
+  // Article-specific conditions are intentionally kept out of the shared
+  // workspace preset. Article creation now uses the fixed platform account
+  // preset plus the seven-step per-article inputs instead.
+  if (feature === "article") return false;
+
   return {
-    article: runtimePreference.applyArticle,
+    article: false,
     images: runtimePreference.applyImages,
     sns: runtimePreference.applySns,
     note: runtimePreference.applyNote,
