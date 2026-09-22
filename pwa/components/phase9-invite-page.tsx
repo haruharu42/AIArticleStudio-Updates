@@ -58,6 +58,8 @@ export function Phase9InvitePage() {
     }
   };
 
+  if (state.kind === "loading") return null;
+
   return (
     <main className="standalone-page">
       <section className="standalone-card">
