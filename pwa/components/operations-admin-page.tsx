@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AdminSelectWithCustom } from "@/components/admin-form-controls";
 
 import {
   loadOpsSnapshot,
@@ -30,6 +31,20 @@ type CapacityDraft = {
 };
 
 const GIB = 1024 ** 3;
+
+
+const PLAN_OPTIONS = [
+  { value: "Free", label: "Free" },
+  { value: "Pro", label: "Pro" },
+  { value: "Team", label: "Team" },
+  { value: "Enterprise", label: "Enterprise" },
+  { value: "Custom", label: "契約上のカスタムプラン" },
+] as const;
+
+const CAPACITY_GB_OPTIONS = ["0.5", "1", "2", "5", "8", "10", "20", "50", "100", "250", "500"] as const;
+const WARNING_PERCENT_OPTIONS = ["50", "60", "65", "70", "75", "80"] as const;
+const DANGER_PERCENT_OPTIONS = ["75", "80", "85", "88", "90"] as const;
+const CRITICAL_PERCENT_OPTIONS = ["90", "92", "95", "97", "99"] as const;
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
@@ -256,12 +271,12 @@ export function OperationsAdminPage() {
           <div className="ops-capacity-settings">
             <div><strong>容量監視設定</strong><small>契約プラン変更時も管理画面から変更できます。上限を空欄にすると残容量・使用率警告を停止します。</small></div>
             <div className="ops-capacity-form">
-              <label className="route-field"><span>プラン名</span><input value={capacityForm.planLabel} onChange={(e) => setCapacityDraft({ ...capacityForm, planLabel: e.target.value.slice(0, 80) })} placeholder="例: Free / Pro" /></label>
-              <label className="route-field"><span>Database上限 (GB)</span><input inputMode="decimal" value={capacityForm.databaseLimitGb} onChange={(e) => setCapacityDraft({ ...capacityForm, databaseLimitGb: e.target.value })} placeholder="例: 0.5" /></label>
-              <label className="route-field"><span>Storage上限 (GB)</span><input inputMode="decimal" value={capacityForm.storageLimitGb} onChange={(e) => setCapacityDraft({ ...capacityForm, storageLimitGb: e.target.value })} placeholder="例: 1" /></label>
-              <label className="route-field"><span>注意 (%)</span><input inputMode="numeric" value={capacityForm.warningPercent} onChange={(e) => setCapacityDraft({ ...capacityForm, warningPercent: e.target.value })} /></label>
-              <label className="route-field"><span>警告 (%)</span><input inputMode="numeric" value={capacityForm.dangerPercent} onChange={(e) => setCapacityDraft({ ...capacityForm, dangerPercent: e.target.value })} /></label>
-              <label className="route-field"><span>重大 (%)</span><input inputMode="numeric" value={capacityForm.criticalPercent} onChange={(e) => setCapacityDraft({ ...capacityForm, criticalPercent: e.target.value })} /></label>
+              <AdminSelectWithCustom label="プラン名" value={capacityForm.planLabel} onChange={(value) => setCapacityDraft({ ...capacityForm, planLabel: value.slice(0, 80) })} options={PLAN_OPTIONS} customPlaceholder="契約プラン名を入力" />
+              <AdminSelectWithCustom label="Database上限 (GB)" value={capacityForm.databaseLimitGb} onChange={(value) => setCapacityDraft({ ...capacityForm, databaseLimitGb: value })} options={CAPACITY_GB_OPTIONS} placeholder="上限なし" customPlaceholder="GB数を自由入力" />
+              <AdminSelectWithCustom label="Storage上限 (GB)" value={capacityForm.storageLimitGb} onChange={(value) => setCapacityDraft({ ...capacityForm, storageLimitGb: value })} options={CAPACITY_GB_OPTIONS} placeholder="上限なし" customPlaceholder="GB数を自由入力" />
+              <AdminSelectWithCustom label="注意ライン (%)" value={capacityForm.warningPercent} onChange={(value) => setCapacityDraft({ ...capacityForm, warningPercent: value })} options={WARNING_PERCENT_OPTIONS} description="標準は70%。早めに気づくための目安です。" />
+              <AdminSelectWithCustom label="警告ライン (%)" value={capacityForm.dangerPercent} onChange={(value) => setCapacityDraft({ ...capacityForm, dangerPercent: value })} options={DANGER_PERCENT_OPTIONS} description="標準は85%。対応を検討する目安です。" />
+              <AdminSelectWithCustom label="重大ライン (%)" value={capacityForm.criticalPercent} onChange={(value) => setCapacityDraft({ ...capacityForm, criticalPercent: value })} options={CRITICAL_PERCENT_OPTIONS} description="標準は95%。至急対応する目安です。" />
             </div>
             <div className="admin-actions"><button className="primary-action" disabled={busy} type="button" onClick={() => void saveCapacitySettings()}>容量設定を保存</button>{capacityDraft && <button className="secondary-action" disabled={busy} type="button" onClick={() => setCapacityDraft(null)}>変更を破棄</button>}</div>
           </div>
