@@ -123,8 +123,10 @@ test("Phase 15 member tools require the same PWA access gate as the rest of the 
   const snsPlanRoute = await read("app/sns-plan/page.tsx");
   const tools = await read("components/phase-tools-page.tsx");
 
-  assert.match(gate, /loadAccessState\(getSupabaseClient\(\)\)/);
+  assert.match(gate, /useSharedAccessState\(\)/);
+  assert.doesNotMatch(gate, /loadAccessState|getSupabaseClient/);
   assert.match(gate, /state\.kind === "ready"/);
+  assert.match(gate, /state\.kind === "loading"\) return null/);
   assert.match(gate, /state\.kind === "entitlement_denied"/);
   assert.match(sideJobRoute, /Phase15MemberGate/);
   assert.match(snsPlanRoute, /Phase15MemberGate/);
