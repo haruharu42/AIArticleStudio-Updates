@@ -395,3 +395,14 @@
     min-height: 46px;
   }
 }
+
+
+.reference-create-shell .paid-price-settings {
+  display: grid;
+  gap: 8px;
+}
+
+.reference-create-shell .paid-price-note {
+  margin: 0;
+  grid-column: 1 / -1;
+}
