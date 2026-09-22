@@ -4,18 +4,29 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
-import { SharedMobileBottomNav } from "@/components/shared-mobile-bottom-nav";
+import { AasReferenceBottomNav, type ReferenceNavKey } from "@/components/aas-reference-shell";
 import {
   MOBILE_NAV_PREFERENCE_EVENT,
   MOBILE_NAV_PREFERENCE_KEY,
   readMobileNavAlways,
 } from "@/features/navigation";
+import { MOBILE_NAV_ITEM_OPTIONS } from "@/lib/mobile-nav-preference";
 
 const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms"];
 const REFERENCE_SHELL_ROUTES = new Set(["/", "/create", "/ranking", "/profile"]);
 
 function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function activeKeyForPathname(pathname: string): ReferenceNavKey {
+  const matches = MOBILE_NAV_ITEM_OPTIONS
+    .filter((item) => {
+      const path = item.href.split("?")[0] || "/";
+      return path !== "/" && (pathname === path || pathname.startsWith(path + "/"));
+    })
+    .sort((a, b) => (b.href.split("?")[0]?.length ?? 0) - (a.href.split("?")[0]?.length ?? 0));
+  return matches[0]?.key ?? "";
 }
 
 export function PersistentMobileNav() {
@@ -49,12 +60,12 @@ export function PersistentMobileNav() {
 
   if (!visible) return null;
 
-  const needsSpacer = pathname !== "/settings";
+  const activeKey = activeKeyForPathname(pathname);
 
   return (
     <>
-      {needsSpacer && <div className="persistent-mobile-nav-spacer" aria-hidden="true" />}
-      <SharedMobileBottomNav className="persistent-mobile-nav unified-reference-mobile-nav" />
+      <div className="persistent-mobile-nav-spacer" aria-hidden="true" />
+      <AasReferenceBottomNav active={activeKey} />
     </>
   );
 }
