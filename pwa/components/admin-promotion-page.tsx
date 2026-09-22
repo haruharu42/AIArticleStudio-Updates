@@ -7,7 +7,13 @@ import { useSharedAccessState } from "@/components/access-state-provider";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { WORKSPACE_PRESETS } from "@/features/presets/workspace-presets";
-import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
+import {
+  PromptOutput,
+  SelectField,
+  SelectWithCustomField,
+  SocialLengthSettings,
+  TextField,
+} from "@/components/admin-promotion/admin-promotion-fields";
 import {
   ADMIN_PRODUCT_FACTS_STORAGE_KEY,
   DEFAULT_ADMIN_PRODUCT_FACTS,
@@ -249,14 +255,6 @@ const PREVIEW_UPDATE_OPTIONS = [
 
 const TESTED_PLATFORM_OPTIONS = ["note", "Tips", "Brain", "PWA版", "Windows版", "複数媒体"];
 
-const SOCIAL_PLATFORM_OPTIONS: readonly { key: AdminSocialPlatform; label: string }[] = [
-  { key: "x", label: "X" },
-  { key: "instagram", label: "Instagram" },
-  { key: "threads", label: "Threads" },
-  { key: "tiktok", label: "TikTok" },
-  { key: "youtube", label: "YouTube Shorts" },
-];
-
 const DEFAULT_SOCIAL_PRESET_IDS: Record<AdminSocialPlatform, string> = {
   x: "x-standard",
   instagram: "instagram-standard",
@@ -264,137 +262,6 @@ const DEFAULT_SOCIAL_PRESET_IDS: Record<AdminSocialPlatform, string> = {
   tiktok: "tiktok-standard",
   youtube: "youtube-standard",
 };
-
-function TextField({ label, value, onChange, placeholder = "", multiline = false }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; multiline?: boolean }) {
-  return (
-    <label className="admin-promo-field">
-      <span>{label}</span>
-      {multiline ? <textarea value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} rows={5} /> : <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />}
-    </label>
-  );
-}
-
-function SelectField({ label, value, onChange, options, placeholder = "選択してください" }: { label: string; value: string; onChange: (value: string) => void; options: readonly string[]; placeholder?: string }) {
-  return (
-    <label className="admin-promo-field">
-      <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
-        <option value="">{placeholder}</option>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
-      </select>
-    </label>
-  );
-}
-
-function SelectWithCustomField({ label, value, onChange, options, placeholder = "選択してください", customPlaceholder = "自由入力してください" }: { label: string; value: string; onChange: (value: string) => void; options: readonly string[]; placeholder?: string; customPlaceholder?: string }) {
-  const isPreset = options.includes(value);
-  const [customMode, setCustomMode] = useState(false);
-  const showCustom = customMode || (Boolean(value) && !isPreset);
-
-  return (
-    <label className="admin-promo-field">
-      <span>{label}</span>
-      <select
-        value={showCustom ? "__custom__" : isPreset ? value : ""}
-        onChange={(event) => {
-          const next = event.target.value;
-          if (next === "__custom__") {
-            setCustomMode(true);
-            if (isPreset) onChange("");
-            return;
-          }
-          setCustomMode(false);
-          onChange(next);
-        }}
-      >
-        <option value="">{placeholder}</option>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
-        <option value="__custom__">その他・自由入力</option>
-      </select>
-      {showCustom && <input value={isPreset ? "" : value} onChange={(event) => onChange(event.target.value)} placeholder={customPlaceholder} />}
-    </label>
-  );
-}
-
-function SocialLengthSettings({
-  presetIds,
-  plan,
-  onChange,
-}: {
-  presetIds: Record<AdminSocialPlatform, string>;
-  plan: AdminSocialLengthPlan;
-  onChange: (platform: AdminSocialPlatform, presetId: string, targetChars: number) => void;
-}) {
-  return (
-    <section className="admin-promo-length-settings" aria-labelledby="admin-promo-length-title">
-      <div className="admin-promo-length-head">
-        <div>
-          <span>SNS LENGTH</span>
-          <h3 id="admin-promo-length-title">SNSごとの文字数設定</h3>
-        </div>
-        <small>選んだ設定はSNS販促・テスト公開予告・キャンペーンで共通利用します。</small>
-      </div>
-      <div className="admin-promo-length-grid">
-        {SOCIAL_PLATFORM_OPTIONS.map((platform) => {
-          const presets = socialLengthPresetsFor(platform.key);
-          const presetId = presetIds[platform.key];
-          const selected = presets.find((item) => item.id === presetId);
-          const custom = presetId === "__custom__";
-          return (
-            <div className="admin-promo-length-card" key={platform.key}>
-              <strong>{platform.label}</strong>
-              <select
-                value={presetId}
-                onChange={(event) => {
-                  const nextId = event.target.value;
-                  if (nextId === "__custom__") {
-                    onChange(platform.key, nextId, plan[platform.key]);
-                    return;
-                  }
-                  const preset = presets.find((item) => item.id === nextId);
-                  if (preset) onChange(platform.key, preset.id, preset.targetChars);
-                }}
-              >
-                {presets.map((preset) => (
-                  <option key={preset.id} value={preset.id}>{preset.label}</option>
-                ))}
-                <option value="__custom__">その他・自由入力</option>
-              </select>
-              {custom && (
-                <label>
-                  <span>目標文字数</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={25000}
-                    inputMode="numeric"
-                    value={plan[platform.key]}
-                    onChange={(event) => onChange(platform.key, "__custom__", sanitizeSocialTargetChars(Number(event.target.value)))}
-                  />
-                </label>
-              )}
-              <small>{selected?.note ?? `カスタム: 約${plan[platform.key]}文字。投稿前に各SNSの最新仕様を確認してください。`}</small>
-            </div>
-          );
-        })}
-      </div>
-      <p className="admin-promo-length-footnote">Xは標準投稿とPremium長文を分けて選択できます。Threadsは通常投稿500文字と最大10,000文字の添付テキストを分けています。YouTube Shortsはタイトル100文字以内＋概要欄文字数として扱います。</p>
-    </section>
-  );
-}
-
-function PromptOutput({ prompt, onCopy }: { prompt: string; onCopy: () => void }) {
-  return (
-    <section className="admin-promo-output" aria-label="生成用プロンプト">
-      <div className="admin-promo-output-head"><div><span>AI PROMPT</span><h3>生成用プロンプト</h3></div><button type="button" onClick={onCopy}>コピー</button></div>
-      <pre>{prompt}</pre>
-      <div className="admin-promo-ai-actions">
-        {(Object.keys(AI_APP_LINKS) as AiAppKey[]).map((key) => <button key={key} type="button" onClick={() => launchAiApp(key)}>{AI_APP_LINKS[key].name}を開く</button>)}
-      </div>
-      <p>プロンプトをコピーしてAIへ渡すと、確認済み情報だけを基準にテスト報告・公開予告・紹介記事・SNS素材を作成できます。</p>
-    </section>
-  );
-}
 
 export function AdminPromotionPage() {
   const { state } = useSharedAccessState();
