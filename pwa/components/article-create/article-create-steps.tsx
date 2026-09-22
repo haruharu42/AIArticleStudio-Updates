@@ -442,7 +442,7 @@ export function BodyStep({
       {draft.articleType === "paid" && (
         <div className={paidAreaPresent ? "marker-status marker-status-ok" : "marker-status marker-status-warning"}>
           <strong>{paidAreaPresent ? "✓ 有料エリア開始位置があります" : "有料エリア開始位置がまだありません"}</strong>
-          <small>AI生成時は {"<!-- PAID_AREA -->"} を自動で含めるよう指示しています。手動で追加する場合は本文欄の希望位置へカーソルを置いてください。</small>
+          <small>AI生成時は <code>&lt;!-- PAID_AREA --&gt;</code> を自動で含めるよう指示しています。手動で追加する場合は本文欄の希望位置へカーソルを置いてください。</small>
           {!paidAreaPresent && (
             <button className="secondary-action" type="button" onClick={() => insertMarkerAtCursor("<!-- PAID_AREA -->", "有料エリア開始位置")}>
               カーソル位置に有料エリアを追加
@@ -453,7 +453,7 @@ export function BodyStep({
       {draft.inlineEnabled && (
         <div className={missingImageMarkers.length === 0 ? "marker-status marker-status-ok" : "marker-status marker-status-warning"}>
           <strong>{missingImageMarkers.length === 0 ? "✓ 挿絵の差し込み位置がそろっています" : `挿絵位置が${missingImageMarkers.length}か所不足しています`}</strong>
-          <small>AI生成時は挿絵枚数ぶんの {"<!-- IMAGE:01 -->"} 形式を本文へ入れるよう指示しています。足りない場合はカーソル位置へ追加できます。</small>
+          <small>AI生成時は挿絵枚数ぶんの <code>&lt;!-- IMAGE:01 --&gt;</code> 形式を本文へ入れるよう指示しています。足りない場合はカーソル位置へ追加できます。</small>
           {missingImageMarkers.map((order) => (
             <button
               key={order}
