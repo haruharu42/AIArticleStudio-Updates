@@ -14,6 +14,7 @@ export type ArticleWizardProgress = {
   draft: ArticleCreationDraft;
   magazinePlan: MagazinePlanDraft;
   tagsText: string;
+  titleCandidatesText: string;
   activePresetId: string | null;
   updatedAt: string;
 };
@@ -75,6 +76,7 @@ export function loadArticleWizardProgress(ownerId: string): ArticleWizardProgres
       draft,
       magazinePlan,
       tagsText: parsed.tagsText,
+      titleCandidatesText: typeof parsed.titleCandidatesText === "string" ? parsed.titleCandidatesText.slice(0, 10000) : "",
       activePresetId: typeof parsed.activePresetId === "string" ? parsed.activePresetId : null,
       updatedAt: parsed.updatedAt,
     };
