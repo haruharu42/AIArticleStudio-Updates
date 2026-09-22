@@ -112,6 +112,8 @@ export function SalesSettingsAdminPage() {
     } finally { setBusy(false); }
   };
 
+  if (gate.kind === "loading") return null;
+
   if (gate.kind !== "ready") return (
     <main className="standalone-page"><section className="standalone-card">
       <p className="eyebrow">SALES & BILLING</p><h1>販売・決済設定</h1>
