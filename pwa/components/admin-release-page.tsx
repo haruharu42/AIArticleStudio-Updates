@@ -50,11 +50,6 @@ export function AdminReleasePage() {
   const [error, setError] = useState("");
   const [testerAasId, setTesterAasId] = useState("AAS-000002");
 
-  const reload = async () => {
-    const next = await adminListAppReleases(getSupabaseClient());
-    setSnapshot(next);
-  };
-
   useEffect(() => {
     let active = true;
     void adminListAppReleases(getSupabaseClient())
