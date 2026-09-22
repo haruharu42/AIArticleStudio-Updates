@@ -80,14 +80,13 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
   if (audience === "public" || gate.kind === "public" || alwaysPublicPreviewPath(pathname) || gate.kind === "allowed") return <>{children}</>;
 
   if (gate.kind === "signed_out" && pathname === "/") return <>{children}</>;
+  if (gate.kind === "loading") return null;
 
   const message = gate.kind === "denied" && gate.state?.is_release_tester
     ? "現在は第1段階の管理者確認中です。管理者が第2段階へ進めると、この一般ユーザーテストアカウントで候補版を確認できます。"
     : gate.kind === "denied"
       ? "この候補版は管理者と、管理者が指定した一般ユーザーテスターだけが利用できます。"
-      : gate.kind === "error"
-        ? "候補版の利用権を確認できませんでした。"
-        : "候補版の利用権を確認しています。";
+      : "候補版の利用権を確認できませんでした。";
 
   return (
     <main className="standalone-page">
