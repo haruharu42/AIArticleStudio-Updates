@@ -11,7 +11,6 @@ import {
   adminReviewKnowledgeCandidate,
   type KnowledgeCandidate,
 } from "@/lib/knowledge-catalog";
-import { getSupabaseClient } from "@/lib/supabase";
 
 type Filter = "all" | "pending" | "approved" | "rejected";
 type CatalogRow = {
@@ -63,7 +62,7 @@ export function AdminKnowledgePage() {
   const [busy, setBusy] = useState(false);
 
   const reload = async () => {
-    const client = getSupabaseClient();
+    if (!client) throw new Error("AASへ接続できませんでした。");
     const [nextCandidates, catalogResult] = await Promise.all([
       adminListKnowledgeCandidates(client, null),
       client.from("knowledge_catalog").select("key,kind,label,parent_label,status,priority,updated_at").order("updated_at", { ascending: false }).limit(300),
@@ -118,11 +117,11 @@ export function AdminKnowledgePage() {
   };
 
   const review = async (decision: "approved" | "rejected" | "pending") => {
-    if (!selected) return;
+    if (!selected || !client) return;
     setBusy(true);
     setMessage("");
     try {
-      await adminReviewKnowledgeCandidate(getSupabaseClient(), {
+      await adminReviewKnowledgeCandidate(client, {
         kind: selected.kind,
         parentValue: selected.parentValue,
         value: selected.value,
