@@ -351,7 +351,7 @@ export function PreviewStep({
           </article>
           <p className="beginner-help">1枚のコラージュではなく、アイキャッチ→挿絵1→挿絵2…を別画像として順番に作るようプロンプト内で指定しています。挿絵は本文の差し込み位置と周辺内容を参照します。</p>
         </section>
-      )}      )}
+      )}
     </div>
   );
 }
