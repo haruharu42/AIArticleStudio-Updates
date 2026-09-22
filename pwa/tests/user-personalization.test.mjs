@@ -9,12 +9,12 @@ const repoRoot = path.resolve(root, "..");
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
-test("article creation asks for AI and plan before the generation wizard", async () => {
+test("article creation asks for AI once and resumes the generation wizard after setup", async () => {
   const route = await read("app/create/page.tsx");
   const setup = await read("components/create-ai-setup.tsx");
   const personalization = await read("lib/user-personalization.ts");
   assert.match(route, /CreateAiSetup/);
-  for (const label of ["最初に使用するAIを選びます", "無料版", "有料版", "この設定で記事作成へ"]) {
+  for (const label of ["使用するAIを選びます", "無料版", "有料版", "この設定で記事作成へ"]) {
     assert.match(setup, new RegExp(label));
   }
   for (const label of ["ChatGPT", "Claude", "Gemini"]) {
@@ -22,6 +22,8 @@ test("article creation asks for AI and plan before the generation wizard", async
   }
   assert.match(setup, /saveWritingProfile/);
   assert.match(setup, /setRuntimeWritingProfile/);
+  assert.match(setup, /wizardProgress \|\| writingProfile\.updatedAt/);
+  assert.match(setup, /タブやアプリを切り替えても記事作成の進行画面へ直接戻ります/);
 });
 
 test("personalization settings can be viewed edited saved and reset", async () => {
