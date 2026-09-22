@@ -96,7 +96,6 @@ export function Phase8Images({
   const [assets, setAssets] = useState<ImageAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     onBusyChange(false);
@@ -110,7 +109,6 @@ export function Phase8Images({
   const reload = useCallback(async () => {
     setLoading(true);
     setError("");
-    setNotice("");
     try {
       setAssets(await listArticleImages(ctx));
     } catch (caught) {
@@ -146,7 +144,6 @@ export function Phase8Images({
       </div>
 
       {error && <p className="library-notice error" role="alert">{error}</p>}
-      {notice && <p className="library-notice success" role="status">{notice}</p>}
       {loading ? (
         <p role="status">旧クラウド画像を確認しています…</p>
       ) : ordered.length ? (
