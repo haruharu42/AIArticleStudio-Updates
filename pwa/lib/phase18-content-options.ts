@@ -62,6 +62,37 @@ export const SUBGENRE_OPTIONS: Record<string, readonly string[]> = {
   "その他": ["AIおまかせ", "その他"],
 };
 
+export const IMAGE_STYLE_OPTIONS = [
+  { value: "auto", label: "AIおまかせ", prompt: "" },
+  { value: "anime", label: "アニメ風", prompt: "日本の現代的な2Dアニメ調。明瞭な線画、セル塗り寄りの2〜3段階の陰影、整理された色面、親しみやすい表情。" },
+  { value: "manga", label: "漫画風", prompt: "現代的な漫画イラスト調。読みやすい輪郭線、メリハリのある構図、スクリーントーンや漫画的な陰影を必要に応じて使う。" },
+  { value: "illustration", label: "イラスト風", prompt: "記事メディア向けのクリーンなデジタルイラスト。内容が一目で伝わる構図、自然な色使い、商用記事に馴染む仕上がり。" },
+  { value: "soft-illustration", label: "やさしいイラスト風", prompt: "柔らかく親しみやすいデジタルイラスト。淡い色調、丸みのある形、安心感のある雰囲気。" },
+  { value: "editorial", label: "エディトリアル風", prompt: "雑誌やWebメディアの挿絵に合うエディトリアルイラスト。抽象化と具体性のバランスを取り、記事テーマを象徴的に表現する。" },
+  { value: "flat", label: "フラットデザイン風", prompt: "シンプルなフラットデザイン。明快な形、少ない陰影、整理された配色、情報が伝わりやすい構成。" },
+  { value: "infographic", label: "図解・インフォグラフィック風", prompt: "説明性を重視した図解・インフォグラフィック調。要素の関係が直感的に分かるレイアウト。文字は短いラベルに限定する。" },
+  { value: "business", label: "ビジネス資料風", prompt: "信頼感のあるビジネス向けビジュアル。端正な構図、落ち着いた配色、情報整理を重視した現代的なデザイン。" },
+  { value: "line-art", label: "線画・ペン画風", prompt: "線を主役にした線画・ペン画調。輪郭とディテールを丁寧に整理し、必要に応じて最小限の色を加える。" },
+  { value: "watercolor", label: "水彩イラスト風", prompt: "透明感のある水彩イラスト調。柔らかなにじみ、自然な色の重なり、手描き感を活かす。" },
+  { value: "pastel", label: "パステル風", prompt: "明るく柔らかなパステル調。低〜中彩度の配色、やさしい陰影、温かみのある雰囲気。" },
+  { value: "pop", label: "ポップ・カラフル", prompt: "明るくポップなイラスト調。視認性の高い配色、楽しい形、SNSでも目を引くメリハリのある構図。" },
+  { value: "minimal", label: "ミニマル風", prompt: "余白を活かしたミニマルなビジュアル。要素を絞り、主題が一瞬で伝わるシンプルな構成。" },
+  { value: "retro", label: "レトロポスター風", prompt: "一般的なレトロポスター調。限定的な色数、印刷物らしい質感、懐かしさのある構図。特定作品やブランドは模倣しない。" },
+  { value: "pixel", label: "ピクセルアート風", prompt: "現代的なピクセルアート調。明瞭なドット表現、読みやすいシルエット、ゲーム的だが特定作品を模倣しないデザイン。" },
+  { value: "3d-illustration", label: "3Dイラスト風", prompt: "親しみやすい3Dイラスト調。柔らかな立体感、整理されたライティング、記事メディア向けの清潔感。" },
+  { value: "photo", label: "写真風", prompt: "自然な写真表現。現実的な光、素材感、構図を重視し、実在人物やブランドを特定できる要素は避ける。" },
+] as const;
+
+export type ImageStyleValue = (typeof IMAGE_STYLE_OPTIONS)[number]["value"];
+
+export function isImageStyleValue(value: string): value is ImageStyleValue {
+  return IMAGE_STYLE_OPTIONS.some((option) => option.value === value);
+}
+
+export function imageStylePrompt(value: string): string {
+  return IMAGE_STYLE_OPTIONS.find((option) => option.value === value)?.prompt ?? "";
+}
+
 export const AGE_GROUP_OPTIONS = [
   "AIおまかせ",
   "全年代",
