@@ -52,8 +52,9 @@ test("title creation stays external while article quota is consumed only by expl
   assert.match(creator, /articleQuotaInFlightRef\.current/);
   assert.equal((creator.match(/consumeFreeTrialUsage\(/g) || []).length, 1);
   assert.doesNotMatch(stepUi, /consumeFreeTrialUsage\(/);
-  assert.match(stepUi, /copyText\(titlePrompt, setMessage\)/);
-  assert.match(stepUi, /copyText\(articlePrompt, setMessage\)/);
+  assert.match(stepUi, /<CopyButton value=\{titlePrompt\} label="タイトルプロンプトをコピー" setMessage=\{setMessage\} \/>/);
+  assert.match(stepUi, /<CopyButton value=\{articlePrompt\} label="完成記事プロンプトをコピー" setMessage=\{setMessage\} \/>/);
+  assert.match(stepUi, /コピーしました ✓/);
   assert.match(stepUi, /生成後のコピーやAIアプリ起動では追加消費しません/);
 });
 
