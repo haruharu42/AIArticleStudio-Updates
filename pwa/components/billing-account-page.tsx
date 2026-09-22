@@ -11,7 +11,6 @@ import {
   type BillingSubscription,
   type MyBillingState,
 } from "@/lib/commerce";
-import { getSupabaseClient } from "@/lib/supabase";
 
 const STATUS_LABELS: Record<string, string> = {
   incomplete: "決済未完了",
