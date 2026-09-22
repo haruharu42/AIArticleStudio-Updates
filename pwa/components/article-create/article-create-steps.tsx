@@ -97,12 +97,6 @@ export function GenerationMethodStep({
             <option value="manual">自分で本文を書く</option>
           </select>
         </label>
-        {!draft.magazineEnabled && (
-          <label className="reference-field">
-            <span>記事テーマ</span>
-            <input value={draft.theme} onChange={(event) => patch("theme", event.target.value)} placeholder="例：30代初心者向けのAI副業の始め方" />
-          </label>
-        )}
       </div>
 
       {draft.magazineEnabled ? (
@@ -115,7 +109,7 @@ export function GenerationMethodStep({
           onPlanChange={onMagazinePlanChange}
         />
       ) : (
-        <p className="beginner-help">迷った場合は「誰向けに・何を解決する記事か」を1文で入力してください。</p>
+        <p className="beginner-help">記事テーマの別入力は不要です。ジャンル・サブジャンル等を決めたあと、STEP 4で記事タイトルを作成します。</p>
       )}
     </div>
   );
@@ -141,8 +135,6 @@ export function ImagePlanStep({
 export function ArticleConditionsStep({
   draft,
   patch,
-  tagsText,
-  setTagsText,
   setGenre,
   setCustomGenre,
   setSubgenre,
@@ -150,8 +142,6 @@ export function ArticleConditionsStep({
 }: {
   draft: ArticleCreationDraft;
   patch: ArticleDraftPatch;
-  tagsText: string;
-  setTagsText: (value: string) => void;
   setGenre: (value: string) => void;
   setCustomGenre: (value: string) => void;
   setSubgenre: (value: string) => void;
@@ -176,7 +166,6 @@ export function ArticleConditionsStep({
         {draft.articleType === "paid" && <label className="route-field"><span>価格（円）</span><input type="number" min={1} value={draft.price ?? 1} onChange={(event) => patch("price", Math.max(1, Number(event.target.value) || 1))} /></label>}
         <label className="choice-card compact"><input type="checkbox" checked={draft.affiliateEnabled} onChange={(event) => patch("affiliateEnabled", event.target.checked)} /><span><strong>アフィリエイトを使う</strong><small>商品・サービス紹介を含む記事の場合にON</small></span></label>
         {draft.magazineEnabled && <div className="magazine-inline-status"><strong>▤ マガジン作成モード</strong><small>STEP 1で選んだマガジン設計を保存時に引き継ぎます。</small></div>}
-        <label className="route-field full"><span>タグ（任意）</span><input value={tagsText} onChange={(event) => setTagsText(event.target.value)} placeholder="AI副業, 初心者, ChatGPT" /></label>
       </div>
       {(genreSelectValue === "その他" || subgenreSelectValue === "その他") && <p className="knowledge-learning-note">自由入力したジャンル・サブジャンルは、記事本文とは分離して候補名と利用回数だけを集計します。管理者は個人を特定せず集計候補を確認し、必要なものだけ正式ナレッジへ承認できます。</p>}
     </div>
@@ -269,20 +258,25 @@ export function PreviewStep({ draft }: { draft: ArticleCreationDraft }) {
 export function SaveStep({
   draft,
   patch,
+  tagsText,
+  setTagsText,
   busy,
   createdId,
   onSave,
 }: {
   draft: ArticleCreationDraft;
   patch: ArticleDraftPatch;
+  tagsText: string;
+  setTagsText: (value: string) => void;
   busy: boolean;
   createdId: string;
   onSave: () => Promise<void>;
 }) {
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 7</p><h2>記事ライブラリへ保存</h2>
-      <p className="panel-muted">記事・編集条件・画像計画を1つのWorkspaceとして保存します。保存後はPWAの記事ライブラリからいつでも続けて編集できます。</p>
+      <p className="eyebrow">STEP 7</p><h2>タグを設定して記事ライブラリへ保存</h2>
+      <p className="panel-muted">タグは記事内容が完成してから決めます。ジャンル・サブジャンルに合わせて投稿前の最終設定として入力してください。</p>
+      <label className="route-field"><span>タグ（任意・投稿前に設定）</span><input value={tagsText} onChange={(event) => setTagsText(event.target.value)} placeholder="例：恋愛, 人間関係, 職場" /></label>
       <label className="route-field"><span>保存状態</span><select value={draft.saveStatus} onChange={(event) => patch("saveStatus", event.target.value as SaveStatus)}><option value="draft">下書き</option><option value="writing">執筆中</option><option value="ready">完成</option></select></label>
       <dl className="route-meta"><div><dt>タイトル</dt><dd>{draft.title || "未入力"}</dd></div><div><dt>掲載先</dt><dd>{draft.publicationTarget}</dd></div><div><dt>ジャンル</dt><dd>{draft.genre} / {draft.subgenre}</dd></div><div><dt>本文</dt><dd>{draft.body.length.toLocaleString()}文字</dd></div><div><dt>画像</dt><dd>cover {draft.coverEnabled ? "ON" : "OFF"} / inline {draft.inlineEnabled ? draft.inlineCount : 0}</dd></div></dl>
       {!createdId && <button className="primary-action" type="button" disabled={busy || !draft.title.trim()} onClick={() => void onSave()}>{busy ? "保存中…" : "記事ライブラリへ保存"}</button>}
