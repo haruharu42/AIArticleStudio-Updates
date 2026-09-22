@@ -119,7 +119,12 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /key: "claude", label: "Claude"/);
   assert.match(stepUi, /key: "gemini", label: "Gemini"/);
   assert.match(stepUi, /launchAiApp\(app\.key\)/);
-  assert.match(stepUi, /AAS内ではタイトル候補を生成しません/);
+  assert.match(api, /記事タイトル候補を5個作成してください/);
+  assert.match(api, /parseTitleCandidates/);
+  assert.match(api, /必ず5個だけ/);
+  assert.match(stepUi, /タイトルを5候補から選んでください/);
+  assert.match(stepUi, /AIが生成した5候補をまとめて貼り付け/);
+  assert.match(stepUi, /parseTitleCandidates/);
   assert.match(stepUi, /AIで生成したタイトルをここへ貼り付け/);
   assert.match(stepUi, /AI用タイトルプロンプト/);
   assert.doesNotMatch(stepUi, />記事テーマ</);
@@ -160,7 +165,12 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(page, /visibilitychange/);
   assert.match(page, /document\.visibilityState === "hidden"/);
   assert.match(page, /onBeforeExternalLaunch=\{persistWizardProgress\}/);
+  assert.match(page, /titleCandidatesText/);
+  assert.match(page, /buildImagePromptPlan/);
   assert.match(stepUi, /onBeforeExternalLaunch/);
+  assert.match(stepUi, /アイキャッチ・挿絵を作成/);
+  assert.match(stepUi, /画像プロンプトをコピー/);
+  assert.match(stepUi, /imagePrompts/);
   assert.match(stepUi, /onBeforeExternalLaunch\(\); launchAiApp\(app\.key\)/);
   assert.match(page, /setStep\(saved\.step\)/);
   assert.match(page, /前回の作業内容を復元しました/);
@@ -169,6 +179,7 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(progress, /window\.localStorage/);
   assert.match(progress, /STORAGE_VERSION = 1/);
   assert.match(progress, /updatedAt/);
+  assert.match(progress, /titleCandidatesText/);
   assert.match(progress, /parseStoredArticleDraft/);
   assert.doesNotMatch(progress, /as unknown as ArticleCreationDraft/);
   assert.doesNotMatch(progress, /service[_-]?role|sb_secret_/i);
