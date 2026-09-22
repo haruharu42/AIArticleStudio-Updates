@@ -16,6 +16,8 @@ test("root layout keeps verified access state alive across client-side route cha
   assert.match(layout, /<AccessStateProvider>/);
   assert.match(layout, /<AccessStateProvider>[\s\S]*?\{children\}[\s\S]*?<PersistentMobileNav \/>[\s\S]*?<\/AccessStateProvider>/);
   assert.match(provider, /loadAccessState/);
+  assert.match(provider, /loadAccessStateOnce/);
+  assert.match(provider, /inFlightRef/);
   assert.match(provider, /onAuthStateChange/);
   assert.match(provider, /if \(!session\) \{[\s\S]*?setState\(\{ kind: "signed_out" \}\)/);
   assert.match(provider, /useSharedAccessState/);
@@ -125,8 +127,9 @@ test("auth and preview gates keep mandatory verification invisible while it runs
     read("components/release-audience-gate.tsx"),
   ]);
 
-  assert.match(authGateway, /loadAccessState/);
-  assert.match(authGateway, /if \(screen\.kind === "loading"\) return null/);
+  assert.match(authGateway, /useSharedAccessState\(\)/);
+  assert.doesNotMatch(authGateway, /loadAccessState/);
+  assert.match(authGateway, /if \(state\.kind === "loading"\) return null/);
   assert.doesNotMatch(authGateway, /アカウントと利用権を確認しています/);
 
   assert.match(releaseGate, /loadMyAppReleaseState/);
