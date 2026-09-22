@@ -9,7 +9,7 @@ import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider
 import { consumeFreeTrialUsage, trialUsageMessage } from "@/lib/free-trial";
 import { OPENAI_LINKS } from "@/lib/openai-links";
 import { buildImagePromptPlan, type ImagePromptItem } from "@/lib/phase13-image-prompts";
-import { AGE_GROUP_OPTIONS, GENDER_OPTIONS } from "@/lib/phase18-content-options";
+import { AGE_GROUP_OPTIONS, GENDER_OPTIONS, IMAGE_STYLE_OPTIONS, isImageStyleValue } from "@/lib/phase18-content-options";
 import { getCloudArticleDetail, listCloudArticles, type ArticleDetail, type ArticleSummary } from "@/lib/phase7-articles";
 import { getSupabaseClient } from "@/lib/supabase";
 
@@ -44,6 +44,7 @@ export function Phase13ImagePromptPage() {
   const [coverEnabled, setCoverEnabled] = useState(true);
   const [inlineEnabled, setInlineEnabled] = useState(false);
   const [inlineCount, setInlineCount] = useState(2);
+  const [imageStyle, setImageStyle] = useState("auto");
   const [generatedPrompts, setGeneratedPrompts] = useState<ImagePromptItem[]>([]);
   const [generatedFingerprint, setGeneratedFingerprint] = useState("");
   const [message, setMessage] = useState("");
@@ -94,12 +95,14 @@ export function Phase13ImagePromptPage() {
       setInlineCount(Math.max(1, Math.min(10, typeof inline.count === "number" && Number.isSafeInteger(inline.count)
         ? inline.count
         : presetDefaults?.inlineCount ?? 2)));
+      const storedStyle = stringValue(plan.style) || stringValue(request.image_style);
+      setImageStyle(isImageStyleValue(storedStyle) ? storedStyle : "auto");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "記事を読み込めませんでした。");
     } finally { setBusy(false); }
   };
 
-  const promptFingerprint = useMemo(() => detail ? JSON.stringify({ id: detail.id, revision: detail.revision, theme, ageGroup, gender, coverEnabled, inlineEnabled, inlineCount }) : "", [ageGroup, coverEnabled, detail, gender, inlineCount, inlineEnabled, theme]);
+  const promptFingerprint = useMemo(() => detail ? JSON.stringify({ id: detail.id, revision: detail.revision, theme, ageGroup, gender, coverEnabled, inlineEnabled, inlineCount, imageStyle }) : "", [ageGroup, coverEnabled, detail, gender, imageStyle, inlineCount, inlineEnabled, theme]);
   const promptsReady = Boolean(promptFingerprint) && generatedFingerprint === promptFingerprint;
 
   const generatePrompts = async () => {
@@ -112,7 +115,7 @@ export function Phase13ImagePromptPage() {
       setGeneratedPrompts(buildImagePromptPlan({
         title: detail.title, theme, publicationTarget: publicationTarget(detail.publicationTarget),
         genre: detail.genre || "", subgenre: detail.subgenre || "", ageGroup, gender,
-        coverEnabled, inlineEnabled, inlineCount,
+        coverEnabled, inlineEnabled, inlineCount, imageStyle,
       }));
       setGeneratedFingerprint(promptFingerprint);
       setMessage(result.bypassLimits ? "画像生成プロンプトと保存用ファイル名を作成しました。" : `画像生成プロンプトを1回作成しました。${trialUsageMessage(result)}`);
@@ -158,6 +161,7 @@ export function Phase13ImagePromptPage() {
             <PresetSelect label="対象性別" value={gender} onChange={setGender} options={GENDER_SELECT_OPTIONS} customPlaceholder="対象を自由に入力" />
             <label className="choice-card compact"><input type="checkbox" checked={coverEnabled} onChange={(event) => setCoverEnabled(event.target.checked)} /><span><strong>アイキャッチを作る</strong></span></label>
             <label className="choice-card compact"><input type="checkbox" checked={inlineEnabled} onChange={(event) => setInlineEnabled(event.target.checked)} /><span><strong>挿絵を作る</strong></span></label>
+            {(coverEnabled || inlineEnabled) && <label className="route-field"><span>画像の画風</span><select value={imageStyle} onChange={(event) => setImageStyle(event.target.value)}>{IMAGE_STYLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
             {inlineEnabled && <label className="route-field"><span>挿絵枚数</span><select value={inlineCount} onChange={(event) => setInlineCount(Number(event.target.value))}>{INLINE_COUNT_OPTIONS.map((count) => <option key={count} value={count}>{count}枚</option>)}</select></label>}
           </div>
 
