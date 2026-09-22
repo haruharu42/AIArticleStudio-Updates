@@ -26,6 +26,7 @@ type AccessStateContextValue = {
 };
 
 const AccessStateContext = createContext<AccessStateContextValue | null>(null);
+const BACKGROUND_RECHECK_MIN_INTERVAL_MS = 30_000;
 
 export function AccessStateProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SharedAccessState>({ kind: "loading" });
@@ -44,6 +45,7 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    let lastBackgroundCheckAt = 0;
     let activeClient: SupabaseClient;
     try {
       activeClient = getSupabaseClient();
@@ -54,17 +56,32 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const applyAccessState = async (mode: "strict" | "background") => {
+      try {
+        const next = await loadAccessState(activeClient);
+        if (active) setState(next);
+      } catch {
+        if (!active) return;
+        if (mode === "background") {
+          setState((current) => current.kind === "ready" ? current : { kind: "unavailable" });
+          return;
+        }
+        setState({ kind: "unavailable" });
+      }
+    };
+
+    const recheckInBackground = () => {
+      if (!active || document.visibilityState === "hidden") return;
+      const now = Date.now();
+      if (now - lastBackgroundCheckAt < BACKGROUND_RECHECK_MIN_INTERVAL_MS) return;
+      lastBackgroundCheckAt = now;
+      void applyAccessState("background");
+    };
+
     queueMicrotask(() => {
       if (!active) return;
       setClient(activeClient);
-      void loadAccessState(activeClient).then(
-        (next) => {
-          if (active) setState(next);
-        },
-        () => {
-          if (active) setState({ kind: "unavailable" });
-        },
-      );
+      void applyAccessState("strict");
     });
 
     const { data } = activeClient.auth.onAuthStateChange((_event, session) => {
@@ -74,20 +91,21 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
           setState({ kind: "signed_out" });
           return;
         }
-        void loadAccessState(activeClient).then(
-          (next) => {
-            if (active) setState(next);
-          },
-          () => {
-            if (active) setState({ kind: "unavailable" });
-          },
-        );
+        void applyAccessState("strict");
       }, 0);
     });
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") recheckInBackground();
+    };
+    window.addEventListener("focus", recheckInBackground);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       active = false;
       data.subscription.unsubscribe();
+      window.removeEventListener("focus", recheckInBackground);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 
