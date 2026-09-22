@@ -78,18 +78,22 @@ test("member routes reuse root access state and keep access verification invisib
     read("components/platform-account-design-page.tsx"),
     read("components/phase15-member-gate.tsx"),
     read("components/article-export-page.tsx"),
+    read("components/create-ai-setup.tsx"),
+    read("components/phase16-publish-page.tsx"),
+    read("components/phase17-analytics-page.tsx"),
+    read("components/billing-account-page.tsx"),
+    read("components/commerce-plans-page.tsx"),
+    read("components/phase9-invite-page.tsx"),
+    read("components/knowledge-runtime-bootstrap.tsx"),
   ]);
 
   for (const source of sources) {
     assert.match(source, /useSharedAccessState\(\)/);
     assert.doesNotMatch(
       source,
-      /アカウントと利用権を確認しています|アカウント情報を確認しています|利用可能な機能を確認しています|アカウントと運営データを確認しています|アカウントと保存データを確認しています/,
+      /アカウントと利用権を確認しています|アカウント情報を確認しています|利用可能な機能を確認しています|アカウントと運営データを確認しています|アカウントと保存データを確認しています|記事ライブラリを確認しています|記事を確認しています|記事集計を作成しています|契約情報を確認しています|アカウントを確認しています|使用AIを確認しています/,
     );
-  }
-
-  for (const source of sources.slice(3)) {
-    assert.doesNotMatch(source, /auth\.getUser\(\)|\.from\("profiles"\)/);
+    assert.doesNotMatch(source, /auth\.getUser\(\)|\.from\("profiles"\)|loadCoreAccessState|loadAccessState/);
   }
 
   const tools = sources[1];
@@ -112,4 +116,20 @@ test("persistent navigation and article export do not start their own auth sessi
   assert.doesNotMatch(exportPage, /getSupabaseClient|auth\.getUser\(\)|\.from\("profiles"\)/);
   assert.doesNotMatch(exportPage, /記事ライブラリを確認しています/);
   assert.match(exportPage, /<Link className="route-back" href="\/tools"/);
+});
+
+
+test("auth and preview gates keep mandatory verification invisible while it runs", async () => {
+  const [authGateway, releaseGate] = await Promise.all([
+    read("components/phase6-app.tsx"),
+    read("components/release-audience-gate.tsx"),
+  ]);
+
+  assert.match(authGateway, /loadAccessState/);
+  assert.match(authGateway, /if \(screen\.kind === "loading"\) return null/);
+  assert.doesNotMatch(authGateway, /アカウントと利用権を確認しています/);
+
+  assert.match(releaseGate, /loadMyAppReleaseState/);
+  assert.match(releaseGate, /if \(gate\.kind === "loading"\) return null/);
+  assert.doesNotMatch(releaseGate, /候補版の利用権を確認しています/);
 });
