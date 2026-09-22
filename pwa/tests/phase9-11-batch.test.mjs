@@ -99,6 +99,10 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(api, /https:\/\/tips\.jp\//);
   assert.match(api, /https:\/\/brain-market\.com\//);
   assert.match(api, /<!-- IMAGE:01 -->/);
+  assert.match(api, /<!-- PAID_AREA -->/);
+  assert.match(api, /【ここから有料エリア】/);
+  assert.match(api, /【挿絵\$\{Number\(order\)\}をここに挿入】/);
+  assert.match(api, /image_style/);
   assert.doesNotMatch(api, /service[_-]?role|sb_secret_/i);
 
   for (const label of ["記事の種類", "画像設定", "記事条件", "タイトル", "本文", "内容確認", "保存・タグ"]) {
@@ -142,6 +146,20 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /対象年齢/);
   assert.match(stepUi, /対象性別/);
   assert.match(stepUi, /文字数の目安/);
+  assert.match(stepUi, /IMAGE_STYLE_OPTIONS/);
+  assert.match(stepUi, /画像の画風/);
+  assert.match(stepUi, /アニメ風・漫画風・イラスト風/);
+  assert.match(stepUi, /クリップボードから5候補を貼り付け/);
+  assert.match(stepUi, /クリップボードから本文を貼り付け/);
+  assert.match(stepUi, /コピーしました ✓/);
+  assert.match(stepUi, /カーソル位置に有料エリアを追加/);
+  assert.match(stepUi, /挿絵の差し込み位置がそろっています/);
+  assert.match(options, /IMAGE_STYLE_OPTIONS/);
+  assert.match(options, /value: "anime"/);
+  assert.match(options, /value: "manga"/);
+  assert.match(options, /value: "illustration"/);
+  assert.match(options, /value: "watercolor"/);
+  assert.match(options, /value: "photo"/);
   assert.match(options, /PAID_ARTICLE_PRICE_OPTIONS/);
   assert.match(options, /value: 980/);
   assert.match(options, /value: 1480/);
@@ -197,6 +215,10 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /アイキャッチ・挿絵をまとめて作成/);
   assert.match(stepUi, /まとめて画像プロンプトをコピー/);
   assert.match(stepUi, /完成本文を装飾付きコピー/);
+  assert.match(stepUi, /装飾付きでコピーしました ✓/);
+  assert.match(stepUi, /有料noteの仕上げ/);
+  assert.match(stepUi, /【ここから有料エリア】/);
+  assert.match(stepUi, /【挿絵1をここに挿入】/);
   assert.match(stepUi, /copyNoteRichText/);
   assert.match(stepUi, /投稿先を開く/);
   assert.match(stepUi, /imagePrompts/);
