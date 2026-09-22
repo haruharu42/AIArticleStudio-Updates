@@ -59,7 +59,10 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
     const applyAccessState = async (mode: "strict" | "background") => {
       try {
         const next = await loadAccessState(activeClient);
-        if (active) setState(next);
+        if (active) {
+          if (mode === "strict") lastBackgroundCheckAt = Date.now();
+          setState(next);
+        }
       } catch {
         if (!active) return;
         if (mode === "background") {
@@ -84,14 +87,15 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
       void applyAccessState("strict");
     });
 
-    const { data } = activeClient.auth.onAuthStateChange((_event, session) => {
+    const { data } = activeClient.auth.onAuthStateChange((event, session) => {
       window.setTimeout(() => {
         if (!active) return;
         if (!session) {
           setState({ kind: "signed_out" });
           return;
         }
-        void applyAccessState("strict");
+        if (event === "INITIAL_SESSION") return;
+        void applyAccessState(event === "TOKEN_REFRESHED" ? "background" : "strict");
       }, 0);
     });
 
