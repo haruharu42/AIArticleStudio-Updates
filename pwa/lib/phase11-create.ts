@@ -45,6 +45,7 @@ export type ArticleCreationDraft = {
   coverEnabled: boolean;
   inlineEnabled: boolean;
   inlineCount: number;
+  imageStyle: string;
   body: string;
   saveStatus: SaveStatus;
 };
@@ -97,7 +98,8 @@ export function publicationEditorLink(target: PublicationTarget): string | null 
 
 export function publicationBodyForCopy(body: string, title: string): string {
   return stripLeadingArticleTitle(body, title)
-    .replace(/^\s*<!--\s*IMAGE:\d+\s*-->\s*$/gim, "")
+    .replace(/^\s*<!--\s*IMAGE:(\d+)\s*-->\s*$/gim, (_match, order: string) => `**【挿絵${Number(order)}をここに挿入】**`)
+    .replace(/^\s*<!--\s*PAID_AREA\s*-->\s*$/gim, "---\n**【ここから有料エリア】**\n---")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
@@ -190,10 +192,13 @@ export function buildTitlePrompt(draft: ArticleCreationDraft, magazinePlan?: Mag
 
 export function buildArticlePrompt(draft: ArticleCreationDraft, magazinePlan?: MagazinePlanDraft): string {
   const imageRule = draft.coverEnabled || draft.inlineEnabled
-    ? `画像計画: アイキャッチ=${draft.coverEnabled ? "あり" : "なし"}、挿絵=${draft.inlineEnabled ? `${draft.inlineCount}枚` : "なし"}。本文中で挿絵が有効な場合は「<!-- IMAGE:01 -->」のような差し込み候補位置を自然な区切りに置いてください。`
+    ? `画像計画: アイキャッチ=${draft.coverEnabled ? "あり" : "なし"}、挿絵=${draft.inlineEnabled ? `${draft.inlineCount}枚` : "なし"}、画風=${draft.imageStyle || "auto"}。本文中で挿絵が有効な場合は「<!-- IMAGE:01 -->」のような差し込み候補位置を自然な区切りに、必要枚数ぶん必ず単独行で置いてください。`
     : "画像計画: なし。";
+  const paidAreaRule = draft.articleType === "paid"
+    ? "有料記事: 無料で読める導入・問題提起・価値提示を先に用意し、その後、有料本文が始まる直前に <!-- PAID_AREA --> を必ず1回だけ単独行で置いてください。マーカーより前だけでも購入判断ができる説明を入れ、核心となる具体策・手順・テンプレート・詳細解説はマーカーより後へ配置してください。"
+    : "無料記事: <!-- PAID_AREA --> は出力しないでください。";
   const specialization = specializationFor(draft, "article");
-  return `あなたは日本語の編集者兼記事ライターです。\n目的は、指定された掲載先へそのまま掲載できる、具体的で読みやすく、読者が行動できる完成記事を作ることです。\n\n【絶対ルール】\n- ユーザーが入力していない実体験・実績・レビュー・購入経験・使用経験を事実として作らない。\n- 価格、在庫、評価、キャンペーン、統計、販売数、ランキング、最新仕様など変動する情報を未確認のまま断定しない。\n- 競合記事の文章をコピー・近似模倣しない。\n- 根拠のない成果保証、過度な煽り、架空の権威づけをしない。\n- 架空例を使う場合は「例」「想定」と明示する。\n- 文字数を水増しせず、手順・判断基準・具体例・チェックリスト等で価値を作る。\n\n【出力】\n- 日本語。\n- 選択済みタイトルは構成条件として参照するだけにし、出力本文の先頭や見出しに記事タイトルを再掲しない。\n- H1（#）は使わない。最初の行から導入本文またはH2（##）以下の本文を出力する。\n- Markdown見出し（## / ###）で明確に構造化する。\n- 読者に必ず覚えてほしい結論・重要語・判断基準は **太字** で強調する。\n- 特に重要な注意点・要点・行動指針は > 引用形式の強調ブロックを自然に使う。\n- 手順・比較・チェック項目は箇条書きまたは番号付きリストを使い、長い文章だけが続かないようにする。\n- セクションの大きな切り替わりでは必要に応じて --- を使う。\n- 装飾は重要箇所に絞り、全文章を太字にするなど過剰な装飾はしない。\n- 挿絵マーカー <!-- IMAGE:01 --> 等は単独行に置き、太字・引用・リストの中へ入れない。\n- 余計な前置き、メタ説明、生成方針の説明は付けない。\n- 完成記事の本文だけを返す。タイトル・「タイトル：」表記・末尾の解説は出力しない。${promptContextBlock("article")}\n\n【ARTICLE BRIEF】\nタイトル: ${draft.title || "タイトル候補から選択"}\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\n${draft.theme.trim() ? `補足テーマ: ${draft.theme.trim()}\\n` : ""}文字数目安: 約${draft.targetLength}文字\n価格: ${draft.articleType === "paid" && draft.price !== null ? `${draft.price}円` : "設定なし"}\nアフィリエイト: ${draft.affiliateEnabled ? "ON" : "OFF"}\nマガジン: ${draft.magazineEnabled ? "ON" : "OFF"}\n${imageRule}\n\n${specialization}${magazinePromptContext(magazinePlan)}${buildPlatformAccountPromptContext(draft.publicationTarget)}\n\n掲載先と無料/有料の性質に合わせ、導入、見出し構成、具体例、手順、注意点、必要に応じたCTAを自然に最適化してください。`;
+  return `あなたは日本語の編集者兼記事ライターです。\n目的は、指定された掲載先へそのまま掲載できる、具体的で読みやすく、読者が行動できる完成記事を作ることです。\n\n【絶対ルール】\n- ユーザーが入力していない実体験・実績・レビュー・購入経験・使用経験を事実として作らない。\n- 価格、在庫、評価、キャンペーン、統計、販売数、ランキング、最新仕様など変動する情報を未確認のまま断定しない。\n- 競合記事の文章をコピー・近似模倣しない。\n- 根拠のない成果保証、過度な煽り、架空の権威づけをしない。\n- 架空例を使う場合は「例」「想定」と明示する。\n- 文字数を水増しせず、手順・判断基準・具体例・チェックリスト等で価値を作る。\n\n【出力】\n- 日本語。\n- 選択済みタイトルは構成条件として参照するだけにし、出力本文の先頭や見出しに記事タイトルを再掲しない。\n- H1（#）は使わない。最初の行から導入本文またはH2（##）以下の本文を出力する。\n- Markdown見出し（## / ###）で明確に構造化する。\n- 読者に必ず覚えてほしい結論・重要語・判断基準は **太字** で強調する。\n- 特に重要な注意点・要点・行動指針は > 引用形式の強調ブロックを自然に使う。\n- 手順・比較・チェック項目は箇条書きまたは番号付きリストを使い、長い文章だけが続かないようにする。\n- セクションの大きな切り替わりでは必要に応じて --- を使う。\n- 装飾は重要箇所に絞り、全文章を太字にするなど過剰な装飾はしない。\n- 挿絵マーカー <!-- IMAGE:01 --> 等は単独行に置き、太字・引用・リストの中へ入れない。\n- 余計な前置き、メタ説明、生成方針の説明は付けない。\n- 完成記事の本文だけを返す。タイトル・「タイトル：」表記・末尾の解説は出力しない。${promptContextBlock("article")}\n\n【ARTICLE BRIEF】\nタイトル: ${draft.title || "タイトル候補から選択"}\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\n${draft.theme.trim() ? `補足テーマ: ${draft.theme.trim()}\\n` : ""}文字数目安: 約${draft.targetLength}文字\n価格: ${draft.articleType === "paid" && draft.price !== null ? `${draft.price}円` : "設定なし"}\nアフィリエイト: ${draft.affiliateEnabled ? "ON" : "OFF"}\nマガジン: ${draft.magazineEnabled ? "ON" : "OFF"}\n${imageRule}\n${paidAreaRule}\n\n${specialization}${magazinePromptContext(magazinePlan)}${buildPlatformAccountPromptContext(draft.publicationTarget)}\n\n掲載先と無料/有料の性質に合わせ、導入、見出し構成、具体例、手順、注意点、必要に応じたCTAを自然に最適化してください。`;
 }
 
 async function requireAccess(
@@ -261,6 +266,9 @@ export function validateCreationDraft(
   ) {
     throw new Error("有料記事は1以上の整数価格を設定してください。");
   }
+  if (draft.articleType === "paid" && draft.body.trim() && !/<!--\s*PAID_AREA\s*-->/i.test(draft.body)) {
+    throw new Error("有料記事の本文に有料エリア開始位置がありません。本文工程で「ここから有料エリア」を設定してください。");
+  }
   if (draft.articleType === "free") draft.price = null;
   if (!draft.inlineEnabled) draft.inlineCount = 0;
   return draft;
@@ -323,6 +331,7 @@ export async function createArticleFromWizard(
     coverEnabled: draft.coverEnabled,
     inlineEnabled: draft.inlineEnabled,
     inlineCount: draft.inlineCount,
+    imageStyle: draft.imageStyle,
   });
   const knowledgeRuntime = getRuntimeKnowledgeState();
   const accountDesign = getRuntimePlatformAccountDesign(draft.publicationTarget);
@@ -395,6 +404,7 @@ export async function createArticleFromWizard(
       gender: draft.gender,
       target_length: draft.targetLength,
       price_jpy: draft.price,
+      image_style: draft.imageStyle,
       affiliate_enabled: draft.affiliateEnabled,
       magazine_enabled: draft.magazineEnabled,
       magazine_name: draft.magazineEnabled ? magazinePlan?.name || null : null,
@@ -422,6 +432,7 @@ export async function createArticleFromWizard(
         enabled: draft.inlineEnabled,
         count: draft.inlineCount,
       },
+      style: draft.imageStyle,
       prompt_plan: imagePrompts,
     },
     source_body: draft.body || null,
