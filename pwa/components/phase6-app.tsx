@@ -552,7 +552,7 @@ export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Prom
     }
   }, [onAccessReady, state.kind]);
 
-  if (recoveryRef.current && client) {
+  if (authMode === "recovery" && client) {
     return <AuthScreen client={client} mode="recovery" setMode={setAuthMode} refresh={refresh} />;
   }
 
