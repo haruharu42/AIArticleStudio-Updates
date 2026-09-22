@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import {
   ArticleConditionsStep,
@@ -13,7 +15,6 @@ import {
   SaveStep,
   TitleStep,
 } from "@/components/article-create/article-create-steps";
-import { loadCoreAccessState } from "@/lib/access-control";
 import { DEFAULT_MAGAZINE_PLAN, type MagazinePlanDraft } from "@/lib/magazine-planner";
 import {
   ARTICLE_CREATE_STEPS,
@@ -53,7 +54,9 @@ type Gate =
   | { kind: "error"; message: string };
 
 export function Phase11CreatePage() {
+  const { state: accessState, client } = useSharedAccessState();
   const { accountPresets } = useWorkspacePreset();
+  const accessOwnerId = accessState.kind === "ready" ? accessState.profile.id : "";
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ArticleCreationDraft>(() => initialDraftFromLocation());
@@ -85,29 +88,31 @@ export function Phase11CreatePage() {
   }, [activePresetId, createdId, draft, gate, magazinePlan, step, tagsText, titleCandidatesText]);
 
   useEffect(() => {
+    if (accessState.kind === "loading") return;
+    if (accessState.kind === "signed_out") {
+      queueMicrotask(() => setGate({ kind: "signed_out" }));
+      return;
+    }
+    if (accessState.kind === "entitlement_denied") {
+      queueMicrotask(() => setGate({ kind: "denied", message: "PWA利用権が必要です。" }));
+      return;
+    }
+    if (accessState.kind === "pending" || accessState.kind === "suspended" || accessState.kind === "disabled") {
+      queueMicrotask(() => setGate({ kind: "denied", message: "記事作成にはactiveアカウントが必要です。" }));
+      return;
+    }
+    if (accessState.kind === "unavailable" || !client || !accessOwnerId) {
+      queueMicrotask(() => setGate({ kind: "error", message: "AASへ接続できませんでした。" }));
+      return;
+    }
+
     let active = true;
     setRuntimePlatformAccountDesigns(null);
     const boot = async () => {
       try {
-        const access = await loadCoreAccessState(getSupabaseClient());
-        if (!active) return;
-
-        if (access.kind === "signed_out") {
-          setGate({ kind: "signed_out" });
-          return;
-        }
-        if (access.kind === "entitlement_denied") {
-          setGate({ kind: "denied", message: "PWA利用権が必要です。" });
-          return;
-        }
-        if (access.kind !== "ready") {
-          setGate({ kind: "denied", message: "記事作成にはactiveアカウントが必要です。" });
-          return;
-        }
-
-        const ownerId = access.user.id;
+        const ownerId = accessOwnerId;
         try {
-          const loadedDesigns = await loadPlatformAccountDesigns(getSupabaseClient(), ownerId);
+          const loadedDesigns = await loadPlatformAccountDesigns(client, ownerId);
           if (active) {
             setAccountDesigns(loadedDesigns);
             setRuntimePlatformAccountDesigns(loadedDesigns);
@@ -148,7 +153,7 @@ export function Phase11CreatePage() {
       active = false;
       setRuntimePlatformAccountDesigns(null);
     };
-  }, []);
+  }, [accessOwnerId, accessState.kind, client]);
 
   useEffect(() => {
     persistWizardProgress();
@@ -348,11 +353,10 @@ export function Phase11CreatePage() {
     return (
       <main className="standalone-page"><section className="standalone-card">
         <p className="eyebrow">ARTICLE CREATOR</p><h1>記事を作る</h1>
-        {gate.kind === "loading" && <p className="route-notice">アカウントと利用権を確認しています…</p>}
         {gate.kind === "signed_out" && <p className="route-notice error">先にホームからログインしてください。</p>}
         {gate.kind === "denied" && <p className="route-notice error">{gate.message}</p>}
         {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-        <a className="route-back" href="/">← ホームへ戻る</a>
+        <Link className="route-back" href="/">← ホームへ戻る</Link>
       </section></main>
     );
   }
@@ -366,7 +370,7 @@ export function Phase11CreatePage() {
           <h1>✎ 記事を作成</h1>
           <p>目的に合わせて、通常記事またはマガジン記事の作成方法を選択してください。</p>
         </div>
-        <a className="reference-help-link" href="/manual">? ヘルプ</a>
+        <Link className="reference-help-link" href="/manual">? ヘルプ</Link>
       </header>
 
       <ol className="wizard-steps" aria-label="記事作成の進行状況">
@@ -397,7 +401,7 @@ export function Phase11CreatePage() {
               </small>
             </div>
             <div className="account-design-create-actions">
-              <a href="/settings">{activeAccountPreset ? "プリセットを確認" : "プリセットを登録"}</a>
+              <Link href="/settings">{activeAccountPreset ? "プリセットを確認" : "プリセットを登録"}</Link>
             </div>
           </div>
         )}
@@ -453,7 +457,7 @@ export function Phase11CreatePage() {
         <footer className="wizard-actions">
           <button className="secondary-action" type="button" disabled={step === 0 || busy || articleBusy} onClick={back}>戻る</button>
           {step < ARTICLE_CREATE_STEPS.length - 1 && <button className="primary-action" type="button" disabled={busy || articleBusy} onClick={next}>次へ →</button>}
-          {createdId && <a className="primary-action" href="/">ホームへ戻る</a>}
+          {createdId && <Link className="primary-action" href="/">ホームへ戻る</Link>}
         </footer>
       </section>
       <AasReferenceBottomNav active="create" />
