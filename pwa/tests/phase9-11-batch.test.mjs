@@ -142,6 +142,17 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /対象年齢/);
   assert.match(stepUi, /対象性別/);
   assert.match(stepUi, /文字数の目安/);
+  assert.match(options, /PAID_ARTICLE_PRICE_OPTIONS/);
+  assert.match(options, /value: 980/);
+  assert.match(options, /value: 1480/);
+  assert.match(options, /value: 1980/);
+  assert.match(options, /value: 2480/);
+  assert.match(options, /value: 3480/);
+  assert.match(options, /value: 4980/);
+  assert.match(options, /value: 49800/);
+  assert.match(stepUi, /自由入力/);
+  assert.match(stepUi, /note公式では通常会員100〜50,000円/);
+  assert.match(page, /price: value === "free" \? null : current\.price !== null && current\.price > 0 \? current\.price : 980/);
   assert.doesNotMatch(stepUi, />タイトル候補を生成<|>タイトル候補を作り直す</);
   assert.doesNotMatch(page, /generateTitleCandidates|titleQuotaInFlightRef|titlePromptAuthorized|suggestLocalTitles/);
   assert.doesNotMatch(stepUi, /OPENAI_LINKS\.chatgpt/);
