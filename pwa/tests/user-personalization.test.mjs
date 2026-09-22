@@ -74,7 +74,7 @@ test("personalization UI has dedicated responsive styling", async () => {
 });
 
 
-test("article presets save reusable note settings with self-only RLS and no article body storage", async () => {
+test("legacy article preset storage stays compatible while the new creator uses account presets", async () => {
   const migration = await readRepo("supabase/migrations/20260919094500_article_presets_learning.sql");
   const serverLimit = await readRepo("supabase/migrations/20260919151101_article_presets_server_limit.sql");
   const api = await read("lib/article-presets.ts");
@@ -110,9 +110,9 @@ test("article presets save reusable note settings with self-only RLS and no arti
   assert.match(panel, /<select/);
   assert.match(panel, /article-preset-picker-actions/);
   assert.match(panel, /article-preset-delete/);
-  assert.match(page, /ArticlePresetPanel/);
+  assert.doesNotMatch(page, /ArticlePresetPanel|applyArticlePreset/);
   assert.match(page, /activePresetId/);
-  assert.match(page, /applyArticlePreset/);
+  assert.match(page, /activeAccountPreset/);
   assert.match(page, /createArticleFromWizard[\s\S]*activePresetId/);
   assert.match(progress, /activePresetId/);
   assert.match(layout, /phase34-article-presets\.css/);
