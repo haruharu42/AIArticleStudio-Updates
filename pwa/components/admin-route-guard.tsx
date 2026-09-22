@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
-import { getSupabaseClient } from "@/lib/supabase";
 
 const ADMIN_MFA_FRIENDLY_NAME = "AAS PWA Admin";
 // Temporary development switch. Keep the MFA flow in place, but do not require it
@@ -101,11 +100,10 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
   }, [accessState, client]);
 
   const beginEnrollment = async () => {
+    if (!client) return;
     setBusy(true);
     setActionError("");
     try {
-      const client = getSupabaseClient();
-
       // A browser refresh or interrupted setup can leave an unverified TOTP factor behind.
       // Remove only the unfinished primary-admin factor before creating a fresh enrollment.
       const { data: factors, error: factorsError } = await client.auth.mfa.listFactors();
@@ -137,11 +135,10 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
   };
 
   const cancelEnrollment = async () => {
-    if (!enrollment) return;
+    if (!enrollment || !client) return;
     setBusy(true);
     setActionError("");
     try {
-      const client = getSupabaseClient();
       const { error } = await client.auth.mfa.unenroll({ factorId: enrollment.factorId });
       if (error) throw error;
       setEnrollment(null);
@@ -154,6 +151,7 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
   };
 
   const verifyTotp = async (factorId: string) => {
+    if (!client) return;
     const normalized = code.replace(/\s+/g, "");
     if (!/^\d{6}$/.test(normalized)) {
       setActionError("認証アプリに表示された6桁のコードを入力してください。");
@@ -162,7 +160,6 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
     setBusy(true);
     setActionError("");
     try {
-      const client = getSupabaseClient();
       const { data: challenge, error: challengeError } = await client.auth.mfa.challenge({ factorId });
       if (challengeError) throw challengeError;
       const { error: verifyError } = await client.auth.mfa.verify({
