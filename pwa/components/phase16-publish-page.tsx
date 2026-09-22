@@ -12,7 +12,6 @@ import {
   type ArticleSummary,
 } from "@/lib/phase7-articles";
 import { savePublicationState, type PublicationUpdate } from "@/lib/phase16-publish";
-import { getSupabaseClient } from "@/lib/supabase";
 
 function localInput(value: string | null): string {
   if (!value) return "";
