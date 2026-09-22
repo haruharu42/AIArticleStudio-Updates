@@ -364,6 +364,7 @@ export function SaveStep({
   busy,
   createdId,
   onSave,
+  setMessage,
 }: {
   draft: ArticleCreationDraft;
   patch: ArticleDraftPatch;
@@ -372,11 +373,42 @@ export function SaveStep({
   busy: boolean;
   createdId: string;
   onSave: () => Promise<void>;
+  setMessage: MessageSetter;
 }) {
+  const publicationBody = publicationBodyForCopy(draft.body, draft.title);
+  const editorLink = publicationEditorLink(draft.publicationTarget);
+  const publicationLabel = draft.publicationTarget === "note"
+    ? "note"
+    : draft.publicationTarget === "tips"
+      ? "Tips"
+      : draft.publicationTarget === "brain"
+        ? "Brain"
+        : "ブログ";
+
+  const copyPublicationBody = async () => {
+    if (!publicationBody) return;
+    try {
+      await copyNoteRichText(publicationBody);
+      setMessage(publicationLabel + "へ貼り付ける装飾付き本文をコピーしました。タイトルは含めていません。");
+    } catch {
+      copyText(publicationBody, setMessage);
+    }
+  };
   return (
     <div className="wizard-pane">
       <p className="eyebrow">STEP 7</p><h2>タグを設定して記事ライブラリへ保存</h2>
       <p className="panel-muted">タグは記事内容が完成してから決めます。ジャンル・サブジャンルに合わせて投稿前の最終設定として入力してください。</p>
+      <section className="creator-publish-copy" aria-label="掲載用コピー">
+        <h3>完成記事を掲載先へコピー</h3>
+        <p className="panel-muted">タイトルと本文を分けてコピーします。本文は記事タイトルと画像差し込みマーカーを除き、見出し・太字・引用・リスト等の装飾を保てる形式でコピーします。</p>
+        <div className="openai-prompt-actions">
+          <button className="secondary-action" type="button" disabled={!draft.title.trim()} onClick={() => copyText(draft.title, setMessage)}>タイトルをコピー</button>
+          <button className="primary-action" type="button" disabled={!publicationBody} onClick={() => void copyPublicationBody()}>完成本文を装飾付きコピー</button>
+        </div>
+        {editorLink
+          ? <a className="openai-launch-action creator-publication-link" href={editorLink} target="_blank" rel="noreferrer">{publicationLabel}の投稿先を開く ↗</a>
+          : <p className="beginner-help">「ブログ」は特定サービスを指さないため外部URLを固定していません。利用中のブログ管理画面を開いて貼り付けてください。</p>}
+      </section>
       <label className="route-field"><span>タグ（任意・投稿前に設定）</span><input value={tagsText} onChange={(event) => setTagsText(event.target.value)} placeholder="例：恋愛, 人間関係, 職場" /></label>
       <label className="route-field"><span>保存状態</span><select value={draft.saveStatus} onChange={(event) => patch("saveStatus", event.target.value as SaveStatus)}><option value="draft">下書き</option><option value="writing">執筆中</option><option value="ready">完成</option></select></label>
       <dl className="route-meta"><div><dt>タイトル</dt><dd>{draft.title || "未入力"}</dd></div><div><dt>掲載先</dt><dd>{draft.publicationTarget}</dd></div><div><dt>ジャンル</dt><dd>{draft.genre} / {draft.subgenre}</dd></div><div><dt>本文</dt><dd>{draft.body.length.toLocaleString()}文字</dd></div><div><dt>画像</dt><dd>cover {draft.coverEnabled ? "ON" : "OFF"} / inline {draft.inlineEnabled ? draft.inlineCount : 0}</dd></div></dl>
