@@ -42,6 +42,7 @@ import {
   type AccountDesignPlatform,
   type PlatformAccountDesign,
 } from "@/features/account-design";
+import { buildImagePromptPlan } from "@/lib/phase13-image-prompts";
 import { getSupabaseClient } from "@/lib/supabase";
 
 type Gate =
@@ -57,6 +58,7 @@ export function Phase11CreatePage() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ArticleCreationDraft>(() => initialDraftFromLocation());
   const [tagsText, setTagsText] = useState("");
+  const [titleCandidatesText, setTitleCandidatesText] = useState("");
   const [magazinePlan, setMagazinePlan] = useState<MagazinePlanDraft>(() => ({ ...DEFAULT_MAGAZINE_PLAN, articleTitles: [] }));
   const [message, setMessage] = useState(() => initialMessageFromLocation());
   const [busy, setBusy] = useState(false);
@@ -77,9 +79,10 @@ export function Phase11CreatePage() {
       draft,
       magazinePlan,
       tagsText,
+      titleCandidatesText,
       activePresetId,
     });
-  }, [activePresetId, createdId, draft, gate, magazinePlan, step, tagsText]);
+  }, [activePresetId, createdId, draft, gate, magazinePlan, step, tagsText, titleCandidatesText]);
 
   useEffect(() => {
     let active = true;
@@ -122,6 +125,7 @@ export function Phase11CreatePage() {
           setDraft(saved.draft);
           setMagazinePlan(saved.magazinePlan);
           setTagsText(saved.tagsText);
+          setTitleCandidatesText(saved.titleCandidatesText);
           setActivePresetId(saved.activePresetId);
           setWizardRestored(true);
           setMessage("前回の作業内容を復元しました。");
@@ -218,6 +222,22 @@ export function Phase11CreatePage() {
   const articlePrompt = useMemo(
     () => buildArticlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined),
     [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey, accountPresetPromptKey],
+  );
+  const imagePrompts = useMemo(
+    () => buildImagePromptPlan({
+      title: draft.title,
+      theme: draft.theme || draft.title,
+      publicationTarget: draft.publicationTarget,
+      genre: draft.genre,
+      subgenre: draft.subgenre,
+      ageGroup: draft.ageGroup,
+      gender: draft.gender,
+      body: draft.body,
+      coverEnabled: draft.coverEnabled,
+      inlineEnabled: draft.inlineEnabled,
+      inlineCount: draft.inlineCount,
+    }),
+    [draft, accountDesignPromptKey, accountPresetPromptKey],
   );
   const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
@@ -397,6 +417,8 @@ export function Phase11CreatePage() {
             draft={draft}
             patch={patch}
             titlePrompt={titlePrompt}
+            titleCandidatesText={titleCandidatesText}
+            setTitleCandidatesText={setTitleCandidatesText}
             onBeforeExternalLaunch={persistWizardProgress}
             setMessage={setMessage}
           />
@@ -413,7 +435,14 @@ export function Phase11CreatePage() {
             setMessage={setMessage}
           />
         )}
-        {step === 5 && <PreviewStep draft={draft} />}
+        {step === 5 && (
+          <PreviewStep
+            draft={draft}
+            imagePrompts={imagePrompts}
+            onBeforeExternalLaunch={persistWizardProgress}
+            setMessage={setMessage}
+          />
+        )}
         {step === 6 && <SaveStep draft={draft} patch={patch} tagsText={tagsText} setTagsText={setTagsText} busy={busy} createdId={createdId} onSave={save} />}
 
         {message && <div className="route-notice" role="status" aria-live="polite">{message}</div>}
