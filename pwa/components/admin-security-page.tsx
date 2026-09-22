@@ -117,7 +117,6 @@ export function AdminSecurityPage() {
       setErrorMessage("認証アプリに表示された6桁コードを入力してください。");
       return;
     }
-    if (!window.confirm("このMFA認証器を削除しますか？\n削除した認証器では管理者認証できなくなります。")) return;
     setBusy(true);
     setMessage("");
     setErrorMessage("");
@@ -147,6 +146,7 @@ export function AdminSecurityPage() {
       setErrorMessage("最後のMFA認証器は削除できません。先に予備認証器を追加してください。");
       return;
     }
+    if (!window.confirm("このMFA認証器を削除しますか？\n削除した認証器では管理者認証できなくなります。")) return;
     setBusy(true);
     setMessage("");
     setErrorMessage("");
