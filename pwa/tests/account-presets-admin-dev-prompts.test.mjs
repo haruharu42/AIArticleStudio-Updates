@@ -45,7 +45,7 @@ test("account-specific note Tips Brain presets support names, genres, defaults, 
   assert.match(lib, /今回の画面でユーザーが明示した条件と衝突する場合は、今回の明示条件を優先する/);
 
   assert.match(ui, /投稿ジャンル別のアカウントプリセット/);
-  assert.match(ui, /プリセット名 \*/);
+  assert.match(ui, /プリセット名（投稿ジャンル名） \*/);
   assert.match(ui, /ユーザー名 \/ 表示名/);
   assert.match(ui, /主な投稿ジャンル/);
   assert.match(ui, /想定読者/);
