@@ -182,7 +182,8 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(draftHelpers, /validateArticleCreateStep/);
   assert.match(draftHelpers, /parseStoredArticleDraft/);
 
-  assert.match(page, /loadCoreAccessState/);
+  assert.match(page, /useSharedAccessState/);
+  assert.doesNotMatch(page, /loadCoreAccessState/);
   assert.match(setup, /loadCoreAccessState/);
   assert.match(setup, /loadArticleWizardProgress/);
   assert.match(setup, /setRuntimeWritingProfile\(writingProfile\)/);
