@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import type { Metadata } from "next";
 import { LegalDocument } from "@/components/legal-document";
 
@@ -82,7 +84,7 @@ export default function PrivacyPage() {
 
       <h2>11. 開示・訂正・削除等</h2>
       <p>
-        利用者から自己の保有個人データに関する開示、訂正、利用停止、削除等の請求があった場合、適用法令に従い本人確認のうえ対応します。契約・決済・法令上保存が必要な記録については直ちに削除できない場合があります。請求方法は、<a href="/support">お問い合わせ・開示請求ページ</a>をご確認ください。
+        利用者から自己の保有個人データに関する開示、訂正、利用停止、削除等の請求があった場合、適用法令に従い本人確認のうえ対応します。契約・決済・法令上保存が必要な記録については直ちに削除できない場合があります。請求方法は、<Link href="/support">お問い合わせ・開示請求ページ</Link>をご確認ください。
       </p>
 
       <h2>12. ポリシーの変更</h2>
@@ -92,7 +94,7 @@ export default function PrivacyPage() {
 
       <h2>13. お問い合わせ</h2>
       <p>
-        個人情報の取扱いその他本ポリシーに関する問い合わせは、<a href="/support">お問い合わせ・開示請求ページ</a>をご確認ください。
+        個人情報の取扱いその他本ポリシーに関する問い合わせは、<Link href="/support">お問い合わせ・開示請求ページ</Link>をご確認ください。
       </p>
     </LegalDocument>
   );
