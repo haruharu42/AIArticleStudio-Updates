@@ -114,7 +114,8 @@ test("article creator keeps UI, access and pure draft responsibilities separated
 
   assert.match(page, /useSharedAccessState/);
   assert.doesNotMatch(page, /loadCoreAccessState/);
-  assert.match(setup, /loadCoreAccessState/);
+  assert.match(setup, /useSharedAccessState/);
+  assert.doesNotMatch(setup, /loadCoreAccessState/);
   assert.doesNotMatch(`${page}\n${setup}`, /\.from\("profiles"\)|can_access_product/);
   assert.doesNotMatch(page, /aasId/);
   assert.match(page, /GenerationMethodStep/);
