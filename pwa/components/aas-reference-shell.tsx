@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { SharedMobileBottomNav } from "@/components/shared-mobile-bottom-nav";
+import type { MobileNavItemKey } from "@/lib/mobile-nav-preference";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -16,7 +17,7 @@ import {
   type DesktopNavItemKey,
 } from "@/lib/desktop-nav-preference";
 
-export type ReferenceNavKey = "home" | "create" | "library" | "ranking" | "profile";
+export type ReferenceNavKey = "home" | MobileNavItemKey | "";
 
 export function AasReferenceHeader({
   hasUnreadNotifications = false,
@@ -159,9 +160,11 @@ function DesktopNavCustomizer({
 
 export function AasReferenceBottomNav({
   active,
+  onHome,
   onLibrary,
 }: {
   active: ReferenceNavKey;
+  onHome?: () => void;
   onLibrary?: () => void;
 }) {
   const [desktopItems, setDesktopItems] = useState<DesktopNavItemKey[]>([...DEFAULT_DESKTOP_NAV_ITEMS]);
@@ -186,12 +189,13 @@ export function AasReferenceBottomNav({
     <>
       <SharedMobileBottomNav
         activeKey={active}
+        onHome={onHome}
         onLibrary={onLibrary}
         className="aas-reference-mobile-main-nav"
       />
 
       <nav className="aas-reference-desktop-nav" aria-label="PCメインナビゲーション">
-        <NavItem active={active === "home"} href="/" icon="⌂" label="ホーム" />
+        <NavItem active={active === "home"} href="/" icon="⌂" label="ホーム" onClick={onHome} />
         {desktopItems.map((key) => {
           const item = desktopNavItemFor(key);
           const isActive = key === active;
