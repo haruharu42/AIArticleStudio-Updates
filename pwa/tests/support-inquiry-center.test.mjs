@@ -118,8 +118,9 @@ test("active admins get an inquiry inbox, admin-only nav choice, and home unread
 
   assert.match(nav, /key: "adminInquiries".*href: "\/admin\/inquiries"/);
   assert.match(nav, /ADMIN_MOBILE_NAV_ITEM_OPTIONS/);
-  assert.match(sharedNav, /data\.role === "admin"/);
-  assert.match(sharedNav, /data\.status === "active"/);
+  assert.match(sharedNav, /useSharedAccessState\(\)/);
+  assert.match(sharedNav, /state\.profile\.role === "admin"/);
+  assert.match(sharedNav, /state\.profile\.status === "active"/);
   assert.match(customizer, /問合せ確認/);
 
   assert.match(home, /getSupportNotificationSummary/);
