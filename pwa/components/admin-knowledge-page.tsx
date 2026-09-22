@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AdminPresetNumberField } from "@/components/admin-form-controls";
 import { KnowledgeRefreshPanel } from "@/components/knowledge-refresh-panel";
 
 import {
@@ -118,6 +119,8 @@ export function AdminKnowledgePage() {
 
   const review = async (decision: "approved" | "rejected" | "pending") => {
     if (!selected || !client) return;
+    if (decision === "approved" && !window.confirm(`「${editor.canonicalLabel || selected.value}」を正式ナレッジとして承認しますか？`)) return;
+    if (decision === "rejected" && !window.confirm(`「${selected.value}」を却下しますか？`)) return;
     setBusy(true);
     setMessage("");
     try {
@@ -143,6 +146,8 @@ export function AdminKnowledgePage() {
       setBusy(false);
     }
   };
+
+  if (state.kind === "loading") return null;
 
   if (!isAdmin) {
     return (
@@ -193,7 +198,15 @@ export function AdminKnowledgePage() {
         <dl className="knowledge-source-meta"><div><dt>入力候補</dt><dd>{selected.value}</dd></div><div><dt>親ジャンル</dt><dd>{selected.parentValue || "なし"}</dd></div><div><dt>利用</dt><dd>{selected.totalUses}回 / {selected.distinctUsers}ユーザー</dd></div></dl>
         <div className="knowledge-editor-grid">
           <label><span>正式名称</span><input value={editor.canonicalLabel} onChange={(event) => setEditor((current) => ({ ...current, canonicalLabel: event.target.value.slice(0, 120) }))} /></label>
-          <label><span>優先度 0〜100</span><input type="number" min={0} max={100} value={editor.priority} onChange={(event) => setEditor((current) => ({ ...current, priority: Math.max(0, Math.min(100, Number(event.target.value) || 0)) }))} /></label>
+          <AdminPresetNumberField
+            label="優先度"
+            value={editor.priority}
+            presets={[10, 25, 40, 50, 60, 70, 80, 90, 100]}
+            min={0}
+            max={100}
+            description="通常は70。重要度が高いほどPrompt Compilerで優先されます。"
+            onChange={(priority) => setEditor((current) => ({ ...current, priority }))}
+          />
           <label className="full"><span>制作ルール（1行1項目）</span><textarea rows={5} value={editor.guidance} onChange={(event) => setEditor((current) => ({ ...current, guidance: event.target.value }))} placeholder="例: 初心者が実行できる順番で説明する" /></label>
           <label className="full"><span>価値が出やすい成果物（1行1項目）</span><textarea rows={4} value={editor.deliverables} onChange={(event) => setEditor((current) => ({ ...current, deliverables: event.target.value }))} placeholder="例: チェックリスト" /></label>
           <label className="full"><span>注意・禁止（1行1項目）</span><textarea rows={4} value={editor.cautions} onChange={(event) => setEditor((current) => ({ ...current, cautions: event.target.value }))} placeholder="例: 未確認の効果を断定しない" /></label>
