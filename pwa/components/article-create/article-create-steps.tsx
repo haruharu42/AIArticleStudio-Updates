@@ -319,36 +319,39 @@ export function PreviewStep({
       <h3>{draft.title || "タイトル未入力"}</h3>
       <pre className="creator-preview">{draft.body || "本文がまだありません。"}</pre>
 
-      {imagePrompts.length > 0 && (
+      {imagePrompts.length > 0 && combinedImagePrompt && (
         <section className="creator-image-prompts" aria-label="記事画像生成プロンプト">
           <div className="creator-image-prompts-head">
-            <h3>アイキャッチ・挿絵を作成</h3>
-            <p className="panel-muted">STEP 2で選んだ画像設定と完成した記事本文を確認して、AASが画像生成用プロンプトを作成しています。各プロンプトをコピーして画像生成AIへ貼り付けてください。</p>
+            <h3>アイキャッチ・挿絵をまとめて作成</h3>
+            <p className="panel-muted">STEP 2の画像設定と完成本文をもとに、アイキャッチと全挿絵を1つの依頼文へまとめています。1回コピーして画像生成AIへ貼り付けてください。</p>
           </div>
-          {imagePrompts.map((item) => (
-            <article className="creator-image-prompt-card" key={`${item.kind}-${item.order}`}>
-              <div className="creator-image-prompt-title">
-                <strong>{item.kind === "cover" ? "アイキャッチ" : `挿絵 ${item.order}`}</strong>
-                {item.insertionMarker && <span>{`<!-- ${item.insertionMarker} -->`}</span>}
-              </div>
-              <textarea className="prompt-area" readOnly value={item.prompt} />
-              <div className="openai-prompt-actions">
-                <button className="secondary-action" type="button" onClick={() => copyText(item.prompt, setMessage)}>画像プロンプトをコピー</button>
-                {AI_LAUNCH_OPTIONS.map((app) => (
-                  <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>
-                    {app.label}を開く ↗
-                  </button>
-                ))}
-              </div>
-              <div className="creator-image-prompt-meta">
-                <small>推奨ファイル名: {item.suggestedFilename}</small>
-                <small>alt候補: {item.altText}</small>
-              </div>
-            </article>
-          ))}
-          <p className="beginner-help">挿絵プロンプトは本文中の「&lt;!-- IMAGE:01 --&gt;」などの差し込み位置と周辺内容を優先して作成します。画像生成後は端末へ保存し、記事へ投稿する際に該当位置へ挿入してください。</p>
+          <article className="creator-image-prompt-card">
+            <div className="creator-image-prompt-title">
+              <strong>まとめて画像作成プロンプト</strong>
+              <span>{imagePrompts.length}枚分</span>
+            </div>
+            <textarea className="prompt-area large" readOnly value={combinedImagePrompt} />
+            <div className="openai-prompt-actions">
+              <button className="secondary-action" type="button" onClick={() => copyText(combinedImagePrompt, setMessage)}>まとめて画像プロンプトをコピー</button>
+              {AI_LAUNCH_OPTIONS.map((app) => (
+                <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>
+                  {app.label}を開く ↗
+                </button>
+              ))}
+            </div>
+            <div className="creator-image-prompt-meta">
+              {imagePrompts.map((item) => (
+                <small key={item.kind + "-" + item.order}>
+                  {item.kind === "cover" ? "アイキャッチ" : "挿絵 " + item.order}
+                  {item.insertionMarker ? " / <!-- " + item.insertionMarker + " -->" : ""}
+                  {" / " + item.suggestedFilename}
+                </small>
+              ))}
+            </div>
+          </article>
+          <p className="beginner-help">1枚のコラージュではなく、アイキャッチ→挿絵1→挿絵2…を別画像として順番に作るようプロンプト内で指定しています。挿絵は本文の差し込み位置と周辺内容を参照します。</p>
         </section>
-      )}
+      )}      )}
     </div>
   );
 }
