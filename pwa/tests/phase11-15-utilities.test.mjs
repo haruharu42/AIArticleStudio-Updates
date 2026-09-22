@@ -34,7 +34,11 @@ test("paid article pricing stays compatible with positive-price validation", asy
   assert.match(api, /有料記事は1以上の整数価格を設定してください/);
   assert.match(page, /const setArticleType = \(value: ArticleType\)/);
   assert.match(page, /value === "free"\s*\? null/);
-  assert.match(stepUi, /type="number" min=\{1\} value=\{draft\.price \?\? 1\}/);
+  assert.match(stepUi, /PAID_ARTICLE_PRICE_OPTIONS/);
+  assert.match(stepUi, /paidArticlePriceSelectionValue/);
+  assert.match(stepUi, /<option value="custom">自由入力<\/option>/);
+  assert.match(stepUi, /type="number" min=\{1\} step=\{1\} value=\{draft\.price \?\? 980\}/);
+  assert.match(page, /current\.price : 980/);
   assert.match(migration, /articles_paid_price_positive_check/);
   assert.match(migration, /price is not null and price > 0/);
 });
