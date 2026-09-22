@@ -114,6 +114,10 @@ test("admin development prompt builder is hierarchical, protected, and copy-read
   assert.match(page, /2\. 分野/);
   assert.match(page, /3\. 対象画面・機能/);
   assert.match(page, /4\. 詳細箇所/);
+  assert.match(page, /AdminSelectWithCustom/);
+  assert.match(page, /一覧にない画面・機能を入力/);
+  assert.match(page, /一覧にない詳細箇所を入力/);
+  assert.match(page, /if \(state\.kind === "loading"\) return null/);
   assert.match(page, /5\. 依頼内容 \*/);
   assert.match(page, /プロンプトをコピー/);
   assert.match(page, /コピーしてChatGPTを開く/);
