@@ -4,29 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { signOutCurrentBrowser } from "@/lib/auth-session";
 import {
   authMessage,
-  loadAccessState,
   PWA_PRODUCT_CODE,
   type AccessState,
   type AasProfile,
 } from "@/lib/phase6-access";
-import {
-  getSupabaseClient,
-  PublicConfigurationError,
-  publicLinks,
-} from "@/lib/supabase";
+import { publicLinks } from "@/lib/supabase";
 import { Phase7Library } from "@/components/phase7-library";
 
 type AuthMode = "login" | "register" | "reset" | "recovery";
-type Screen =
-  | { kind: "loading" }
-  | { kind: "auth" }
-  | { kind: "access"; value: Exclude<AccessState, { kind: "signed_out" }> }
-  | { kind: "configuration_error"; message: string }
-  | { kind: "error"; message: string };
-
 type InstallPrompt = Event & {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
@@ -518,31 +507,15 @@ function FeatureCard({ mark, title, description, ready = false }: { mark: string
   return <article className={ready ? "feature-card ready" : "feature-card"}><span>{mark}</span><div><h3>{title}</h3><p>{description}</p></div><b>{ready ? "利用可能" : "準備中"}</b></article>;
 }
 
-async function resolveAccess(
-  client: SupabaseClient,
-  setScreen: (next: Screen) => void,
-): Promise<void> {
-  setScreen({ kind: "loading" });
-  try {
-    const access = await loadAccessState(client);
-    if (access.kind === "signed_out") setScreen({ kind: "auth" });
-    else setScreen({ kind: "access", value: access });
-  } catch (error) {
-    setScreen({ kind: "error", message: authMessage(error) });
-  }
-}
-
 export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Promise<void> }) {
   const recoveryRef = useRef(false);
-  const [client, setClient] = useState<SupabaseClient | null>(null);
-  const [screen, setScreen] = useState<Screen>({ kind: "loading" });
+  const { state, client, refresh: refreshAccess } = useSharedAccessState();
   const [authMode, setAuthMode] = useState<AuthMode>("login");
 
   const refresh = useCallback(async () => {
-    if (!client) return;
     recoveryRef.current = false;
-    await resolveAccess(client, setScreen);
-  }, [client]);
+    await refreshAccess();
+  }, [refreshAccess]);
 
   const logout = useCallback(async () => {
     if (!client) return;
@@ -551,98 +524,72 @@ export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Prom
   }, [client]);
 
   useEffect(() => {
-    let active = true;
-    let authClient: SupabaseClient;
-    try {
-      authClient = getSupabaseClient();
-    } catch (error) {
-      const message =
-        error instanceof PublicConfigurationError
-          ? error.message
-          : "PWAの初期化に失敗しました。";
-      queueMicrotask(() => {
-        if (active) setScreen({ kind: "configuration_error", message });
-      });
-      return;
-    }
-
     recoveryRef.current =
       new URLSearchParams(window.location.search).get("mode") === "recovery";
-    queueMicrotask(() => {
-      if (!active) return;
-      setClient(authClient);
-      if (recoveryRef.current) {
-        setAuthMode("recovery");
-        setScreen({ kind: "auth" });
-      } else {
-        void resolveAccess(authClient, setScreen);
-      }
-    });
-
-    const { data } = authClient.auth.onAuthStateChange((event, session) => {
-      if (!active) return;
-      if (event === "SIGNED_OUT" || !session) {
-        setAuthMode("login");
-        setScreen({ kind: "auth" });
-        return;
-      }
-      if (event === "PASSWORD_RECOVERY" || recoveryRef.current) {
-        recoveryRef.current = true;
-        setAuthMode("recovery");
-        setScreen({ kind: "auth" });
-        return;
-      }
-      window.setTimeout(() => void resolveAccess(authClient, setScreen), 0);
-    });
-
-    const registerServiceWorker = () =>
-      void navigator.serviceWorker.register("/sw.js");
-    if ("serviceWorker" in navigator) {
-      if (document.readyState === "complete") registerServiceWorker();
-      else window.addEventListener("load", registerServiceWorker, { once: true });
+    if (recoveryRef.current) {
+      queueMicrotask(() => setAuthMode("recovery"));
     }
-
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-      window.removeEventListener("load", registerServiceWorker);
-    };
   }, []);
 
   useEffect(() => {
-    if (screen.kind === "access" && screen.value.kind === "ready" && onAccessReady) {
+    if (!client) return;
+    const { data } = client.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        recoveryRef.current = true;
+        setAuthMode("recovery");
+      } else if (event === "SIGNED_OUT") {
+        recoveryRef.current = false;
+        setAuthMode("login");
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, [client]);
+
+  useEffect(() => {
+    const registerServiceWorker = () =>
+      void navigator.serviceWorker.register("/sw.js");
+    if (!("serviceWorker" in navigator)) return;
+    if (document.readyState === "complete") registerServiceWorker();
+    else window.addEventListener("load", registerServiceWorker, { once: true });
+    return () => window.removeEventListener("load", registerServiceWorker);
+  }, []);
+
+  useEffect(() => {
+    if (state.kind === "ready" && onAccessReady) {
       void onAccessReady();
     }
-  }, [onAccessReady, screen]);
+  }, [onAccessReady, state.kind]);
 
-  if (screen.kind === "loading") return null;
+  if (recoveryRef.current && client) {
+    return <AuthScreen client={client} mode="recovery" setMode={setAuthMode} refresh={refresh} />;
+  }
 
-  if (screen.kind === "configuration_error" || screen.kind === "error") {
+  if (state.kind === "loading") return null;
+
+  if (state.kind === "unavailable" || !client) {
     return (
       <main className="status-page">
         <section className="status-card">
           <Brand compact />
           <span className="status-symbol">!</span>
           <p className="eyebrow">PWA ACCESS</p>
-          <h1>{screen.kind === "configuration_error" ? "公開設定が必要です" : "接続を確認できません"}</h1>
-          <p>{screen.message}</p>
-          {screen.kind === "error" && <button className="primary-action" type="button" onClick={() => void refresh()}>再試行</button>}
+          <h1>接続を確認できません</h1>
+          <p>AASへ接続できませんでした。通信状態と公開設定を確認してください。</p>
+          <button className="primary-action" type="button" onClick={() => void refresh()}>再試行</button>
         </section>
       </main>
     );
   }
 
-  if (!client) return null;
-
-  if (screen.kind === "auth") {
+  if (state.kind === "signed_out") {
     return <AuthScreen client={client} mode={authMode} setMode={setAuthMode} refresh={refresh} />;
   }
 
-  if (screen.value.kind !== "ready") {
-    return <AccessIssue value={screen.value} onRetry={refresh} onLogout={logout} />;
+  if (state.kind !== "ready") {
+    return <AccessIssue value={state} onRetry={refresh} onLogout={logout} />;
   }
 
-  if (onAccessReady) return <Spinner label="ホームを準備しています…" />;
+  if (onAccessReady) return null;
 
-  return <Dashboard client={client} profile={screen.value.profile} onRetry={refresh} onLogout={logout} />;
+  return <Dashboard client={client} profile={state.profile} onRetry={refresh} onLogout={logout} />;
 }
