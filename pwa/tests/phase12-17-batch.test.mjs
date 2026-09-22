@@ -46,6 +46,8 @@ test("Phase 13 builds cover and inline prompt plans and stores them in the artic
   assert.match(page, /挿絵/);
   assert.match(page, /IMAGE_STYLE_OPTIONS/);
   assert.match(page, /画像の画風/);
+  assert.match(page, /useSharedAccessState/);
+  assert.doesNotMatch(page, /auth\.getUser\(\)|\.from\("profiles"\)/);
   assert.match(route, /Phase13ImagePromptPage/);
 });
 
@@ -60,6 +62,8 @@ test("Phase 14 converts owned article content into X, Instagram and Threads prom
   assert.match(page, /listCloudArticles/);
   assert.match(page, /getCloudArticleDetail/);
   assert.match(page, /buildSocialPrompt/);
+  assert.match(page, /useSharedAccessState/);
+  assert.doesNotMatch(page, /auth\.getUser\(\)|\.from\("profiles"\)/);
   assert.match(route, /Phase14SnsPage/);
   assert.doesNotMatch(`${api}\n${page}`, /sb_secret_|service[_-]?role/i);
 });
