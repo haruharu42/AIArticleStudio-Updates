@@ -46,14 +46,13 @@ export function CreateAiSetup() {
         const writingProfile = await loadWritingProfile(client, accessState.profile.id);
         if (!active) return;
 
-        // Keep the saved AI profile active while resuming or reopening article creation.
-        // Once the user has saved an AI preference, tab/app switches must not send
-        // them back through the setup gate. In-progress wizard data is an additional
-        // resume signal for older/default profiles.
+        // Every new article starts by confirming the AI/provider plan so the prompt
+        // matches the AI the user will actually use. Resume flows must not interrupt
+        // in-progress work, so only an existing wizard draft bypasses this first step.
         setRuntimeWritingProfile(writingProfile);
         const wizardProgress = loadArticleWizardProgress(accessState.profile.id);
         setState({ kind: "setup", profile: writingProfile });
-        if (wizardProgress || writingProfile.updatedAt) setConfirmed(true);
+        setConfirmed(Boolean(wizardProgress));
       } catch (error) {
         if (active) {
           setState({
@@ -135,7 +134,7 @@ export function CreateAiSetup() {
         <div>
           <p className="eyebrow">AI SETUP</p>
           <h1>使用するAIを選びます</h1>
-          <p>この確認は初回または設定変更時だけです。保存後はタブやアプリを切り替えても記事作成の進行画面へ直接戻ります。</p>
+          <p>新しい記事を作る最初に、今回使うAIと無料版・有料版を確認します。途中作業を復元する場合は、この確認を飛ばして同じ工程へ戻ります。</p>
         </div>
         <Link className="route-back" href="/">← ホーム</Link>
       </header>
@@ -168,7 +167,7 @@ export function CreateAiSetup() {
           <span className="ai-setup-number">2</span>
           <div>
             <h2>利用プラン</h2>
-            <p>モデル名を固定せず、無料版・有料版それぞれで扱いやすい指示量に調整します。</p>
+            <p>モデル名は固定せず、無料版は重要条件を優先した簡潔な指示、有料版は構成・推敲・整合性確認まで含む詳細な指示へ調整します。</p>
           </div>
         </div>
         <div className="ai-plan-grid" role="radiogroup" aria-label="利用プラン">
