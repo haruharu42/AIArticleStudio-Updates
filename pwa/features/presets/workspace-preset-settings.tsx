@@ -11,7 +11,6 @@ import {
 } from "@/features/presets/workspace-presets";
 
 const FEATURE_SWITCHES = [
-  { key: "applyArticle", label: "記事作成", detail: "記事条件・タイトル・本文プロンプト" },
   { key: "applyImages", label: "画像計画", detail: "アイキャッチ・挿絵・画像プロンプト" },
   { key: "applySns", label: "SNS", detail: "SNS投稿・再利用・管理者プロモーション" },
   { key: "applyNote", label: "note運営", detail: "プロフィール・運営計画・月間スケジュール" },
@@ -75,7 +74,7 @@ export function WorkspacePresetSettings() {
         <div>
           <p className="eyebrow">SHARED PRESET</p>
           <h3>全機能共通プリセット</h3>
-          <p>ここで1つ選ぶと、記事・画像・SNS・note運営・シリーズなどのAI生成へ同じ運営方針を渡します。画面で個別に指定した条件は常にこちらより優先します。</p>
+          <p>ここでは画像・SNS・note運営・シリーズなどの共通方針をまとめます。記事作成のジャンルは下の投稿アカウントプリセット、サブジャンル・年齢・性別・文字数・価格・タグは記事ごとの7工程で設定します。</p>
         </div>
         <span>{activePreset.badge}</span>
       </div>
@@ -99,11 +98,8 @@ export function WorkspacePresetSettings() {
       </div>
 
       <section className="workspace-preset-preview" aria-label="プリセット影響プレビュー">
-        <div><strong>現在のプリセットで変わる内容</strong><small>保存前に影響範囲を確認できます。</small></div>
+        <div><strong>現在の共通プリセットで変わる内容</strong><small>記事ごとの条件はここでは固定しません。</small></div>
         <ul>
-          {activePreset.article.publicationTarget && <li>掲載先の基準: {activePreset.article.publicationTarget}</li>}
-          {activePreset.article.genre && <li>記事ジャンルの基準: {activePreset.article.genre}</li>}
-          {activePreset.article.targetLength && <li>記事文字数の基準: 約{activePreset.article.targetLength.toLocaleString()}文字</li>}
           <li>画像: アイキャッチ {activePreset.images.coverEnabled === false ? "OFF" : "ON"} / 挿絵 {activePreset.images.inlineEnabled ? (activePreset.images.inlineCount ?? 2) + "枚" : "OFF"}</li>
           <li>SNS: X 約{activePreset.social.targetCharacters.x}文字 / Threads 約{activePreset.social.targetCharacters.threads}文字</li>
           <li>シリーズ記事数の基準: {activePreset.workflow.defaultSeriesCount}記事</li>
