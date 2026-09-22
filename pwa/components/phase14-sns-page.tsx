@@ -141,6 +141,8 @@ export function Phase14SnsPage() {
     catch { setMessage("自動コピーできません。テキスト欄からコピーしてください。"); }
   };
 
+  if (accessState.kind === "loading") return null;
+
   if (accessState.kind !== "ready" || !client) return (
     <main className="standalone-page"><section className="standalone-card">
       <p className="eyebrow">SNS CONTENT</p><h1>SNS投稿作成</h1>
