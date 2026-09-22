@@ -70,9 +70,7 @@ export function FreeTrialFeatureGate({ feature, children }: { feature: TrialFeat
     );
   }
 
-  if (!status) {
-    return <main className="standalone-page"><section className="standalone-card"><p className="eyebrow">FREE TRIAL</p><h1>{LABELS[feature]}</h1><p className="route-notice">利用回数を確認しています…</p></section></main>;
-  }
+  if (!status) return null;
 
   if (status.trialStatus !== "active") {
     return (
