@@ -26,6 +26,8 @@ test("admin security route is protected by shared admin layout and supports back
   assert.match(page, /auth\.mfa\.unenroll\(/);
   assert.match(page, /verifiedFactors\.length <= 1/);
   assert.match(page, /最後のMFA認証器は削除できません/);
+  assert.match(page, /このMFA認証器を削除しますか/);
+  assert.doesNotMatch(page.match(/const verifyEnrollment = async \(\) => \{[\s\S]*?const removeFactor/)?.[0] ?? "", /このMFA認証器を削除しますか/);
   assert.match(page, /主端末とは別/);
 });
 
