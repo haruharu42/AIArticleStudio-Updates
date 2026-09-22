@@ -112,7 +112,8 @@ test("article creator keeps UI, access and pure draft responsibilities separated
   const setup = await read("components/create-ai-setup.tsx");
   const progress = await read("lib/phase11-wizard-progress.ts");
 
-  assert.match(page, /loadCoreAccessState/);
+  assert.match(page, /useSharedAccessState/);
+  assert.doesNotMatch(page, /loadCoreAccessState/);
   assert.match(setup, /loadCoreAccessState/);
   assert.doesNotMatch(`${page}\n${setup}`, /\.from\("profiles"\)|can_access_product/);
   assert.doesNotMatch(page, /aasId/);
