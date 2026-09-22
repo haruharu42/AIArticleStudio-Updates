@@ -305,7 +305,7 @@ export function Phase18BeginnerHome() {
             onBusyChange={setImageBusy}
           />
         </main>
-        <AasReferenceBottomNav active="library" onLibrary={() => openSection("library")} />
+        <AasReferenceBottomNav active="library" onHome={() => openSection("home")} onLibrary={() => openSection("library")} />
       </div>
     );
   }
