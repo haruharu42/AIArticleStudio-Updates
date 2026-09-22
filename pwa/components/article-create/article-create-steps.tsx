@@ -187,6 +187,15 @@ export function ImagePlanStep({
       <p className="eyebrow">STEP 2</p><h2>記事に画像を入れますか？</h2>
       <label className="choice-card"><input type="checkbox" checked={draft.coverEnabled} onChange={(event) => patch("coverEnabled", event.target.checked)} /><span><strong>アイキャッチ画像を作る</strong><small>記事の先頭に表示するメイン画像です。基本はONがおすすめです。</small></span></label>
       <label className="choice-card"><input type="checkbox" checked={draft.inlineEnabled} onChange={(event) => patch("inlineEnabled", event.target.checked)} /><span><strong>挿絵を作る</strong><small>本文の途中に入れる画像です。必要な場合だけONにしてください。</small></span></label>
+      {(draft.coverEnabled || draft.inlineEnabled) && (
+        <label className="route-field image-style-field">
+          <span>画像の画風</span>
+          <select value={draft.imageStyle} onChange={(event) => patch("imageStyle", event.target.value)}>
+            {IMAGE_STYLE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select>
+          <small>アニメ風・漫画風・イラスト風・図解・水彩・写真風などから選べます。「AIおまかせ」は共通プリセットや記事内容から最適化します。</small>
+        </label>
+      )}
       {draft.inlineEnabled && <label className="route-field"><span>挿絵枚数</span><select value={draft.inlineCount} onChange={(event) => patch("inlineCount", Number(event.target.value))}><option value={1}>1枚</option><option value={2}>2枚</option><option value={3}>3枚</option><option value={4}>4枚</option><option value={5}>5枚</option></select></label>}
     </div>
   );
@@ -287,7 +296,7 @@ export function TitleStep({
         <p className="panel-muted">下のプロンプトをChatGPT・Claude・Geminiへ渡すと、タイトル候補を5個作成します。AIの回答5候補をまとめてAASへ貼り付けると、候補ボタンから選択できます。</p>
         <label className="route-field"><span>AI用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
         <div className="openai-prompt-actions">
-          <button className="secondary-action" type="button" onClick={() => copyText(titlePrompt, setMessage)}>タイトルプロンプトをコピー</button>
+          <CopyButton value={titlePrompt} label="タイトルプロンプトをコピー" setMessage={setMessage} />
           {AI_LAUNCH_OPTIONS.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>{app.label}を開く ↗</button>)}
         </div>
         <label className="route-field title-candidate-paste">
@@ -298,6 +307,15 @@ export function TitleStep({
             placeholder={"1. タイトル候補A\n2. タイトル候補B\n3. タイトル候補C\n4. タイトル候補D\n5. タイトル候補E"}
           />
         </label>
+        <button
+          className="secondary-action clipboard-paste-action"
+          type="button"
+          onClick={() => void readClipboardText(setMessage).then((value) => {
+            if (value !== null) setTitleCandidatesText(value.slice(0, 10000));
+          })}
+        >
+          クリップボードから5候補を貼り付け
+        </button>
         {titleCandidates.length > 0 && (
           <div className="title-candidates" aria-label="貼り付けたタイトル候補">
             {titleCandidates.map((title, index) => (
@@ -353,7 +371,7 @@ export function BodyStep({
         {articlePromptReady && <>
           <label className="route-field"><span>AI用完成記事プロンプト</span><textarea className="prompt-area large" readOnly value={articlePrompt} /></label>
           <div className="openai-prompt-actions">
-            <button className="secondary-action" type="button" onClick={() => copyText(articlePrompt, setMessage)}>完成記事プロンプトをコピー</button>
+            <CopyButton value={articlePrompt} label="完成記事プロンプトをコピー" setMessage={setMessage} />
             {AI_LAUNCH_OPTIONS.map((app) => <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>{app.label}を開く ↗</button>)}
           </div>
           <p className="beginner-help">生成後のコピーやAIアプリ起動では追加消費しません。条件を変えて作り直した時だけ次の1回として記録されます。</p>
@@ -415,7 +433,7 @@ export function PreviewStep({
             </div>
             <textarea className="prompt-area large" readOnly value={combinedImagePrompt} />
             <div className="openai-prompt-actions">
-              <button className="secondary-action" type="button" onClick={() => copyText(combinedImagePrompt, setMessage)}>まとめて画像プロンプトをコピー</button>
+              <CopyButton value={combinedImagePrompt} label="まとめて画像プロンプトをコピー" setMessage={setMessage} />
               {AI_LAUNCH_OPTIONS.map((app) => (
                 <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>
                   {app.label}を開く ↗
@@ -485,7 +503,7 @@ export function SaveStep({
         <h3>完成記事を掲載先へコピー</h3>
         <p className="panel-muted">タイトルと本文を分けてコピーします。本文は記事タイトルと画像差し込みマーカーを除き、見出し・太字・引用・リスト等の装飾を保てる形式でコピーします。</p>
         <div className="openai-prompt-actions">
-          <button className="secondary-action" type="button" disabled={!draft.title.trim()} onClick={() => copyText(draft.title, setMessage)}>タイトルをコピー</button>
+          <CopyButton value={draft.title} label="タイトルをコピー" setMessage={setMessage} />
           <button className="primary-action" type="button" disabled={!publicationBody} onClick={() => void copyPublicationBody()}>完成本文を装飾付きコピー</button>
         </div>
         {editorLink
