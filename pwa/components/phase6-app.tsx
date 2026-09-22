@@ -499,7 +499,7 @@ function FeatureCard({ mark, title, description, ready = false }: { mark: string
   return <article className={ready ? "feature-card ready" : "feature-card"}><span>{mark}</span><div><h3>{title}</h3><p>{description}</p></div><b>{ready ? "利用可能" : "準備中"}</b></article>;
 }
 
-export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Promise<void> }) {
+export function Phase7App() {
   const { state, client, refresh: refreshAccess } = useSharedAccessState();
   const [authMode, setAuthMode] = useState<AuthMode>("login");
 
@@ -541,11 +541,6 @@ export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Prom
     return () => window.removeEventListener("load", registerServiceWorker);
   }, []);
 
-  useEffect(() => {
-    if (state.kind === "ready" && onAccessReady) {
-      void onAccessReady();
-    }
-  }, [onAccessReady, state.kind]);
 
   if (authMode === "recovery" && client) {
     return <AuthScreen client={client} mode="recovery" setMode={setAuthMode} refresh={refresh} />;
@@ -576,7 +571,6 @@ export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Prom
     return <AccessIssue value={state} onRetry={refresh} onLogout={logout} />;
   }
 
-  if (onAccessReady) return null;
 
   return <Dashboard client={client} profile={state.profile} onRetry={refresh} onLogout={logout} />;
 }
