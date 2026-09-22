@@ -41,7 +41,7 @@ import {
   setRuntimePlatformAccountDesigns,
   type AccountDesignPlatform,
   type PlatformAccountDesign,
-} from "@/lib/platform-account-design";
+} from "@/features/account-design";
 import { getSupabaseClient } from "@/lib/supabase";
 
 type Gate =
