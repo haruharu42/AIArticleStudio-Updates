@@ -347,8 +347,6 @@ export function Phase11CreatePage() {
         <a className="reference-help-link" href="/manual">? ヘルプ</a>
       </header>
 
-      <ActiveWorkspacePresetBadge feature="article" />
-
       <ol className="wizard-steps" aria-label="記事作成の進行状況">
         {ARTICLE_CREATE_STEPS.map((label, index) => (
           <li
