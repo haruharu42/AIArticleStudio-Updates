@@ -136,7 +136,9 @@ test("active admins keep admin access without changing the shared five-item mobi
   const settings = await read("components/pwa-settings-page.tsx");
   const layout = await read("app/layout.tsx");
   assert.match(topbar, /pathname !== "\/"/);
-  assert.match(topbar, /data\.role === "admin"/);
+  assert.match(topbar, /useSharedAccessState\(\)/);
+  assert.match(topbar, /state\.profile\.role === "admin"/);
+  assert.match(topbar, /state\.profile\.status === "active"/);
   assert.match(topbar, /管理ダッシュボード/);
   assert.match(topbar, /ADMIN_HOME_SHORTCUT_IDS/);
   assert.match(sections, /販売・プロモーション/);
