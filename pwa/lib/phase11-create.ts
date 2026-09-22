@@ -126,7 +126,7 @@ export function suggestLocalTitles(
 
 export function parseTitleCandidates(value: string): string[] {
   const candidates: string[] = [];
-  const lines = value.replace(/\`\`\`[a-z0-9_-]*\s*/gi, "").replace(/\`\`\`/g, "").split(/\r?\n/);
+  const lines = value.replace(/```[a-z0-9_-]*\s*/gi, "").replace(/```/g, "").split(/\r?\n/);
   for (const rawLine of lines) {
     let line = rawLine.trim();
     if (!line) continue;
