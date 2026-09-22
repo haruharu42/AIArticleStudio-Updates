@@ -77,6 +77,7 @@ test("member routes reuse root access state and keep access verification invisib
     read("components/note-operations-page.tsx"),
     read("components/platform-account-design-page.tsx"),
     read("components/phase15-member-gate.tsx"),
+    read("components/article-export-page.tsx"),
   ]);
 
   for (const source of sources) {
@@ -95,4 +96,20 @@ test("member routes reuse root access state and keep access verification invisib
   assert.match(tools, /import Link from "next\/link"/);
   assert.match(tools, /<Link className="route-back" href="\/"/);
   assert.doesNotMatch(tools, /<a className="route-back" href="\/"/);
+});
+
+
+test("persistent navigation and article export do not start their own auth session checks", async () => {
+  const [nav, exportPage] = await Promise.all([
+    read("components/persistent-mobile-nav.tsx"),
+    read("components/article-export-page.tsx"),
+  ]);
+
+  assert.match(nav, /useSharedAccessState\(\)/);
+  assert.doesNotMatch(nav, /getSupabaseClient|auth\.getSession|onAuthStateChange/);
+
+  assert.match(exportPage, /useSharedAccessState\(\)/);
+  assert.doesNotMatch(exportPage, /getSupabaseClient|auth\.getUser\(\)|\.from\("profiles"\)/);
+  assert.doesNotMatch(exportPage, /記事ライブラリを確認しています/);
+  assert.match(exportPage, /<Link className="route-back" href="\/tools"/);
 });
