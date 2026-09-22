@@ -113,12 +113,7 @@ function BeginnerAccessFallback({ unavailable = false }: { unavailable?: boolean
             </div>
             <button type="button" onClick={() => window.location.reload()}>再読み込み</button>
           </section>
-        ) : (
-          <div className="reference-route-loading" role="status" aria-live="polite" aria-label="画面を準備しています">
-            <span aria-hidden="true" />
-            <small>準備中</small>
-          </div>
-        )}
+        ) : null}
       </main>
     </div>
   );
