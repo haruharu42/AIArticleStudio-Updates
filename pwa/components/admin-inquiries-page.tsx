@@ -145,6 +145,13 @@ export function AdminInquiriesPage() {
 
   const updateWorkflow = async (status: SupportStatus, priority: SupportPriority) => {
     if (!selected) return;
+    if (
+      status !== selected.status
+      && (status === "resolved" || status === "closed")
+      && !window.confirm(status === "closed"
+        ? "この問い合わせを終了しますか？\n終了後はユーザーへの返信欄が閉じます。"
+        : "この問い合わせを解決済みにしますか？")
+    ) return;
     setBusy(true);
     setMessage("");
     try {
