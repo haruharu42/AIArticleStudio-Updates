@@ -2,6 +2,7 @@ import { buildSuggestedImageFilename } from "@/lib/image-file-names";
 import { buildPlatformAccountPromptContext } from "@/features/account-design";
 import { getRuntimeWorkspacePresetDefinition, workspacePresetAppliesTo } from "@/features/presets/workspace-presets";
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
+import { imageStylePrompt } from "@/lib/phase18-content-options";
 import { buildUserPromptContext, getRuntimeWritingProfile } from "@/lib/user-personalization";
 
 export type ImagePromptPlanInput = {
@@ -16,6 +17,7 @@ export type ImagePromptPlanInput = {
   coverEnabled: boolean;
   inlineEnabled: boolean;
   inlineCount: number;
+  imageStyle: string;
 };
 
 export type ImagePromptItem = {
@@ -38,7 +40,7 @@ const style = [
 ].join("、");
 
 const avoid = [
-  "写真・半写実・3D・水彩・絵本・フラット広告・ベクター表現にしない",
+  "選択した画風と矛盾する別画風を混ぜない",
   "既存作品・特定作家・実在人物の画風や外見を模倣しない",
   "実在ブランドのロゴ・商標・特徴的な商品形状を入れない",
   "記事に根拠のない数字・ランキング・価格・評価を画像内へ書かない",
@@ -91,12 +93,15 @@ function common(input: ImagePromptPlanInput): string {
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "image");
   const accountContext = buildPlatformAccountPromptContext(input.publicationTarget);
+  const articleStyle = imageStylePrompt(input.imageStyle);
   const presetStyle = workspacePresetAppliesTo("images")
     ? getRuntimeWorkspacePresetDefinition().images.styleContext
     : "";
-  const selectedStyle = presetStyle
-    ? `${presetStyle} この記事ではこの共通プリセットの画風指定を既定画風より優先する。`
-    : style;
+  const selectedStyle = articleStyle
+    ? `${articleStyle} この記事で選択した画風を最優先する。`
+    : presetStyle
+      ? `${presetStyle} この記事ではこの共通プリセットの画風指定を既定画風より優先する。`
+      : style;
   const bodyContext = articleBodyContext(input.body);
   return `記事タイトル: ${input.title || "未定"}\n掲載先: ${input.publicationTarget}\nジャンル: ${input.genre || "未指定"}\nサブジャンル: ${input.subgenre || "AIおまかせ"}\n対象読者: ${input.ageGroup || "AIおまかせ"} / ${input.gender || "AIおまかせ"}\n記事テーマ: ${input.theme || input.title || "タイトルから推定"}\n${bodyContext ? `${bodyContext}\n` : ""}画風: ${selectedStyle}。\n禁止・回避: ${avoid}\n\n${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}${accountContext}`;
 }
