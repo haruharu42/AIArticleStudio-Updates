@@ -20,6 +20,7 @@ import {
 
 type SharedMobileBottomNavProps = {
   activeKey?: "home" | MobileNavItemKey | "";
+  onHome?: () => void;
   onLibrary?: () => void;
   className?: string;
 };
@@ -33,6 +34,7 @@ function routeMatches(pathname: string, href: string): boolean {
 
 export function SharedMobileBottomNav({
   activeKey = "",
+  onHome,
   onLibrary,
   className = "",
 }: SharedMobileBottomNavProps) {
@@ -69,10 +71,22 @@ export function SharedMobileBottomNav({
 
   return (
     <nav className={navClass} aria-label="メインナビゲーション">
-      <Link className={homeActive ? "active" : ""} href="/" aria-current={homeActive ? "page" : undefined}>
-        <span aria-hidden="true">⌂</span>
-        ホーム
-      </Link>
+      {onHome ? (
+        <button
+          className={homeActive ? "active" : ""}
+          type="button"
+          aria-current={homeActive ? "page" : undefined}
+          onClick={onHome}
+        >
+          <span aria-hidden="true">⌂</span>
+          ホーム
+        </button>
+      ) : (
+        <Link className={homeActive ? "active" : ""} href="/" aria-current={homeActive ? "page" : undefined}>
+          <span aria-hidden="true">⌂</span>
+          ホーム
+        </Link>
+      )}
 
       {items.map((key) => {
         const item = mobileNavItemFor(key);
