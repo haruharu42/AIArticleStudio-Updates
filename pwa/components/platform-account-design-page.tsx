@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { applyWorkspacePresetToAccountDesign } from "@/features/presets/preset-adapters";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
@@ -35,10 +36,7 @@ import {
   type AccountDesignTrust,
   type PlatformAccountDesign,
 } from "@/features/account-design";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { getSupabaseClient } from "@/lib/supabase";
-
-type PageState = AccessState | { kind: "loading" } | { kind: "unavailable" };
 
 function platformLabel(platform: AccountDesignPlatform): string {
   return ACCOUNT_DESIGN_PLATFORMS.find((item) => item.value === platform)?.label ?? platform;
@@ -76,8 +74,9 @@ function clearLocalAccountDesignDraft(userId: string, platform: AccountDesignPla
 }
 
 export function PlatformAccountDesignPage() {
+  const { state, client } = useSharedAccessState();
   const { preference: workspacePreference } = useWorkspacePreset();
-  const [state, setState] = useState<PageState>({ kind: "loading" });
+  const [loadError, setLoadError] = useState("");
   const [designs, setDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
   const [platform, setPlatform] = useState<AccountDesignPlatform>(() => initialAccountDesignPlatform());
   const [busy, setBusy] = useState(false);
@@ -85,19 +84,18 @@ export function PlatformAccountDesignPage() {
   const [dirtyPlatforms, setDirtyPlatforms] = useState<AccountDesignPlatform[]>([]);
 
   useEffect(() => {
+    if (state.kind !== "ready" || !client) return;
     let active = true;
+    queueMicrotask(() => {
+      if (active) setLoadError("");
+    });
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const access = await loadAccessState(client);
-        if (!active) return;
-        setState(access);
-        if (access.kind !== "ready") return;
-        const next = await loadPlatformAccountDesigns(client, access.profile.id);
+        const next = await loadPlatformAccountDesigns(client, state.profile.id);
         const restored = { ...next };
         const dirty: AccountDesignPlatform[] = [];
         for (const item of ACCOUNT_DESIGN_PLATFORMS) {
-          const key = accountDesignDraftStorageKey(access.profile.id, item.value);
+          const key = accountDesignDraftStorageKey(state.profile.id, item.value);
           let raw: string | null = null;
           try {
             raw = window.localStorage.getItem(key);
@@ -109,20 +107,20 @@ export function PlatformAccountDesignPage() {
             restored[item.value] = localDraft;
             dirty.push(item.value);
           } else if (raw) {
-            clearLocalAccountDesignDraft(access.profile.id, item.value);
+            clearLocalAccountDesignDraft(state.profile.id, item.value);
           }
         }
         if (active) {
           setDesigns(restored);
           setDirtyPlatforms(dirty);
         }
-      } catch {
-        if (active) setState({ kind: "unavailable" });
+      } catch (error) {
+        if (active) setLoadError(error instanceof Error ? error.message : "アカウント設計を読み込めませんでした。");
       }
     };
     void boot();
     return () => { active = false; };
-  }, []);
+  }, [client, state]);
 
   const design = designs?.[platform] ?? null;
   const labels = useMemo(() => design ? accountDesignLabels(design) : null, [design]);
@@ -179,20 +177,20 @@ export function PlatformAccountDesignPage() {
     }
   };
 
-  if (state.kind !== "ready" || !designs || !design || !labels) {
+  if (state.kind !== "ready" || !client || !designs || !design || !labels) {
     return (
       <div className="account-design-shell">
         <AasReferenceHeader />
         <main className="account-design-gate">
           <p className="eyebrow">ACCOUNT DESIGN</p>
           <h1>note / Tips / Brain アカウント設計</h1>
-          {state.kind === "loading" && <p>アカウントと保存データを確認しています…</p>}
           {state.kind === "unavailable" && <p>アカウント設計を読み込めませんでした。通信状態を確認してください。</p>}
           {state.kind === "signed_out" && <p>先にログインしてください。</p>}
           {state.kind === "pending" && <p>アカウント承認後に利用できます。</p>}
           {state.kind === "suspended" && <p>現在このアカウントは一時停止中です。</p>}
           {state.kind === "disabled" && <p>現在このアカウントでは利用できません。</p>}
           {state.kind === "entitlement_denied" && <p>PWA利用権を確認できませんでした。</p>}
+          {state.kind === "ready" && loadError && <p>{loadError}</p>}
           <Link href="/">← ホームへ戻る</Link>
         </main>
       </div>
