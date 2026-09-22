@@ -71,8 +71,23 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
       try {
         const next = await loadAccessStateOnce(activeClient);
         if (active) {
-          if (mode === "strict") lastBackgroundCheckAt = Date.now();
-          setState(next);
+          if (mode === "strict") {
+            lastBackgroundCheckAt = Date.now();
+            setState(next);
+            return;
+          }
+          setState((current) => {
+            if (
+              current.kind === "ready" &&
+              next.kind === "ready" &&
+              current.profile.id === next.profile.id &&
+              current.profile.role === next.profile.role &&
+              current.profile.status === next.profile.status
+            ) {
+              return current;
+            }
+            return next;
+          });
         }
       } catch {
         if (!active) return;
