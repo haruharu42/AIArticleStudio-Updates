@@ -6,6 +6,12 @@ import { useMemo, useState } from "react";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { redeemPwaInvite } from "@/lib/phase9-invite";
 
+type State =
+  | { kind: "loading" }
+  | { kind: "signed_out" }
+  | { kind: "ready"; aasId: string; status: string }
+  | { kind: "error"; message: string };
+
 export function Phase9InvitePage() {
   const { state: accessState, client, refresh } = useSharedAccessState();
   const [code, setCode] = useState("");
@@ -13,23 +19,25 @@ export function Phase9InvitePage() {
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
 
-
-  const profile = useMemo(() => {
-    if (
-      accessState.kind === "ready" ||
-      accessState.kind === "entitlement_denied" ||
-      accessState.kind === "pending"
-    ) {
-      return accessState.profile.role === "user" &&
-        (accessState.profile.status === "pending" || accessState.profile.status === "active")
-        ? accessState.profile
-        : null;
+  const state = useMemo<State>(() => {
+    if (accessState.kind === "loading") return { kind: "loading" };
+    if (accessState.kind === "signed_out") return { kind: "signed_out" };
+    if (accessState.kind === "unavailable") {
+      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
     }
-    return null;
+
+    const profile = accessState.profile;
+    if (profile.role !== "user") {
+      return { kind: "error", message: "招待コードは一般ユーザーアカウントで利用してください。" };
+    }
+    if (profile.status !== "pending" && profile.status !== "active") {
+      return { kind: "error", message: "現在のアカウント状態では招待コードを利用できません。" };
+    }
+    return { kind: "ready", aasId: profile.aas_user_id, status: profile.status };
   }, [accessState]);
 
   const redeem = async () => {
-    if (!client || !profile) return;
+    if (!client) return;
     setBusy(true);
     setMessage("");
     setSuccess(false);
@@ -57,20 +65,15 @@ export function Phase9InvitePage() {
         <h1>PWA招待コード</h1>
         <p className="standalone-lead">購入・招待で受け取ったコードを、このAASアカウントへ登録します。Windows利用権とは別に管理されます。</p>
 
-        {accessState.kind === "signed_out" && (
+        {state.kind === "signed_out" && (
           <div className="route-notice error">先にホームからログインしてください。</div>
         )}
-        {accessState.kind === "unavailable" && (
-          <div className="route-notice error">AASへ接続できませんでした。通信状態を確認してください。</div>
-        )}
-        {accessState.kind !== "loading" && accessState.kind !== "signed_out" && accessState.kind !== "unavailable" && !profile && (
-          <div className="route-notice error">現在のアカウント状態では招待コードを利用できません。</div>
-        )}
-        {profile && (
+        {state.kind === "error" && <div className="route-notice error">{state.message}</div>}
+        {state.kind === "ready" && (
           <>
             <dl className="route-meta">
-              <div><dt>AAS ID</dt><dd>{profile.aas_user_id}</dd></div>
-              <div><dt>アカウント状態</dt><dd>{profile.status}</dd></div>
+              <div><dt>AAS ID</dt><dd>{state.aasId}</dd></div>
+              <div><dt>アカウント状態</dt><dd>{state.status}</dd></div>
             </dl>
             <label className="route-field">
               <span>招待コード</span>
