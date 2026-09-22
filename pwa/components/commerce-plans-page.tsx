@@ -19,7 +19,6 @@ import {
   planSalesEnabled,
   type SalesSettings,
 } from "@/lib/sales-settings";
-import { getSupabaseClient } from "@/lib/supabase";
 
 export function CommercePlansPage() {
   const { state, client, refresh: refreshAccess } = useSharedAccessState();
