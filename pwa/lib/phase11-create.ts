@@ -124,11 +124,32 @@ export function suggestLocalTitles(
   ];
 }
 
+export function parseTitleCandidates(value: string): string[] {
+  const candidates: string[] = [];
+  const lines = value.replace(/\`\`\`[a-z0-9_-]*\s*/gi, "").replace(/\`\`\`/g, "").split(/\r?\n/);
+  for (const rawLine of lines) {
+    let line = rawLine.trim();
+    if (!line) continue;
+    line = line.replace(/^#{1,6}\s+/, "").trim();
+    if (/^(?:記事)?タイトル候補(?:\s*[（(]?5(?:個|案)[）)]?)?\s*[:：]?$/i.test(line)) continue;
+    line = line.replace(/^\*\*(.+)\*\*$/, "$1").trim();
+    line = line.replace(/^(?:候補\s*)?\d{1,2}\s*[.)、:：-]\s*/, "").trim();
+    line = line.replace(/^[-*•・]\s*/, "").trim();
+    line = line.replace(/^\*\*(.+)\*\*$/, "$1").trim();
+    line = line.replace(/^[\"'「『](.+)[\"'」』]$/, "$1").trim();
+    if (line.length < 2 || line.length > 500 || candidates.includes(line)) continue;
+    candidates.push(line);
+    if (candidates.length >= 5) break;
+  }
+  return candidates;
+}
+
 export function buildTitlePrompt(draft: ArticleCreationDraft, magazinePlan?: MagazinePlanDraft): string {
   const specialization = specializationFor(draft, "title");
-  return `あなたは日本語の編集者です。次の条件で記事タイトル候補を10個作成してください。\n\n【絶対ルール】\n- 実体験・実績・レビューを創作しない。\n- 未確認の価格・在庫・評価・ランキング・統計を断定しない。\n- 競合記事のコピーや近似模倣をしない。\n- 根拠のない成果保証や過度な煽りを使わない。${promptContextBlock("title")}\n\n【条件】\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\n${draft.theme.trim() ? `補足テーマ: ${draft.theme.trim()}\\n` : ""}\n${specialization}${magazinePromptContext(magazinePlan)}\n\n${buildPlatformAccountPromptContext(draft.publicationTarget)}
+  return `あなたは日本語の編集者です。次の条件で記事タイトル候補を5個作成してください。\n\n【絶対ルール】\n- 実体験・実績・レビューを創作しない。\n- 未確認の価格・在庫・評価・ランキング・統計を断定しない。\n- 競合記事のコピーや近似模倣をしない。\n- 根拠のない成果保証や過度な煽りを使わない。${promptContextBlock("title")}\n\n【条件】\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\n${draft.theme.trim() ? `補足テーマ: ${draft.theme.trim()}\\n` : ""}\n${specialization}${magazinePromptContext(magazinePlan)}\n\n${buildPlatformAccountPromptContext(draft.publicationTarget)}
 
-一目で内容が分かり、誇張せず、読者がクリック後の内容を想像できるタイトルにしてください。タイトルだけを番号付きで出力してください。`;
+一目で内容が分かり、誇張せず、読者がクリック後の内容を想像できるタイトルにしてください。
+必ず5個だけ、1〜5の番号付きで1行に1候補を出力してください。前置き・解説・まとめは不要です。`;
 }
 
 export function buildArticlePrompt(draft: ArticleCreationDraft, magazinePlan?: MagazinePlanDraft): string {
@@ -262,6 +283,7 @@ export async function createArticleFromWizard(
     subgenre: draft.subgenre,
     ageGroup: draft.ageGroup,
     gender: draft.gender,
+    body: draft.body,
     coverEnabled: draft.coverEnabled,
     inlineEnabled: draft.inlineEnabled,
     inlineCount: draft.inlineCount,
