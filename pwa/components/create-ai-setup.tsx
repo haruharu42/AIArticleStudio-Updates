@@ -48,14 +48,14 @@ export function CreateAiSetup() {
         const writingProfile = await loadWritingProfile(client, access.user.id);
         if (!active) return;
 
-        // Keep the saved AI profile active while resuming an in-progress article.
-        // The article wizard itself is already persisted in localStorage; if that
-        // progress exists, skip the setup gate so returning from ChatGPT/Claude/
-        // Gemini lands directly on the saved wizard step.
+        // Keep the saved AI profile active while resuming or reopening article creation.
+        // Once the user has saved an AI preference, tab/app switches must not send
+        // them back through the setup gate. In-progress wizard data is an additional
+        // resume signal for older/default profiles.
         setRuntimeWritingProfile(writingProfile);
         const wizardProgress = loadArticleWizardProgress(access.user.id);
         setState({ kind: "setup", profile: writingProfile });
-        if (wizardProgress) setConfirmed(true);
+        if (wizardProgress || writingProfile.updatedAt) setConfirmed(true);
       } catch (error) {
         if (active) {
           setState({
@@ -145,8 +145,8 @@ export function CreateAiSetup() {
       <header className="creator-head ai-setup-head">
         <div>
           <p className="eyebrow">AI SETUP</p>
-          <h1>最初に使用するAIを選びます</h1>
-          <p>選択したAIと利用プランに合わせて、AASが記事プロンプトの指示構造を調整します。</p>
+          <h1>使用するAIを選びます</h1>
+          <p>この確認は初回または設定変更時だけです。保存後はタブやアプリを切り替えても記事作成の進行画面へ直接戻ります。</p>
         </div>
         <Link className="route-back" href="/">← ホーム</Link>
       </header>
