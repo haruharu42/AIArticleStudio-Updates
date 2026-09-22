@@ -206,6 +206,8 @@ export function ArticleExportPage() {
     } finally { setBulkBusy(false); }
   };
 
+  if (accessState.kind === "loading") return null;
+
   if (accessState.kind !== "ready" || !client) {
     return (
       <main className="standalone-page"><section className="standalone-card">
