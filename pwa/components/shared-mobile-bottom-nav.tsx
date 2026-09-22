@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
+
 import {
   DEFAULT_MOBILE_NAV_ITEMS,
   MOBILE_NAV_ITEMS_EVENT,
@@ -15,7 +17,6 @@ import {
   type MobileNavItemKey,
   type MobileNavItemsPreferenceEventDetail,
 } from "@/lib/mobile-nav-preference";
-import { getSupabaseClient } from "@/lib/supabase";
 
 type SharedMobileBottomNavProps = {
   activeKey?: "home" | MobileNavItemKey | "";
@@ -36,57 +37,10 @@ export function SharedMobileBottomNav({
   className = "",
 }: SharedMobileBottomNavProps) {
   const pathname = usePathname();
-  const [userId, setUserId] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { state } = useSharedAccessState();
+  const userId = state.kind === "ready" ? state.profile.id : "";
+  const isAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
   const [items, setItems] = useState<MobileNavItemKey[]>([...DEFAULT_MOBILE_NAV_ITEMS]);
-
-  useEffect(() => {
-    let active = true;
-    let client: ReturnType<typeof getSupabaseClient>;
-    try {
-      client = getSupabaseClient();
-    } catch {
-      return;
-    }
-
-    const syncAccount = async (session: Awaited<ReturnType<typeof client.auth.getSession>>["data"]["session"]) => {
-      if (!active) return;
-      const nextUserId = session?.user.id ?? "";
-      setUserId(nextUserId);
-      setIsAdmin(false);
-      if (!nextUserId) return;
-
-      try {
-        const { data } = await client
-          .from("profiles")
-          .select("id,role,status")
-          .eq("id", nextUserId)
-          .single();
-        if (active) {
-          setIsAdmin(Boolean(
-            data &&
-            data.id === nextUserId &&
-            data.role === "admin" &&
-            data.status === "active"
-          ));
-        }
-      } catch {
-        if (active) setIsAdmin(false);
-      }
-    };
-
-    void client.auth.getSession().then(({ data }) => syncAccount(data.session));
-    const { data } = client.auth.onAuthStateChange((_event, session) => {
-      window.setTimeout(() => {
-        if (active) void syncAccount(session);
-      }, 0);
-    });
-
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-    };
-  }, []);
 
   useEffect(() => {
     const sync = () => setItems(readMobileNavItems(userId, isAdmin));
