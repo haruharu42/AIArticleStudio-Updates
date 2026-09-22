@@ -154,7 +154,9 @@ export async function createLocalImageZip(entries: readonly LocalZipEntry[]): Pr
   set16(endView, 20, 0);
 
   const bytes = concat([...localParts, ...centralParts, end], localSize + centralSize + end.byteLength);
-  return new Blob([bytes], { type: "application/zip" });
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return new Blob([buffer], { type: "application/zip" });
 }
 
 export function downloadLocalBlob(blob: Blob, filename: string): void {
