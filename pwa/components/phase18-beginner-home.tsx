@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
 import { useSharedAccessState } from "@/components/access-state-provider";
@@ -139,7 +139,7 @@ function MissionRows({ missions }: { missions: CreatorMission[] }) {
 }
 
 export function Phase18BeginnerHome() {
-  const { state, client, refresh } = useSharedAccessState();
+  const { state, client } = useSharedAccessState();
   const [section, setSection] = useState<Section>("home");
   const [imageUnsaved, setImageUnsaved] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
@@ -234,9 +234,6 @@ export function Phase18BeginnerHome() {
     return () => { active = false; };
   }, [client, state]);
 
-  const handleAccessReady = useCallback(() => {
-    void refresh();
-  }, [refresh]);
 
   const quickSubgenres = useMemo(() => subgenreOptionsFor(quickSetup.genre), [quickSetup.genre]);
   const quickCreateHref = useMemo(() => {
@@ -262,7 +259,7 @@ export function Phase18BeginnerHome() {
 
   if (state.kind === "loading") return <BeginnerAccessFallback />;
   if (state.kind === "unavailable") return <BeginnerAccessFallback unavailable />;
-  if (state.kind !== "ready") return <Phase7App onAccessReady={handleAccessReady} />;
+  if (state.kind !== "ready") return <Phase7App />;
   if (!client) return <BeginnerAccessFallback />;
 
   const profile = state.profile;
