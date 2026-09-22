@@ -66,6 +66,35 @@ function normalizeLines(value: string): string {
   return value.replace(/\r\n?/g, "\n").trim();
 }
 
+function normalizedTitleLine(value: string): string {
+  return value
+    .trim()
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/^\*\*(.+)\*\*$/, "$1")
+    .replace(/^["'「『](.+)["'」』]$/, "$1")
+    .trim();
+}
+
+export function stripLeadingArticleTitle(value: string, title: string): string {
+  const normalized = value.replace(/\r\n?/g, "\n").trimStart();
+  const selectedTitle = normalizedTitleLine(title);
+  if (!normalized || !selectedTitle) return normalized;
+
+  const lines = normalized.split("\n");
+  if (normalizedTitleLine(lines[0] ?? "") !== selectedTitle) return normalized;
+
+  lines.shift();
+  while (lines[0]?.trim() === "") lines.shift();
+  return lines.join("\n").trimStart();
+}
+
+export function publicationEditorLink(target: PublicationTarget): string | null {
+  if (target === "note") return "https://note.com/new";
+  if (target === "tips") return "https://tips.jp/";
+  if (target === "brain") return "https://brain-market.com/";
+  return null;
+}
+
 function compactTags(tags: string[]): string[] {
   return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))].slice(0, 50);
 }
