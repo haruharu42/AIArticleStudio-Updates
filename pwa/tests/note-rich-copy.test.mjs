@@ -37,7 +37,7 @@ const safe = true;
 
 test('note rich renderer preserves supported structural decoration and escapes raw html', () => {
   const html = rich.markdownToNoteHtml(`${markdown}\n\n<script>alert(1)</script>`);
-  assert.match(html, /<h1>大見出し<\/h1>/);
+  assert.match(html, /<h2>大見出し<\/h2>/);
   assert.match(html, /<h2>小見出し<\/h2>/);
   assert.match(html, /<strong>重要<\/strong>/);
   assert.match(html, /<a href="https:\/\/example\.com">公式<\/a>/);
@@ -64,6 +64,8 @@ test('clipboard implementation writes html and plain text with a browser fallbac
   assert.match(richSource, /"text\/html"/);
   assert.match(richSource, /"text\/plain"/);
   assert.match(richSource, /navigator\.clipboard\.write/);
+  assert.match(richSource, /catch \{/);
+  assert.match(richSource, /fallbackRichCopy\(html\)/);
   assert.match(richSource, /document\.execCommand\("copy"\)/);
 });
 
