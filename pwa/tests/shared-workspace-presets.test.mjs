@@ -59,7 +59,7 @@ test("settings are compact accordion sections and include impact-preview preset 
   assert.match(settings, /useState<SettingsSection \| null>\(null\)/);
   assert.match(settings, /current === id \? null : id/);
 
-  assert.match(control, /現在のプリセットで変わる内容/);
+  assert.match(control, /現在の共通プリセットで変わる内容/);
   assert.match(control, /FEATURE_SWITCHES/);
   assert.doesNotMatch(control, /key: "applyArticle"/);
   assert.match(control, /記事作成のジャンルは下の投稿アカウントプリセット/);
