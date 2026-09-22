@@ -525,8 +525,6 @@ export function PreviewStep({
   onBeforeExternalLaunch: () => void;
   setMessage: MessageSetter;
 }) {
-  const aiLaunchOptions = currentAiLaunchOptions();
-
   return (
     <div className="wizard-pane">
       <p className="eyebrow">STEP 6</p><h2>内容を確認しましょう</h2>
@@ -548,9 +546,9 @@ export function PreviewStep({
             <textarea className="prompt-area large" readOnly value={combinedImagePrompt} />
             <div className="openai-prompt-actions">
               <CopyButton value={combinedImagePrompt} label="まとめて画像プロンプトをコピー" setMessage={setMessage} />
-              {aiLaunchOptions.map((app) => (
+              {AI_LAUNCH_OPTIONS.map((app) => (
                 <button key={app.key} className="openai-launch-action" type="button" onClick={() => { onBeforeExternalLaunch(); launchAiApp(app.key); }}>
-                  選択中の{app.label}を開く ↗
+                  {app.label}を開く ↗
                 </button>
               ))}
             </div>
