@@ -139,6 +139,7 @@ test("desktop navigation can add hide reorder reset and persist items", async ()
   assert.match(shell, /move\(key, 1\)/);
   assert.match(shell, /初期状態に戻す/);
   assert.match(shell, /ホームと設定は常に表示されます/);
+  assert.match(shell, /active=\{active === "settings"\}/);
   assert.match(shell, /writeDesktopNavItems/);
 
   assert.match(css, /@media \(min-width: 900px\)/);
