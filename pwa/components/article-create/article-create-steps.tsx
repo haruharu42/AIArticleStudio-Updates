@@ -17,8 +17,10 @@ import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
   GENRE_OPTIONS,
+  PAID_ARTICLE_PRICE_OPTIONS,
   TARGET_LENGTH_OPTIONS,
   genreSelectionValue,
+  paidArticlePriceSelectionValue,
   subgenreOptionsFor,
   subgenreSelectionValue,
 } from "@/lib/phase18-content-options";
@@ -156,6 +158,7 @@ export function ArticleConditionsStep({
   const genreSelectValue = genreSelectionValue(draft.genre);
   const subgenreSelectValue = subgenreSelectionValue(draft.genre, draft.subgenre);
   const subgenreOptions = subgenreOptionsFor(draft.genre);
+  const priceSelectionValue = paidArticlePriceSelectionValue(draft.price);
 
   return (
     <div className="wizard-pane">
@@ -169,7 +172,35 @@ export function ArticleConditionsStep({
         <label className="route-field"><span>対象年齢</span><select value={draft.ageGroup} onChange={(event) => patch("ageGroup", event.target.value)}>{AGE_GROUP_OPTIONS.map((age) => <option key={age} value={age}>{age}</option>)}</select></label>
         <label className="route-field"><span>対象性別</span><select value={draft.gender} onChange={(event) => patch("gender", event.target.value)}>{GENDER_OPTIONS.map((gender) => <option key={gender} value={gender}>{gender}</option>)}</select></label>
         <label className="route-field"><span>文字数の目安</span><select value={draft.targetLength} onChange={(event) => patch("targetLength", Number(event.target.value))}>{TARGET_LENGTH_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-        {draft.articleType === "paid" && <label className="route-field"><span>価格（円）</span><input type="number" min={1} value={draft.price ?? 1} onChange={(event) => patch("price", Math.max(1, Number(event.target.value) || 1))} /></label>}
+        {draft.articleType === "paid" && (
+          <div className="paid-price-settings">
+            <label className="route-field">
+              <span>価格（円）</span>
+              <select
+                value={priceSelectionValue}
+                onChange={(event) => {
+                  if (event.target.value === "custom") {
+                    if (priceSelectionValue !== "custom") patch("price", draft.price ?? 980);
+                    return;
+                  }
+                  patch("price", Number(event.target.value));
+                }}
+              >
+                {PAID_ARTICLE_PRICE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                <option value="custom">自由入力</option>
+              </select>
+            </label>
+            {priceSelectionValue === "custom" && (
+              <label className="route-field">
+                <span>自由価格（円）</span>
+                <input type="number" min={1} step={1} value={draft.price ?? 980} onChange={(event) => patch("price", Math.max(1, Math.trunc(Number(event.target.value) || 1)))} />
+              </label>
+            )}
+            {draft.publicationTarget === "note" && (
+              <p className="beginner-help paid-price-note">note公式では通常会員100〜50,000円、プレミアム/note proは上限100,000円です。読み物系の売上上位記事平均983円、実用ノウハウ系1,842円を参考に、980円・1,980円付近を選びやすくしています。</p>
+            )}
+          </div>
+        )}
         <label className="choice-card compact"><input type="checkbox" checked={draft.affiliateEnabled} onChange={(event) => patch("affiliateEnabled", event.target.checked)} /><span><strong>アフィリエイトを使う</strong><small>商品・サービス紹介を含む記事の場合にON</small></span></label>
         {draft.magazineEnabled && <div className="magazine-inline-status"><strong>▤ マガジン作成モード</strong><small>STEP 1で選んだマガジン設計を保存時に引き継ぎます。</small></div>}
       </div>
