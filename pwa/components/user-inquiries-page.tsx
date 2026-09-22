@@ -174,6 +174,8 @@ export function UserInquiriesPage() {
     }
   };
 
+  if (state.kind === "loading") return null;
+
   return (
     <main className="creator-page support-center-page">
       <header className="creator-head support-page-head">
