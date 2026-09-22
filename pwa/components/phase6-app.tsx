@@ -38,16 +38,6 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function Spinner({ label }: { label: string }) {
-  return (
-    <div className="center-screen" role="status" aria-live="polite">
-      <Brand />
-      <span className="spinner" aria-hidden="true" />
-      <p>{label}</p>
-    </div>
-  );
-}
-
 function Notice({ children, error = false }: { children: ReactNode; error?: boolean }) {
   return (
     <div className={error ? "notice error" : "notice"} role={error ? "alert" : "status"}>
