@@ -184,7 +184,8 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
 
   assert.match(page, /useSharedAccessState/);
   assert.doesNotMatch(page, /loadCoreAccessState/);
-  assert.match(setup, /loadCoreAccessState/);
+  assert.match(setup, /useSharedAccessState/);
+  assert.doesNotMatch(setup, /loadCoreAccessState|auth\.getUser\(\)|\.from\("profiles"\)/);
   assert.match(setup, /loadArticleWizardProgress/);
   assert.match(setup, /setRuntimeWritingProfile\(writingProfile\)/);
   assert.match(setup, /if \(wizardProgress \|\| writingProfile\.updatedAt\) setConfirmed\(true\)/);
