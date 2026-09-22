@@ -92,7 +92,7 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(api, /<!-- IMAGE:01 -->/);
   assert.doesNotMatch(api, /service[_-]?role|sb_secret_/i);
 
-  for (const label of ["生成方法", "画像計画", "本文条件", "タイトル", "本文生成", "プレビュー", "保存"]) {
+  for (const label of ["記事の種類", "画像設定", "記事条件", "タイトル", "本文", "内容確認", "保存・タグ"]) {
     assert.match(draftHelpers, new RegExp(label));
   }
   assert.match(page, /createArticleFromWizard/);
@@ -103,6 +103,10 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(page, /BodyStep/);
   assert.match(page, /PreviewStep/);
   assert.match(page, /SaveStep/);
+  assert.match(page, /ARTICLE_CREATE_STEPS\.map/);
+  assert.doesNotMatch(page, /ARTICLE_CREATE_UI_STEPS/);
+  assert.match(page, /投稿アカウントプリセット/);
+  assert.doesNotMatch(page, /ArticlePresetPanel|applyWorkspacePresetToArticleDraft/);
   assert.doesNotMatch(page, /GENRE_OPTIONS|AGE_GROUP_OPTIONS|GENDER_OPTIONS|TARGET_LENGTH_OPTIONS|launchAiApp/);
 
   assert.match(stepUi, /GENRE_OPTIONS/);
@@ -118,6 +122,12 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /AAS内ではタイトル候補を生成しません/);
   assert.match(stepUi, /AIで生成したタイトルをここへ貼り付け/);
   assert.match(stepUi, /AI用タイトルプロンプト/);
+  assert.doesNotMatch(stepUi, />記事テーマ</);
+  assert.match(stepUi, /タグ（任意・投稿前に設定）/);
+  assert.match(stepUi, /サブジャンル/);
+  assert.match(stepUi, /対象年齢/);
+  assert.match(stepUi, /対象性別/);
+  assert.match(stepUi, /文字数の目安/);
   assert.doesNotMatch(stepUi, />タイトル候補を生成<|>タイトル候補を作り直す</);
   assert.doesNotMatch(page, /generateTitleCandidates|titleQuotaInFlightRef|titlePromptAuthorized|suggestLocalTitles/);
   assert.doesNotMatch(stepUi, /OPENAI_LINKS\.chatgpt/);
@@ -131,6 +141,9 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
 
   assert.match(page, /loadCoreAccessState/);
   assert.match(setup, /loadCoreAccessState/);
+  assert.match(setup, /loadArticleWizardProgress/);
+  assert.match(setup, /setRuntimeWritingProfile\(writingProfile\)/);
+  assert.match(setup, /if \(wizardProgress\) setConfirmed\(true\)/);
   assert.doesNotMatch(page, /\.from\("profiles"\)|can_access_product/);
   assert.doesNotMatch(setup, /\.from\("profiles"\)|can_access_product/);
   assert.match(accessControl, /\.from\("profiles"\)/);
@@ -150,6 +163,7 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /onBeforeExternalLaunch\(\); launchAiApp\(app\.key\)/);
   assert.match(page, /setStep\(saved\.step\)/);
   assert.match(page, /前回の作業内容を復元しました/);
+  assert.match(setup, /wizardProgress/);
   assert.match(progress, /aas:pwa:article-wizard-progress:v1:/);
   assert.match(progress, /window\.localStorage/);
   assert.match(progress, /STORAGE_VERSION = 1/);
