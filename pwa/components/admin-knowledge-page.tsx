@@ -154,7 +154,7 @@ export function AdminKnowledgePage() {
       <main className="standalone-page"><section className="standalone-card">
         <p className="eyebrow">KNOWLEDGE CONTROL</p><h1>ナレッジ管理</h1>
         {state.kind === "signed_out" && <p className="route-notice">先にログインしてください。</p>}
-        {state.kind !== "loading" && state.kind !== "signed_out" && <p className="route-notice error">この機能はactive管理者のみ利用できます。</p>}
+        {state.kind !== "signed_out" && <p className="route-notice error">この機能はactive管理者のみ利用できます。</p>}
         <Link className="route-back" href="/">← ホームへ戻る</Link>
       </section></main>
     );
