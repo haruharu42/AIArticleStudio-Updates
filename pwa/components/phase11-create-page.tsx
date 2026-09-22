@@ -327,6 +327,12 @@ export function Phase11CreatePage() {
     setStep((current) => Math.max(0, current - 1));
   };
 
+  const jumpBackToStep = (targetStep: number) => {
+    if (targetStep < 0 || targetStep >= step || busy || articleBusy) return;
+    setMessage("");
+    setStep(targetStep);
+  };
+
   const save = async () => {
     if (gate.kind !== "ready") return;
     setBusy(true);
@@ -376,15 +382,27 @@ export function Phase11CreatePage() {
       </header>
 
       <ol className="wizard-steps" aria-label="記事作成の進行状況">
-        {ARTICLE_CREATE_STEPS.map((label, index) => (
-          <li
-            key={label}
-            className={index === displayStep ? "active" : index < displayStep ? "done" : ""}
-            aria-current={index === displayStep ? "step" : undefined}
-          >
-            <span>{index + 1}</span>{label}
-          </li>
-        ))}
+        {ARTICLE_CREATE_STEPS.map((label, index) => {
+          const canJumpBack = index < displayStep && !busy && !articleBusy;
+          return (
+            <li
+              key={label}
+              className={index === displayStep ? "active" : index < displayStep ? "done" : ""}
+              aria-current={index === displayStep ? "step" : undefined}
+            >
+              <button
+                type="button"
+                disabled={!canJumpBack}
+                onClick={() => jumpBackToStep(index)}
+                aria-label={canJumpBack ? `STEP ${index + 1}「${label}」へ戻る` : `STEP ${index + 1}「${label}」`}
+                title={canJumpBack ? "このSTEPへ戻る" : undefined}
+              >
+                <span>{index + 1}</span>
+                <small>{label}</small>
+              </button>
+            </li>
+          );
+        })}
       </ol>
 
       <section className="creator-card">
