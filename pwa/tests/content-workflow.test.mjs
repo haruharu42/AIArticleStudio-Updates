@@ -110,7 +110,7 @@ test("series planner supports AI JSON import, cloud save, status updates, and cr
   assert.match(draft, /source === "series-plan"/);
 });
 
-test("saved account design can be applied directly to visible article conditions", async () => {
+test("account-design compatibility stays available while visible article conditions use account presets", async () => {
   const [link, create] = await Promise.all([
     read("lib/account-article-link.ts"),
     read("components/phase11-create-page.tsx"),
@@ -120,10 +120,10 @@ test("saved account design can be applied directly to visible article conditions
   assert.match(link, /GENRE_MAP/);
   assert.match(link, /mainTopics/);
   assert.match(link, /publicationTarget: design\.platform/);
-  assert.match(create, /applyActiveAccountDesign/);
-  assert.match(create, /記事条件にも反映/);
-  assert.match(create, /setTagsText\(result\.draft\.tags\.join/);
-  assert.match(create, /アカウント設計を記事条件へ反映しました/);
+  assert.doesNotMatch(create, /applyActiveAccountDesign|記事条件にも反映/);
+  assert.match(create, /activeAccountPreset/);
+  assert.match(create, /投稿アカウントプリセット/);
+  assert.match(create, /サブジャンル・年齢・性別・文字数・価格/);
 });
 
 test("article library exposes preflight and reuse shortcuts", async () => {
