@@ -360,3 +360,38 @@
     min-height: 44px;
   }
 }
+
+
+.reference-create-shell .creator-publish-copy {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+  border: 1px solid #d3e2f1;
+  border-radius: 14px;
+  background: #f9fcff;
+  padding: 13px;
+}
+
+.reference-create-shell .creator-publish-copy h3 {
+  margin: 0;
+  color: #173557;
+  font-size: 16px;
+}
+
+.reference-create-shell .creator-publication-link {
+  width: fit-content;
+  min-height: 44px;
+}
+
+@media (max-width: 700px) {
+  .reference-create-shell .creator-publish-copy .openai-prompt-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .reference-create-shell .creator-publish-copy .openai-prompt-actions button,
+  .reference-create-shell .creator-publication-link {
+    width: 100%;
+    min-height: 46px;
+  }
+}
