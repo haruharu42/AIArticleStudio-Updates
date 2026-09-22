@@ -7,7 +7,6 @@ import { useSharedAccessState } from "@/components/access-state-provider";
 
 import { FreeTrialAdminPanel } from "@/components/free-trial-admin-panel";
 import { listAdminUsers, type AdminUser } from "@/lib/phase10-admin";
-import { getSupabaseClient } from "@/lib/supabase";
 
 type Gate =
   | { kind: "loading" }
@@ -54,7 +53,8 @@ export function FreeTrialAdminPage() {
   }, [search, users]);
 
   const reloadUsers = async () => {
-    const next = await listAdminUsers(getSupabaseClient());
+    if (!client) throw new Error("AASへ接続できませんでした。");
+    const next = await listAdminUsers(client);
     setUsers(next);
     if (selectedId && !next.some((user) => user.id === selectedId)) setSelectedId("");
   };
