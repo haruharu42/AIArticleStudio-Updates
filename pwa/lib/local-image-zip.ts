@@ -72,9 +72,10 @@ export function buildImageZipFilename(articleTitle: string): string {
   const cleaned = articleTitle
     .normalize("NFKC")
     .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_")
-    .replace(/[. ]+$/g, "")
+    .replace(/\s+/g, "_")
     .replace(/_+/g, "_")
-    .trim()
+    .replace(/^_+|_+$/g, "")
+    .replace(/[. ]+$/g, "")
     .slice(0, 80);
   return `${cleaned || "AAS記事"}_画像一式.zip`;
 }
