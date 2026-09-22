@@ -406,3 +406,63 @@
   margin: 0;
   grid-column: 1 / -1;
 }
+
+
+.reference-create-shell .image-style-field small {
+  color: #70849c;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.reference-create-shell .clipboard-paste-action,
+.reference-create-shell .body-clipboard-actions {
+  width: fit-content;
+}
+
+.reference-create-shell .marker-status,
+.reference-create-shell .note-paid-area-guide,
+.reference-create-shell .note-image-marker-guide {
+  display: grid;
+  gap: 7px;
+  border: 1px solid #d5e3f1;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 11px 12px;
+}
+
+.reference-create-shell .marker-status strong,
+.reference-create-shell .note-paid-area-guide strong,
+.reference-create-shell .note-image-marker-guide strong {
+  color: #173557;
+  font-size: 12px;
+}
+
+.reference-create-shell .marker-status small,
+.reference-create-shell .note-paid-area-guide small,
+.reference-create-shell .note-image-marker-guide small {
+  color: #657b94;
+  line-height: 1.65;
+}
+
+.reference-create-shell .marker-status-warning {
+  border-color: #e8c87c;
+  background: #fffaf0;
+}
+
+.reference-create-shell .marker-status-ok {
+  border-color: #a9d9bd;
+  background: #f3fbf6;
+}
+
+.reference-create-shell .marker-status button {
+  width: fit-content;
+}
+
+@media (max-width: 700px) {
+  .reference-create-shell .clipboard-paste-action,
+  .reference-create-shell .body-clipboard-actions,
+  .reference-create-shell .body-clipboard-actions button,
+  .reference-create-shell .marker-status button {
+    width: 100%;
+  }
+}
