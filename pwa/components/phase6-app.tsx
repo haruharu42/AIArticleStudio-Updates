@@ -615,7 +615,7 @@ export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Prom
     }
   }, [onAccessReady, screen]);
 
-  if (screen.kind === "loading") return <Spinner label="アカウントと利用権を確認しています…" />;
+  if (screen.kind === "loading") return null;
 
   if (screen.kind === "configuration_error" || screen.kind === "error") {
     return (
@@ -632,7 +632,7 @@ export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Prom
     );
   }
 
-  if (!client) return <Spinner label="初期化しています…" />;
+  if (!client) return null;
 
   if (screen.kind === "auth") {
     return <AuthScreen client={client} mode={authMode} setMode={setAuthMode} refresh={refresh} />;
