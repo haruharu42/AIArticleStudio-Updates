@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { AdminSelectWithCustom } from "@/components/admin-form-controls";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -21,6 +23,18 @@ type FormState = {
   notes: string;
   updateKind: "optional" | "required";
 };
+
+const RELEASE_TITLE_OPTIONS = [
+  "記事作成UI改善",
+  "記事作成の不具合修正",
+  "管理者ツール改善",
+  "表示・操作性改善",
+  "認証・ログイン改善",
+  "パフォーマンス改善",
+  "安定性・セキュリティ改善",
+  "新機能追加",
+  "軽微な修正",
+] as const;
 
 const EMPTY_FORM: FormState = {
   version: "",
@@ -216,6 +230,7 @@ export function AdminReleasePage() {
         <p className="trial-admin-note">
           登録した時点では一般ユーザーへは反映されません。まず管理者だけで確認し、問題がなければ第2段階として指定テスターへ反映します。第2段階を通過するまで全体公開はDB側でも禁止します。
         </p>
+        <div className="admin-safety-confirm">入力順：①バージョン → ②更新名を選択 → ③ユーザー向け変更内容 → ④任意/必須を選択。登録後も、テスター確認と全体公開は別操作です。</div>
 
         <div className="release-admin-form">
           <label className="editor-field">
@@ -227,15 +242,14 @@ export function AdminReleasePage() {
               autoComplete="off"
             />
           </label>
-          <label className="editor-field">
-            <span>アップデート名</span>
-            <input
-              value={form.title}
-              onChange={(event) => setForm((value) => ({ ...value, title: event.target.value }))}
-              placeholder="例: 記事作成UI改善"
-              maxLength={120}
-            />
-          </label>
+          <AdminSelectWithCustom
+            label="アップデート名"
+            value={form.title}
+            onChange={(title) => setForm((value) => ({ ...value, title: title.slice(0, 120) }))}
+            options={RELEASE_TITLE_OPTIONS}
+            description="よく使う更新名から選択できます。固有の内容は「その他・自由入力」を使ってください。"
+            customPlaceholder="例: 記事ライブラリ検索改善"
+          />
           <label className="editor-field release-admin-notes">
             <span>ユーザーへ表示する更新内容</span>
             <textarea
