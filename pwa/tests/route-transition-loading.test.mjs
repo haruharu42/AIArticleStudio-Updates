@@ -139,6 +139,14 @@ test("auth and preview gates keep mandatory verification invisible while it runs
 });
 
 
+
+test("free trial usage verification stays invisible while loading", async () => {
+  const gate = await read("components/free-trial-feature-gate.tsx");
+
+  assert.match(gate, /if \(!status\) return null/);
+  assert.doesNotMatch(gate, /利用回数を確認しています/);
+});
+
 test("admin surfaces reuse root access state instead of starting page-level account checks", async () => {
   const sources = await Promise.all([
     read("components/phase10-admin-page.tsx"),
