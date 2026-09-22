@@ -42,7 +42,7 @@ import {
   type AccountDesignPlatform,
   type PlatformAccountDesign,
 } from "@/features/account-design";
-import { buildImagePromptPlan } from "@/lib/phase13-image-prompts";
+import { buildCombinedImagePrompt, buildImagePromptPlan } from "@/lib/phase13-image-prompts";
 import { getSupabaseClient } from "@/lib/supabase";
 
 type Gate =
@@ -239,6 +239,7 @@ export function Phase11CreatePage() {
     }),
     [draft, accountDesignPromptKey, accountPresetPromptKey],
   );
+  const combinedImagePrompt = useMemo(() => buildCombinedImagePrompt(imagePrompts), [imagePrompts]);
   const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
   const patch = <K extends keyof ArticleCreationDraft>(key: K, value: ArticleCreationDraft[K]) => {
@@ -439,6 +440,7 @@ export function Phase11CreatePage() {
           <PreviewStep
             draft={draft}
             imagePrompts={imagePrompts}
+            combinedImagePrompt={combinedImagePrompt}
             onBeforeExternalLaunch={persistWizardProgress}
             setMessage={setMessage}
           />
