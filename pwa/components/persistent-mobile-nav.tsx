@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { SharedMobileBottomNav } from "@/components/shared-mobile-bottom-nav";
 import {
   MOBILE_NAV_PREFERENCE_EVENT,
   MOBILE_NAV_PREFERENCE_KEY,
   readMobileNavAlways,
 } from "@/features/navigation";
-import { getSupabaseClient } from "@/lib/supabase";
 
 const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms"];
 const REFERENCE_SHELL_ROUTES = new Set(["/", "/create", "/ranking", "/profile"]);
@@ -20,33 +20,9 @@ function matchesPrefix(pathname: string, prefix: string): boolean {
 
 export function PersistentMobileNav() {
   const pathname = usePathname();
-  const [signedIn, setSignedIn] = useState(false);
+  const { state } = useSharedAccessState();
+  const signedIn = state.kind !== "loading" && state.kind !== "unavailable" && state.kind !== "signed_out";
   const [alwaysShow, setAlwaysShow] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    let client: ReturnType<typeof getSupabaseClient>;
-    try {
-      client = getSupabaseClient();
-    } catch {
-      return;
-    }
-
-    const syncAccount = async (session: Awaited<ReturnType<typeof client.auth.getSession>>["data"]["session"]) => {
-      if (!active) return;
-      setSignedIn(Boolean(session));
-    };
-
-    void client.auth.getSession().then(({ data }) => syncAccount(data.session));
-    const { data } = client.auth.onAuthStateChange((_event, session) => {
-      window.setTimeout(() => { if (active) void syncAccount(session); }, 0);
-    });
-
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-    };
-  }, []);
 
   useEffect(() => {
     const syncVisibility = () => setAlwaysShow(readMobileNavAlways());
