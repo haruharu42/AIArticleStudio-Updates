@@ -12,6 +12,7 @@ after(() => vite.close());
 
 const filenames = await vite.ssrLoadModule("/lib/image-file-names.ts");
 const prompts = await vite.ssrLoadModule("/lib/phase13-image-prompts.ts");
+const localZip = await vite.ssrLoadModule("/lib/local-image-zip.ts");
 
 test("suggested image filenames are Windows-safe and identify image purpose", () => {
   assert.equal(
@@ -23,6 +24,28 @@ test("suggested image filenames are Windows-safe and identify image purpose", ()
     "AI副業_初心者_入門_挿絵02.png",
   );
   assert.doesNotMatch(filenames.buildSuggestedImageFilename({ title: '<>:"/\\|?*', kind: "cover" }), /[<>:"/\\|?*]/);
+});
+
+test("local image ZIP preserves suggested names without cloud upload", async () => {
+  assert.equal(
+    localZip.filenameForSelectedImage("記事タイトル_アイキャッチ.png", "download.png", "image/png"),
+    "記事タイトル_アイキャッチ.png",
+  );
+  assert.equal(
+    localZip.filenameForSelectedImage("記事タイトル_挿絵01.png", "download.jpeg", "image/jpeg"),
+    "記事タイトル_挿絵01.jpg",
+  );
+  assert.equal(localZip.buildImageZipFilename("AI副業: 初心者/入門?"), "AI副業_初心者_入門_画像一式.zip");
+
+  const archive = await localZip.createLocalImageZip([
+    { filename: "記事タイトル_アイキャッチ.png", data: new Blob(["cover"], { type: "image/png" }) },
+    { filename: "記事タイトル_挿絵01.png", data: new Blob(["inline"], { type: "image/png" }) },
+  ]);
+  const bytes = Buffer.from(await archive.arrayBuffer());
+  assert.equal(bytes.readUInt32LE(0), 0x04034b50);
+  assert.match(bytes.toString("utf8"), /記事タイトル_アイキャッチ\.png/);
+  assert.match(bytes.toString("utf8"), /記事タイトル_挿絵01\.png/);
+  assert.equal(bytes.readUInt32LE(bytes.length - 22), 0x06054b50);
 });
 
 test("image prompt plan includes local filename and alt metadata", () => {
@@ -54,6 +77,9 @@ test("PWA image UI is local-save first and does not expose cloud upload actions"
   assert.match(imagePage, /推奨ファイル名/);
   assert.match(imagePage, /ファイル名をコピー/);
   assert.match(imagePage, /Supabase Storageへアップロードしません/);
+  assert.match(imagePage, /選択した画像をZIPで保存/);
+  assert.match(imagePage, /画像はAASやSupabaseへアップロードされません/);
+  assert.match(imagePage, /createLocalImageZip/);
   assert.match(legacyViewer, /閲覧のみ可能/);
   assert.doesNotMatch(legacyViewer, /uploadArticleImage/);
   assert.doesNotMatch(legacyViewer, /type="file"/);
