@@ -9,7 +9,7 @@ const repoRoot = path.resolve(root, "..");
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
-test("article creation asks for AI once and resumes the generation wizard after setup", async () => {
+test("article creation confirms AI for each new article and resumes in-progress work without interruption", async () => {
   const route = await read("app/create/page.tsx");
   const setup = await read("components/create-ai-setup.tsx");
   const personalization = await read("lib/user-personalization.ts");
@@ -22,8 +22,10 @@ test("article creation asks for AI once and resumes the generation wizard after 
   }
   assert.match(setup, /saveWritingProfile/);
   assert.match(setup, /setRuntimeWritingProfile/);
-  assert.match(setup, /wizardProgress \|\| writingProfile\.updatedAt/);
-  assert.match(setup, /タブやアプリを切り替えても記事作成の進行画面へ直接戻ります/);
+  assert.match(setup, /setConfirmed\(Boolean\(wizardProgress\)\)/);
+  assert.doesNotMatch(setup, /wizardProgress \|\| writingProfile\.updatedAt/);
+  assert.match(setup, /新しい記事を作る最初に/);
+  assert.match(setup, /途中作業を復元する場合/);
 });
 
 test("personalization settings can be viewed edited saved and reset", async () => {
@@ -40,7 +42,7 @@ test("personalization settings can be viewed edited saved and reset", async () =
 test("prompt builder applies provider plan and optional user preferences", async () => {
   const personalization = await read("lib/user-personalization.ts");
   const creator = await read("lib/phase11-create.ts");
-  for (const label of ["使用AI向けAAS最適化", "このユーザー向け文章設定", "無料版で扱いやすいよう", "詳細条件を最後まで保持"]) {
+  for (const label of ["使用AI向けAAS最適化", "このユーザー向け文章設定", "無料版で扱いやすいよう", "詳細条件を最後まで保持", "ARTICLE BRIEFの条件をチェックリストとして内部確認"]) {
     assert.match(personalization, new RegExp(label));
   }
   assert.match(creator, /buildUserPromptContext/);
@@ -48,6 +50,26 @@ test("prompt builder applies provider plan and optional user preferences", async
   assert.match(creator, /recordPersonalizationSignal/);
   assert.match(creator, /ai_provider/);
   assert.match(creator, /ai_plan/);
+});
+
+test("article wizard supports direct back navigation and safe clearing of pasted AI content", async () => {
+  const [page, steps, css] = await Promise.all([
+    read("components/phase11-create-page.tsx"),
+    read("components/article-create/article-create-steps.tsx"),
+    read("app/phase9-11.css"),
+  ]);
+
+  assert.match(page, /jumpBackToStep/);
+  assert.match(page, /index < displayStep/);
+  assert.match(page, /STEP \$\{index \+ 1\}「\$\{label\}」へ戻る/);
+  assert.match(steps, /タイトル候補をクリア/);
+  assert.match(steps, /本文をクリア/);
+  assert.match(steps, /window\.confirm\("貼り付けたタイトル候補/);
+  assert.match(steps, /window\.confirm\("貼り付けた本文/);
+  assert.match(steps, /currentAiLaunchOptions/);
+  assert.match(steps, /選択中の\{app\.label\}を開く/);
+  assert.match(css, /\.wizard-steps li\.done button/);
+  assert.match(css, /\.clear-content-action/);
 });
 
 test("server profile stores small aggregate signals with strict self-only RLS", async () => {
