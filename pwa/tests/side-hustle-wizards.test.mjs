@@ -114,11 +114,16 @@ test("side-hustle wizard injects cloud knowledge and prompt optimization and per
   assert.match(builder, /compilePromptOptimizationContext/);
   assert.match(builder, /definition\.knowledgeTask/);
   assert.match(builder, /selectedPlan/);
+  assert.match(builder, /selectedPlan: "free"/);
   assert.match(progress, /aas-side-hustle-wizard/);
   assert.match(progress, /localStorage/);
+  assert.match(progress, /hasStoredSideHustleDraft/);
   assert.match(progress, /resultText/);
   assert.match(progress, /Math\.min\(4, row\.step\)/);
   assert.match(wizard, /readSideHustleDraft/);
+  assert.match(wizard, /hasStoredSideHustleDraft/);
+  assert.match(wizard, /loadWritingProfile/);
+  assert.match(wizard, /profile\.preferredPlan/);
   assert.match(wizard, /writeSideHustleDraft/);
   assert.match(wizard, /pagehide/);
   assert.match(wizard, /beforeunload/);
