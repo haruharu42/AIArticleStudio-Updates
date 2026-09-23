@@ -81,6 +81,48 @@ test("membership feature management is server gated and ready for cloud image st
   assert.match(accessClient, /has_creator_membership_feature/);
 });
 
+test("membership operations expose active assignments, expiry watch and DB audit without weakening admin checks", () => {
+  const migration = readRepo("supabase/migrations/20260923073500_membership_operations_and_public_features.sql");
+  const page = read("components/admin-membership-page.tsx");
+  const client = read("lib/admin-membership.ts");
+
+  assert.match(migration, /creator_membership_admin_actions/);
+  assert.match(migration, /audit_creator_membership_entitlement_change/);
+  assert.match(migration, /after insert or update on public\.user_entitlements/);
+  assert.match(migration, /admin_list_creator_membership_assignments/);
+  assert.match(migration, /admin_list_creator_membership_actions/);
+  assert.match(migration, /private\.is_active_admin\(\)/);
+  assert.match(migration, /revoke all on table public\.creator_membership_admin_actions from public, anon, authenticated/);
+  assert.match(migration, /list_creator_membership_feature_matrix/);
+  assert.match(migration, /where \(select auth\.uid\(\)\) is not null/);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+
+  assert.match(client, /listMembershipAssignments/);
+  assert.match(client, /listMembershipAuditActions/);
+  assert.match(page, /現在のメンバー状況/);
+  assert.match(page, /7日以内に期限/);
+  assert.match(page, /メンバー特典の変更履歴/);
+  assert.match(page, /assignmentPlanCounts/);
+  assert.match(page, /expiringSoon/);
+});
+
+test("user membership page shows admin-configured note URL and only enabled managed benefits", () => {
+  const page = read("app/membership/page.tsx");
+  const access = read("lib/membership-access.ts");
+  const css = read("components/creator-quests.module.css");
+
+  assert.match(page, /getCreatorMembershipPublicSettings/);
+  assert.match(page, /listCreatorMembershipFeatureMatrix/);
+  assert.match(page, /noteメンバーシップを見る/);
+  assert.match(page, /featuresByPlan/);
+  assert.match(page, /if \(!item\.enabled\) continue/);
+  assert.match(page, /AASで利用できる特典/);
+  assert.match(access, /get_creator_membership_public_settings/);
+  assert.match(access, /list_creator_membership_feature_matrix/);
+  assert.match(css, /membershipJoinCard/);
+  assert.match(css, /membershipFeatureList/);
+});
+
 test("membership defaults make cloud image storage a member-only capability across active plans", () => {
   const migration = readRepo("supabase/migrations/20260923072000_membership_management_center.sql");
 
