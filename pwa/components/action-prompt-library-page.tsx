@@ -4,64 +4,45 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { ActionPromptEditor } from "@/components/action-prompt-library/action-prompt-editor";
+import { ActionPromptTemplateList } from "@/components/action-prompt-library/action-prompt-template-list";
+import { ActionPromptToolbar } from "@/components/action-prompt-library/action-prompt-toolbar";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import {
   ACTION_PROMPT_TEMPLATES,
   buildActionPrompt,
   type ActionPromptTemplate,
 } from "@/lib/action-prompt-catalog";
+import {
+  ACTION_PROMPT_FAVORITES_KEY,
+  ACTION_PROMPT_RECENT_KEY,
+  initialActionPromptValues,
+  readActionPromptIds,
+  readActionPromptProgress,
+  recommendedActionPromptAi,
+  writeActionPromptIds,
+  writeActionPromptProgress,
+} from "@/lib/action-prompt-preferences";
+import {
+  readActionPromptRouteSelection,
+  resolveActionPromptRouteTemplate,
+} from "@/lib/action-prompt-routing";
 import { loadActionPromptCatalog } from "@/lib/action-prompt-service";
 
-const FAVORITES_KEY = "aas-action-prompt-favorites";
-const RECENT_KEY = "aas-action-prompt-recent";
-const PROGRESS_KEY = "aas-action-prompt-progress";
-
-function scopedKey(base: string, userId: string): string {
-  return userId ? `${base}:${userId}` : base;
+function mergeTemplates(cloudTemplates: readonly ActionPromptTemplate[]): ActionPromptTemplate[] {
+  const merged = new Map(ACTION_PROMPT_TEMPLATES.map((template) => [template.id, template]));
+  cloudTemplates.forEach((template) => merged.set(template.id, template));
+  return [...merged.values()];
 }
 
-function readIds(key: string): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const value = JSON.parse(window.localStorage.getItem(key) ?? "[]");
-    return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-}
-
-function initialValues(template: ActionPromptTemplate): Record<string, string> {
-  return Object.fromEntries(template.fields.map((field) => [field.key, ""]));
-}
-
-function recommendedAiKey(template: ActionPromptTemplate): AiAppKey {
-  if (template.recommendedAi === "Claude") return "claude";
-  if (template.recommendedAi === "Gemini") return "gemini";
-  return "chatgpt";
-}
-
-type StoredPromptProgress = {
-  selectedId: string;
-  values: Record<string, string>;
-};
-
-function readProgress(key: string): StoredPromptProgress | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const value = JSON.parse(window.localStorage.getItem(key) ?? "null") as unknown;
-    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-    const row = value as Record<string, unknown>;
-    if (typeof row.selectedId !== "string" || !row.values || typeof row.values !== "object" || Array.isArray(row.values)) {
-      return null;
-    }
-    const values = Object.fromEntries(
-      Object.entries(row.values as Record<string, unknown>)
-        .filter((entry): entry is [string, string] => typeof entry[1] === "string"),
-    );
-    return { selectedId: row.selectedId, values };
-  } catch {
-    return null;
-  }
+function valuesForTemplate(
+  template: ActionPromptTemplate,
+  stored: ReturnType<typeof readActionPromptProgress>,
+): Record<string, string> {
+  if (!stored || stored.selectedId !== template.id) return initialActionPromptValues(template);
+  return Object.fromEntries(
+    template.fields.map((field) => [field.key, stored.values[field.key] ?? ""]),
+  );
 }
 
 export function ActionPromptLibraryPage() {
@@ -71,37 +52,44 @@ export function ActionPromptLibraryPage() {
   const [category, setCategory] = useState("すべて");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(ACTION_PROMPT_TEMPLATES[0]?.id ?? "");
-  const selected = templates.find((template) => template.id === selectedId) ?? templates[0];
   const [values, setValues] = useState<Record<string, string>>(
-    () => ACTION_PROMPT_TEMPLATES[0] ? initialValues(ACTION_PROMPT_TEMPLATES[0]) : {},
+    () => ACTION_PROMPT_TEMPLATES[0] ? initialActionPromptValues(ACTION_PROMPT_TEMPLATES[0]) : {},
   );
   const [favorites, setFavorites] = useState<string[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedAi, setSelectedAi] = useState<AiAppKey>(
-    () => ACTION_PROMPT_TEMPLATES[0] ? recommendedAiKey(ACTION_PROMPT_TEMPLATES[0]) : "chatgpt",
+    () => ACTION_PROMPT_TEMPLATES[0] ? recommendedActionPromptAi(ACTION_PROMPT_TEMPLATES[0]) : "chatgpt",
   );
   const [progressReady, setProgressReady] = useState(false);
 
+  const selected = templates.find((template) => template.id === selectedId) ?? templates[0];
+
   useEffect(() => {
     if (!userId) return;
-    const favoriteKey = scopedKey(FAVORITES_KEY, userId);
-    const recentKey = scopedKey(RECENT_KEY, userId);
-    const progressKey = scopedKey(PROGRESS_KEY, userId);
+    const routeSelection = readActionPromptRouteSelection(window.location.search);
+    const stored = readActionPromptProgress(userId);
+
     queueMicrotask(() => {
-      setFavorites(readIds(favoriteKey));
-      setRecent(readIds(recentKey));
-      const stored = readProgress(progressKey);
-      const restored = stored
-        ? ACTION_PROMPT_TEMPLATES.find((template) => template.id === stored.selectedId)
-        : null;
-      if (stored && restored) {
+      setFavorites(readActionPromptIds(ACTION_PROMPT_FAVORITES_KEY, userId));
+      setRecent(readActionPromptIds(ACTION_PROMPT_RECENT_KEY, userId));
+      if (routeSelection.category) setCategory(routeSelection.category);
+      if (routeSelection.query) setQuery(routeSelection.query);
+
+      const routeTemplate = resolveActionPromptRouteTemplate(ACTION_PROMPT_TEMPLATES, routeSelection);
+      const restored = routeTemplate
+        ?? (stored ? ACTION_PROMPT_TEMPLATES.find((template) => template.id === stored.selectedId) : undefined)
+        ?? ACTION_PROMPT_TEMPLATES[0];
+
+      if (restored) {
         setSelectedId(restored.id);
-        setSelectedAi(recommendedAiKey(restored));
-        setValues(Object.fromEntries(
-          restored.fields.map((field) => [field.key, stored.values[field.key] ?? ""]),
-        ));
+        setValues(valuesForTemplate(restored, stored));
+        setSelectedAi(
+          stored?.selectedId === restored.id && stored.selectedAi
+            ? stored.selectedAi
+            : recommendedActionPromptAi(restored),
+        );
       }
       setProgressReady(true);
     });
@@ -115,23 +103,29 @@ export function ActionPromptLibraryPage() {
       (catalog) => {
         if (!active) return;
         const cloudTemplates = catalog.templates.filter((template) => template.status === "active");
-        if (!cloudTemplates.length) return;
+        const merged = mergeTemplates(cloudTemplates);
+        const routeSelection = readActionPromptRouteSelection(window.location.search);
+        const stored = readActionPromptProgress(userId);
+        const next = resolveActionPromptRouteTemplate(merged, routeSelection)
+          ?? (stored ? merged.find((template) => template.id === stored.selectedId) : undefined)
+          ?? merged[0];
 
-        const stored = readProgress(scopedKey(PROGRESS_KEY, userId));
-        const next = stored
-          ? cloudTemplates.find((template) => template.id === stored.selectedId) ?? cloudTemplates[0]
-          : cloudTemplates[0];
+        setTemplates(merged);
+        if (routeSelection.category) setCategory(routeSelection.category);
+        if (routeSelection.query) setQuery(routeSelection.query);
 
-        setTemplates(cloudTemplates);
-        setCategory("すべて");
-        setSelectedId(next.id);
-        setSelectedAi(recommendedAiKey(next));
-        setValues(Object.fromEntries(
-          next.fields.map((field) => [field.key, stored?.selectedId === next.id ? stored.values[field.key] ?? "" : ""]),
-        ));
+        if (next) {
+          setSelectedId(next.id);
+          setValues(valuesForTemplate(next, stored));
+          setSelectedAi(
+            stored?.selectedId === next.id && stored.selectedAi
+              ? stored.selectedAi
+              : recommendedActionPromptAi(next),
+          );
+        }
       },
       () => {
-        // The built-in catalog remains available if cloud retrieval is temporarily unavailable.
+        // Built-in templates remain available when the cloud catalog is temporarily unavailable.
       },
     );
 
@@ -142,11 +136,12 @@ export function ActionPromptLibraryPage() {
 
   useEffect(() => {
     if (!progressReady || !userId || !selected) return;
-    window.localStorage.setItem(
-      scopedKey(PROGRESS_KEY, userId),
-      JSON.stringify({ selectedId: selected.id, values }),
-    );
-  }, [progressReady, selected, userId, values]);
+    writeActionPromptProgress(userId, {
+      selectedId: selected.id,
+      values,
+      selectedAi,
+    });
+  }, [progressReady, selected, selectedAi, userId, values]);
 
   const categories = useMemo(
     () => ["すべて", ...Array.from(new Set(templates.map((template) => template.category)))],
@@ -169,39 +164,44 @@ export function ActionPromptLibraryPage() {
     [selected, values],
   );
 
+  const recentTemplates = useMemo(
+    () => recent
+      .map((id) => templates.find((template) => template.id === id))
+      .filter((template): template is ActionPromptTemplate => Boolean(template)),
+    [recent, templates],
+  );
+
   const selectTemplate = (template: ActionPromptTemplate) => {
     setSelectedId(template.id);
-    setSelectedAi(recommendedAiKey(template));
-    setValues(initialValues(template));
+    setSelectedAi(recommendedActionPromptAi(template));
+    setValues(initialActionPromptValues(template));
     setMessage("");
   };
 
-  const persistFavorite = (id: string) => {
-    const next = favorites.includes(id)
-      ? favorites.filter((item) => item !== id)
-      : [...favorites, id];
+  const toggleFavorite = () => {
+    if (!selected) return;
+    const next = favorites.includes(selected.id)
+      ? favorites.filter((item) => item !== selected.id)
+      : [...favorites, selected.id];
     setFavorites(next);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(scopedKey(FAVORITES_KEY, userId), JSON.stringify(next));
-    }
+    writeActionPromptIds(ACTION_PROMPT_FAVORITES_KEY, userId, next);
   };
 
   const markRecent = (id: string) => {
     const next = [id, ...recent.filter((item) => item !== id)].slice(0, 5);
     setRecent(next);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(scopedKey(RECENT_KEY, userId), JSON.stringify(next));
-    }
+    writeActionPromptIds(ACTION_PROMPT_RECENT_KEY, userId, next);
   };
 
   const copyPrompt = async (openAi?: AiAppKey) => {
     if (!selected) return;
-    if (typeof window !== "undefined" && userId) {
-      window.localStorage.setItem(
-        scopedKey(PROGRESS_KEY, userId),
-        JSON.stringify({ selectedId: selected.id, values }),
-      );
-    }
+
+    writeActionPromptProgress(userId, {
+      selectedId: selected.id,
+      values,
+      selectedAi,
+    });
+
     try {
       await navigator.clipboard.writeText(prompt);
       setMessage(openAi
@@ -210,15 +210,12 @@ export function ActionPromptLibraryPage() {
     } catch {
       setMessage("自動コピーできません。下のプロンプト欄からコピーしてください。");
     }
+
     markRecent(selected.id);
     if (openAi) launchAiApp(openAi);
   };
 
   if (!selected) return null;
-
-  const recentTemplates = recent
-    .map((id) => templates.find((template) => template.id === id))
-    .filter((template): template is ActionPromptTemplate => Boolean(template));
 
   return (
     <main className="creator-page action-prompt-page">
@@ -226,121 +223,60 @@ export function ActionPromptLibraryPage() {
         <div>
           <p className="eyebrow">AI ACTION STUDIO</p>
           <h1>副業プロンプトライブラリ</h1>
-          <p>やりたいことを選び、必要な情報だけ入力。完成したプロンプトをコピーしてChatGPT・Claude・Geminiで使えます。</p>
+          <p>
+            副業や目的を選び、必要な情報だけ入力。
+            完成したプロンプトをコピーしてChatGPT・Claude・Geminiですぐ使えます。
+          </p>
         </div>
         <Link className="route-back" href="/">← ホーム</Link>
       </header>
 
-      <section className="action-prompt-toolbar" aria-label="プロンプト検索">
-        <label>
-          <span>検索</span>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="例：note、SNS、YouTube、物販" />
-        </label>
-        <label>
-          <span>用途</span>
-          <select value={category} onChange={(event) => setCategory(event.target.value)}>
-            {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
-        <button className={favoritesOnly ? "active" : ""} type="button" onClick={() => setFavoritesOnly((value) => !value)}>
-          ★ お気に入り{favoritesOnly ? "のみ" : ""}
-        </button>
-      </section>
+      <ActionPromptToolbar
+        categories={categories}
+        category={category}
+        query={query}
+        favoritesOnly={favoritesOnly}
+        onCategoryChange={setCategory}
+        onQueryChange={setQuery}
+        onFavoritesToggle={() => setFavoritesOnly((value) => !value)}
+      />
 
       {recentTemplates.length > 0 && (
         <section className="action-prompt-recent" aria-label="最近使ったプロンプト">
           <strong>最近使ったもの</strong>
           <div>
             {recentTemplates.map((template) => (
-              <button key={template.id} type="button" onClick={() => selectTemplate(template)}>{template.title}</button>
+              <button key={template.id} type="button" onClick={() => selectTemplate(template)}>
+                {template.title}
+              </button>
             ))}
           </div>
         </section>
       )}
 
       <div className="action-prompt-layout">
-        <section className="action-prompt-list" aria-label="プロンプト一覧">
-          <div className="action-prompt-list-head">
-            <strong>{filtered.length}件</strong>
-            <small>プロンプト本文は入力内容から自動で完成します。</small>
-          </div>
-          {filtered.map((template) => (
-            <button
-              key={template.id}
-              className={template.id === selected.id ? "action-prompt-item active" : "action-prompt-item"}
-              type="button"
-              onClick={() => selectTemplate(template)}
-            >
-              <span>{template.category}</span>
-              <strong>{template.title}</strong>
-              <p>{template.description}</p>
-              <small>{template.sideHustle} · 推奨 {template.recommendedAi}</small>
-            </button>
-          ))}
-          {!filtered.length && <p className="route-notice">条件に一致するプロンプトがありません。</p>}
-        </section>
+        <ActionPromptTemplateList
+          templates={filtered}
+          selectedId={selected.id}
+          onSelect={selectTemplate}
+        />
 
-        <section className="creator-card action-prompt-editor" aria-labelledby="selected-prompt-title">
-          <div className="action-prompt-editor-head">
-            <div>
-              <span>{selected.category}</span>
-              <h2 id="selected-prompt-title">{selected.title}</h2>
-              <p>{selected.description}</p>
-            </div>
-            <button type="button" onClick={() => persistFavorite(selected.id)} aria-pressed={favorites.includes(selected.id)}>
-              {favorites.includes(selected.id) ? "★ お気に入り済み" : "☆ お気に入り"}
-            </button>
-          </div>
-
-          <div className="action-prompt-fields">
-            {selected.fields.map((field) => (
-              <label className={field.multiline ? "full" : ""} key={field.key}>
-                <span>{field.label}</span>
-                {field.multiline ? (
-                  <textarea
-                    value={values[field.key] ?? ""}
-                    placeholder={field.placeholder}
-                    onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}
-                  />
-                ) : (
-                  <input
-                    value={values[field.key] ?? ""}
-                    placeholder={field.placeholder}
-                    onChange={(event) => setValues((current) => ({ ...current, [field.key]: event.target.value }))}
-                  />
-                )}
-              </label>
-            ))}
-          </div>
-
-          <label className="action-prompt-output">
-            <span>完成プロンプト</span>
-            <textarea readOnly value={prompt} />
-          </label>
-
-          <div className="action-prompt-ai-step">
-            <label>
-              <span>使用AI</span>
-              <select value={selectedAi} onChange={(event) => setSelectedAi(event.target.value as AiAppKey)}>
-                {(["chatgpt", "claude", "gemini"] as const).map((key) => (
-                  <option key={key} value={key}>
-                    {AI_APP_LINKS[key].name}{key === recommendedAiKey(selected) ? "（推奨）" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <small>あとから何度でも変更できます。選択したAIに合わせてコピーして開きます。</small>
-          </div>
-
-          <div className="action-prompt-actions">
-            <button className="primary-action" type="button" onClick={() => void copyPrompt(selectedAi)}>
-              コピーして{AI_APP_LINKS[selectedAi].name}を開く
-            </button>
-            <button type="button" onClick={() => void copyPrompt()}>プロンプトだけコピー</button>
-          </div>
-          {message && <div className="route-notice" role="status">{message}</div>}
-          <p className="panel-muted">AASはプロンプトを準備して外部AIを開きます。ブラウザへAIサービスのAPIキーや秘密鍵は保存しません。</p>
-        </section>
+        <ActionPromptEditor
+          selected={selected}
+          values={values}
+          prompt={prompt}
+          favorite={favorites.includes(selected.id)}
+          selectedAi={selectedAi}
+          message={message}
+          onValueChange={(key, value) => setValues((current) => ({ ...current, [key]: value }))}
+          onFavoriteToggle={toggleFavorite}
+          onAiChange={setSelectedAi}
+          onCopy={(openAi) => void copyPrompt(openAi)}
+          onReset={() => {
+            setValues(initialActionPromptValues(selected));
+            setMessage("入力内容をリセットしました。");
+          }}
+        />
       </div>
     </main>
   );
