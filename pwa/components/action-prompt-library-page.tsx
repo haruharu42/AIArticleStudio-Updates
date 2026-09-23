@@ -14,6 +14,7 @@ import { loadActionPromptCatalog } from "@/lib/action-prompt-service";
 
 const FAVORITES_KEY = "aas-action-prompt-favorites";
 const RECENT_KEY = "aas-action-prompt-recent";
+const PROGRESS_KEY = "aas-action-prompt-progress";
 
 function scopedKey(base: string, userId: string): string {
   return userId ? `${base}:${userId}` : base;
@@ -33,6 +34,30 @@ function initialValues(template: ActionPromptTemplate): Record<string, string> {
   return Object.fromEntries(template.fields.map((field) => [field.key, ""]));
 }
 
+type StoredPromptProgress = {
+  selectedId: string;
+  values: Record<string, string>;
+};
+
+function readProgress(key: string): StoredPromptProgress | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = JSON.parse(window.localStorage.getItem(key) ?? "null") as unknown;
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const row = value as Record<string, unknown>;
+    if (typeof row.selectedId !== "string" || !row.values || typeof row.values !== "object" || Array.isArray(row.values)) {
+      return null;
+    }
+    const values = Object.fromEntries(
+      Object.entries(row.values as Record<string, unknown>)
+        .filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+    );
+    return { selectedId: row.selectedId, values };
+  } catch {
+    return null;
+  }
+}
+
 export function ActionPromptLibraryPage() {
   const { state, client } = useSharedAccessState();
   const userId = state.kind === "ready" ? state.profile.id : "";
@@ -48,14 +73,27 @@ export function ActionPromptLibraryPage() {
   const [recent, setRecent] = useState<string[]>([]);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [message, setMessage] = useState("");
+  const [progressReady, setProgressReady] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
     const favoriteKey = scopedKey(FAVORITES_KEY, userId);
     const recentKey = scopedKey(RECENT_KEY, userId);
+    const progressKey = scopedKey(PROGRESS_KEY, userId);
     queueMicrotask(() => {
       setFavorites(readIds(favoriteKey));
       setRecent(readIds(recentKey));
+      const stored = readProgress(progressKey);
+      const restored = stored
+        ? ACTION_PROMPT_TEMPLATES.find((template) => template.id === stored.selectedId)
+        : null;
+      if (stored && restored) {
+        setSelectedId(restored.id);
+        setValues(Object.fromEntries(
+          restored.fields.map((field) => [field.key, stored.values[field.key] ?? ""]),
+        ));
+      }
+      setProgressReady(true);
     });
   }, [userId]);
 
@@ -69,10 +107,17 @@ export function ActionPromptLibraryPage() {
         const cloudTemplates = catalog.templates.filter((template) => template.status === "active");
         if (!cloudTemplates.length) return;
 
+        const stored = readProgress(scopedKey(PROGRESS_KEY, userId));
+        const next = stored
+          ? cloudTemplates.find((template) => template.id === stored.selectedId) ?? cloudTemplates[0]
+          : cloudTemplates[0];
+
         setTemplates(cloudTemplates);
         setCategory("すべて");
-        setSelectedId(cloudTemplates[0].id);
-        setValues(initialValues(cloudTemplates[0]));
+        setSelectedId(next.id);
+        setValues(Object.fromEntries(
+          next.fields.map((field) => [field.key, stored?.selectedId === next.id ? stored.values[field.key] ?? "" : ""]),
+        ));
       },
       () => {
         // The built-in catalog remains available if cloud retrieval is temporarily unavailable.
@@ -83,6 +128,14 @@ export function ActionPromptLibraryPage() {
       active = false;
     };
   }, [client, userId]);
+
+  useEffect(() => {
+    if (!progressReady || !userId || !selected) return;
+    window.localStorage.setItem(
+      scopedKey(PROGRESS_KEY, userId),
+      JSON.stringify({ selectedId: selected.id, values }),
+    );
+  }, [progressReady, selected, userId, values]);
 
   const categories = useMemo(
     () => ["すべて", ...Array.from(new Set(templates.map((template) => template.category)))],
@@ -131,6 +184,12 @@ export function ActionPromptLibraryPage() {
 
   const copyPrompt = async (openAi?: AiAppKey) => {
     if (!selected) return;
+    if (typeof window !== "undefined" && userId) {
+      window.localStorage.setItem(
+        scopedKey(PROGRESS_KEY, userId),
+        JSON.stringify({ selectedId: selected.id, values }),
+      );
+    }
     try {
       await navigator.clipboard.writeText(prompt);
       setMessage(openAi
