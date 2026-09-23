@@ -122,6 +122,7 @@ test("Phase 15 member tools require the same PWA access gate as the rest of the 
   const sideJobRoute = await read("app/sidejob/page.tsx");
   const snsPlanRoute = await read("app/sns-plan/page.tsx");
   const tools = await read("components/phase-tools-page.tsx");
+  const toolCatalog = await read("features/tools/tool-catalog.ts");
 
   assert.match(gate, /useSharedAccessState\(\)/);
   assert.doesNotMatch(gate, /loadAccessState|getSupabaseClient/);
@@ -131,21 +132,26 @@ test("Phase 15 member tools require the same PWA access gate as the rest of the 
   assert.match(sideJobRoute, /Phase15MemberGate/);
   assert.match(snsPlanRoute, /Phase15MemberGate/);
   assert.doesNotMatch(tools, /const publicTools/);
-  assert.match(tools, /const memberToolGroups/);
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
+  assert.match(toolCatalog, /export const MEMBER_TOOL_GROUPS/);
   assert.match(tools, /\{ready && \(/);
 });
 
 test("tools hub keeps supporting workflows grouped and leaves article-integrated tools out of the list", async () => {
   const tools = await read("components/phase-tools-page.tsx");
+  const toolCatalog = await read("features/tools/tool-catalog.ts");
   const packageJson = JSON.parse(await read("package.json"));
 
-  assert.match(tools, /href: "\/sns-plan"/);
-  assert.match(tools, /SNSアカウント設計/);
-  assert.match(tools, /SNS・集客/);
-  assert.match(tools, /公開・改善/);
-  assert.doesNotMatch(tools, /href: "\/export"/);
-  assert.doesNotMatch(tools, /href: "\/images"/);
-  assert.doesNotMatch(tools, /href: "\/create"/);
+  assert.match(toolCatalog, /href: "\/sns-plan"/);
+  assert.match(toolCatalog, /SNSアカウント設計/);
+  assert.match(toolCatalog, /SNS・動画・集客/);
+  assert.match(toolCatalog, /公開・分析/);
+  assert.match(toolCatalog, /販売・収益化/);
+  assert.match(toolCatalog, /受託・案件獲得/);
+  assert.doesNotMatch(toolCatalog, /href: "\/export"/);
+  assert.doesNotMatch(toolCatalog, /href: "\/images"/);
+  assert.doesNotMatch(toolCatalog, /href: "\/create"/);
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
   assert.match(packageJson.scripts.test, /node --test --test-concurrency=1/);
 });
 
