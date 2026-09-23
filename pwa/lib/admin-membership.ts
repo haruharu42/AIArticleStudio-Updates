@@ -13,6 +13,8 @@ export type MembershipPlan = {
   tierRank: number;
   badgeLabel: string;
   status: string;
+  monthlyPriceYen: number | null;
+  description: string;
 };
 
 export type MembershipFeature = {
@@ -56,6 +58,11 @@ function integer(value: unknown, field: string): number {
   return value;
 }
 
+function nullableInteger(value: unknown, field: string): number | null {
+  if (value === null || value === undefined) return null;
+  return integer(value, field);
+}
+
 function booleanValue(value: unknown, field: string): boolean {
   if (typeof value !== "boolean") throw new Error(`${field}の形式が不正です。`);
   return value;
@@ -75,6 +82,9 @@ function adminError(error: unknown, fallback: string): Error {
   }
   if (message.includes("membership feature not found")) {
     return new Error("指定した特典機能が見つかりません。");
+  }
+  if (message.includes("invalid membership plan price")) {
+    return new Error("月額料金は0〜1,000,000円の範囲で入力してください。");
   }
   return new Error(fallback);
 }
@@ -105,15 +115,43 @@ export async function updateMembershipSettings(
 }
 
 export async function listMembershipPlans(client: SupabaseClient): Promise<MembershipPlan[]> {
-  const { data, error } = await client.rpc("admin_list_creator_membership_plans");
-  if (error) throw adminError(error, "メンバーシッププランを取得できませんでした。");
-  return rows(data).map((row) => ({
+  const v2 = await client.rpc("admin_list_creator_membership_plans_v2");
+  if (!v2.error) {
+    return rows(v2.data).map((row) => ({
+      planCode: text(row.plan_code, "plan_code"),
+      displayName: text(row.display_name, "display_name"),
+      tierRank: integer(row.tier_rank, "tier_rank"),
+      badgeLabel: text(row.badge_label, "badge_label"),
+      status: text(row.status, "status"),
+      monthlyPriceYen: nullableInteger(row.monthly_price_yen, "monthly_price_yen"),
+      description: text(row.description, "description"),
+    }));
+  }
+
+  const legacy = await client.rpc("admin_list_creator_membership_plans");
+  if (legacy.error) throw adminError(legacy.error, "メンバーシッププランを取得できませんでした。");
+  return rows(legacy.data).map((row) => ({
     planCode: text(row.plan_code, "plan_code"),
     displayName: text(row.display_name, "display_name"),
     tierRank: integer(row.tier_rank, "tier_rank"),
     badgeLabel: text(row.badge_label, "badge_label"),
     status: text(row.status, "status"),
+    monthlyPriceYen: null,
+    description: "",
   }));
+}
+
+export async function updateMembershipPlan(
+  client: SupabaseClient,
+  input: { planCode: string; displayName: string; monthlyPriceYen: number | null; description: string },
+): Promise<void> {
+  const { error } = await client.rpc("admin_update_creator_membership_plan", {
+    p_plan_code: input.planCode,
+    p_display_name: input.displayName.trim(),
+    p_monthly_price_yen: input.monthlyPriceYen,
+    p_description: input.description.trim(),
+  });
+  if (error) throw adminError(error, "メンバーシッププランを保存できませんでした。");
 }
 
 export async function listMembershipFeatures(client: SupabaseClient): Promise<MembershipFeature[]> {
