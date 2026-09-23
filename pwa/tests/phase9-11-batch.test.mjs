@@ -81,7 +81,6 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   const stepUi = await read("components/article-create/article-create-steps.tsx");
   const draftHelpers = await read("lib/article-create-draft.ts");
   const accessControl = await read("lib/access-control.ts");
-  const setup = await read("components/create-ai-setup.tsx");
   const progress = await read("lib/phase11-wizard-progress.ts");
   const route = await read("app/create/page.tsx");
   const options = await read("lib/phase18-content-options.ts");
@@ -115,11 +114,12 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(api, /image_style/);
   assert.doesNotMatch(api, /service[_-]?role|sb_secret_/i);
 
-  for (const label of ["記事の種類", "画像設定", "記事条件", "タイトル", "本文", "内容確認", "保存・タグ"]) {
+  for (const label of ["使用AI選択", "記事の種類", "画像設定", "記事条件", "タイトル", "本文", "内容確認", "保存・タグ"]) {
     assert.match(draftHelpers, new RegExp(label));
   }
   assert.match(page, /createArticleFromWizard/);
   assert.match(page, /ARTICLE_CREATE_STEPS/);
+  assert.match(page, /AiSelectionStep/);
   assert.match(page, /GenerationMethodStep/);
   assert.match(page, /ArticleConditionsStep/);
   assert.match(page, /TitleStep/);
@@ -194,16 +194,13 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
 
   assert.match(page, /useSharedAccessState/);
   assert.doesNotMatch(page, /loadCoreAccessState/);
-  assert.match(setup, /useSharedAccessState/);
-  assert.doesNotMatch(setup, /loadCoreAccessState|auth\.getUser\(\)|\.from\("profiles"\)/);
-  assert.match(setup, /loadArticleWizardProgress/);
-  assert.match(setup, /setRuntimeWritingProfile\(writingProfile\)/);
-  assert.match(setup, /setConfirmed\(Boolean\(wizardProgress\)\)/);
-  assert.doesNotMatch(setup, /wizardProgress \|\| writingProfile\.updatedAt/);
-  assert.match(setup, /新しい記事を作る最初に/);
-  assert.match(setup, /途中作業を復元する場合/);
+  assert.match(page, /loadWritingProfile/);
+  assert.match(page, /saveWritingProfile/);
+  assert.match(page, /setRuntimeWritingProfile/);
+  assert.match(page, /AiSelectionStep/);
+  assert.match(stepUi, /STEP 1 · 使用AI選択/);
+  assert.match(stepUi, /STEP 2 · 種類の選択/);
   assert.doesNotMatch(page, /\.from\("profiles"\)|can_access_product/);
-  assert.doesNotMatch(setup, /\.from\("profiles"\)|can_access_product/);
   assert.match(accessControl, /\.from\("profiles"\)/);
   assert.match(accessControl, /"can_access_product"/);
   assert.match(accessControl, /PWA_PRODUCT_CODE/);
@@ -239,10 +236,10 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.match(stepUi, /onBeforeExternalLaunch\(\); launchAiApp\(app\.key\)/);
   assert.match(page, /setStep\(saved\.step\)/);
   assert.match(page, /前回の作業内容を復元しました/);
-  assert.match(setup, /wizardProgress/);
   assert.match(progress, /aas:pwa:article-wizard-progress:v1:/);
   assert.match(progress, /window\.localStorage/);
-  assert.match(progress, /STORAGE_VERSION = 1/);
+  assert.match(progress, /STORAGE_VERSION = 2/);
+  assert.match(progress, /parsed\.version === 1[\s\S]*?\+ 1/);
   assert.match(progress, /updatedAt/);
   assert.match(progress, /titleCandidatesText/);
   assert.match(progress, /parseStoredArticleDraft/);
@@ -250,8 +247,8 @@ test("Phase 11 article creator separates access, controller, draft logic and ste
   assert.doesNotMatch(progress, /service[_-]?role|sb_secret_/i);
   assert.match(options, /AI副業/);
   assert.match(options, /生活・暮らし/);
-  assert.match(route, /CreateAiSetup/);
-  assert.match(setup, /Phase11CreatePage/);
+  assert.match(route, /Phase11CreatePage/);
+  assert.doesNotMatch(route, /CreateAiSetup/);
 });
 
 test("root uses the approved beginner dashboard across mobile and desktop", async () => {
