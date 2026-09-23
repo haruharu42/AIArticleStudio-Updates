@@ -1444,7 +1444,7 @@
 }
 
 
-/* Article creator UI v2: seven-step progress, readable type, and 390-430px two-column layout. */
+/* Article creator UI v2: eight-step progress, readable type, and 390-430px two-column layout. */
 .reference-create-shell .creator-head {
   width: min(100%, 900px);
   padding-top: 16px;
@@ -1463,7 +1463,7 @@
 
 .reference-create-shell .wizard-steps {
   width: min(100%, 900px);
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   overflow-x: visible;
 }
 
