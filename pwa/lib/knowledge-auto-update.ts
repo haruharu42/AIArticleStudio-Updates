@@ -255,17 +255,23 @@ export function buildKnowledgeRefreshResearchPrompt(channel: "stable" | "fresh")
     ? "Fresh向け。確認済みの重要変更を早期反映する候補を作る。断定できない変更は含めない。"
     : "Stable向け。十分に定着し、公式情報で確認できる変更だけを候補にする。";
 
-  return `あなたはAI Article Studio（AAS）のKnowledge / Prompt Update編集者です。
-目的は、AASの記事制作・画像計画・SNS制作に影響する最新変更をWebで調査し、管理者レビュー用JSONだけを返すことです。
+  return `あなたはAI Action Studio（AAS）のKnowledge / Prompt Update編集者です。
+目的は、AASの記事制作・画像計画・SNS制作に加え、各副業専用機能の判断・制作・販売・案件獲得・調査・業務効率化に影響する最新変更をWebで調査し、管理者レビュー用JSONだけを返すことです。
 
 【更新チャネル】
 ${rollout}
 
 【調査対象】
 - note / Tips / Brain の記事制作・販売・公開仕様
+- X、Instagram、Threads、TikTok、YouTube等のSNS・動画制作・公開に関係する公式仕様
+- アフィリエイトで購入判断・広告表示・商品比較に影響する公式仕様や公的ルール
+- メルカリ、ラクマ、Yahoo!系マーケット、Amazon等の物販で出品・手数料・禁止商品・配送に影響する公式仕様
+- クラウドワークス、ランサーズ、ココナラ等の案件応募・契約・納品に影響する公式仕様
+- デジタル商品・スキル販売で販売条件、購入者対応、納品に影響する公式仕様
+- 営業・案件獲得で迷惑行為や虚偽表示を避けるために必要な公的・公式情報
+- リサーチ、ファクトチェック、業務効率化で情報源の信頼性・更新日・AI利用上の注意に影響する変更
 - ChatGPT / OpenAI、Claude / Anthropic、Gemini / Google の利用上重要な変更
-- X、Instagram、Threads、TikTok、YouTube等の投稿制作に関係する公式仕様
-- 記事制作で変動しやすい仕様だけ。流行の感想やSEO都市伝説は採用しない。
+- 一時的な流行・感想・裏技・SEO都市伝説は採用しない。
 
 【情報源ルール】
 - まず公式ヘルプ、公式ドキュメント、公式発表を使う。
@@ -298,7 +304,7 @@ ${rollout}
       "guidance": ["制作ルール"],
       "deliverables": ["有効な成果物"],
       "cautions": ["注意・禁止"],
-      "tasks": ["title","article","image","social","promotion"],
+      "tasks": ["title","article","image","social","promotion","sidejob_content","sidejob_sns","sidejob_video","sidejob_affiliate","sidejob_resale","sidejob_crowdsourcing","sidejob_skill_sales","sidejob_digital_product","sidejob_outreach","sidejob_research","sidejob_efficiency","sidejob_planning"],
       "priority": 70,
       "source_urls": ["https://..."],
       "source_summary": "根拠と変更点を短く要約"
@@ -309,7 +315,7 @@ ${rollout}
       "key": "auto:一貫して再利用できる英数字キー",
       "provider": "all|chatgpt|claude|gemini",
       "plan": "all|free|paid",
-      "task": "all|title|article|image|social|promotion",
+      "task": "all|title|article|image|social|promotion|sidejob_content|sidejob_sns|sidejob_video|sidejob_affiliate|sidejob_resale|sidejob_crowdsourcing|sidejob_skill_sales|sidejob_digital_product|sidejob_outreach|sidejob_research|sidejob_efficiency|sidejob_planning",
       "rules": ["現在のモデル/サービスで有効な、短く具体的なプロンプト最適化ルール"],
       "priority": 70,
       "source_urls": ["https://..."],
@@ -317,6 +323,21 @@ ${rollout}
     }
   ]
 }
+
+【副業タスク割り当て】
+- 記事・コンテンツ販売 → sidejob_content
+- SNS運用・集客 → sidejob_sns
+- YouTube・ショート動画 → sidejob_video
+- アフィリエイト → sidejob_affiliate
+- 物販・フリマ販売 → sidejob_resale
+- クラウドソーシング → sidejob_crowdsourcing
+- スキル販売 → sidejob_skill_sales
+- デジタル商品・教材販売 → sidejob_digital_product
+- 営業・案件獲得 → sidejob_outreach
+- リサーチ・事実確認 → sidejob_research
+- 業務効率化・SOP化 → sidejob_efficiency
+- AI副業選定 → sidejob_planning
+- 1つの変更を無関係な全タスクへ広げない。影響するタスクだけ指定する。
 
 【最終監査】
 - source_urlsが空の候補は出さない。
