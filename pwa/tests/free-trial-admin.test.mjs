@@ -59,7 +59,7 @@ test("all free trial limits and lifecycle settings are administrator configurabl
   assert.match(migration, /admin_reset_user_free_trial_usage/);
   assert.match(migration, /private\.is_active_admin\(\)/);
 
-  assert.match(admin, /無料期間（日）/);
+  assert.match(admin, /label="無料期間"/);
   assert.match(admin, /1日の総利用回数/);
   assert.match(admin, /記事生成 \/ 日/);
   assert.match(admin, /SNS投稿生成 \/ 日/);
@@ -70,23 +70,26 @@ test("all free trial limits and lifecycle settings are administrator configurabl
   assert.match(adminPage, /AAS ID・表示名で検索/);
 });
 
-test("eligible active users start trial before PWA access check", async () => {
+test("eligible unentitled active users bootstrap trial only after the shared access boundary denies entitlement", async () => {
   const access = await read("lib/phase6-access.ts");
+  assert.match(access, /loadCoreAccessState\(client\)/);
   assert.match(access, /ensureMyFreeTrial\(client\)/);
-  assert.ok(access.indexOf("ensureMyFreeTrial(client)") < access.indexOf('client.rpc(\n    "can_access_product"'));
+  assert.match(access, /hasPwaEntitlement\(client\)/);
+  assert.ok(access.indexOf("loadCoreAccessState(client)") < access.indexOf("ensureMyFreeTrial(client)"));
+  assert.ok(access.indexOf("ensureMyFreeTrial(client)") < access.indexOf("hasPwaEntitlement(client)"));
 });
 
-test("trial action gates consume server-side limits for current AAS creation features", async () => {
+test("current AAS creation controllers consume server-side free usage before generation", async () => {
   const gate = await read("components/free-trial-feature-gate.tsx");
-  const createPage = await read("app/create/page.tsx");
-  const imagePage = await read("app/images/page.tsx");
-  const snsPage = await read("app/sns/page.tsx");
+  const createController = await read("components/phase11-create-page.tsx");
+  const imageController = await read("components/phase13-image-page.tsx");
+  const snsController = await read("components/phase14-sns-page.tsx");
 
   assert.match(gate, /consumeFreeTrialUsage/);
   assert.match(gate, /1回使用して/);
-  assert.match(createPage, /feature="article_generate"/);
-  assert.match(imagePage, /feature="image_generate"/);
-  assert.match(snsPage, /feature="sns_generate"/);
+  assert.match(createController, /consumeFreeTrialUsage\(getSupabaseClient\(\), "article_generate"\)/);
+  assert.match(imageController, /consumeFreeTrialUsage\(getSupabaseClient\(\), "image_generate"\)/);
+  assert.match(snsController, /consumeFreeTrialUsage\(getSupabaseClient\(\), "sns_generate"\)/);
 });
 
 test("paid users and admins bypass trial limits without browser secrets", async () => {
@@ -100,10 +103,10 @@ test("paid users and admins bypass trial limits without browser secrets", async 
   assert.doesNotMatch(client, /SERVICE_ROLE|AAS_SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET/i);
 });
 
-test("home displays trial remaining days and daily usage", async () => {
-  const page = await read("app/page.tsx");
+test("global shell displays trial remaining days and daily usage", async () => {
+  const layout = await read("app/layout.tsx");
   const banner = await read("components/free-trial-banner.tsx");
-  assert.match(page, /FreeTrialBanner/);
+  assert.match(layout, /<FreeTrialBanner \/>/);
   assert.match(banner, /残り \{status\.remainingDays/);
   assert.match(banner, /status\.totalUsed/);
   assert.match(banner, /status\.dailyTotalLimit/);
