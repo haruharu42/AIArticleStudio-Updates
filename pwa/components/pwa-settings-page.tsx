@@ -163,7 +163,7 @@ export function PwaSettingsPage() {
   return (
     <div className="beginner-shell persistent-settings-shell">
       <header className="beginner-topbar">
-        <Link className="beginner-brand" href="/" aria-label="AI Article Studio ホーム"><span aria-hidden="true">✦</span><strong>AI ARTICLE <em>STUDIO</em></strong></Link>
+        <Link className="beginner-brand" href="/" aria-label="AI Action Studio ホーム"><span aria-hidden="true">✦</span><strong>AI ACTION <em>STUDIO</em></strong></Link>
         {profile && <div className="beginner-account"><span>{profile.display_name || "ユーザー"}</span><small>{profile.aas_user_id}</small></div>}
       </header>
 
