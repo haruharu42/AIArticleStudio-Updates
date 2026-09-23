@@ -101,6 +101,8 @@ export type CreatorMembershipPlan = {
   templateTier: string;
   benefits: Record<string, unknown>;
   isCurrent: boolean;
+  monthlyPriceYen: number | null;
+  description: string;
 };
 
 function asString(value: unknown): string {
@@ -270,12 +272,16 @@ export async function claimCreatorMissionReward(client: SupabaseClient, missionC
 }
 
 export async function listCreatorMembershipPlans(client: SupabaseClient): Promise<CreatorMembershipPlan[]> {
-  const { data, error } = await client.rpc("list_my_creator_membership_plans");
-  if (error) throw new Error("Creator Clubプランを読み込めませんでした。");
-  if (!Array.isArray(data)) return [];
-  return data.map((raw) => {
+  const v2 = await client.rpc("list_my_creator_membership_plans_v2");
+  const result = !v2.error ? v2 : await client.rpc("list_my_creator_membership_plans");
+  if (result.error) throw new Error("Creator Clubプランを読み込めませんでした。");
+  if (!Array.isArray(result.data)) return [];
+  return result.data.map((raw) => {
     const row = (raw ?? {}) as Record<string, unknown>;
     const knowledgeChannel: KnowledgeTier = row.knowledge_channel === "fresh" ? "fresh" : "stable";
+    const monthlyPrice = row.monthly_price_yen === null || row.monthly_price_yen === undefined
+      ? null
+      : Math.max(0, asNumber(row.monthly_price_yen));
     return {
       planCode: asString(row.plan_code),
       displayName: asString(row.display_name),
@@ -288,6 +294,8 @@ export async function listCreatorMembershipPlans(client: SupabaseClient): Promis
       templateTier: asString(row.template_tier) || "member",
       benefits: asObject(row.benefits),
       isCurrent: asBoolean(row.is_current),
+      monthlyPriceYen: monthlyPrice,
+      description: asString(row.description),
     };
   });
 }
