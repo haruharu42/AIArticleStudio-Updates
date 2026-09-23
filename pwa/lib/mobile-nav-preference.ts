@@ -57,7 +57,7 @@ export const USER_MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   { key: "images", label: "画像", icon: "▧", href: "/images" },
   { key: "tools", label: "機能", icon: "▦", href: "/tools" },
   { key: "sns", label: "SNS", icon: "↗", href: "/sns" },
-  { key: "sidejob", label: "副業", icon: "◇", href: "/sidejob" },
+  { key: "sidejob", label: "副業", icon: "◇", href: "/side-hustles/sidejob-planner" },
   { key: "snsPlan", label: "SNS設計", icon: "◎", href: "/sns-plan" },
   { key: "publish", label: "公開", icon: "⇧", href: "/publish" },
   { key: "analytics", label: "分析", icon: "▥", href: "/analytics" },
