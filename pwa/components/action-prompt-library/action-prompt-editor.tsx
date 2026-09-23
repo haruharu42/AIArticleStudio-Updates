@@ -1,6 +1,5 @@
 import { AI_APP_LINKS, type AiAppKey } from "@/lib/ai-app-links";
-import type { ActionPromptTemplate } from "@/lib/action-prompt-catalog";
-import { recommendedActionPromptAi } from "@/lib/action-prompt-preferences";
+import { recommendedActionPromptAi, type ActionPromptTemplate } from "@/features/prompts";
 
 type Props = {
   selected: ActionPromptTemplate;
