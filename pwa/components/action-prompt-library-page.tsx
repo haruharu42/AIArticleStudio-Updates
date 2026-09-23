@@ -218,10 +218,10 @@ export function ActionPromptLibraryPage() {
       <header className="creator-head">
         <div>
           <p className="eyebrow">AI ACTION STUDIO</p>
-          <h1>副業プロンプトライブラリ</h1>
+          <h1>汎用プロンプトライブラリ</h1>
           <p>
-            副業や目的を選び、必要な情報だけ入力。
-            完成したプロンプトをコピーしてChatGPT・Claude・Geminiですぐ使えます。
+            短い補助プロンプトを探すための汎用ライブラリです。
+            副業ごとの本格的な設計・制作は「機能一覧」の専用ウィザードを利用してください。
           </p>
         </div>
         <Link className="route-back" href="/">← ホーム</Link>
