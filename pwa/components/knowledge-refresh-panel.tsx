@@ -267,7 +267,7 @@ export function KnowledgeRefreshPanel() {
         <div>
           <p className="eyebrow">AUTO UPDATE CONTROL</p>
           <h2>Knowledge / Prompt 更新</h2>
-          <p>記事・SNS・画像に加え、12種類の副業専用Knowledge / Promptも更新対象です。更新期限は自動でキュー化し、管理者が差分と根拠を確認してからFresh / Stableへ版管理して公開します。</p>
+          <p>記事・SNS・画像に加え、各副業専用Knowledge / Promptも更新対象です。更新期限は自動でキュー化し、管理者が差分と根拠を確認してからFresh / Stableへ版管理して公開します。</p>
         </div>
         <button type="button" disabled={busy} onClick={() => void reload()}>再読込</button>
       </div>
