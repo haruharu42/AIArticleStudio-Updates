@@ -20,7 +20,7 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     route,
     nav,
     layout,
-    hub,
+    toolCatalog,
   ] = await Promise.all([
     read("lib/action-prompt-catalog.ts"),
     read("components/action-prompt-library-page.tsx"),
@@ -33,7 +33,7 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     read("app/prompts/page.tsx"),
     read("lib/mobile-nav-preference.ts"),
     read("app/layout.tsx"),
-    read("components/action-studio-home-hub.tsx"),
+    read("features/tools/tool-catalog.ts"),
   ]);
 
   for (const category of [
@@ -94,7 +94,7 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     "category=リサーチ",
     "category=業務効率化",
   ]) {
-    assert.match(hub, new RegExp(deepLink));
+    assert.match(toolCatalog, new RegExp(deepLink));
   }
 
   assert.doesNotMatch(
