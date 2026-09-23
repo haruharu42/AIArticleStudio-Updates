@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 
+import { NotePostAssistant } from "@/components/article-library/note-post-assistant";
 import { noteMagazineFromWorkspace } from "@/lib/article-library-v2";
 import { articleExportBody } from "@/lib/article-export";
 import { copyNoteRichText } from "@/lib/note-rich-text";
@@ -115,6 +116,10 @@ export function ArticleLibraryDetailView({
           )}
           {copyMessage && <div className="route-notice" role="status" aria-live="polite">{copyMessage}</div>}
         </section>
+
+        {detail.publicationTarget === "note" && (
+          <NotePostAssistant detail={detail} body={articleExportBody(detail)} />
+        )}
 
         <dl className="detail-meta">
           <div><dt>ジャンル</dt><dd>{detail.genre || "—"}</dd></div>
