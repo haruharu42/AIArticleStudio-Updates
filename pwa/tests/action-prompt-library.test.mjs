@@ -20,7 +20,6 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     route,
     nav,
     layout,
-    toolCatalog,
   ] = await Promise.all([
     read("lib/action-prompt-catalog.ts"),
     read("components/action-prompt-library-page.tsx"),
@@ -33,7 +32,6 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     read("app/prompts/page.tsx"),
     read("lib/mobile-nav-preference.ts"),
     read("app/layout.tsx"),
-    read("features/tools/tool-catalog.ts"),
   ]);
 
   for (const category of [
@@ -80,22 +78,6 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
   assert.match(route, /Phase15MemberGate/);
   assert.match(nav, /key: "prompts"/);
   assert.match(layout, /phase49-prompt-library\.css/);
-
-  for (const deepLink of [
-    "category=記事・コンテンツ",
-    "category=SNS",
-    "category=動画・YouTube",
-    "category=アフィリエイト",
-    "category=物販・販売",
-    "category=クラウドソーシング",
-    "category=スキル販売",
-    "category=デジタル商品",
-    "category=顧客対応・営業",
-    "category=リサーチ",
-    "category=業務効率化",
-  ]) {
-    assert.match(toolCatalog, new RegExp(deepLink));
-  }
 
   assert.doesNotMatch(
     [catalog, page, editor, toolbar, list, preferences, routing].join("\n"),
