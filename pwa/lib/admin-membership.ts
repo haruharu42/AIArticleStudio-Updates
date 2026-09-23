@@ -150,3 +150,71 @@ export async function setMembershipPlanFeature(
   });
   if (error) throw adminError(error, "プランの特典機能を更新できませんでした。");
 }
+
+
+export type MembershipAssignment = {
+  userId: string;
+  aasUserId: string;
+  displayName: string | null;
+  planCode: string;
+  planName: string;
+  productCode: string;
+  grantedAt: string;
+  expiresAt: string | null;
+  salesChannel: string;
+  externalReference: string | null;
+};
+
+export type MembershipAuditAction = {
+  id: number;
+  actorUserId: string | null;
+  targetUserId: string;
+  targetAasUserId: string;
+  targetDisplayName: string | null;
+  productCode: string;
+  action: "grant" | "update" | "revoke";
+  oldStatus: string | null;
+  newStatus: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+};
+
+export async function listMembershipAssignments(client: SupabaseClient): Promise<MembershipAssignment[]> {
+  const { data, error } = await client.rpc("admin_list_creator_membership_assignments");
+  if (error) throw adminError(error, "現在のメンバー一覧を取得できませんでした。");
+  return rows(data).map((row) => ({
+    userId: text(row.user_id, "user_id"),
+    aasUserId: text(row.aas_user_id, "aas_user_id"),
+    displayName: nullableText(row.display_name, "display_name"),
+    planCode: text(row.plan_code, "plan_code"),
+    planName: text(row.plan_name, "plan_name"),
+    productCode: text(row.product_code, "product_code"),
+    grantedAt: text(row.granted_at, "granted_at"),
+    expiresAt: nullableText(row.expires_at, "expires_at"),
+    salesChannel: text(row.sales_channel, "sales_channel"),
+    externalReference: nullableText(row.external_reference, "external_reference"),
+  }));
+}
+
+export async function listMembershipAuditActions(
+  client: SupabaseClient,
+  limit = 50,
+): Promise<MembershipAuditAction[]> {
+  const { data, error } = await client.rpc("admin_list_creator_membership_actions", {
+    p_limit: Math.max(1, Math.min(200, Math.trunc(limit))),
+  });
+  if (error) throw adminError(error, "メンバーシップ監査ログを取得できませんでした。");
+  return rows(data).map((row) => ({
+    id: integer(row.id, "id"),
+    actorUserId: nullableText(row.actor_user_id, "actor_user_id"),
+    targetUserId: text(row.target_user_id, "target_user_id"),
+    targetAasUserId: text(row.target_aas_user_id, "target_aas_user_id"),
+    targetDisplayName: nullableText(row.target_display_name, "target_display_name"),
+    productCode: text(row.product_code, "product_code"),
+    action: text(row.action, "action") as MembershipAuditAction["action"],
+    oldStatus: nullableText(row.old_status, "old_status"),
+    newStatus: nullableText(row.new_status, "new_status"),
+    expiresAt: nullableText(row.expires_at, "expires_at"),
+    createdAt: text(row.created_at, "created_at"),
+  }));
+}
