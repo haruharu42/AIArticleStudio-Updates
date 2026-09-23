@@ -23,6 +23,7 @@ test("membership admin exposes note URL, feature matrix and user grant/revoke wo
   for (const label of [
     "noteメンバーシップ基本設定",
     "noteメンバーシップURL",
+    "3プランの料金・表示設定",
     "プランごとの利用可能機能",
     "ユーザーへメンバー特典を付与",
     "メンバー特典を取り消す",
@@ -116,11 +117,43 @@ test("user membership page shows admin-configured note URL and only enabled mana
   assert.match(page, /noteメンバーシップを見る/);
   assert.match(page, /featuresByPlan/);
   assert.match(page, /if \(!item\.enabled\) continue/);
-  assert.match(page, /AASで利用できる特典/);
+  assert.match(page, /このプランで利用できる機能/);
+  assert.match(page, /formatMembershipPrice/);
+  assert.match(page, /monthlyPriceYen/);
   assert.match(access, /get_creator_membership_public_settings/);
   assert.match(access, /list_creator_membership_feature_matrix/);
   assert.match(css, /membershipJoinCard/);
   assert.match(css, /membershipFeatureList/);
+});
+
+test("membership plan pricing is admin-editable and exposed to the user plan comparison", () => {
+  const migration = readRepo("supabase/migrations/20260923092500_membership_plan_pricing_and_features.sql");
+  const adminPage = read("components/admin-membership-page.tsx");
+  const adminClient = read("lib/admin-membership.ts");
+  const creatorClient = read("lib/creator-system.ts");
+  const userPage = read("app/membership/page.tsx");
+
+  assert.match(migration, /monthly_price_yen/);
+  assert.match(migration, /description text not null default ''/);
+  assert.match(migration, /admin_update_creator_membership_plan/);
+  assert.match(migration, /admin_list_creator_membership_plans_v2/);
+  assert.match(migration, /list_my_creator_membership_plans_v2/);
+  assert.match(migration, /private\.is_active_admin\(\)/);
+  assert.match(migration, /between 0 and 1000000/);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+
+  assert.match(adminClient, /updateMembershipPlan/);
+  assert.match(adminClient, /admin_list_creator_membership_plans_v2/);
+  assert.match(adminClient, /pricingManaged/);
+  assert.match(adminPage, /3プランの料金・表示設定/);
+  assert.match(adminPage, /月額料金（税込・円）/);
+  assert.match(adminPage, /自由に割り振り/);
+  assert.match(adminPage, /このプラン設定を保存/);
+  assert.match(creatorClient, /list_my_creator_membership_plans_v2/);
+  assert.match(creatorClient, /monthlyPriceYen/);
+  assert.match(userPage, /料金未設定/);
+  assert.match(userPage, /note側の月額料金/);
+  assert.match(userPage, /このプランで利用できる機能/);
 });
 
 test("membership defaults make cloud image storage a member-only capability across active plans", () => {
