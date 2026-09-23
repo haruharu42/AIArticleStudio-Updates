@@ -68,7 +68,7 @@ test("Phase 14 converts owned article content into X, Instagram and Threads prom
   assert.doesNotMatch(`${api}\n${page}`, /sb_secret_|service[_-]?role/i);
 });
 
-test("Phase 15 ranks side jobs as an internal fit aid and exports a non-guaranteed strategy prompt", async () => {
+test("Phase 15 keeps legacy fit logic safe while the public route uses the dedicated dropdown planner", async () => {
   const api = await read("lib/phase15-sidejob.ts");
   const page = await read("components/phase15-sidejob-page.tsx");
   const route = await read("app/sidejob/page.tsx");
@@ -79,7 +79,9 @@ test("Phase 15 ranks side jobs as an internal fit aid and exports a non-guarante
   assert.match(api, /収益額・成功率・フォロワー数などを保証しない/);
   assert.match(api, /\.sort\(\(a, b\) => b\.score - a\.score/);
   assert.match(page, /適合スコアはAAS内の比較用/);
-  assert.match(route, /Phase15SideJobPage/);
+  assert.match(route, /SideHustleWizardPage/);
+  assert.match(route, /slug="sidejob-planner"/);
+  assert.doesNotMatch(route, /Phase15SideJobPage/);
 });
 
 test("Phase 16 records publication state with optimistic revision and no external auto-post", async () => {
