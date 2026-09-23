@@ -7,7 +7,10 @@ import { useSharedAccessState } from "@/components/access-state-provider";
 import { SideHustleSelectField } from "@/components/side-hustles/side-hustle-select-field";
 import { SideHustleStepRail } from "@/components/side-hustles/side-hustle-step-rail";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
-import { getRuntimeKnowledgeState } from "@/lib/prompt-optimization";
+import {
+  getRuntimeKnowledgeState,
+  KNOWLEDGE_RUNTIME_EVENT,
+} from "@/lib/prompt-optimization";
 import { getSideHustleDefinition } from "@/features/side-hustles/catalog";
 import {
   buildSideHustlePrompt,
@@ -36,6 +39,7 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
   );
   const [message, setMessage] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [knowledgeRevision, setKnowledgeRevision] = useState(0);
 
   useEffect(() => {
     if (!definition || !userId) return;
@@ -47,15 +51,24 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
   }, [definition, userId]);
 
   useEffect(() => {
+    const refresh = () => setKnowledgeRevision((value) => value + 1);
+    window.addEventListener(KNOWLEDGE_RUNTIME_EVENT, refresh);
+    return () => window.removeEventListener(KNOWLEDGE_RUNTIME_EVENT, refresh);
+  }, []);
+
+  useEffect(() => {
     if (!definition || !draft || !hydrated || !userId) return;
     writeSideHustleDraft(userId, definition, draft);
   }, [definition, draft, hydrated, userId]);
 
   const built = useMemo(
     () => definition && draft ? buildSideHustlePrompt(definition, draft) : null,
-    [definition, draft],
+    [definition, draft, knowledgeRevision],
   );
-  const runtimeState = getRuntimeKnowledgeState();
+  const runtimeState = useMemo(
+    () => getRuntimeKnowledgeState(),
+    [knowledgeRevision],
+  );
 
   if (!definition || !draft) return null;
 
