@@ -396,3 +396,131 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.membership-status-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.membership-status-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  border: 1px solid #dce7f3;
+  border-radius: 13px;
+  background: #fff;
+  padding: 13px;
+}
+
+.membership-status-grid span,
+.membership-status-grid small {
+  color: #7185a2;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.membership-status-grid strong {
+  color: #176bd9;
+  font-size: 22px;
+}
+
+.membership-expiring-list {
+  border: 1px solid #ead9ad;
+  border-radius: 13px;
+  background: #fffaf0;
+  overflow: hidden;
+}
+
+.membership-expiring-list summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  color: #76591f;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.membership-expiring-list > div {
+  display: grid;
+  gap: 7px;
+  padding: 0 12px 12px;
+}
+
+.membership-expiring-list button {
+  display: grid;
+  grid-template-columns: minmax(120px, .8fr) minmax(160px, 1.2fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  border: 1px solid #eadfca;
+  border-radius: 10px;
+  background: #fff;
+  color: #324b67;
+  padding: 9px 11px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.membership-expiring-list button small {
+  color: #8a7446;
+  text-align: right;
+}
+
+.membership-audit-list {
+  display: grid;
+  gap: 7px;
+}
+
+.membership-audit-list article {
+  display: grid;
+  grid-template-columns: minmax(120px, .8fr) auto minmax(170px, 1.2fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  border: 1px solid #e0e8f2;
+  border-radius: 11px;
+  background: #fff;
+  padding: 9px 11px;
+}
+
+.membership-audit-list article strong {
+  color: #173756;
+}
+
+.membership-audit-list article span {
+  width: fit-content;
+  border-radius: 999px;
+  background: #eef5ff;
+  color: #176bd9;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.membership-audit-list article small,
+.membership-audit-list article time {
+  color: #7185a2;
+  font-size: 9px;
+}
+
+@media (max-width: 980px) {
+  .membership-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .membership-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .membership-expiring-list button,
+  .membership-audit-list article {
+    grid-template-columns: 1fr;
+  }
+
+  .membership-expiring-list button small {
+    text-align: left;
+  }
+}
