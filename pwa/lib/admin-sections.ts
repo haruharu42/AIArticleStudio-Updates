@@ -32,7 +32,7 @@ export const ADMIN_SECTION_GROUPS: readonly {
 }[] = [
   { id: "daily", eyebrow: "DAILY OPERATIONS", title: "日常の管理", description: "問い合わせ対応、ユーザー承認、無料枠など、普段よく使う管理です。" },
   { id: "sales", eyebrow: "SALES & PROMOTION", title: "販売・告知", description: "販売受付、アップグレード導線、告知や販促素材を管理します。" },
-  { id: "creation", eyebrow: "CONTENT & DEVELOPMENT", title: "制作・開発支援", description: "開発依頼プロンプトと、AASが参照するナレッジを整えます。" },
+  { id: "creation", eyebrow: "CONTENT & DEVELOPMENT", title: "制作・開発支援", description: "ユーザー向け副業プロンプト、開発依頼プロンプト、AASが参照するナレッジを整えます。" },
   { id: "system", eyebrow: "SYSTEM CONTROL", title: "システム・安全管理", description: "アップデート、管理者認証、監査・容量・障害対応を管理します。" },
 ] as const;
 
