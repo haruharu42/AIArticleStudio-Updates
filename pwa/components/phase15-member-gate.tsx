@@ -30,7 +30,7 @@ export function Phase15MemberGate({ children }: { children: ReactNode }) {
   return (
     <main className="standalone-page">
       <section className="standalone-card">
-        <p className="eyebrow">AI ARTICLE STUDIO · MEMBER TOOL</p>
+        <p className="eyebrow">AI ACTION STUDIO · MEMBER TOOL</p>
         <h1>利用権を確認</h1>
         <div className="route-notice error">{message}</div>
         {canRegisterInvite && (
