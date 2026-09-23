@@ -72,7 +72,7 @@ test("admin refresh UI requires sourced JSON review before publication", async (
   assert.match(admin, /KnowledgeRefreshPanel/);
   assert.match(panel, /自動収集＝自動公開ではありません/);
   assert.match(panel, /調査プロンプトをコピー/);
-  assert.match(panel, /検証して公開/);
+  assert.match(panel, /差分確認後に公開/);
   assert.match(client, /まず公式ヘルプ、公式ドキュメント、公式発表を使う/);
   assert.match(client, /可能な限り2つ以上の独立した根拠/);
   assert.match(client, /source_urlsが空の候補は出さない/);
