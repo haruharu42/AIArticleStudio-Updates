@@ -5,6 +5,7 @@ export type AdminSectionId =
   | "sales"
   | "promotion"
   | "development-prompts"
+  | "prompts"
   | "knowledge"
   | "releases"
   | "security"
@@ -100,6 +101,15 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     description: "アップデート・修正・追加機能を対象画面まで絞り込み、ChatGPTへ渡すAAS開発依頼文を作成。",
   },
   {
+    id: "prompts",
+    group: "creation",
+    href: "/admin/prompts",
+    eyebrow: "PROMPT LIBRARY",
+    title: "副業プロンプト管理",
+    shortTitle: "副業プロンプト",
+    description: "ユーザー向け副業プロンプト、カテゴリ、入力項目、推奨AI、公開状態を管理。",
+  },
+  {
     id: "knowledge",
     group: "creation",
     href: "/admin/knowledge",
@@ -144,6 +154,7 @@ export const ADMIN_HOME_SHORTCUT_IDS: readonly AdminSectionId[] = [
   "free-plan",
   "sales",
   "development-prompts",
+  "prompts",
   "releases",
   "security",
   "operations",
