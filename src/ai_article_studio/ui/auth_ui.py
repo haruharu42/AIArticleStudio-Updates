@@ -52,7 +52,7 @@ AI_NOTICE = (
 )
 
 AI_DETAIL = (
-    "AI Article Studioは、記事設計やプロンプト作成などを支援します。\n\n"
+    "AI Action Studioは、記事・SNS・画像・副業などのAI活用を分かりやすく支援します。\n\n"
     "・ChatGPTなどのWeb AI、各社API、ローカルAIは、それぞれの提供元のアカウント・利用枠・料金・利用規約が適用されます。\n"
     "・AIの出力には誤りや古い情報が含まれる場合があります。公開前に、事実・権利・表現・リンクを必ず確認してください。\n"
     "・個人情報、機密情報、第三者の秘密情報を、必要なくAIサービスへ送信しないでください。\n"
@@ -330,7 +330,7 @@ class AuthUIController:
         self._replace_auth_frame()
         frame = self.auth_frame
         assert frame is not None
-        self._brand_panel(frame, "WELCOME BACK", "AI Article Studioへログイン")
+        self._brand_panel(frame, "WELCOME BACK", "AI Action Studioへログイン")
         card = tk.Frame(frame, bg=SURFACE, highlightthickness=1, highlightbackground=LINE)
         card.place(relx=0.66, rely=0.5, anchor="center", width=510, height=680)
         _label(card, "ログイン", size=24, weight="bold").pack(anchor="w", padx=44, pady=(38, 4))
@@ -386,7 +386,7 @@ class AuthUIController:
         self._replace_auth_frame()
         frame = self.auth_frame
         assert frame is not None
-        self._brand_panel(frame, "CREATE ACCOUNT", "AI Article Studioを始める")
+        self._brand_panel(frame, "CREATE ACCOUNT", "AI Action Studioを始める")
         card = tk.Frame(frame, bg=SURFACE, highlightthickness=1, highlightbackground=LINE)
         card.place(relx=0.66, rely=0.5, anchor="center", width=620, height=820)
         _label(card, "新規登録", size=22, weight="bold").pack(anchor="w", padx=42, pady=(28, 3))
