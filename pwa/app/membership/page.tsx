@@ -20,6 +20,10 @@ import {
 } from "@/lib/membership-access";
 import { getSupabaseClient } from "@/lib/supabase";
 
+function formatMembershipPrice(value: number | null): string {
+  return value === null ? "料金未設定" : `¥${value.toLocaleString("ja-JP")} / 月`;
+}
+
 export default function CreatorMembershipPage() {
   const [dashboard, setDashboard] = useState<CreatorDashboard | null>(null);
   const [plans, setPlans] = useState<CreatorMembershipPlan[]>([]);
@@ -114,7 +118,11 @@ export default function CreatorMembershipPage() {
                   {plan.isCurrent ? <span className={styles.tierBadge}>利用中</span> : null}
                 </div>
                 <h2>{plan.displayName}</h2>
-                <p>プラン変更時も記事・プロフィール・Creator Levelはそのまま保持されます。</p>
+                <div className={questStyles.membershipPlanPrice}>
+                  <strong>{formatMembershipPrice(plan.monthlyPriceYen)}</strong>
+                  <small>note側の月額料金</small>
+                </div>
+                <p>{plan.description || "このプランで利用できるAAS特典は下に表示されます。"}</p>
                 <div className={questStyles.planBenefits}>
                   <div><small>AI Knowledge</small><strong>{plan.knowledgeChannel === "fresh" ? "Fresh" : "Stable"} / {formatRefreshCadence(plan.knowledgeRefreshHours)}</strong></div>
                   <div><small>完成記事XP</small><strong>×{plan.articleXpMultiplier.toFixed(1)}</strong></div>
@@ -123,7 +131,7 @@ export default function CreatorMembershipPage() {
                 </div>
                 {(featuresByPlan.get(plan.planCode)?.length ?? 0) > 0 ? (
                   <div className={questStyles.membershipFeatureList}>
-                    <strong>AASで利用できる特典</strong>
+                    <strong>このプランで利用できる機能</strong>
                     <ul>
                       {featuresByPlan.get(plan.planCode)?.map((feature) => (
                         <li key={feature.featureKey}>
