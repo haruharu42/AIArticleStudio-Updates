@@ -109,7 +109,7 @@ test("Phase 17 reports only internal article metrics until external analytics ar
   assert.match(route, /Phase17AnalyticsPage/);
 });
 
-test("tools hub and beginner-first root expose all functional routes with SNS in mobile navigation", async () => {
+test("tools hub exposes grouped supporting routes while article creation keeps its own integrated tools", async () => {
   const tools = await read("components/phase-tools-page.tsx");
   const toolsRoute = await read("app/tools/page.tsx");
   const shell = await read("components/phase18-beginner-home.tsx");
@@ -122,8 +122,14 @@ test("tools hub and beginner-first root expose all functional routes with SNS in
   const beginnerCss = await read("app/phase18-beginner.css");
   const dashboardCss = await read("app/phase19-dashboard.css");
 
-  for (const href of ["/create", "/images", "/sns", "/sidejob", "/publish", "/analytics"]) {
+  for (const href of ["/workflow", "/note-operations", "/account-design", "/sns", "/sns-plan", "/sidejob", "/publish", "/analytics", "/inquiries"]) {
     assert.match(tools, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
+  }
+  for (const duplicateHref of ["/create", "/images", "/export"]) {
+    assert.doesNotMatch(tools, new RegExp(`href: \\"${duplicateHref.replace("/", "\\/")}\\"`));
+  }
+  for (const group of ["運営・アカウント", "SNS・集客", "公開・改善", "副業・収益化", "サポート"]) {
+    assert.match(tools, new RegExp(group));
   }
   assert.match(tools, /useSharedAccessState\(\)/);
   assert.doesNotMatch(tools, /loadAccessState/);
