@@ -38,6 +38,9 @@ test("membership admin exposes note URL, feature matrix and user grant/revoke wo
   assert.match(page, /window\.confirm/);
   assert.match(page, /note-membership-admin/);
   assert.match(page, /AAS ID または表示名/);
+  assert.match(page, /configReady/);
+  assert.match(page, /新しいメンバーシップ設定DBはまだ未適用です/);
+  assert.match(page, /Creator Club特典の付与・変更・取消は利用できます/);
   assert.match(page, /https:\/\/note\.com\//);
   assert.doesNotMatch(page, /service[_-]?role|sb_secret_/i);
 });
