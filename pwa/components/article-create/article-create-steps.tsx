@@ -13,7 +13,15 @@ import {
   type SaveStatus,
 } from "@/lib/phase11-create";
 import { copyNoteRichText } from "@/lib/note-rich-text";
-import { getRuntimeWritingProfile } from "@/lib/user-personalization";
+import {
+  AI_PLAN_LABELS,
+  AI_PROVIDER_LABELS,
+  getRuntimeWritingProfile,
+  summarizeWritingProfile,
+  type AiPlan,
+  type AiProvider,
+  type UserWritingProfile,
+} from "@/lib/user-personalization";
 import type { ImagePromptItem } from "@/lib/phase13-image-prompts";
 import {
   AGE_GROUP_OPTIONS,
@@ -34,6 +42,87 @@ export type ArticleDraftPatch = <K extends keyof ArticleCreationDraft>(
 ) => void;
 
 type MessageSetter = (value: string) => void;
+
+export function AiSelectionStep({
+  profile,
+  onChange,
+}: {
+  profile: UserWritingProfile;
+  onChange: (profile: UserWritingProfile) => void;
+}) {
+  const patchProfile = <K extends keyof UserWritingProfile>(key: K, value: UserWritingProfile[K]) => {
+    onChange({ ...profile, [key]: value });
+  };
+
+  return (
+    <div className="wizard-pane">
+      <p className="eyebrow">STEP 1 · 使用AI選択</p>
+      <h2>今回使用するAIを選んでください</h2>
+      <p className="panel-muted">選んだAIと無料版・有料版に合わせて、AASが記事生成プロンプトを最適化します。後から上の①を押していつでも変更できます。</p>
+
+      <div className="ai-setup-block">
+        <div>
+          <h3>使用AI</h3>
+          <p>今回の記事生成に使うAIを選択してください。</p>
+        </div>
+      </div>
+      <div className="ai-provider-grid" role="radiogroup" aria-label="使用AI">
+        {(Object.keys(AI_PROVIDER_LABELS) as AiProvider[]).map((provider) => (
+          <button
+            key={provider}
+            type="button"
+            role="radio"
+            aria-checked={profile.preferredAi === provider}
+            className={profile.preferredAi === provider ? "active" : ""}
+            onClick={() => patchProfile("preferredAi", provider)}
+          >
+            <strong>{AI_PROVIDER_LABELS[provider]}</strong>
+            <small>{provider === "chatgpt" ? "構造化された記事指示" : provider === "claude" ? "長文の一貫性を意識" : "条件整理と構造化を意識"}</small>
+          </button>
+        ))}
+      </div>
+
+      <div className="ai-setup-block ai-setup-block-spaced">
+        <div>
+          <h3>利用プラン</h3>
+          <p>無料版・有料版に合わせて、プロンプトの情報量と確認項目を調整します。</p>
+        </div>
+      </div>
+      <div className="ai-plan-grid" role="radiogroup" aria-label="利用プラン">
+        {(Object.keys(AI_PLAN_LABELS) as AiPlan[]).map((plan) => (
+          <button
+            key={plan}
+            type="button"
+            role="radio"
+            aria-checked={profile.preferredPlan === plan}
+            className={profile.preferredPlan === plan ? "active" : ""}
+            onClick={() => patchProfile("preferredPlan", plan)}
+          >
+            <strong>{AI_PLAN_LABELS[plan]}</strong>
+            <small>{plan === "free" ? "重要条件を優先してコンパクトに" : "詳細条件と長文整合性まで活用"}</small>
+          </button>
+        ))}
+      </div>
+
+      <label className="ai-personalization-toggle">
+        <span>
+          <strong>あなた向け最適化</strong>
+          <small>ONでは設定した文章の好みと、記事保存時の小さな利用傾向を次回プロンプトへ反映します。</small>
+        </span>
+        <input
+          type="checkbox"
+          checked={profile.personalizationEnabled}
+          onChange={(event) => patchProfile("personalizationEnabled", event.target.checked)}
+        />
+      </label>
+
+      <div className="ai-profile-summary">
+        {summarizeWritingProfile(profile).map((line) => <span key={line}>{line}</span>)}
+      </div>
+      <p className="ai-privacy-note">記事本文・AI回答全文・プロンプト全文を個人最適化プロフィールとして保存しません。</p>
+    </div>
+  );
+}
 
 const AI_LAUNCH_OPTIONS = [
   { key: "chatgpt", label: "ChatGPT" },
@@ -130,7 +219,7 @@ export function GenerationMethodStep({
 
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 1 · 種類の選択</p>
+      <p className="eyebrow">STEP 2 · 種類の選択</p>
       <h2>何を作成しますか？</h2>
 
       <div className="article-kind-grid">
@@ -175,7 +264,7 @@ export function GenerationMethodStep({
           onPlanChange={onMagazinePlanChange}
         />
       ) : (
-        <p className="beginner-help">記事テーマの別入力は不要です。ジャンル・サブジャンル等を決めたあと、STEP 4で記事タイトルを作成します。</p>
+        <p className="beginner-help">記事テーマの別入力は不要です。ジャンル・サブジャンル等を決めたあと、STEP 5で記事タイトルを作成します。</p>
       )}
     </div>
   );
@@ -190,7 +279,7 @@ export function ImagePlanStep({
 }) {
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 2</p><h2>記事に画像を入れますか？</h2>
+      <p className="eyebrow">STEP 3</p><h2>記事に画像を入れますか？</h2>
       <label className="choice-card"><input type="checkbox" checked={draft.coverEnabled} onChange={(event) => patch("coverEnabled", event.target.checked)} /><span><strong>アイキャッチ画像を作る</strong><small>記事の先頭に表示するメイン画像です。基本はONがおすすめです。</small></span></label>
       <label className="choice-card"><input type="checkbox" checked={draft.inlineEnabled} onChange={(event) => patch("inlineEnabled", event.target.checked)} /><span><strong>挿絵を作る</strong><small>本文の途中に入れる画像です。必要な場合だけONにしてください。</small></span></label>
       {(draft.coverEnabled || draft.inlineEnabled) && (
@@ -229,7 +318,7 @@ export function ArticleConditionsStep({
 
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 3</p><h2>記事の基本条件を選んでください</h2>
+      <p className="eyebrow">STEP 4</p><h2>記事の基本条件を選んでください</h2>
       <p className="beginner-help">年齢・ジャンル・サブジャンルなどの選択条件をAAS Knowledge Compilerが組み合わせ、タイトル・本文・画像・SNS向けの指示へ反映します。</p>
       <div className="creator-form-grid">
         <label className="route-field"><span>掲載先</span><select value={draft.publicationTarget} disabled={draft.magazineEnabled} onChange={(event) => patch("publicationTarget", event.target.value as PublicationTarget)}>{draft.magazineEnabled ? <option value="note">note（マガジン）</option> : <><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></>}</select></label>
@@ -269,7 +358,7 @@ export function ArticleConditionsStep({
           </div>
         )}
         <label className="choice-card compact"><input type="checkbox" checked={draft.affiliateEnabled} onChange={(event) => patch("affiliateEnabled", event.target.checked)} /><span><strong>アフィリエイトを使う</strong><small>商品・サービス紹介を含む記事の場合にON</small></span></label>
-        {draft.magazineEnabled && <div className="magazine-inline-status"><strong>▤ マガジン作成モード</strong><small>STEP 1で選んだマガジン設計を保存時に引き継ぎます。</small></div>}
+        {draft.magazineEnabled && <div className="magazine-inline-status"><strong>▤ マガジン作成モード</strong><small>STEP 2で選んだマガジン設計を保存時に引き継ぎます。</small></div>}
       </div>
       {(genreSelectValue === "その他" || subgenreSelectValue === "その他") && <p className="knowledge-learning-note">自由入力したジャンル・サブジャンルは、記事本文とは分離して候補名と利用回数だけを集計します。管理者は個人を特定せず集計候補を確認し、必要なものだけ正式ナレッジへ承認できます。</p>}
     </div>
@@ -306,7 +395,7 @@ export function TitleStep({
 
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 4</p><h2>タイトルを5候補から選んでください</h2>
+      <p className="eyebrow">STEP 5</p><h2>タイトルを5候補から選んでください</h2>
       {draft.generationMode === "prompt_export" && <>
         <p className="panel-muted">下のプロンプトをChatGPT・Claude・Geminiへ渡すと、タイトル候補を5個作成します。AIの回答5候補をまとめてAASへ貼り付けると、候補ボタンから選択できます。</p>
         <label className="route-field"><span>AI用タイトルプロンプト</span><textarea className="prompt-area" readOnly value={titlePrompt} /></label>
@@ -426,7 +515,7 @@ export function BodyStep({
 
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 5</p><h2>本文を準備します</h2>
+      <p className="eyebrow">STEP 6</p><h2>本文を準備します</h2>
       {draft.generationMode === "prompt_export" && <>
         <p className="panel-muted">この画面を開くだけでは回数を消費しません。「完成記事プロンプトを作成」を押した時だけ記事生成1回として記録されます。</p>
         <button className="secondary-action" type="button" disabled={articleBusy} onClick={() => void onGenerate()}>{articleBusy ? "利用回数を確認中…" : articlePromptReady ? "完成記事プロンプトを作り直す" : "完成記事プロンプトを作成"}</button>
@@ -480,7 +569,7 @@ export function BodyStep({
           本文をクリア
         </button>
       </div>
-      <p className="beginner-help">タイトルはSTEP 4で管理するため、この欄には本文だけを入れます。AIが先頭に同じタイトルを付けた場合はAASが除外します。</p>
+      <p className="beginner-help">タイトルはSTEP 5で管理するため、この欄には本文だけを入れます。AIが先頭に同じタイトルを付けた場合はAASが除外します。</p>
       {draft.articleType === "paid" && (
         <div className={paidAreaPresent ? "marker-status marker-status-ok" : "marker-status marker-status-warning"}>
           <strong>{paidAreaPresent ? "✓ 有料エリア開始位置があります" : "有料エリア開始位置がまだありません"}</strong>
@@ -527,7 +616,7 @@ export function PreviewStep({
 }) {
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 6</p><h2>内容を確認しましょう</h2>
+      <p className="eyebrow">STEP 7</p><h2>内容を確認しましょう</h2>
       <div className="preview-meta"><span>{draft.publicationTarget}</span><span>{draft.articleType === "paid" ? "有料" : "無料"}</span><span>{draft.genre || "ジャンル未指定"}</span><span>{draft.subgenre || "サブジャンル未指定"}</span><span>{draft.body.length.toLocaleString()}文字</span></div>
       <h3>{draft.title || "タイトル未入力"}</h3>
       <pre className="creator-preview">{draft.body || "本文がまだありません。"}</pre>
@@ -536,7 +625,7 @@ export function PreviewStep({
         <section className="creator-image-prompts" aria-label="記事画像生成プロンプト">
           <div className="creator-image-prompts-head">
             <h3>アイキャッチ・挿絵をまとめて作成</h3>
-            <p className="panel-muted">STEP 2の画像設定と完成本文をもとに、アイキャッチと全挿絵を1つの依頼文へまとめています。1回コピーして画像生成AIへ貼り付けてください。</p>
+            <p className="panel-muted">STEP 3の画像設定と完成本文をもとに、アイキャッチと全挿絵を1つの依頼文へまとめています。1回コピーして画像生成AIへ貼り付けてください。</p>
           </div>
           <article className="creator-image-prompt-card">
             <div className="creator-image-prompt-title">
@@ -613,7 +702,7 @@ export function SaveStep({
   };
   return (
     <div className="wizard-pane">
-      <p className="eyebrow">STEP 7</p><h2>タグを設定して記事ライブラリへ保存</h2>
+      <p className="eyebrow">STEP 8</p><h2>タグを設定して記事ライブラリへ保存</h2>
       <p className="panel-muted">タグは記事内容が完成してから決めます。ジャンル・サブジャンルに合わせて投稿前の最終設定として入力してください。</p>
       <section className="creator-publish-copy" aria-label="掲載用コピー">
         <h3>完成記事を掲載先へコピー</h3>
