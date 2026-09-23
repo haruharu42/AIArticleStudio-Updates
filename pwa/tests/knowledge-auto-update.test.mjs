@@ -37,6 +37,8 @@ test("runtime loads cloud knowledge and task-aware prompt optimizations together
   assert.match(bootstrap, /loadKnowledgeRuntimeState/);
   assert.match(bootstrap, /Promise\.all/);
   assert.match(promptOptimization, /compilePromptOptimizationContext/);
+  assert.match(promptOptimization, /KNOWLEDGE_RUNTIME_EVENT/);
+  assert.match(promptOptimization, /isKnowledgeTask/);
   assert.match(promptOptimization, /AAS CLOUD PROMPT OPTIMIZATION/);
   assert.match(promptOptimization, /rule\.provider === "all" \|\| rule\.provider === provider/);
   assert.match(promptOptimization, /rule\.task === "all" \|\| rule\.task === task/);
@@ -76,6 +78,10 @@ test("admin refresh UI requires sourced JSON review before publication", async (
   assert.match(client, /まず公式ヘルプ、公式ドキュメント、公式発表を使う/);
   assert.match(client, /可能な限り2つ以上の独立した根拠/);
   assert.match(client, /source_urlsが空の候補は出さない/);
+  assert.match(client, /副業タスク割り当て/);
+  assert.match(client, /sidejob_affiliate/);
+  assert.match(client, /sidejob_resale/);
+  assert.match(client, /sidejob_crowdsourcing/);
   assert.match(client, /admin_publish_knowledge_refresh_bundle/);
   assert.doesNotMatch(`${panel}\n${client}`, /service[_-]?role|sb_secret_|api[_-]?key/i);
 });
@@ -122,4 +128,24 @@ test("Fresh and Stable are explained clearly and publication requires diff revie
   assert.match(client, /parseKnowledgeRefreshDiff/);
   assert.match(css, /\.knowledge-channel-guide/);
   assert.match(css, /\.knowledge-diff-summary/);
+});
+
+
+test("side-hustle knowledge migration expands task constraints without changing the review gate", async () => {
+  const migration = await readRepo("supabase/migrations/20260923231331_side_hustle_knowledge_tasks_v1.sql");
+  assert.match(migration, /sidejob_content/);
+  assert.match(migration, /sidejob_sns/);
+  assert.match(migration, /sidejob_video/);
+  assert.match(migration, /sidejob_affiliate/);
+  assert.match(migration, /sidejob_resale/);
+  assert.match(migration, /sidejob_crowdsourcing/);
+  assert.match(migration, /sidejob_skill_sales/);
+  assert.match(migration, /sidejob_digital_product/);
+  assert.match(migration, /sidejob_outreach/);
+  assert.match(migration, /sidejob_research/);
+  assert.match(migration, /sidejob_efficiency/);
+  assert.match(migration, /sidejob_planning/);
+  assert.match(migration, /admin_publish_knowledge_refresh_bundle/);
+  assert.match(migration, /admin_review_knowledge_candidate/);
+  assert.doesNotMatch(migration, /grant .* to anon/i);
 });
