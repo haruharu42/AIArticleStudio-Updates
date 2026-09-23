@@ -46,12 +46,16 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
   }, [detail.id, detail.userId]);
 
   useEffect(() => {
+    let active = true;
     const next: Record<string, string> = {};
     for (const record of images) {
       next[recordKey(record.kind, record.order)] = URL.createObjectURL(record.blob);
     }
-    setPreviewUrls(next);
+    queueMicrotask(() => {
+      if (active) setPreviewUrls(next);
+    });
     return () => {
+      active = false;
       for (const url of Object.values(next)) URL.revokeObjectURL(url);
     };
   }, [images]);
