@@ -98,9 +98,9 @@ test("article draft URL parsing and step validation stay pure and bounded", () =
   assert.equal(draft.price, 980);
   assert.equal(draft.inlineEnabled, true);
   assert.equal(draft.inlineCount, 3);
-  assert.equal(validateArticleCreateStep(2, draft), null);
+  assert.equal(validateArticleCreateStep(3, draft), null);
   assert.match(
-    validateArticleCreateStep(2, { ...draft, genre: "その他" }) ?? "",
+    validateArticleCreateStep(3, { ...draft, genre: "その他" }) ?? "",
     /ジャンル名/,
   );
 });
@@ -109,17 +109,19 @@ test("article creator keeps UI, access and pure draft responsibilities separated
   const page = await read("components/phase11-create-page.tsx");
   const stepUi = await read("components/article-create/article-create-steps.tsx");
   const draftHelpers = await read("lib/article-create-draft.ts");
-  const setup = await read("components/create-ai-setup.tsx");
   const progress = await read("lib/phase11-wizard-progress.ts");
 
   assert.match(page, /useSharedAccessState/);
   assert.doesNotMatch(page, /loadCoreAccessState/);
-  assert.match(setup, /useSharedAccessState/);
-  assert.doesNotMatch(setup, /loadCoreAccessState/);
-  assert.doesNotMatch(`${page}\n${setup}`, /\.from\("profiles"\)|can_access_product/);
+  assert.match(page, /AiSelectionStep/);
+  assert.match(page, /loadWritingProfile/);
+  assert.match(page, /saveWritingProfile/);
+  assert.doesNotMatch(page, /\.from\("profiles"\)|can_access_product/);
   assert.doesNotMatch(page, /aasId/);
+  assert.match(page, /AiSelectionStep/);
   assert.match(page, /GenerationMethodStep/);
   assert.match(page, /SaveStep/);
+  assert.match(stepUi, /export function AiSelectionStep/);
   assert.match(stepUi, /export function GenerationMethodStep/);
   assert.match(stepUi, /export function SaveStep/);
   assert.match(draftHelpers, /export function parseStoredArticleDraft/);
