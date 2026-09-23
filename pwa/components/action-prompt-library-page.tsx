@@ -9,25 +9,21 @@ import { ActionPromptTemplateList } from "@/components/action-prompt-library/act
 import { ActionPromptToolbar } from "@/components/action-prompt-library/action-prompt-toolbar";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import {
-  ACTION_PROMPT_TEMPLATES,
-  buildActionPrompt,
-  type ActionPromptTemplate,
-} from "@/lib/action-prompt-catalog";
-import {
   ACTION_PROMPT_FAVORITES_KEY,
   ACTION_PROMPT_RECENT_KEY,
+  ACTION_PROMPT_TEMPLATES,
+  buildActionPrompt,
   initialActionPromptValues,
+  loadActionPromptCatalog,
   readActionPromptIds,
   readActionPromptProgress,
+  readActionPromptRouteSelection,
   recommendedActionPromptAi,
+  resolveActionPromptRouteTemplate,
   writeActionPromptIds,
   writeActionPromptProgress,
-} from "@/lib/action-prompt-preferences";
-import {
-  readActionPromptRouteSelection,
-  resolveActionPromptRouteTemplate,
-} from "@/lib/action-prompt-routing";
-import { loadActionPromptCatalog } from "@/lib/action-prompt-service";
+  type ActionPromptTemplate,
+} from "@/features/prompts";
 
 function mergeTemplates(cloudTemplates: readonly ActionPromptTemplate[]): ActionPromptTemplate[] {
   const merged = new Map<string, ActionPromptTemplate>(ACTION_PROMPT_TEMPLATES.map((template) => [template.id, template]));
