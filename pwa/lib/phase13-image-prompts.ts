@@ -143,7 +143,7 @@ export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptIt
       insertionMarker: null,
       suggestedFilename,
       altText,
-      prompt: `次の記事用アイキャッチ画像を1枚作成してください。\n${common(input)}\n構図: 横長のアイキャッチを想定し、記事テーマが一目で伝わる主役を1つに絞る。人物を使う場合は親しみやすく、余白を十分に取る。\n文字方針: 原則として画像内文字は入れない。必要な場合でも記事タイトル全文を描画せず、短い補助語だけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASへアップロードせず、端末へこのファイル名で保存してください。`,
+      prompt: `次の記事用アイキャッチ画像を1枚作成してください。\n${common(input)}\n構図: 横長のアイキャッチを想定し、記事テーマが一目で伝わる主役を1つに絞る。人物を使う場合は親しみやすく、余白を十分に取る。\n文字方針: 原則として画像内文字は入れない。必要な場合でも記事タイトル全文を描画せず、短い補助語だけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASのクラウドへアップロードせず、端末へこのファイル名で保存してください。AASでは端末内画像として読み込めます。`,
     });
   }
   if (input.inlineEnabled) {
@@ -158,7 +158,7 @@ export function buildImagePromptPlan(input: ImagePromptPlanInput): ImagePromptIt
         insertionMarker: `IMAGE:${number}`,
         suggestedFilename,
         altText,
-        prompt: `次の記事の挿絵${index + 1}を1枚作成してください。\n${common(input)}\nこの挿絵が対応する本文周辺: ${inlineBodyContext(input.body, index + 1) || "本文全体から最適な場面を選ぶ"}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、同じ構図を繰り返さない。\n差し込みマーカー: <!-- IMAGE:${number} -->\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASへアップロードせず、端末へこのファイル名で保存してください。`,
+        prompt: `次の記事の挿絵${index + 1}を1枚作成してください。\n${common(input)}\nこの挿絵が対応する本文周辺: ${inlineBodyContext(input.body, index + 1) || "本文全体から最適な場面を選ぶ"}\n役割: 本文の理解を助ける説明用挿絵。アイキャッチと同じ世界観を維持しつつ、同じ構図を繰り返さない。\n差し込みマーカー: <!-- IMAGE:${number} -->\n文字方針: 画像内に長文を入れず、図解が必要な場合も短いラベルだけにする。\n推奨保存ファイル名: ${suggestedFilename}\n画像生成後はAASのクラウドへアップロードせず、端末へこのファイル名で保存してください。AASでは端末内画像として読み込めます。`,
       });
     }
   }
