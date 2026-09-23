@@ -293,3 +293,45 @@
   color: var(--muted, #94a3b8);
   line-height: 1.6;
 }
+
+
+.action-prompt-input-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #dce5f4;
+  border-radius: 12px;
+  background: #f8faff;
+}
+
+.action-prompt-input-status span {
+  color: #52627a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.action-prompt-input-status button {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #cfd9e9;
+  border-radius: 10px;
+  background: #fff;
+  color: #40516c;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 560px) {
+  .action-prompt-input-status {
+    align-items: stretch;
+  }
+
+  .action-prompt-input-status button {
+    margin-left: auto;
+  }
+}
