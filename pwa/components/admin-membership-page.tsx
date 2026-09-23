@@ -11,6 +11,7 @@ import {
   listMembershipPlanFeatures,
   listMembershipPlans,
   setMembershipPlanFeature,
+  updateMembershipPlan,
   updateMembershipSettings,
   type MembershipAssignment,
   type MembershipAuditAction,
@@ -99,6 +100,11 @@ export function AdminMembershipPage() {
   const activeFeatures = useMemo(
     () => features.filter((feature) => feature.status === "active"),
     [features],
+  );
+
+  const pricingReady = useMemo(
+    () => plans.length > 0 && plans.every((plan) => plan.pricingManaged),
+    [plans],
   );
 
   const expiringSoon = useMemo(() => {
@@ -229,6 +235,43 @@ export function AdminMembershipPage() {
     }
   };
 
+  const patchPlan = (planCode: string, patch: Partial<MembershipPlan>) => {
+    setPlans((current) => current.map((plan) => plan.planCode === planCode ? { ...plan, ...patch } : plan));
+  };
+
+  const savePlan = async (plan: MembershipPlan) => {
+    if (busy) return;
+    if (!plan.pricingManaged) {
+      setMessage("料金設定用のDB migrationがまだ未適用です。リリース工程で適用後に保存できます。");
+      return;
+    }
+    if (!plan.displayName.trim()) {
+      setMessage("プラン表示名を入力してください。");
+      return;
+    }
+    if (plan.monthlyPriceYen !== null && (!Number.isInteger(plan.monthlyPriceYen) || plan.monthlyPriceYen < 0 || plan.monthlyPriceYen > 1000000)) {
+      setMessage("月額料金は0〜1,000,000円の範囲で入力してください。");
+      return;
+    }
+
+    setBusy(true);
+    setMessage("");
+    try {
+      await updateMembershipPlan(getSupabaseClient(), {
+        planCode: plan.planCode,
+        displayName: plan.displayName,
+        monthlyPriceYen: plan.monthlyPriceYen,
+        description: plan.description,
+      });
+      setPlans(await listMembershipPlans(getSupabaseClient()));
+      setMessage(`${plan.displayName}の料金・表示設定を保存しました。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "プラン設定を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const toggleFeature = async (plan: MembershipPlan, feature: MembershipFeature) => {
     if (busy) return;
     const enabled = currentFeatureEnabled(plan.planCode, feature.featureKey, planFeatures);
@@ -257,7 +300,9 @@ export function AdminMembershipPage() {
   const assignMembership = async () => {
     if (!selectedUser || busy) return;
     const current = membershipEntitlements[0]?.productName;
-    const label = CREATOR_MEMBERSHIP_PLANS.find((plan) => plan.code === selectedPlan)?.label ?? selectedPlan;
+    const label = plans.find((plan) => plan.planCode === selectedPlan)?.displayName
+      ?? CREATOR_MEMBERSHIP_PLANS.find((plan) => plan.code === selectedPlan)?.label
+      ?? selectedPlan;
     if (!window.confirm(
       current
         ? `${selectedUser.aasUserId} のメンバー特典を「${label}」へ変更しますか？`
@@ -374,10 +419,10 @@ export function AdminMembershipPage() {
           <div className="membership-status-grid">
             <article><span>有効メンバー</span><strong>{assignments.length}</strong><small>現在有効なCreator Club系特典</small></article>
             <article><span>7日以内に期限</span><strong>{expiringSoon.length}</strong><small>更新確認が必要なメンバー</small></article>
-            {CREATOR_MEMBERSHIP_PLANS.map((plan) => (
-              <article key={plan.code}>
-                <span>{plan.label}</span>
-                <strong>{assignmentPlanCounts.get(plan.code) ?? 0}</strong>
+            {plans.map((plan) => (
+              <article key={plan.planCode}>
+                <span>{plan.displayName}</span>
+                <strong>{assignmentPlanCounts.get(plan.planCode) ?? 0}</strong>
                 <small>現在の有効ユーザー</small>
               </article>
             ))}
@@ -450,12 +495,92 @@ export function AdminMembershipPage() {
         <div className="admin-panel-heading">
           <div>
             <p className="eyebrow">STEP 2</p>
-            <h2>プランごとの利用可能機能</h2>
+            <h2>3プランの料金・表示設定</h2>
           </div>
-          <span className="availability-badge active">DB側でも判定</span>
+          <span className="availability-badge">月額料金</span>
         </div>
         <p className="trial-admin-note">
-          OFFにした機能は、今後 <code>has_creator_membership_feature()</code> を使う機能ゲートから利用不可にできます。
+          note側で設定した実際の月額料金と同じ金額を入力してください。プランコードは既存ユーザーの権限判定に使うため固定です。
+        </p>
+        {!pricingReady && (
+          <div className="route-notice" role="note">
+            料金設定DBはまだ未適用です。現在のプラン・機能割り当ては確認できますが、料金・説明の保存はmigration適用後に有効になります。
+          </div>
+        )}
+        <div className="membership-plan-editor-grid">
+          {plans.map((plan) => (
+            <article className="membership-plan-editor-card" key={plan.planCode}>
+              <div className="membership-plan-editor-head">
+                <div>
+                  <span>PLAN {plan.tierRank}</span>
+                  <code>{plan.planCode}</code>
+                </div>
+                <strong>
+                  {plan.monthlyPriceYen === null
+                    ? "料金未設定"
+                    : `¥${plan.monthlyPriceYen.toLocaleString("ja-JP")} / 月`}
+                </strong>
+              </div>
+              <label className="route-field">
+                <span>プラン表示名</span>
+                <input
+                  value={plan.displayName}
+                  maxLength={100}
+                  onChange={(event) => patchPlan(plan.planCode, { displayName: event.target.value })}
+                />
+              </label>
+              <label className="route-field">
+                <span>月額料金（税込・円）</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={1000000}
+                  step={1}
+                  inputMode="numeric"
+                  value={plan.monthlyPriceYen ?? ""}
+                  placeholder="例: 500"
+                  onChange={(event) => patchPlan(plan.planCode, {
+                    monthlyPriceYen: event.target.value === "" ? null : Number(event.target.value),
+                  })}
+                />
+              </label>
+              <label className="route-field">
+                <span>ユーザー向けプラン説明</span>
+                <textarea
+                  value={plan.description}
+                  maxLength={500}
+                  placeholder="このプランで利用できる内容を簡潔に説明"
+                  onChange={(event) => patchPlan(plan.planCode, { description: event.target.value })}
+                />
+              </label>
+              <div className="membership-plan-feature-summary">
+                <span>現在の利用可能機能</span>
+                <strong>
+                  {activeFeatures.filter((feature) => currentFeatureEnabled(plan.planCode, feature.featureKey, planFeatures)).length}個
+                </strong>
+              </div>
+              <button
+                type="button"
+                disabled={busy || !plan.pricingManaged}
+                onClick={() => void savePlan(plan)}
+              >
+                このプラン設定を保存
+              </button>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="admin-panel membership-admin-section">
+        <div className="admin-panel-heading">
+          <div>
+            <p className="eyebrow">STEP 3</p>
+            <h2>プランごとの利用可能機能</h2>
+          </div>
+          <span className="availability-badge active">自由に割り振り</span>
+        </div>
+        <p className="trial-admin-note">
+          各機能を3つのプランへ自由に割り振れます。「利用可」を押すたびにON/OFFが切り替わり、DB側の機能ゲートにも反映されます。
         </p>
         <div className="membership-feature-matrix">
           <div className="membership-feature-row membership-feature-head">
@@ -493,7 +618,7 @@ export function AdminMembershipPage() {
       <section className="admin-panel membership-admin-section">
         <div className="admin-panel-heading">
           <div>
-            <p className="eyebrow">STEP 3</p>
+            <p className="eyebrow">STEP 4</p>
             <h2>ユーザーへメンバー特典を付与</h2>
           </div>
           <span className="availability-badge">手動確認</span>
@@ -545,9 +670,10 @@ export function AdminMembershipPage() {
                   value={selectedPlan}
                   onChange={(event) => setSelectedPlan(event.target.value as CreatorMembershipPlanCode)}
                 >
-                  {CREATOR_MEMBERSHIP_PLANS.map((plan) => (
-                    <option key={plan.code} value={plan.code}>{plan.label}</option>
-                  ))}
+                  {CREATOR_MEMBERSHIP_PLANS.map((plan) => {
+                    const managedPlan = plans.find((item) => item.planCode === plan.code);
+                    return <option key={plan.code} value={plan.code}>{managedPlan?.displayName ?? plan.label}</option>;
+                  })}
                 </select>
               </label>
               <label className="route-field">
