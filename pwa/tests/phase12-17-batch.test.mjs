@@ -123,7 +123,7 @@ test("tools hub exposes grouped supporting routes while article creation keeps i
   const beginnerCss = await read("app/phase18-beginner.css");
   const dashboardCss = await read("app/phase19-dashboard.css");
 
-  for (const href of ["/workflow", "/note-operations", "/account-design", "/sns", "/sns-plan", "/sidejob", "/publish", "/analytics", "/inquiries"]) {
+  for (const href of ["/workflow", "/note-operations", "/account-design", "/sns", "/sns-plan", "/side-hustles/sidejob-planner", "/publish", "/analytics", "/inquiries"]) {
     assert.match(toolCatalog, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
   }
   for (const duplicateHref of ["/create", "/images", "/export"]) {
