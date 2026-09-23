@@ -26,6 +26,8 @@ test("side-hustle prompt library is searchable, copy-first, and uses existing ex
   assert.match(page, /loadActionPromptCatalog/);
   assert.match(page, /ACTION_PROMPT_TEMPLATES/);
   assert.match(page, /お気に入り/);
+  assert.match(page, /PROGRESS_KEY/);
+  assert.match(page, /aas-action-prompt-progress/);
   assert.match(page, /最近使った/);
   assert.match(route, /Phase15MemberGate/);
   assert.match(nav, /key: "prompts"/);
