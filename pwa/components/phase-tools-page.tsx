@@ -168,8 +168,6 @@ export function PhaseToolsPage() {
           </Link>
         </section>
       )}
-
-}
     </main>
   );
 }
