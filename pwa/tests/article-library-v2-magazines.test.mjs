@@ -17,6 +17,9 @@ const migration = await fs.readFile(`${repoRoot}/supabase/migrations/20260917061
 const libraryController = await fs.readFile(`${root}/components/phase7-library.tsx`, 'utf8');
 const libraryListUi = await fs.readFile(`${root}/components/article-library/article-library-list.tsx`, 'utf8');
 const libraryDetailUi = await fs.readFile(`${root}/components/article-library/article-library-detail.tsx`, 'utf8');
+const notePostAssistantUi = await fs.readFile(`${root}/components/article-library/note-post-assistant.tsx`, 'utf8');
+const localArticleImagesSource = await fs.readFile(`${root}/lib/local-article-images.ts`, 'utf8');
+const imagePromptUi = await fs.readFile(`${root}/components/phase13-image-page.tsx`, 'utf8');
 const libraryEditorUi = await fs.readFile(`${root}/components/article-library/article-library-editor.tsx`, 'utf8');
 const libraryUi = [libraryController, libraryListUi, libraryDetailUi, libraryEditorUi].join('\n');
 const exportUi = await fs.readFile(`${root}/components/article-export-page.tsx`, 'utf8');
@@ -86,6 +89,26 @@ test('article library detail can copy title and rich publication body', () => {
   assert.match(libraryDetailUi, /navigator\.clipboard\?\.writeText/);
   assert.match(libraryDetailUi, /【ここから有料エリア】/);
   assert.match(libraryDetailUi, /【挿絵/);
+});
+
+test('note article detail exposes local image posting assistant without Supabase Storage', () => {
+  assert.match(libraryDetailUi, /NotePostAssistant/);
+  assert.match(libraryDetailUi, /detail\.publicationTarget === "note"/);
+  assert.match(notePostAssistantUi, /画像込みでnoteへ貼り付ける/);
+  assert.match(notePostAssistantUi, /画像入り完成プレビュー/);
+  assert.match(notePostAssistantUi, /noteへ貼り付ける順番/);
+  assert.match(notePostAssistantUi, /copyNoteRichText/);
+  assert.match(notePostAssistantUi, /copyImageBlobToClipboard/);
+  assert.match(notePostAssistantUi, /https:\/\/note\.com\/new/);
+  assert.match(notePostAssistantUi, /Supabase Storageへは送信しません/);
+  assert.match(localArticleImagesSource, /indexedDB\.open/);
+  assert.match(localArticleImagesSource, /createObjectStore/);
+  assert.match(localArticleImagesSource, /saveLocalArticleImage/);
+  assert.match(localArticleImagesSource, /listLocalArticleImages/);
+  assert.doesNotMatch(localArticleImagesSource, /supabase|\.from\(|storage\./i);
+  assert.match(imagePromptUi, /saveLocalArticleImage/);
+  assert.match(imagePromptUi, /listLocalArticleImages/);
+  assert.match(imagePromptUi, /記事ライブラリのnote投稿アシスト/);
 });
 
 test('article library edit validation matches the positive-price database contract', () => {
