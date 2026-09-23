@@ -9,6 +9,19 @@ const repoRoot = path.resolve(pwaRoot, "..");
 const readPwa = (relative) => readFile(path.join(pwaRoot, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
+test("knowledge refresh scheduler releases processing requests that are stuck for more than 24 hours", async () => {
+  const migration = await readRepo("supabase/migrations/20260923234555_knowledge_refresh_stale_recovery.sql");
+  const panel = await readPwa("components/knowledge-refresh-panel.tsx");
+
+  assert.match(migration, /status = 'failed'/);
+  assert.match(migration, /interval '24 hours'/);
+  assert.match(migration, /next refresh cycle/);
+  assert.match(migration, /enqueue_due_knowledge_refreshes/);
+  assert.match(migration, /revoke all on function private\.enqueue_due_knowledge_refreshes/);
+  assert.match(panel, /24時間以上処理中だったため自動解除/);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
+});
+
 test("knowledge auto-update control plane keeps Fresh and Stable review-gated and versioned", async () => {
   const migration = await readRepo("supabase/migrations/20260919083000_knowledge_prompt_auto_update.sql");
 
