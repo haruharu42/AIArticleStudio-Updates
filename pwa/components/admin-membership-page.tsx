@@ -243,24 +243,29 @@ export function AdminMembershipPage() {
     setBusy(true);
     setMessage("");
     try {
-      await setCreatorMembershipPlan(getSupabaseClient(), selectedUser.id, {
+      const client = getSupabaseClient();
+      await setCreatorMembershipPlan(client, selectedUser.id, {
         planCode: selectedPlan,
         expiresAt: membershipExpiry ? new Date(membershipExpiry).toISOString() : undefined,
         salesChannel: "note-membership-admin",
         externalReference: membershipReference.trim() || undefined,
       });
-      const client = getSupabaseClient();
-      const items = await listCreatorMembershipEntitlements(client, selectedUser.id);
-      setMembershipEntitlements(items);
-      if (operationsReady) {
-        const [nextAssignments, nextAuditActions] = await Promise.all([
-          listMembershipAssignments(client),
-          listMembershipAuditActions(client, 30),
-        ]);
-        setAssignments(nextAssignments);
-        setAuditActions(nextAuditActions);
+      let refreshWarning = "";
+      try {
+        const items = await listCreatorMembershipEntitlements(client, selectedUser.id);
+        setMembershipEntitlements(items);
+        if (operationsReady) {
+          const [nextAssignments, nextAuditActions] = await Promise.all([
+            listMembershipAssignments(client),
+            listMembershipAuditActions(client, 30),
+          ]);
+          setAssignments(nextAssignments);
+          setAuditActions(nextAuditActions);
+        }
+      } catch {
+        refreshWarning = " 最新表示の再取得だけ失敗したため、「更新」で再確認してください。";
       }
-      setMessage(`${selectedUser.aasUserId} に${label}特典を設定しました。`);
+      setMessage(`${selectedUser.aasUserId} に${label}特典を設定しました。${refreshWarning}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "メンバー特典を設定できませんでした。");
     } finally {
@@ -280,15 +285,20 @@ export function AdminMembershipPage() {
       const client = getSupabaseClient();
       await clearCreatorMembershipPlan(client, selectedUser.id);
       setMembershipEntitlements([]);
+      let refreshWarning = "";
       if (operationsReady) {
-        const [nextAssignments, nextAuditActions] = await Promise.all([
-          listMembershipAssignments(client),
-          listMembershipAuditActions(client, 30),
-        ]);
-        setAssignments(nextAssignments);
-        setAuditActions(nextAuditActions);
+        try {
+          const [nextAssignments, nextAuditActions] = await Promise.all([
+            listMembershipAssignments(client),
+            listMembershipAuditActions(client, 30),
+          ]);
+          setAssignments(nextAssignments);
+          setAuditActions(nextAuditActions);
+        } catch {
+          refreshWarning = " 最新表示の再取得だけ失敗したため、「更新」で再確認してください。";
+        }
       }
-      setMessage(`${selectedUser.aasUserId} のメンバーシップ特典を取り消しました。`);
+      setMessage(`${selectedUser.aasUserId} のメンバーシップ特典を取り消しました。${refreshWarning}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "メンバー特典を取り消せませんでした。");
     } finally {
