@@ -50,6 +50,10 @@
   margin-top: 16px;
 }
 
+.planGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .missionCard,
 .planCard {
   position: relative;
@@ -129,6 +133,26 @@
     0 18px 40px rgba(54, 72, 157, 0.14);
 }
 
+
+.membershipPlanPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 8px 0 10px;
+}
+
+.membershipPlanPrice strong {
+  color: #3449c8;
+  font-size: clamp(21px, 3vw, 28px);
+  letter-spacing: -0.02em;
+}
+
+.membershipPlanPrice small {
+  color: #7a86a7;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .planBenefits {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -141,6 +165,12 @@
   border-radius: 12px;
   padding: 11px;
   background: rgba(255, 255, 255, 0.72);
+}
+
+@media (max-width: 980px) and (min-width: 721px) {
+  .planGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 720px) {
