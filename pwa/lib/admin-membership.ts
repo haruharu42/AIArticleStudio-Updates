@@ -15,6 +15,7 @@ export type MembershipPlan = {
   status: string;
   monthlyPriceYen: number | null;
   description: string;
+  pricingManaged: boolean;
 };
 
 export type MembershipFeature = {
@@ -125,6 +126,7 @@ export async function listMembershipPlans(client: SupabaseClient): Promise<Membe
       status: text(row.status, "status"),
       monthlyPriceYen: nullableInteger(row.monthly_price_yen, "monthly_price_yen"),
       description: text(row.description, "description"),
+      pricingManaged: true,
     }));
   }
 
@@ -138,6 +140,7 @@ export async function listMembershipPlans(client: SupabaseClient): Promise<Membe
     status: text(row.status, "status"),
     monthlyPriceYen: null,
     description: "",
+    pricingManaged: false,
   }));
 }
 
