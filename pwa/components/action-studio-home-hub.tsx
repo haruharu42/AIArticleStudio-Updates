@@ -4,103 +4,9 @@ type ActionCard = {
   title: string;
   description: string;
   icon: string;
-  href?: string;
+  href: string;
   badge?: string;
 };
-
-const sideHustles: readonly ActionCard[] = [
-  {
-    title: "note副業",
-    description: "アカウント準備から投稿計画、記事作成、運営まで順番に進めます。",
-    icon: "▣",
-    href: "/note-operations",
-    badge: "専用フロー",
-  },
-  {
-    title: "記事・ブログ・コンテンツ販売",
-    description: "note・Tips・Brain・ブログ向けの企画、構成、販売設計プロンプトをすぐ使えます。",
-    icon: "✎",
-    href: "/prompts?category=記事・コンテンツ",
-    badge: "プロンプト",
-  },
-  {
-    title: "SNS運用・集客",
-    description: "X・Instagram・Threads向けの投稿、企画、導線づくりを始めます。",
-    icon: "↗",
-    href: "/prompts?category=SNS",
-    badge: "プロンプト",
-  },
-  {
-    title: "YouTube・ショート動画",
-    description: "動画企画、台本、サムネイル文言、ショート動画の構成を作ります。",
-    icon: "▶",
-    href: "/prompts?category=動画・YouTube",
-    badge: "プロンプト",
-  },
-  {
-    title: "アフィリエイト",
-    description: "比較軸、記事企画、確認すべき一次情報を整理して紹介コンテンツへつなげます。",
-    icon: "◎",
-    href: "/prompts?category=アフィリエイト",
-    badge: "プロンプト",
-  },
-  {
-    title: "物販・フリマ販売",
-    description: "商品説明、出品文、購入前の注意点など販売に必要な文章を作ります。",
-    icon: "¥",
-    href: "/prompts?category=物販・販売",
-    badge: "プロンプト",
-  },
-  {
-    title: "クラウドソーシング",
-    description: "案件要件の整理、応募文、確認事項を事実情報から作成します。",
-    icon: "◇",
-    href: "/prompts?category=クラウドソーシング",
-    badge: "プロンプト",
-  },
-  {
-    title: "スキル販売",
-    description: "サービス内容、提供範囲、購入前確認、納品内容を販売ページ向けに整理します。",
-    icon: "◫",
-    href: "/prompts?category=スキル販売",
-    badge: "プロンプト",
-  },
-  {
-    title: "デジタル商品・教材販売",
-    description: "教材、テンプレート、デジタル商品の章構成や成果物を設計します。",
-    icon: "▤",
-    href: "/prompts?category=デジタル商品",
-    badge: "プロンプト",
-  },
-  {
-    title: "営業・案件獲得",
-    description: "営業DMや問い合わせ文を、相手の状況と自分の事実情報から作ります。",
-    icon: "✉",
-    href: "/prompts?category=顧客対応・営業",
-    badge: "プロンプト",
-  },
-  {
-    title: "リサーチ・事実確認",
-    description: "市場調査、競合調査、公開前の事実確認を必要な情報源から整理します。",
-    icon: "⌕",
-    href: "/prompts?category=リサーチ",
-    badge: "プロンプト",
-  },
-  {
-    title: "業務効率化・SOP化",
-    description: "繰り返し作業を、チェックリストと再利用できる標準手順へ変換します。",
-    icon: "⌘",
-    href: "/prompts?category=業務効率化",
-    badge: "プロンプト",
-  },
-  {
-    title: "自分に合うAI副業を探す",
-    description: "使える時間・得意分野・予算から候補を整理し、30日プランへつなげます。",
-    icon: "☆",
-    href: "/sidejob",
-    badge: "診断",
-  },
-];
 
 const actions: readonly ActionCard[] = [
   {
@@ -140,31 +46,26 @@ const actions: readonly ActionCard[] = [
     href: "/prompts",
   },
   {
-    title: "すべての機能を見る",
-    description: "記事生成に重複しない関連機能を、用途別にまとめて確認します。",
+    title: "ジャンル別に機能を見る",
+    description: "副業・SNS・販売・受託・リサーチ・運営など、すべての機能をジャンル別に確認します。",
     icon: "▦",
     href: "/tools",
+    badge: "機能一覧",
   },
 ];
 
 function ActionCardView({ card }: { card: ActionCard }) {
-  const content = (
-    <>
+  return (
+    <Link className="action-studio-card" href={card.href}>
       <div className="action-studio-card-top">
         <span className="action-studio-card-icon" aria-hidden="true">{card.icon}</span>
         {card.badge ? <small>{card.badge}</small> : null}
       </div>
       <strong>{card.title}</strong>
       <p>{card.description}</p>
-      <b>{card.href ? "開く →" : "順次対応予定"}</b>
-    </>
+      <b>開く →</b>
+    </Link>
   );
-
-  if (!card.href) {
-    return <article className="action-studio-card planned" aria-disabled="true">{content}</article>;
-  }
-
-  return <Link className="action-studio-card" href={card.href}>{content}</Link>;
 }
 
 export function ActionStudioHomeHub() {
@@ -175,8 +76,8 @@ export function ActionStudioHomeHub() {
           <span className="action-studio-kicker">AI ACTION STUDIO</span>
           <h2 id="action-studio-hub-title">今日は、AIで何を進めますか？</h2>
           <p>
-            副業や目的を選ぶだけで、必要な機能やプロンプトへすぐ進めます。
-            AIに何を聞けばいいか分からなくても、入力 → コピー → AI実行までAASが案内します。
+            よく使う作業はホームから直接開始できます。
+            副業ジャンルから探したい場合は「ジャンル別に機能を見る」から機能一覧へ進めます。
           </p>
         </div>
         <div className="action-studio-flow" aria-label="基本の使い方">
@@ -190,19 +91,8 @@ export function ActionStudioHomeHub() {
 
       <div className="action-studio-section-head">
         <div>
-          <span>START BY SIDE HUSTLE</span>
-          <h3>副業から探す</h3>
-        </div>
-        <p>やりたい副業を選び、必要な作業へ順番に進みます。</p>
-      </div>
-      <div className="action-studio-card-grid side-hustles">
-        {sideHustles.map((card) => <ActionCardView key={card.title} card={card} />)}
-      </div>
-
-      <div className="action-studio-section-head">
-        <div>
-          <span>START BY ACTION</span>
-          <h3>やりたいことから探す</h3>
+          <span>QUICK ACTIONS</span>
+          <h3>よく使う機能</h3>
         </div>
         <p>目的が決まっている場合は、必要な機能を直接開けます。</p>
       </div>
