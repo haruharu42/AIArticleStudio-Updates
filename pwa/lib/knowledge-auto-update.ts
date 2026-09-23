@@ -304,7 +304,7 @@ ${rollout}
       "guidance": ["制作ルール"],
       "deliverables": ["有効な成果物"],
       "cautions": ["注意・禁止"],
-      "tasks": ["title","article","image","social","promotion","sidejob_content","sidejob_sns","sidejob_video","sidejob_affiliate","sidejob_resale","sidejob_crowdsourcing","sidejob_skill_sales","sidejob_digital_product","sidejob_outreach","sidejob_research","sidejob_efficiency","sidejob_planning"],
+      "tasks": ["sidejob_affiliate"],
       "priority": 70,
       "source_urls": ["https://..."],
       "source_summary": "根拠と変更点を短く要約"
@@ -323,6 +323,10 @@ ${rollout}
     }
   ]
 }
+
+【tasks / task の指定ルール】
+- 上のJSON例は形式例。tasksには今回の変更が実際に影響するタスクだけを1〜数個入れる。
+- prompt_optimizations.taskも、影響する1タスクまたは本当に全タスク共通の場合だけallを使う。
 
 【副業タスク割り当て】
 - 記事・コンテンツ販売 → sidejob_content
