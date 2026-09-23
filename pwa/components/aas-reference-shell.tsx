@@ -30,11 +30,11 @@ export function AasReferenceHeader({
 } = {}) {
   return (
     <header className="aas-reference-header">
-      <Link className="aas-reference-brand" href="/" aria-label="AI Article Studio ホーム">
+      <Link className="aas-reference-brand" href="/" aria-label="AI Action Studio ホーム">
         <strong>AAS</strong>
         <span>
-          <b>AI Article Studio</b>
-          <small>書くを、もっとシンプルに。</small>
+          <b>AI Action Studio</b>
+          <small>AIで副業を、もっと簡単に。</small>
         </span>
       </Link>
       <nav className="aas-reference-header-actions" aria-label="クイックメニュー">
