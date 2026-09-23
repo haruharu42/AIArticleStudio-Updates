@@ -111,6 +111,7 @@ test("Phase 17 reports only internal article metrics until external analytics ar
 
 test("tools hub exposes grouped supporting routes while article creation keeps its own integrated tools", async () => {
   const tools = await read("components/phase-tools-page.tsx");
+  const toolCatalog = await read("features/tools/tool-catalog.ts");
   const toolsRoute = await read("app/tools/page.tsx");
   const shell = await read("components/phase18-beginner-home.tsx");
   const referenceShell = await read("components/aas-reference-shell.tsx");
@@ -123,14 +124,15 @@ test("tools hub exposes grouped supporting routes while article creation keeps i
   const dashboardCss = await read("app/phase19-dashboard.css");
 
   for (const href of ["/workflow", "/note-operations", "/account-design", "/sns", "/sns-plan", "/sidejob", "/publish", "/analytics", "/inquiries"]) {
-    assert.match(tools, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
+    assert.match(toolCatalog, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
   }
   for (const duplicateHref of ["/create", "/images", "/export"]) {
-    assert.doesNotMatch(tools, new RegExp(`href: \\"${duplicateHref.replace("/", "\\/")}\\"`));
+    assert.doesNotMatch(toolCatalog, new RegExp(`href: \\"${duplicateHref.replace("/", "\\/")}\\"`));
   }
-  for (const group of ["運営・アカウント", "SNS・集客", "公開・改善", "副業・収益化", "サポート"]) {
-    assert.match(tools, new RegExp(group));
+  for (const group of ["記事・コンテンツ", "SNS・動画・集客", "販売・収益化", "受託・案件獲得", "リサーチ・業務効率化", "運営・アカウント", "公開・分析", "サポート"]) {
+    assert.match(toolCatalog, new RegExp(group));
   }
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
   assert.match(tools, /useSharedAccessState\(\)/);
   assert.doesNotMatch(tools, /loadAccessState/);
   assert.doesNotMatch(tools, /getSupabaseClient\(\)/);
