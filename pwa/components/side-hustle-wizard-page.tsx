@@ -19,10 +19,12 @@ import {
 } from "@/features/side-hustles/prompt-builder";
 import {
   clearSideHustleDraft,
+  hasStoredSideHustleDraft,
   readSideHustleDraft,
   writeSideHustleDraft,
 } from "@/features/side-hustles/progress";
 import type { SideHustleDraft } from "@/features/side-hustles/types";
+import { loadWritingProfile } from "@/lib/user-personalization";
 
 function formatKnowledgeDate(value: string | null): string {
   if (!value) return "未設定";
@@ -32,7 +34,7 @@ function formatKnowledgeDate(value: string | null): string {
 
 export function SideHustleWizardPage({ slug }: { slug: string }) {
   const definition = getSideHustleDefinition(slug);
-  const { state } = useSharedAccessState();
+  const { state, client } = useSharedAccessState();
   const userId = state.kind === "ready" ? state.profile.id : "";
   const [draft, setDraft] = useState<SideHustleDraft | null>(
     () => definition ? initialSideHustleDraft(definition) : null,
@@ -43,12 +45,27 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (!definition || !userId) return;
-    const restored = readSideHustleDraft(userId, definition);
-    queueMicrotask(() => {
+    let active = true;
+    const restore = async () => {
+      const hasStored = hasStoredSideHustleDraft(userId, definition);
+      const restored = readSideHustleDraft(userId, definition);
+
+      if (!hasStored && client) {
+        try {
+          const profile = await loadWritingProfile(client, userId);
+          restored.selectedPlan = profile.preferredPlan;
+        } catch {
+          // Keep the safe free-plan default when personalization is unavailable.
+        }
+      }
+
+      if (!active) return;
       setDraft(restored);
       setHydrated(true);
-    });
-  }, [definition, userId]);
+    };
+    void restore();
+    return () => { active = false; };
+  }, [client, definition, userId]);
 
   useEffect(() => {
     const refresh = () => setKnowledgeRevision((value) => value + 1);
