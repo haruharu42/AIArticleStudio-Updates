@@ -1,0 +1,222 @@
+export type ToolCard = {
+  href: string;
+  category: string;
+  title: string;
+  description: string;
+  badge?: string;
+};
+
+export type ToolGroup = {
+  id: string;
+  title: string;
+  description: string;
+  tools: readonly ToolCard[];
+};
+
+export const MEMBER_TOOL_GROUPS: readonly ToolGroup[] = [
+  {
+    id: "content",
+    title: "記事・コンテンツ",
+    description: "note・ブログ・コンテンツ販売など、文章を中心にした副業・発信をまとめています。",
+    tools: [
+      {
+        href: "/note-operations",
+        category: "note副業",
+        title: "note運営アシスタント",
+        description: "アカウント準備、プロフィール、無料・有料noteの投稿計画、カレンダーと今日のToDoを管理します。",
+        badge: "専用フロー",
+      },
+      {
+        href: "/prompts?category=記事・コンテンツ",
+        category: "記事・ブログ",
+        title: "記事・ブログ・コンテンツ販売",
+        description: "note・Tips・Brain・ブログ向けの企画、構成、販売設計プロンプトを作成します。",
+        badge: "プロンプト",
+      },
+    ],
+  },
+  {
+    id: "social-video",
+    title: "SNS・動画・集客",
+    description: "SNS運用、集客、YouTube・ショート動画など、発信と視聴者獲得に関する機能です。",
+    tools: [
+      {
+        href: "/sns-plan",
+        category: "SNS設計",
+        title: "SNSアカウント設計",
+        description: "ジャンル選定からプロフィール、投稿の柱、収益導線、改善までまとめて設計します。",
+      },
+      {
+        href: "/sns",
+        category: "SNS投稿",
+        title: "SNS投稿を作る",
+        description: "記事ライブラリからX・Instagram・Threads向け投稿プロンプトを作成します。",
+      },
+      {
+        href: "/prompts?category=SNS",
+        category: "SNS副業",
+        title: "SNS運用・集客",
+        description: "X・Instagram・Threads向けの投稿企画、導線づくり、投稿シリーズを作成します。",
+        badge: "プロンプト",
+      },
+      {
+        href: "/prompts?category=動画・YouTube",
+        category: "動画副業",
+        title: "YouTube・ショート動画",
+        description: "動画企画、台本、サムネイル文言、ショート動画の構成を作成します。",
+        badge: "プロンプト",
+      },
+    ],
+  },
+  {
+    id: "sales",
+    title: "販売・収益化",
+    description: "アフィリエイト、物販、スキル販売、デジタル商品など、販売型の副業をまとめています。",
+    tools: [
+      {
+        href: "/prompts?category=アフィリエイト",
+        category: "アフィリエイト",
+        title: "アフィリエイト",
+        description: "比較軸、記事企画、確認すべき一次情報を整理し、紹介コンテンツへつなげます。",
+        badge: "プロンプト",
+      },
+      {
+        href: "/prompts?category=物販・販売",
+        category: "物販・EC",
+        title: "物販・フリマ販売",
+        description: "商品説明、出品文、購入前の注意点など販売に必要な文章を作成します。",
+        badge: "プロンプト",
+      },
+      {
+        href: "/prompts?category=スキル販売",
+        category: "スキル販売",
+        title: "スキル販売",
+        description: "サービス内容、提供範囲、購入前確認、納品内容を販売ページ向けに整理します。",
+        badge: "プロンプト",
+      },
+      {
+        href: "/prompts?category=デジタル商品",
+        category: "デジタル商品",
+        title: "デジタル商品・教材販売",
+        description: "教材、テンプレート、デジタル商品の章構成や購入後の成果物を設計します。",
+        badge: "プロンプト",
+      },
+    ],
+  },
+  {
+    id: "client-work",
+    title: "受託・案件獲得",
+    description: "クラウドソーシング、営業、案件応募など、仕事を受注するための機能です。",
+    tools: [
+      {
+        href: "/prompts?category=クラウドソーシング",
+        category: "クラウドソーシング",
+        title: "クラウドソーシング",
+        description: "案件要件の整理、応募文、確認事項を入力済みの事実情報から作成します。",
+        badge: "プロンプト",
+      },
+      {
+        href: "/prompts?category=顧客対応・営業",
+        category: "営業・案件獲得",
+        title: "営業DM・問い合わせ",
+        description: "営業DMや問い合わせ文を、相手の状況と自分の事実情報から作成します。",
+        badge: "プロンプト",
+      },
+      {
+        href: "/sidejob",
+        category: "副業診断",
+        title: "AI副業プランナー",
+        description: "作業時間・得意分野・予算から、副業候補と30日プラン用プロンプトを作成します。",
+        badge: "診断",
+      },
+    ],
+  },
+  {
+    id: "research-efficiency",
+    title: "リサーチ・業務効率化",
+    description: "調査、事実確認、繰り返し作業の標準化など、複数ジャンルで使える補助機能です。",
+    tools: [
+      {
+        href: "/prompts?category=リサーチ",
+        category: "リサーチ",
+        title: "リサーチ・事実確認",
+        description: "市場調査、競合調査、公開前の事実確認で必要な情報源と確認項目を整理します。",
+        badge: "プロンプト",
+      },
+      {
+        href: "/prompts?category=業務効率化",
+        category: "業務効率化",
+        title: "業務効率化・SOP化",
+        description: "繰り返し作業をチェックリストと再利用できる標準手順へ変換します。",
+        badge: "プロンプト",
+      },
+      {
+        href: "/workflow",
+        category: "作業整理",
+        title: "AAS運営コックピット",
+        description: "今日やること、公開前チェック、記事→SNS再利用、シリーズ設計を1つの流れで管理します。",
+      },
+    ],
+  },
+  {
+    id: "operations",
+    title: "運営・アカウント",
+    description: "投稿先アカウントの設計や、継続運営に必要な設定をまとめています。",
+    tools: [
+      {
+        href: "/account-design",
+        category: "アカウント設計",
+        title: "note / Tips / Brain アカウント作成",
+        description: "表示名・ID候補・プロフィール・発信軸・初期投稿・専用アイコンまで媒体別に設計して保存します。",
+      },
+    ],
+  },
+  {
+    id: "publish",
+    title: "公開・分析",
+    description: "公開後の記録と、蓄積したコンテンツの状況確認をまとめています。",
+    tools: [
+      {
+        href: "/publish",
+        category: "公開管理",
+        title: "公開管理",
+        description: "公開予定・公開済みURL・公開日時を記事ライブラリへ記録します。",
+      },
+      {
+        href: "/analytics",
+        category: "分析",
+        title: "コンテンツ分析",
+        description: "記事ストック、掲載先、状態、最近更新した記事をAAS内のデータから集計します。",
+      },
+    ],
+  },
+  {
+    id: "support",
+    title: "サポート",
+    description: "困ったときの問い合わせや要望・不具合連絡はこちらです。",
+    tools: [
+      {
+        href: "/inquiries",
+        category: "サポート",
+        title: "お問い合わせ",
+        description: "追加機能要望、不具合、使い方、アカウント・購入関連を送信し、管理者からの返信を確認します。",
+      },
+    ],
+  },
+];
+
+export const SIDE_HUSTLE_TOOL_TITLES = [
+  "note運営アシスタント",
+  "記事・ブログ・コンテンツ販売",
+  "SNS運用・集客",
+  "YouTube・ショート動画",
+  "アフィリエイト",
+  "物販・フリマ販売",
+  "クラウドソーシング",
+  "スキル販売",
+  "デジタル商品・教材販売",
+  "営業DM・問い合わせ",
+  "リサーチ・事実確認",
+  "業務効率化・SOP化",
+  "AI副業プランナー",
+] as const;
