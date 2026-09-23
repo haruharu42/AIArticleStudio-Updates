@@ -60,11 +60,12 @@ test("article reuse creates platform-specific length and follow-up schedules", a
 });
 
 test("workflow cockpit combines schedule drafts preflight reuse and series work", async () => {
-  const [lib, page, route, tools, nav, home, css] = await Promise.all([
+  const [lib, page, route, tools, toolCatalog, nav, home, css] = await Promise.all([
     read("lib/content-lifecycle.ts"),
     read("components/content-workflow-page.tsx"),
     read("app/workflow/page.tsx"),
     read("components/phase-tools-page.tsx"),
+    read("features/tools/tool-catalog.ts"),
     read("lib/mobile-nav-preference.ts"),
     read("components/phase18-beginner-home.tsx"),
     read("app/phase43-content-workflow.css"),
@@ -82,7 +83,8 @@ test("workflow cockpit combines schedule drafts preflight reuse and series work"
   assert.match(page, /記事 → SNS再利用/);
   assert.match(page, /記事シリーズ・マガジン設計/);
   assert.match(route, /ContentWorkflowPage/);
-  assert.match(tools, /href: "\/workflow"/);
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
+  assert.match(toolCatalog, /href: "\/workflow"/);
   assert.match(nav, /key: "workflow".*href: "\/workflow"/);
   assert.match(home, /href="\/workflow"/);
   assert.match(css, /\.workflow-tabs/);
