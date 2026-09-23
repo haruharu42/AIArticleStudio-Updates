@@ -223,7 +223,7 @@ function AuthScreen({
         <p className="eyebrow">PWA ACCESS</p>
         <h1>記事づくりを、<br />どこからでも。</h1>
         <p className="lead">
-          AI Article Studio PWAへ安全にログインし、
+          AI Action Studio PWAへ安全にログインし、
           PC・スマホ・タブレットからクラウド記事を確認・編集できます。
         </p>
         <div className="trust-row">
@@ -236,7 +236,7 @@ function AuthScreen({
       <section className="auth-panel">
         <div className="auth-card">
           <div className="mobile-brand"><Brand compact /></div>
-          <p className="eyebrow">AI ARTICLE STUDIO</p>
+          <p className="eyebrow">AI ACTION STUDIO</p>
           <h2>{title}</h2>
           <p className="form-caption">
             {mode === "login" && "登録済みのアカウントで続けます。"}
