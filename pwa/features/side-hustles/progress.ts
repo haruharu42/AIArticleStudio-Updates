@@ -8,6 +8,11 @@ function storageKey(userId: string, slug: string): string {
   return [BASE_KEY, userId, slug].join(":");
 }
 
+export function hasStoredSideHustleDraft(userId: string, definition: SideHustleDefinition): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  return window.localStorage.getItem(storageKey(userId, definition.slug)) !== null;
+}
+
 export function readSideHustleDraft(
   userId: string,
   definition: SideHustleDefinition,
