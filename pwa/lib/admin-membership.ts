@@ -150,14 +150,3 @@ export async function setMembershipPlanFeature(
   });
   if (error) throw adminError(error, "プランの特典機能を更新できませんでした。");
 }
-
-export async function hasCreatorMembershipFeature(
-  client: SupabaseClient,
-  featureKey: string,
-): Promise<boolean> {
-  const { data, error } = await client.rpc("has_creator_membership_feature", {
-    p_feature_key: featureKey,
-  });
-  if (error) return false;
-  return data === true;
-}
