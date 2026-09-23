@@ -35,12 +35,26 @@ test("home provides side-hustle and action-first entry points without breaking a
     read("app/layout.tsx"),
   ]);
 
-  for (const label of ["副業から探す", "やりたいことから探す", "note副業", "SNS運用・集客", "自分に合うAI副業を探す", "記事を作る"]) {
+  for (const label of [
+    "副業から探す",
+    "やりたいことから探す",
+    "note副業",
+    "SNS運用・集客",
+    "YouTube・ショート動画",
+    "アフィリエイト",
+    "物販・フリマ販売",
+    "クラウドソーシング",
+    "スキル販売・デジタル商品",
+    "リサーチ・業務効率化",
+    "自分に合うAI副業を探す",
+    "記事を作る",
+  ]) {
     assert.match(hub, new RegExp(label));
   }
-  for (const href of ["/create", "/note-operations", "/sns-plan", "/sidejob", "/images", "/tools"]) {
+  for (const href of ["/create", "/note-operations", "/prompts", "/sidejob", "/images", "/tools"]) {
     assert.match(hub, new RegExp(href.replaceAll("/", "\\/")));
   }
+  assert.doesNotMatch(hub, /準備中/);
   assert.match(home, /<ActionStudioHomeHub \/>/);
   assert.match(layout, /phase48-action-studio\.css/);
   assert.match(css, /\.action-studio-card-grid/);
