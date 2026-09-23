@@ -120,9 +120,9 @@ export function PhaseToolsPage() {
     <main className="creator-page">
       <header className="creator-head">
         <div>
-          <p className="eyebrow">AI ARTICLE STUDIO</p>
+          <p className="eyebrow">AI ACTION STUDIO</p>
           <h1>機能一覧</h1>
-          <p>記事作成以外の機能を用途別にまとめています。画像設定・タイトル・本文・掲載用コピーなど、記事作成に含まれる機能は「記事を作る」へ集約しています。</p>
+          <p>副業・SNS・運営・公開・分析などの関連機能を用途別にまとめています。記事生成に含まれる画像設定・タイトル・本文・掲載用コピーは「記事を作る」へ集約しています。</p>
         </div>
         <Link className="route-back" href="/">← ホーム</Link>
       </header>
