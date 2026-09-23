@@ -59,6 +59,7 @@ test("admin home is navigation-only and sections are centralized", () => {
   assert.match(home, /ADMIN_SECTIONS\.filter/);
   for (const route of [
     "/admin/users",
+    "/admin/membership",
     "/admin/free-trial",
     "/admin/sales",
     "/admin/promotion",
