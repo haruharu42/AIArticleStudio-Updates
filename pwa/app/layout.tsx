@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { AccessStateProvider } from "@/components/access-state-provider";
 import { AdminHomeTopbar } from "@/components/admin-home-topbar";
 import { AppErrorReporter } from "@/components/app-error-reporter";
@@ -8,6 +9,7 @@ import { KnowledgeRuntimeBootstrap } from "@/components/knowledge-runtime-bootst
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
 import { ReleaseAudienceGate } from "@/components/release-audience-gate";
 import { ReleaseUpdateManager } from "@/components/release-update-manager";
+import { RouteScrollToTop } from "@/components/route-scroll-to-top";
 import "./globals.css";
 import "./phase9-11.css";
 import "./phase12-17.css";
@@ -77,6 +79,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <AccessStateProvider>
             <WorkspacePresetProvider>
               <AppErrorReporter />
+              <Suspense fallback={null}><RouteScrollToTop /></Suspense>
               <KnowledgeRuntimeBootstrap />
               <AdminHomeTopbar />
               <div className="free-trial-global-shell"><FreeTrialBanner /></div>
