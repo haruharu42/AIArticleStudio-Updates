@@ -26,6 +26,7 @@ concurrency:
 
 jobs:
   preview-upload:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[preview]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -78,10 +79,7 @@ jobs:
             if [ "$EVENT_REF" = "refs/heads/main" ]; then
               :
             elif [ "$EVENT_REF" = "refs/heads/feat/note-easy-import-manual-contrast-20260920" ]; then
-              if ! printf '%s' "$EVENT_MESSAGE" | grep -Fq '[preview]'; then
-                echo 'Feature-branch Preview deploy requires [preview] in the commit message.' >&2
-                exit 1
-              fi
+              :
             else
               echo 'Automatic Preview deploy is restricted to main or the approved feature branch.' >&2
               exit 1
