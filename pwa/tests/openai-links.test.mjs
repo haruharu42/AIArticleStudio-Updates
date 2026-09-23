@@ -70,8 +70,7 @@ test("beginner home and article wizard use the shared AI app launcher", async ()
   assert.match(creatorSteps, /AI用完成記事プロンプト/);
   assert.doesNotMatch(creatorSteps, /href=\{OPENAI_LINKS\.chatgpt\}/);
   assert.match(images, /ChatGPT Imagesを開く/);
-  assert.match(tools, /ChatGPT Work/);
-  assert.match(tools, /外部AIツール/);
+  assert.doesNotMatch(tools, /OPENAI_LINKS|外部AIツール|ChatGPT Work|ChatGPT Images/);
   assert.match(creator, /createArticleFromWizard/);
   assert.match(images, /buildImagePromptPlan/);
   assert.doesNotMatch(`${home}\n${creator}\n${creatorSteps}\n${images}\n${tools}`, /sora\.chatgpt\.com/i);
