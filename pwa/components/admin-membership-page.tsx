@@ -170,6 +170,29 @@ export function AdminMembershipPage() {
     return () => { active = false; };
   }, [loadMembership]);
 
+  const refreshNow = async () => {
+    if (busy) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await loadMembership();
+      if (selectedUserId) {
+        try {
+          setMembershipEntitlements(
+            await listCreatorMembershipEntitlements(getSupabaseClient(), selectedUserId),
+          );
+        } catch {
+          // 全体更新は成功扱いにし、選択中ユーザーだけ次回選択時に再取得する。
+        }
+      }
+      setMessage("メンバーシップ管理を最新状態へ更新しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "最新状態へ更新できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const selectUser = async (user: PwaAdminUser) => {
     setSelectedUserId(user.id);
     setMessage("");
@@ -317,6 +340,7 @@ export function AdminMembershipPage() {
           <p>noteメンバー特典の付与・取消、プラン別機能、参加URLを1か所で管理します。</p>
         </div>
         <div className="admin-head-actions">
+          <button type="button" className="secondary-action" disabled={busy} onClick={() => void refreshNow()}>最新状態へ更新</button>
           <Link className="route-back" href="/admin">← 管理ダッシュボード</Link>
         </div>
       </header>
