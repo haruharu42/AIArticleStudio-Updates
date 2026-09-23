@@ -64,6 +64,18 @@ test('article library exposes filters, sorting, paging, archive, duplicate and P
   assert.match(libraryListUi, /PWAで作成した記事や、これまでに同期済みの記事/);
 });
 
+test('article library filters can be collapsed without clearing the selected conditions', () => {
+  assert.match(libraryListUi, /useState\(true\)/);
+  assert.match(libraryListUi, /検索・絞り込み/);
+  assert.match(libraryListUi, /aria-expanded=\{filtersOpen\}/);
+  assert.match(libraryListUi, /setFiltersOpen\(\(current\) => !current\)/);
+  assert.match(libraryListUi, /絞り込み条件を指定中/);
+  assert.match(libraryListUi, /条件なし・すべての記事/);
+  assert.match(libraryListUi, /filtersOpen && \(/);
+  assert.match(libraryListUi, /value=\{filters\.query\}/);
+  assert.match(libraryListUi, /value=\{filters\.status\}/);
+});
+
 test('article library detail can copy title and rich publication body', () => {
   assert.match(libraryDetailUi, /掲載用コピー/);
   assert.match(libraryDetailUi, /タイトルをコピー/);
