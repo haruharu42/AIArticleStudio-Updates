@@ -384,14 +384,14 @@ export default function ManualPage() {
   return (
     <div className="help-shell">
       <header className="help-topbar">
-        <Link className="beginner-brand" href="/" aria-label="AI Article Studio ホーム"><span aria-hidden="true">✦</span><strong>AI ARTICLE <em>STUDIO</em></strong></Link>
+        <Link className="beginner-brand" href="/" aria-label="AI Action Studio ホーム"><span aria-hidden="true">✦</span><strong>AI ACTION <em>STUDIO</em></strong></Link>
         <div className="help-top-actions"><Link href="/faq">Q&A</Link><Link href="/settings">設定</Link></div>
       </header>
 
       <main className="help-main">
         <section className="help-hero">
           <p className="eyebrow">MANUAL</p>
-          <h1>AI Article Studio 機能別マニュアル</h1>
+          <h1>AI Action Studio 機能別マニュアル</h1>
           <p>「この機能は何をするのか」「どんな時に使うのか」「何を押せばよいか」を、一般機能と管理者機能に分けてまとめています。</p>
           <div className="help-hero-actions"><Link href="/tools">機能一覧を開く</Link><Link className="secondary" href="/faq">よくある質問を見る</Link></div>
         </section>
