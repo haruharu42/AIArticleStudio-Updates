@@ -65,7 +65,8 @@ test("image prompt plan includes local filename and alt metadata", () => {
   assert.equal(items[0].suggestedFilename, "ChatGPTで始めるAI副業_アイキャッチ.png");
   assert.equal(items[2].suggestedFilename, "ChatGPTで始めるAI副業_挿絵02.png");
   assert.match(items[0].prompt, /推奨保存ファイル名/);
-  assert.match(items[0].prompt, /AASへアップロードせず/);
+  assert.match(items[0].prompt, /AASのクラウドへアップロードせず/);
+  assert.match(items[0].prompt, /AASでは端末内画像として読み込めます/);
   assert.match(items[1].altText, /挿絵1/);
 });
 
@@ -78,7 +79,9 @@ test("PWA image UI is local-save first and does not expose cloud upload actions"
   assert.match(imagePage, /ファイル名をコピー/);
   assert.match(imagePage, /Supabase Storageへアップロードしません/);
   assert.match(imagePage, /選択した画像をZIPで保存/);
-  assert.match(imagePage, /画像はAASやSupabaseへアップロードされません/);
+  assert.match(imagePage, /画像はこの端末のAAS領域へ保存され、Supabaseへはアップロードされません/);
+  assert.match(imagePage, /saveLocalArticleImage/);
+  assert.match(imagePage, /listLocalArticleImages/);
   assert.match(imagePage, /createLocalImageZip/);
   assert.match(legacyViewer, /閲覧のみ可能/);
   assert.doesNotMatch(legacyViewer, /uploadArticleImage/);
