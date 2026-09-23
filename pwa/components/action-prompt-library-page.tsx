@@ -71,13 +71,8 @@ export function ActionPromptLibraryPage() {
 
         setTemplates(cloudTemplates);
         setCategory("すべて");
-        setSelectedId((currentId) => {
-          const next = cloudTemplates.find((template) => template.id === currentId) ?? cloudTemplates[0];
-          setValues((currentValues) => Object.fromEntries(
-            next.fields.map((field) => [field.key, next.id === currentId ? currentValues[field.key] ?? "" : ""]),
-          ));
-          return next.id;
-        });
+        setSelectedId(cloudTemplates[0].id);
+        setValues(initialValues(cloudTemplates[0]));
       },
       () => {
         // The built-in catalog remains available if cloud retrieval is temporarily unavailable.
