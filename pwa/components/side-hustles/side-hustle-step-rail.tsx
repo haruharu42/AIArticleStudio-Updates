@@ -1,4 +1,4 @@
-const STEPS = ["基本設定", "詳細設定", "AI設定", "完成プロンプト"] as const;
+const STEPS = ["基本設定", "詳細設定", "AI設定", "完成プロンプト", "AI出力"] as const;
 
 export function SideHustleStepRail({ step }: { step: number }) {
   return (
