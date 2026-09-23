@@ -16,6 +16,7 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     list,
     preferences,
     routing,
+    featureBoundary,
     route,
     nav,
     layout,
@@ -28,6 +29,7 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     read("components/action-prompt-library/action-prompt-template-list.tsx"),
     read("lib/action-prompt-preferences.ts"),
     read("lib/action-prompt-routing.ts"),
+    read("features/prompts/index.ts"),
     read("app/prompts/page.tsx"),
     read("lib/mobile-nav-preference.ts"),
     read("app/layout.tsx"),
@@ -70,6 +72,10 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
   assert.match(routing, /URLSearchParams/);
   assert.match(routing, /category/);
   assert.match(routing, /template/);
+  assert.match(featureBoundary, /action-prompt-catalog/);
+  assert.match(featureBoundary, /action-prompt-preferences/);
+  assert.match(featureBoundary, /action-prompt-routing/);
+  assert.match(featureBoundary, /action-prompt-service/);
   assert.match(page, /最近使った/);
   assert.match(route, /Phase15MemberGate/);
   assert.match(nav, /key: "prompts"/);
@@ -83,7 +89,10 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
     "category=物販・販売",
     "category=クラウドソーシング",
     "category=スキル販売",
+    "category=デジタル商品",
+    "category=顧客対応・営業",
     "category=リサーチ",
+    "category=業務効率化",
   ]) {
     assert.match(hub, new RegExp(deepLink));
   }
