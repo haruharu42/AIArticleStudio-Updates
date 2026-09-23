@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { SideHustlePromptStep } from "@/components/side-hustles/side-hustle-prompt-step";
+import { SideHustleResultStep } from "@/components/side-hustles/side-hustle-result-step";
 import { SideHustleSelectField } from "@/components/side-hustles/side-hustle-select-field";
 import { SideHustleStepRail } from "@/components/side-hustles/side-hustle-step-rail";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
@@ -289,92 +291,26 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
       )}
 
       {draft.step === 3 && built && (
-        <section className="side-hustle-wizard-card">
-          <div className="side-hustle-step-copy">
-            <p className="eyebrow">STEP 4</p>
-            <h2>専用プロンプト完成</h2>
-            <p>選択内容・専用設計・最新ナレッジ・選択AI向け最適化を1本のプロンプトに統合しました。</p>
-          </div>
-
-          <div className="side-hustle-applied-knowledge">
-            <strong>適用ナレッジ</strong>
-            <div>
-              {built.appliedKnowledge.map((label) => <span key={label}>{label}</span>)}
-            </div>
-            {built.warnings.map((warning) => <small key={warning}>{warning}</small>)}
-          </div>
-
-          <label className="side-hustle-prompt-output">
-            <span>完成プロンプト</span>
-            <textarea readOnly value={built.prompt} rows={24} />
-          </label>
-
-          <div className="side-hustle-prompt-actions">
-            <button className="primary-action" type="button" onClick={() => void copyPrompt(draft.selectedAi)}>
-              コピーして{AI_APP_LINKS[draft.selectedAi].name}を開く
-            </button>
-            <button className="secondary-action" type="button" onClick={() => void copyPrompt()}>
-              プロンプトだけコピー
-            </button>
-          </div>
-        </section>
+        <SideHustlePromptStep
+          definition={definition}
+          draft={draft}
+          built={built}
+          onCopyPrompt={copyPrompt}
+        />
       )}
 
       {draft.step === 4 && (
-        <section className="side-hustle-wizard-card">
-          <div className="side-hustle-step-copy">
-            <p className="eyebrow">STEP 5</p>
-            <h2>AIの完成結果をAASへ戻す</h2>
-            <p>
-              外部AIで生成した結果をここへ貼り付けて保存できます。
-              入力内容と同じく端末内へ自動保存されるため、別画面へ移動しても続きから確認できます。
-            </p>
-          </div>
-
-          <label className="side-hustle-prompt-output side-hustle-result-output">
-            <span>AIの完成結果</span>
-            <textarea
-              value={draft.resultText}
-              rows={24}
-              onChange={(event) => patchDraft({ resultText: event.target.value.slice(0, 120000) })}
-              placeholder="ChatGPT / Claude / Gemini の完成結果をここへ貼り付けてください。"
-            />
-          </label>
-
-          <div className="side-hustle-result-actions">
-            <button className="primary-action" type="button" onClick={() => void pasteResult()}>
-              クリップボードから貼り付け
-            </button>
-            <button
-              className="secondary-action"
-              type="button"
-              disabled={!draft.resultText.trim()}
-              onClick={() => void copyResult()}
-            >
-              完成結果をコピー
-            </button>
-            <button
-              className="secondary-action"
-              type="button"
-              disabled={!draft.resultText.trim()}
-              onClick={() => {
-                patchDraft({ resultText: "" });
-                setMessage("AIの完成結果だけをクリアしました。設定内容は残しています。");
-              }}
-            >
-              結果だけクリア
-            </button>
-          </div>
-
-          <div className="side-hustle-result-summary">
-            <strong>{definition.title} の作業結果</strong>
-            <span>{draft.resultText.length.toLocaleString()}文字</span>
-            <small>
-              この結果はAAS内の副業ウィザード進捗として端末へ保存します。
-              パスワード・認証コード・決済情報などの機密情報は貼り付けないでください。
-            </small>
-          </div>
-        </section>
+        <SideHustleResultStep
+          definition={definition}
+          draft={draft}
+          onChangeResult={(value) => patchDraft({ resultText: value })}
+          onPasteResult={pasteResult}
+          onCopyResult={copyResult}
+          onClearResult={() => {
+            patchDraft({ resultText: "" });
+            setMessage("AIの完成結果だけをクリアしました。設定内容は残しています。");
+          }}
+        />
       )}
 
 
