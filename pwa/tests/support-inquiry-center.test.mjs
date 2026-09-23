@@ -56,11 +56,12 @@ ${hardening}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
 });
 
 test("general users can submit categorized required inquiries and keep a reply history", async () => {
-  const [lib, page, route, tools, settings, nav] = await Promise.all([
+  const [lib, page, route, tools, toolCatalog, settings, nav] = await Promise.all([
     read("lib/support-center.ts"),
     read("components/user-inquiries-page.tsx"),
     read("app/inquiries/page.tsx"),
     read("components/phase-tools-page.tsx"),
+    read("features/tools/tool-catalog.ts"),
     read("components/pwa-settings-page.tsx"),
     read("lib/mobile-nav-preference.ts"),
   ]);
@@ -82,7 +83,8 @@ test("general users can submit categorized required inquiries and keep a reply h
   assert.match(lib, /close_own_support_request/);
 
   assert.match(route, /UserInquiriesPage/);
-  assert.match(tools, /href: "\/inquiries"/);
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
+  assert.match(toolCatalog, /href: "\/inquiries"/);
   assert.match(settings, /href="\/inquiries">お問い合わせ・返信確認/);
   assert.match(nav, /key: "inquiries".*href: "\/inquiries"/);
 });
