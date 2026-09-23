@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { ActionStudioHomeHub } from "@/components/action-studio-home-hub";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { Phase7App } from "@/components/phase6-app";
 import { Phase7Library } from "@/components/phase7-library";
@@ -316,10 +317,12 @@ export function Phase18BeginnerHome() {
       <main className="reference-home-main">
         <div className="reference-home-heading">
           <h1>⌂ ホーム</h1>
-          <p>今日も、いい記事をつくりましょう！</p>
+          <p>AIで副業を、もっと簡単に。</p>
         </div>
 
         <ReleasePreviewHomeStatus />
+
+        <ActionStudioHomeHub />
 
         <section className="reference-creator-card" aria-label="Creatorステータス">
           <span className="reference-avatar" aria-hidden="true">
