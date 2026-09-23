@@ -51,11 +51,16 @@ test("active PWA access shell avoids frozen Windows and hands successful login b
   assert.match(provider, /onAuthStateChange/);
 });
 
-test("feature hub uses user-facing categories instead of phase badges", async () => {
+test("feature hub groups supporting features by purpose and avoids article-creator duplication", async () => {
   const tools = await read("components/phase-tools-page.tsx");
-  for (const label of ["記事制作", "画像", "SNS", "副業支援", "SNS設計", "出力", "公開", "分析"]) {
+  for (const label of ["運営・アカウント", "SNS・集客", "公開・改善", "副業・収益化", "サポート", "外部AIツール"]) {
     assert.match(tools, new RegExp(label));
   }
+  assert.match(tools, /memberToolGroups/);
+  assert.match(tools, /tool-group-section/);
+  assert.doesNotMatch(tools, /href: "\/create"/);
+  assert.doesNotMatch(tools, /href: "\/images"/);
+  assert.doesNotMatch(tools, /href: "\/export"/);
   assert.doesNotMatch(tools, /phase:\s*["']/i);
 });
 
