@@ -20,20 +20,24 @@ def authenticated(role="admin", status="active", user_id="admin-id", aas_id="AAS
     )
 
 
+class AppStub:
+    pass
+
+
 def main() -> None:
     admin = authenticated()
-    shell = RoleShell(object(), admin.profile, lambda: None, current_user=admin)
+    shell = RoleShell(AppStub(), admin.profile, lambda: None, current_user=admin)
     assert shell.ui_mode == "admin"
     assert shell._can_switch_modes()
     assert admin.profile.role == "admin"
 
     user = authenticated("user", "active", "user-id", "AAS-000002")
-    user_shell = RoleShell(object(), user.profile, lambda: None, current_user=user)
+    user_shell = RoleShell(AppStub(), user.profile, lambda: None, current_user=user)
     assert user_shell.ui_mode == "user"
     assert not user_shell._can_switch_modes()
 
     suspended_admin = authenticated("admin", "suspended")
-    suspended_shell = RoleShell(object(), suspended_admin.profile, lambda: None, current_user=suspended_admin)
+    suspended_shell = RoleShell(AppStub(), suspended_admin.profile, lambda: None, current_user=suspended_admin)
     assert suspended_shell.ui_mode == "user"
     assert not suspended_shell._can_switch_modes()
     assert {"dashboard", "users", "articles", "licenses", "diagnostics"} <= ADMIN_ONLY_ROUTES
