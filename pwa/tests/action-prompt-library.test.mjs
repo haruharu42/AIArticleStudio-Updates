@@ -52,7 +52,8 @@ test("side-hustle prompt library is modular, searchable, copy-first, and uses ex
   }
 
   assert.match(catalog, /入力されていない実績/);
-  assert.match(page, /副業プロンプトライブラリ/);
+  assert.match(page, /汎用プロンプトライブラリ/);
+  assert.match(page, /専用ウィザード/);
   assert.match(page, /navigator\.clipboard\.writeText/);
   assert.match(page, /launchAiApp/);
   assert.match(page, /loadActionPromptCatalog/);
