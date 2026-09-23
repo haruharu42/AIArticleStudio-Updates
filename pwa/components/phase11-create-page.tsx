@@ -7,6 +7,7 @@ import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-refe
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import {
+  AiSelectionStep,
   ArticleConditionsStep,
   BodyStep,
   GenerationMethodStep,
@@ -45,6 +46,13 @@ import {
 } from "@/features/account-design";
 import { buildCombinedImagePrompt, buildImagePromptPlan } from "@/lib/phase13-image-prompts";
 import { getSupabaseClient } from "@/lib/supabase";
+import {
+  createDefaultWritingProfile,
+  loadWritingProfile,
+  saveWritingProfile,
+  setRuntimeWritingProfile,
+  type UserWritingProfile,
+} from "@/lib/user-personalization";
 
 type Gate =
   | { kind: "loading" }
@@ -71,6 +79,7 @@ export function Phase11CreatePage() {
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [wizardRestored, setWizardRestored] = useState<boolean | null>(null);
   const [accountDesigns, setAccountDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
+  const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
   const progressOwnerIdRef = useRef("");
   const articleQuotaInFlightRef = useRef(false);
   const accountPresetAppliedRef = useRef(false);
@@ -124,6 +133,16 @@ export function Phase11CreatePage() {
           }
         }
 
+        let loadedWritingProfile: UserWritingProfile;
+        try {
+          loadedWritingProfile = await loadWritingProfile(client, ownerId);
+        } catch {
+          loadedWritingProfile = createDefaultWritingProfile(ownerId);
+        }
+        if (!active) return;
+        setWritingProfile(loadedWritingProfile);
+        setRuntimeWritingProfile(loadedWritingProfile);
+
         const saved = loadArticleWizardProgress(ownerId);
         if (saved) {
           setStep(saved.step);
@@ -152,6 +171,7 @@ export function Phase11CreatePage() {
     return () => {
       active = false;
       setRuntimePlatformAccountDesigns(null);
+      setRuntimeWritingProfile(null);
     };
   }, [accessOwnerId, accessState.kind, client]);
 
@@ -308,9 +328,29 @@ export function Phase11CreatePage() {
     }
   };
 
-  const next = () => {
+  const next = async () => {
     setMessage("");
-    if (step === 0 && draft.magazineEnabled && !magazinePlan.name.trim()) {
+
+    if (step === 0) {
+      if (!writingProfile) {
+        setMessage("使用AIの設定を読み込めませんでした。");
+        return;
+      }
+      setBusy(true);
+      try {
+        const savedProfile = await saveWritingProfile(getSupabaseClient(), writingProfile);
+        setWritingProfile(savedProfile);
+        setRuntimeWritingProfile(savedProfile);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "使用AIの設定を保存できませんでした。");
+        setBusy(false);
+        return;
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    if (step === 1 && draft.magazineEnabled && !magazinePlan.name.trim()) {
       setMessage("マガジン構成案を生成し、「このマガジンを使用する」を選んでから次へ進んでください。");
       return;
     }
@@ -426,9 +466,10 @@ export function Phase11CreatePage() {
           </div>
         )}
 
-        {step === 0 && <GenerationMethodStep draft={draft} patch={patch} magazinePlan={magazinePlan} onMagazinePlanChange={setMagazinePlan} setGenre={setGenre} setSubgenre={setSubgenre} />}
-        {step === 1 && <ImagePlanStep draft={draft} patch={patch} />}
-        {step === 2 && (
+        {step === 0 && writingProfile && <AiSelectionStep profile={writingProfile} onChange={setWritingProfile} />}
+        {step === 1 && <GenerationMethodStep draft={draft} patch={patch} magazinePlan={magazinePlan} onMagazinePlanChange={setMagazinePlan} setGenre={setGenre} setSubgenre={setSubgenre} />}
+        {step === 2 && <ImagePlanStep draft={draft} patch={patch} />}
+        {step === 3 && (
           <ArticleConditionsStep
             draft={draft}
             patch={patch}
@@ -438,7 +479,7 @@ export function Phase11CreatePage() {
             setArticleType={setArticleType}
           />
         )}
-        {step === 3 && (
+        {step === 4 && (
           <TitleStep
             draft={draft}
             patch={patch}
@@ -449,7 +490,7 @@ export function Phase11CreatePage() {
             setMessage={setMessage}
           />
         )}
-        {step === 4 && (
+        {step === 5 && (
           <BodyStep
             draft={draft}
             patch={patch}
@@ -461,7 +502,7 @@ export function Phase11CreatePage() {
             setMessage={setMessage}
           />
         )}
-        {step === 5 && (
+        {step === 6 && (
           <PreviewStep
             draft={draft}
             imagePrompts={imagePrompts}
@@ -470,13 +511,13 @@ export function Phase11CreatePage() {
             setMessage={setMessage}
           />
         )}
-        {step === 6 && <SaveStep draft={draft} patch={patch} tagsText={tagsText} setTagsText={setTagsText} busy={busy} createdId={createdId} onSave={save} setMessage={setMessage} />}
+        {step === 7 && <SaveStep draft={draft} patch={patch} tagsText={tagsText} setTagsText={setTagsText} busy={busy} createdId={createdId} onSave={save} setMessage={setMessage} />}
 
         {message && <div className="route-notice" role="status" aria-live="polite">{message}</div>}
 
         <footer className="wizard-actions">
           <button className="secondary-action" type="button" disabled={step === 0 || busy || articleBusy} onClick={back}>戻る</button>
-          {step < ARTICLE_CREATE_STEPS.length - 1 && <button className="primary-action" type="button" disabled={busy || articleBusy} onClick={next}>次へ →</button>}
+          {step < ARTICLE_CREATE_STEPS.length - 1 && <button className="primary-action" type="button" disabled={busy || articleBusy || (step === 0 && !writingProfile)} onClick={() => void next()}>次へ →</button>}
           {createdId && <Link className="primary-action" href="/">ホームへ戻る</Link>}
         </footer>
       </section>
