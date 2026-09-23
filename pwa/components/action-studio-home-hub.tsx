@@ -59,17 +59,38 @@ const sideHustles: readonly ActionCard[] = [
     badge: "プロンプト",
   },
   {
-    title: "スキル販売・デジタル商品",
-    description: "サービスページや教材・テンプレート商品の設計を進めます。",
+    title: "スキル販売",
+    description: "サービス内容、提供範囲、購入前確認、納品内容を販売ページ向けに整理します。",
     icon: "◫",
     href: "/prompts?category=スキル販売",
     badge: "プロンプト",
   },
   {
-    title: "リサーチ・業務効率化",
-    description: "市場調査、事実確認、繰り返し作業のSOP化をテンプレートで進めます。",
-    icon: "⌘",
+    title: "デジタル商品・教材販売",
+    description: "教材、テンプレート、デジタル商品の章構成や成果物を設計します。",
+    icon: "▤",
+    href: "/prompts?category=デジタル商品",
+    badge: "プロンプト",
+  },
+  {
+    title: "営業・案件獲得",
+    description: "営業DMや問い合わせ文を、相手の状況と自分の事実情報から作ります。",
+    icon: "✉",
+    href: "/prompts?category=顧客対応・営業",
+    badge: "プロンプト",
+  },
+  {
+    title: "リサーチ・事実確認",
+    description: "市場調査、競合調査、公開前の事実確認を必要な情報源から整理します。",
+    icon: "⌕",
     href: "/prompts?category=リサーチ",
+    badge: "プロンプト",
+  },
+  {
+    title: "業務効率化・SOP化",
+    description: "繰り返し作業を、チェックリストと再利用できる標準手順へ変換します。",
+    icon: "⌘",
+    href: "/prompts?category=業務効率化",
     badge: "プロンプト",
   },
   {
@@ -154,8 +175,8 @@ export function ActionStudioHomeHub() {
           <span className="action-studio-kicker">AI ACTION STUDIO</span>
           <h2 id="action-studio-hub-title">今日は、AIで何を進めますか？</h2>
           <p>
-            副業や目的を選ぶだけで、必要な機能へすぐ進めます。
-            AIに何を聞けばいいか分からなくても、AASが作業の入口を整理します。
+            副業や目的を選ぶだけで、必要な機能やプロンプトへすぐ進めます。
+            AIに何を聞けばいいか分からなくても、入力 → コピー → AI実行までAASが案内します。
           </p>
         </div>
         <div className="action-studio-flow" aria-label="基本の使い方">
