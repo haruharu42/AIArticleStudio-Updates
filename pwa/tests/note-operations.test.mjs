@@ -46,11 +46,12 @@ test("note operations engine generates mixed schedules and supports download upl
 });
 
 test("note operations UI covers setup profile planning calendar and home todo", async () => {
-  const [page, today, home, tools, desktop, mobile, layout, css] = await Promise.all([
+  const [page, today, home, tools, toolCatalog, desktop, mobile, layout, css] = await Promise.all([
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-today-panel.tsx"),
     readPwa("components/phase18-beginner-home.tsx"),
     readPwa("components/phase-tools-page.tsx"),
+    readPwa("features/tools/tool-catalog.ts"),
     readPwa("lib/desktop-nav-preference.ts"),
     readPwa("lib/mobile-nav-preference.ts"),
     readPwa("app/layout.tsx"),
@@ -83,7 +84,8 @@ test("note operations UI covers setup profile planning calendar and home todo", 
   assert.match(today, /完了にする/);
   assert.match(home, /NoteTodayPanel/);
   assert.match(home, /ownerId=\{profile\.id\}/);
-  assert.match(tools, /href: "\/note-operations"/);
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
+  assert.match(toolCatalog, /href: "\/note-operations"/);
   assert.match(desktop, /key: "noteOps"/);
   assert.match(desktop, /label: "note運営"/);
   assert.match(mobile, /key: "noteOps"/);
