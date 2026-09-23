@@ -120,6 +120,9 @@ test("side-hustle wizard injects cloud knowledge and prompt optimization and per
   assert.match(progress, /Math\.min\(4, row\.step\)/);
   assert.match(wizard, /readSideHustleDraft/);
   assert.match(wizard, /writeSideHustleDraft/);
+  assert.match(wizard, /pagehide/);
+  assert.match(wizard, /beforeunload/);
+  assert.match(wizard, /visibilitychange/);
   assert.match(wizard, /KNOWLEDGE_RUNTIME_EVENT/);
   assert.match(wizard, /Fresh/);
   assert.match(wizard, /Stable/);
