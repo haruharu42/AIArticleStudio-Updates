@@ -41,6 +41,13 @@ function statusLabel(status: KnowledgeRefreshRequest["status"]): string {
   }
 }
 
+function refreshErrorLabel(value: string): string {
+  if (value.startsWith("AAS auto-recovery: processing exceeded 24 hours")) {
+    return "24時間以上処理中だったため自動解除しました。次回の更新サイクルで再試行できます。";
+  }
+  return value;
+}
+
 const FIELD_LABELS: Record<string, string> = {
   new: "新規追加",
   kind: "分類",
@@ -413,7 +420,7 @@ export function KnowledgeRefreshPanel() {
                 {!hasDetails && request.status === "completed" && (
                   <small>この更新は旧形式の履歴のため詳細差分は記録されていません。</small>
                 )}
-                {request.errorMessage && <p className="error">{request.errorMessage}</p>}
+                {request.errorMessage && <p className="error">{refreshErrorLabel(request.errorMessage)}</p>}
               </article>
             );
           })}
