@@ -264,3 +264,32 @@
     width: 100%;
   }
 }
+
+
+.action-prompt-ai-step {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line, rgba(148, 163, 184, 0.2));
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.action-prompt-ai-step label {
+  display: grid;
+  gap: 6px;
+}
+
+.action-prompt-ai-step span {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.action-prompt-ai-step select {
+  min-height: 42px;
+}
+
+.action-prompt-ai-step small {
+  color: var(--muted, #94a3b8);
+  line-height: 1.6;
+}
