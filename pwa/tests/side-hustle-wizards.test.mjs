@@ -99,10 +99,12 @@ test("dedicated prompts have task-specific deliverables instead of a generic sha
 });
 
 test("side-hustle wizard injects cloud knowledge and prompt optimization and persists progress", async () => {
-  const [builder, progress, wizard, field, rail, route, layout, runtime] = await Promise.all([
+  const [builder, progress, wizard, promptStep, resultStep, field, rail, route, layout, runtime] = await Promise.all([
     read("features/side-hustles/prompt-builder.ts"),
     read("features/side-hustles/progress.ts"),
     read("components/side-hustle-wizard-page.tsx"),
+    read("components/side-hustles/side-hustle-prompt-step.tsx"),
+    read("components/side-hustles/side-hustle-result-step.tsx"),
     read("components/side-hustles/side-hustle-select-field.tsx"),
     read("components/side-hustles/side-hustle-step-rail.tsx"),
     read("app/side-hustles/[slug]/page.tsx"),
@@ -131,12 +133,18 @@ test("side-hustle wizard injects cloud knowledge and prompt optimization and per
   assert.match(wizard, /KNOWLEDGE_RUNTIME_EVENT/);
   assert.match(wizard, /Fresh/);
   assert.match(wizard, /Stable/);
-  assert.match(wizard, /完成プロンプト/);
-  assert.match(wizard, /コピーして/);
-  assert.match(wizard, /AIの完成結果をAASへ戻す/);
-  assert.match(wizard, /クリップボードから貼り付け/);
-  assert.match(wizard, /完成結果をコピー/);
+  assert.match(wizard, /SideHustlePromptStep/);
+  assert.match(wizard, /SideHustleResultStep/);
   assert.match(wizard, /resultText/);
+  assert.match(promptStep, /専用プロンプト完成/);
+  assert.match(promptStep, /選択内容/);
+  assert.match(promptStep, /resolveSideHustleFieldValue/);
+  assert.match(promptStep, /appliedKnowledge/);
+  assert.match(promptStep, /コピーして/);
+  assert.match(resultStep, /AIの完成結果をAASへ戻す/);
+  assert.match(resultStep, /クリップボードから貼り付け/);
+  assert.match(resultStep, /完成結果をコピー/);
+  assert.match(resultStep, /結果だけクリア/);
   assert.match(wizard, /const nextDraft = \{ \.\.\.draft, step: 4 \}/);
   assert.match(wizard, /writeSideHustleDraft\(userId, definition, nextDraft\)/);
   assert.match(field, /<select/);
