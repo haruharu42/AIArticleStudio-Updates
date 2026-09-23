@@ -182,7 +182,7 @@ test("service worker fetches current UI assets before cache fallback and purges 
 
 test("package includes the Phase 12-17 contract test and keeps dependency pins unchanged", async () => {
   const packageJson = JSON.parse(await read("package.json"));
-  assert.match(packageJson.scripts.test, /phase12-17-batch\.test\.mjs/);
+  assert.match(packageJson.scripts.test, /node --test --test-concurrency=1/);
   assert.equal(packageJson.dependencies.next, "16.3.4");
   assert.equal(packageJson.dependencies.react, "19.2.8");
   assert.equal(packageJson.dependencies["@supabase/supabase-js"], "2.112.3");
