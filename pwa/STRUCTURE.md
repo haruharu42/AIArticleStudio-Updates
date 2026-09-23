@@ -9,12 +9,15 @@ AI Article Studio PWA keeps responsibilities separated so UI changes, business l
 - `components/phase6-app.tsx`: authentication/access shell; when access becomes ready inside the current home flow, it hands control back instead of rendering the legacy dashboard.
 - `components/phase18-beginner-home.tsx`: current PWA home; owns the ready dashboard and stable auth-state refresh subscription.
 - `components/article-create/`: article-creation step UI; no direct profile or entitlement queries.
+- `components/action-prompt-library/`: prompt-library presentation panels; receives catalog state and callbacks without owning persistence or Supabase access.
+- `components/action-prompt-library-page.tsx`: prompt-library controller; owns catalog merge, filtering, route selection, local progress/favorites/recent orchestration, clipboard handoff, and messages.
 - `components/article-create/magazine-planner.tsx`: dropdown-first note magazine planning UI; receives draft state and callbacks only.
 - `components/aas-reference-shell.tsx`: shared AAS header and five-item reference bottom navigation for the primary mobile surfaces.
 - `components/article-library/`: article-library list, detail, and editor presentation; receives data and callbacks without owning Supabase operations.
 - `components/phase7-library.tsx`: article-library controller; owns paging, detail loading, mutation orchestration, async request ordering, and image/tool composition.
 - `components/admin-users/`: admin user-management presentation panels; callbacks only, with no direct Supabase mutation ownership.
 - `components/pwa-admin-users-page.tsx`: admin user-management controller; owns loading, selection, mutation orchestration, refresh, and messages.
+- `features/prompts/`: public prompt-domain boundary used by new UI; re-exports catalog, preferences, routing, and service contracts while legacy `lib/` paths remain compatible.
 - `lib/access-control.ts`: authenticated profile validation and authoritative PWA entitlement checks.
 - `lib/admin-users-view.ts`: pure admin-user filtering, labels, date formatting, and summary calculations.
 - `lib/article-create-draft.ts`: pure article-draft defaults, URL parsing, tag parsing, step validation, and restored-draft validation.
@@ -58,6 +61,7 @@ pwa/
 │  ├─ social/
 │  ├─ images/
 │  ├─ presets/
+│  ├─ prompts/
 │  ├─ support/
 │  ├─ admin/
 │  └─ navigation/
