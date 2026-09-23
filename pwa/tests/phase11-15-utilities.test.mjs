@@ -146,7 +146,7 @@ test("tools hub keeps supporting workflows grouped and leaves article-integrated
   assert.doesNotMatch(tools, /href: "\/export"/);
   assert.doesNotMatch(tools, /href: "\/images"/);
   assert.doesNotMatch(tools, /href: "\/create"/);
-  assert.match(packageJson.scripts.test, /phase11-15-utilities\.test\.mjs/);
+  assert.match(packageJson.scripts.test, /node --test --test-concurrency=1/);
 });
 
 
