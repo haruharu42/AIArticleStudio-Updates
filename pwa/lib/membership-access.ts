@@ -6,6 +6,16 @@ export type CreatorMembershipPublicSettings = {
   guidance: string;
 };
 
+export type CreatorMembershipFeatureRow = {
+  planCode: string;
+  planName: string;
+  tierRank: number;
+  featureKey: string;
+  featureName: string;
+  featureDescription: string;
+  enabled: boolean;
+};
+
 function row(value: unknown): Record<string, unknown> | null {
   if (!Array.isArray(value) || !value.length) return null;
   const first = value[0];
@@ -39,4 +49,35 @@ export async function hasCreatorMembershipFeature(
   });
   if (error) return false;
   return data === true;
+}
+
+
+export async function listCreatorMembershipFeatureMatrix(
+  client: SupabaseClient,
+): Promise<CreatorMembershipFeatureRow[]> {
+  const { data, error } = await client.rpc("list_creator_membership_feature_matrix");
+  if (error || !Array.isArray(data)) return [];
+  return data.flatMap((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+    const item = raw as Record<string, unknown>;
+    const tierRank = typeof item.tier_rank === "number" ? item.tier_rank : Number(item.tier_rank ?? 0);
+    if (
+      typeof item.plan_code !== "string"
+      || typeof item.plan_name !== "string"
+      || !Number.isFinite(tierRank)
+      || typeof item.feature_key !== "string"
+      || typeof item.feature_name !== "string"
+      || typeof item.feature_description !== "string"
+      || typeof item.enabled !== "boolean"
+    ) return [];
+    return [{
+      planCode: item.plan_code,
+      planName: item.plan_name,
+      tierRank,
+      featureKey: item.feature_key,
+      featureName: item.feature_name,
+      featureDescription: item.feature_description,
+      enabled: item.enabled,
+    }];
+  });
 }
