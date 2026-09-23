@@ -53,7 +53,7 @@ test("active PWA access shell avoids frozen Windows and hands successful login b
 
 test("feature hub groups supporting features by purpose and avoids article-creator duplication", async () => {
   const tools = await read("components/phase-tools-page.tsx");
-  for (const label of ["運営・アカウント", "SNS・集客", "公開・改善", "副業・収益化", "サポート", "外部AIツール"]) {
+  for (const label of ["運営・アカウント", "SNS・集客", "公開・改善", "副業・収益化", "サポート"]) {
     assert.match(tools, new RegExp(label));
   }
   assert.match(tools, /memberToolGroups/);
@@ -61,6 +61,7 @@ test("feature hub groups supporting features by purpose and avoids article-creat
   assert.doesNotMatch(tools, /href: "\/create"/);
   assert.doesNotMatch(tools, /href: "\/images"/);
   assert.doesNotMatch(tools, /href: "\/export"/);
+  assert.doesNotMatch(tools, /OPENAI_LINKS|外部AIツール|ChatGPT Work|ChatGPT Images/);
   assert.doesNotMatch(tools, /phase:\s*["']/i);
 });
 
