@@ -88,6 +88,12 @@ const memberToolGroups: readonly ToolGroup[] = [
     description: "記事制作とは別の副業計画や活動設計をまとめています。",
     tools: [
       {
+        href: "/prompts",
+        category: "プロンプト",
+        title: "副業プロンプトライブラリ",
+        description: "記事・SNS・動画・画像・販売・受託など、用途別テンプレートを選んでコピペ用プロンプトを作成します。",
+      },
+      {
         href: "/sidejob",
         category: "副業支援",
         title: "AI副業プランナー",
