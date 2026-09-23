@@ -156,7 +156,7 @@ test("article creator UI v2 keeps the eight-step rail readable and preserves two
 
   assert.match(plannerUi, /マガジンタイトル一括生成/);
   assert.match(css, /Article creator UI v2: eight-step progress, readable type, and 390-430px two-column layout/);
-  assert.match(css, /grid-template-columns: repeat\\(8, minmax\\(0, 1fr\\)\\)/);
+  assert.match(css, /grid-template-columns: repeat\(8, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: 1fr/);
 });
