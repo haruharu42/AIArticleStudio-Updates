@@ -92,9 +92,10 @@ test("account designs load and save per user and platform without external crede
 });
 
 test("account design is reachable from tools settings note operations and manual", async () => {
-  const [route, tools, settings, noteOps, layout, css, manual, faq] = await Promise.all([
+  const [route, tools, toolCatalog, settings, noteOps, layout, css, manual, faq] = await Promise.all([
     read("app/account-design/page.tsx"),
     read("components/phase-tools-page.tsx"),
+    read("features/tools/tool-catalog.ts"),
     read("components/pwa-settings-page.tsx"),
     read("components/note-operations-page.tsx"),
     read("app/layout.tsx"),
@@ -104,7 +105,8 @@ test("account design is reachable from tools settings note operations and manual
   ]);
 
   assert.match(route, /PlatformAccountDesignPage/);
-  assert.match(tools, /href: "\/account-design"/);
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
+  assert.match(toolCatalog, /href: "\/account-design"/);
   assert.match(settings, /href="\/account-design"/);
   assert.match(noteOps, /href="\/account-design"/);
   assert.match(layout, /phase40-account-design\.css/);
