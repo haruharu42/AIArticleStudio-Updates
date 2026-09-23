@@ -9,23 +9,32 @@ const repoRoot = path.resolve(root, "..");
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 
-test("article creation confirms AI for each new article and resumes in-progress work without interruption", async () => {
-  const route = await read("app/create/page.tsx");
-  const setup = await read("components/create-ai-setup.tsx");
-  const personalization = await read("lib/user-personalization.ts");
-  assert.match(route, /CreateAiSetup/);
-  for (const label of ["使用するAIを選びます", "無料版", "有料版", "この設定で記事作成へ"]) {
-    assert.match(setup, new RegExp(label));
+test("article creation keeps AI selection as wizard step one and allows returning to it", async () => {
+  const [route, page, steps, draft, progress, personalization] = await Promise.all([
+    read("app/create/page.tsx"),
+    read("components/phase11-create-page.tsx"),
+    read("components/article-create/article-create-steps.tsx"),
+    read("lib/article-create-draft.ts"),
+    read("lib/phase11-wizard-progress.ts"),
+    read("lib/user-personalization.ts"),
+  ]);
+
+  assert.match(route, /Phase11CreatePage/);
+  assert.doesNotMatch(route, /CreateAiSetup/);
+  assert.match(draft, /"使用AI選択"[\s\S]*?"記事の種類"/);
+  assert.match(steps, /STEP 1 · 使用AI選択/);
+  assert.match(steps, /STEP 2 · 種類の選択/);
+  for (const label of ["ChatGPT", "Claude", "Gemini", "無料版", "有料版"]) {
+    assert.match(steps + personalization, new RegExp(label));
   }
-  for (const label of ["ChatGPT", "Claude", "Gemini"]) {
-    assert.match(personalization, new RegExp(label));
-  }
-  assert.match(setup, /saveWritingProfile/);
-  assert.match(setup, /setRuntimeWritingProfile/);
-  assert.match(setup, /setConfirmed\(Boolean\(wizardProgress\)\)/);
-  assert.doesNotMatch(setup, /wizardProgress \|\| writingProfile\.updatedAt/);
-  assert.match(setup, /新しい記事を作る最初に/);
-  assert.match(setup, /途中作業を復元する場合/);
+  assert.match(page, /AiSelectionStep/);
+  assert.match(page, /loadWritingProfile/);
+  assert.match(page, /saveWritingProfile/);
+  assert.match(page, /setRuntimeWritingProfile/);
+  assert.match(page, /jumpBackToStep/);
+  assert.match(page, /index < displayStep/);
+  assert.match(progress, /STORAGE_VERSION = 2/);
+  assert.match(progress, /parsed\.version === 1[\s\S]*?\+ 1/);
 });
 
 test("personalization settings can be viewed edited saved and reset", async () => {
