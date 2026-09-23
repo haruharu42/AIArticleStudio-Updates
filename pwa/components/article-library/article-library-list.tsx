@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 import type { ArticleLibraryItem } from "@/lib/article-library-v2";
 import type { ArticleStatus } from "@/lib/phase7-articles";
@@ -48,9 +51,29 @@ export function ArticleLibraryListView({
   onOpen: (articleId: string) => void;
   onLoadMore: () => void;
 }) {
+  const [filtersOpen, setFiltersOpen] = useState(true);
+
   return (
     <>
-      <div className="editor-card">
+      <section className={`library-filter-panel ${filtersOpen ? "open" : "closed"}`}>
+        <button
+          className="library-filter-toggle"
+          type="button"
+          aria-expanded={filtersOpen}
+          aria-controls="article-library-filters"
+          onClick={() => setFiltersOpen((current) => !current)}
+        >
+          <span>
+            <strong>検索・絞り込み</strong>
+            <small>{filtersActive ? "絞り込み条件を指定中" : "条件なし・すべての記事"}</small>
+          </span>
+          <span className="library-filter-toggle-state" aria-hidden="true">
+            {filtersOpen ? "閉じる ▲" : "開く ▼"}
+          </span>
+        </button>
+
+        {filtersOpen && (
+          <div id="article-library-filters" className="editor-card library-filter-fields">
         <label className="editor-field full">
           <span>検索</span>
           <input
@@ -144,7 +167,9 @@ export function ArticleLibraryListView({
           <button className="secondary-action" type="button" onClick={onReload} disabled={loading}>一覧を更新</button>
           {desktopDownloads && <Link className="secondary-action" href="/export">PC一括保存へ</Link>}
         </div>
-      </div>
+          </div>
+        )}
+      </section>
 
       <div className="library-toolbar">
         <span>{articles.length} / {totalCount} 件を表示</span>
