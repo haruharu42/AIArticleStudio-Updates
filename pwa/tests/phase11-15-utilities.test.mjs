@@ -131,18 +131,21 @@ test("Phase 15 member tools require the same PWA access gate as the rest of the 
   assert.match(sideJobRoute, /Phase15MemberGate/);
   assert.match(snsPlanRoute, /Phase15MemberGate/);
   assert.doesNotMatch(tools, /const publicTools/);
-  assert.match(tools, /const cards = ready \? memberTools : \[\]/);
+  assert.match(tools, /const memberToolGroups/);
+  assert.match(tools, /\{ready && \(/);
 });
 
-test("tools hub exposes output and SNS planning with public-facing categories", async () => {
+test("tools hub keeps supporting workflows grouped and leaves article-integrated tools out of the list", async () => {
   const tools = await read("components/phase-tools-page.tsx");
   const packageJson = JSON.parse(await read("package.json"));
 
-  assert.match(tools, /href: "\/export"/);
   assert.match(tools, /href: "\/sns-plan"/);
-  assert.match(tools, /category: "出力"/);
   assert.match(tools, /SNSアカウント設計/);
-  assert.doesNotMatch(tools, /Phase 11 出力/);
+  assert.match(tools, /SNS・集客/);
+  assert.match(tools, /公開・改善/);
+  assert.doesNotMatch(tools, /href: "\/export"/);
+  assert.doesNotMatch(tools, /href: "\/images"/);
+  assert.doesNotMatch(tools, /href: "\/create"/);
   assert.match(packageJson.scripts.test, /phase11-15-utilities\.test\.mjs/);
 });
 
