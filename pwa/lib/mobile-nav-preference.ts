@@ -10,6 +10,7 @@ export type MobileNavItemsPreferenceEventDetail = {
 
 export type MobileNavItemKey =
   | "create"
+  | "prompts"
   | "workflow"
   | "library"
   | "noteOps"
@@ -48,6 +49,7 @@ const FALLBACK_MOBILE_NAV_ITEM: MobileNavItem = { key: "create", label: "作成"
 
 export const USER_MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   FALLBACK_MOBILE_NAV_ITEM,
+  { key: "prompts", label: "プロンプト", icon: "⌘", href: "/prompts" },
   { key: "workflow", label: "運営", icon: "◎", href: "/workflow" },
   { key: "library", label: "ライブラリ", icon: "▤", href: "/?section=library" },
   { key: "noteOps", label: "note運営", icon: "▣", href: "/note-operations" },
