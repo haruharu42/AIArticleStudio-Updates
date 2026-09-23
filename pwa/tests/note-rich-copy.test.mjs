@@ -9,6 +9,7 @@ const vite = await createServer({ appType: 'custom', configFile: false, root, re
 after(() => vite.close());
 
 const rich = await vite.ssrLoadModule('/lib/note-rich-text.ts');
+const postAssistant = await vite.ssrLoadModule('/lib/note-post-assistant.ts');
 const exporter = await vite.ssrLoadModule('/lib/article-export.ts');
 const exportUi = await fs.readFile(`${root}/components/article-export-page.tsx`, 'utf8');
 const richSource = await fs.readFile(`${root}/lib/note-rich-text.ts`, 'utf8');
@@ -58,6 +59,30 @@ test('plain text conversion removes markdown decoration while keeping readable c
   assert.match(text, /• 項目A/);
   assert.doesNotMatch(text, /\*\*重要\*\*/);
   assert.doesNotMatch(text, /^##/m);
+});
+
+test('note post assistant splits article body around inline image markers in posting order', () => {
+  const body = `導入です。
+
+<!-- IMAGE:01 -->
+
+## 続き
+本文です。
+
+<!-- IMAGE:02 -->
+
+まとめです。`;
+  const sequence = postAssistant.buildNotePostSequence(body, '別タイトル');
+  assert.deepEqual(sequence.map((item) => item.kind === 'inline-image' ? `image-${item.order}` : item.id), [
+    'body-1',
+    'image-1',
+    'body-2',
+    'image-2',
+    'body-3',
+  ]);
+  assert.deepEqual(postAssistant.inlineImageOrders(sequence), [1, 2]);
+  assert.match(sequence[1].id, /inline-1/);
+  assert.doesNotMatch(sequence.filter((item) => item.kind === 'body').map((item) => item.markdown).join('\n'), /挿絵1をここに挿入/);
 });
 
 test('clipboard implementation writes html and plain text with a browser fallback', () => {
