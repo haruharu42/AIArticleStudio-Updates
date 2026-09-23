@@ -42,6 +42,7 @@ export type SideHustleDraft = {
   values: Record<string, SideHustleFieldValue>;
   selectedAi: AiAppKey;
   selectedPlan: "free" | "paid";
+  resultText: string;
   step: number;
 };
 
