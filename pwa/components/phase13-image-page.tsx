@@ -10,6 +10,7 @@ import { workspacePresetImageDefaults } from "@/features/presets/preset-adapters
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { consumeFreeTrialUsage, trialUsageMessage } from "@/lib/free-trial";
 import { buildImageZipFilename, createLocalImageZip, downloadLocalBlob, filenameForSelectedImage } from "@/lib/local-image-zip";
+import { listLocalArticleImages, localArticleImageToFile, saveLocalArticleImage } from "@/lib/local-article-images";
 import { OPENAI_LINKS } from "@/lib/openai-links";
 import { buildImagePromptPlan, type ImagePromptItem } from "@/lib/phase13-image-prompts";
 import { AGE_GROUP_OPTIONS, GENDER_OPTIONS, IMAGE_STYLE_OPTIONS, isImageStyleValue } from "@/lib/phase18-content-options";
@@ -91,6 +92,14 @@ export function Phase13ImagePromptPage() {
         : presetDefaults?.inlineCount ?? 2)));
       const storedStyle = stringValue(plan.style) || stringValue(request.image_style);
       setImageStyle(isImageStyleValue(storedStyle) ? storedStyle : "auto");
+      try {
+        const storedImages = await listLocalArticleImages(accessState.profile.id, articleId);
+        setSelectedImageFiles(Object.fromEntries(
+          storedImages.map((record) => [`${record.kind}-${record.order}`, localArticleImageToFile(record)]),
+        ));
+      } catch {
+        // IndexedDBが利用できない環境でも画像プロンプト作成自体は継続する。
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "記事を読み込めませんでした。");
     } finally { setBusy(false); }
@@ -109,7 +118,6 @@ export function Phase13ImagePromptPage() {
     try {
       const result = await consumeFreeTrialUsage(getSupabaseClient(), "image_generate");
       if (!result.allowed) { setGeneratedPrompts([]); setGeneratedFingerprint(""); setMessage(trialUsageMessage(result)); return; }
-      setSelectedImageFiles({});
       setGeneratedPrompts(buildImagePromptPlan({
         title: detail.title, theme, publicationTarget: publicationTarget(detail.publicationTarget),
         genre: detail.genre || "", subgenre: detail.subgenre || "", ageGroup, gender,
@@ -118,7 +126,7 @@ export function Phase13ImagePromptPage() {
       setGeneratedFingerprint(promptFingerprint);
       setMessage(result.bypassLimits ? "画像生成プロンプトと保存用ファイル名を作成しました。" : `画像生成プロンプトを1回作成しました。${trialUsageMessage(result)}`);
     } catch (error) {
-      setGeneratedPrompts([]); setGeneratedFingerprint(""); setSelectedImageFiles({});
+      setGeneratedPrompts([]); setGeneratedFingerprint("");
       setMessage(error instanceof Error ? error.message : "画像生成の利用回数を確認できませんでした。");
     } finally { generateInFlightRef.current = false; setGenerateBusy(false); }
   };
@@ -128,14 +136,24 @@ export function Phase13ImagePromptPage() {
     catch { setMessage("自動コピーできません。表示欄から手動でコピーしてください。"); }
   };
 
-  const selectImageFile = (item: ImagePromptItem, file: File | undefined) => {
+  const selectImageFile = async (item: ImagePromptItem, file: File | undefined) => {
+    if (!detail || accessState.kind !== "ready") return;
     const key = imagePromptKey(item);
-    setSelectedImageFiles((current) => {
-      const next = { ...current };
-      if (file) next[key] = file;
-      else delete next[key];
-      return next;
-    });
+    if (!file) return;
+    setSelectedImageFiles((current) => ({ ...current, [key]: file }));
+    try {
+      await saveLocalArticleImage({
+        userId: accessState.profile.id,
+        articleId: detail.id,
+        kind: item.kind,
+        order: item.order,
+        file,
+        filename: filenameForSelectedImage(item.suggestedFilename, file.name, file.type),
+      });
+      setMessage(`${item.kind === "cover" ? "アイキャッチ" : `挿絵${item.order}`}をこの端末のAASへ保存しました。記事ライブラリのnote投稿アシストで自動的に読み込まれます。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "画像を端末内AASへ保存できませんでした。");
+    }
   };
 
   const downloadSelectedImagesAsZip = async () => {
@@ -222,12 +240,12 @@ export function Phase13ImagePromptPage() {
                   type="file"
                   accept="image/png,image/jpeg,image/webp,image/avif,image/heic,image/heif"
                   disabled={zipBusy}
-                  onChange={(event) => selectImageFile(item, event.target.files?.[0])}
+                  onChange={(event) => void selectImageFile(item, event.target.files?.[0])}
                 />
                 <small>
                   {selectedImageFiles[imagePromptKey(item)]
                     ? `選択中: ${selectedImageFiles[imagePromptKey(item)].name} → ZIP内では ${filenameForSelectedImage(item.suggestedFilename, selectedImageFiles[imagePromptKey(item)].name, selectedImageFiles[imagePromptKey(item)].type)}`
-                    : "ChatGPT Images等から保存した画像を選択してください。画像はAASやSupabaseへアップロードされません。"}
+                    : "ChatGPT Images等から保存した画像を選択してください。画像はこの端末のAAS領域へ保存され、Supabaseへはアップロードされません。"}
                 </small>
               </label>
               <textarea className="prompt-area" readOnly value={item.prompt} />
@@ -236,7 +254,7 @@ export function Phase13ImagePromptPage() {
           {promptsReady && <>
             <div className="route-notice" role="note">
               <strong>iPhoneでもファイル名を揃える場合</strong>
-              <p>ChatGPT Images等から保存した画像を上で選び、「選択した画像をZIPで保存」を押してください。画像本体は端末内だけで処理し、ZIP内では推奨ファイル名へ自動変更します。</p>
+              <p>ChatGPT Images等から保存した画像を上で選ぶと、この端末のAASへ記事ID付きで保存され、記事ライブラリのnote投稿アシストにも引き継がれます。「選択した画像をZIPで保存」では推奨ファイル名に揃えたバックアップも作れます。</p>
               <div className="image-prompt-actions">
                 <button className="primary-action" type="button" disabled={zipBusy || selectedImageCount === 0} onClick={() => void downloadSelectedImagesAsZip()}>
                   {zipBusy ? "ZIPを作成中…" : "選択した画像をZIPで保存"}
@@ -244,7 +262,7 @@ export function Phase13ImagePromptPage() {
                 <span>{selectedImageCount} / {generatedPrompts.length} 枚選択</span>
               </div>
             </div>
-            <p className="beginner-help">生成後のコピーやChatGPT Images起動では追加消費しません。画像生成後はAASへアップロードせず端末へ保存してください。個別保存で名前が変わらない端末ではZIP保存を使うと、ZIP内の画像名を「記事タイトル_アイキャッチ」「記事タイトル_挿絵01」の形式で揃えられます。</p>
+            <p className="beginner-help">生成後のコピーやChatGPT Images起動では追加消費しません。選択した画像はSupabase Storageへ送らず、この端末内だけで保持します。個別保存で名前が変わらない端末ではZIP保存を使うと、ZIP内の画像名を「記事タイトル_アイキャッチ」「記事タイトル_挿絵01」の形式で揃えられます。</p>
           </>}
           {!coverEnabled && !inlineEnabled && <p className="route-notice">アイキャッチまたは挿絵をONにしてください。</p>}
         </>}
