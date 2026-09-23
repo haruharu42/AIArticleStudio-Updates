@@ -5,11 +5,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   getMembershipSettings,
+  listMembershipAuditActions,
+  listMembershipAssignments,
   listMembershipFeatures,
   listMembershipPlanFeatures,
   listMembershipPlans,
   setMembershipPlanFeature,
   updateMembershipSettings,
+  type MembershipAssignment,
+  type MembershipAuditAction,
   type MembershipFeature,
   type MembershipPlan,
   type MembershipPlanFeature,
@@ -72,6 +76,9 @@ export function AdminMembershipPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [configReady, setConfigReady] = useState(true);
+  const [operationsReady, setOperationsReady] = useState(true);
+  const [assignments, setAssignments] = useState<MembershipAssignment[]>([]);
+  const [auditActions, setAuditActions] = useState<MembershipAuditAction[]>([]);
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -93,6 +100,22 @@ export function AdminMembershipPage() {
     [features],
   );
 
+  const expiringSoon = useMemo(() => {
+    const now = Date.now();
+    const deadline = now + 7 * 24 * 60 * 60 * 1000;
+    return assignments.filter((item) => {
+      if (!item.expiresAt) return false;
+      const expiresAt = new Date(item.expiresAt).getTime();
+      return Number.isFinite(expiresAt) && expiresAt > now && expiresAt <= deadline;
+    });
+  }, [assignments]);
+
+  const assignmentPlanCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of assignments) counts.set(item.planCode, (counts.get(item.planCode) ?? 0) + 1);
+    return counts;
+  }, [assignments]);
+
   const loadMembership = useCallback(async () => {
     const client = getSupabaseClient();
     const nextUsers = await listPwaAdminUsers(client);
@@ -112,6 +135,20 @@ export function AdminMembershipPage() {
       setConfigReady(true);
     } catch {
       setConfigReady(false);
+    }
+
+    try {
+      const [nextAssignments, nextAuditActions] = await Promise.all([
+        listMembershipAssignments(client),
+        listMembershipAuditActions(client, 30),
+      ]);
+      setAssignments(nextAssignments);
+      setAuditActions(nextAuditActions);
+      setOperationsReady(true);
+    } catch {
+      setOperationsReady(false);
+      setAssignments([]);
+      setAuditActions([]);
     }
   }, []);
 
@@ -212,8 +249,17 @@ export function AdminMembershipPage() {
         salesChannel: "note-membership-admin",
         externalReference: membershipReference.trim() || undefined,
       });
-      const items = await listCreatorMembershipEntitlements(getSupabaseClient(), selectedUser.id);
+      const client = getSupabaseClient();
+      const items = await listCreatorMembershipEntitlements(client, selectedUser.id);
       setMembershipEntitlements(items);
+      if (operationsReady) {
+        const [nextAssignments, nextAuditActions] = await Promise.all([
+          listMembershipAssignments(client),
+          listMembershipAuditActions(client, 30),
+        ]);
+        setAssignments(nextAssignments);
+        setAuditActions(nextAuditActions);
+      }
       setMessage(`${selectedUser.aasUserId} に${label}特典を設定しました。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "メンバー特典を設定できませんでした。");
@@ -231,8 +277,17 @@ export function AdminMembershipPage() {
     setBusy(true);
     setMessage("");
     try {
-      await clearCreatorMembershipPlan(getSupabaseClient(), selectedUser.id);
+      const client = getSupabaseClient();
+      await clearCreatorMembershipPlan(client, selectedUser.id);
       setMembershipEntitlements([]);
+      if (operationsReady) {
+        const [nextAssignments, nextAuditActions] = await Promise.all([
+          listMembershipAssignments(client),
+          listMembershipAuditActions(client, 30),
+        ]);
+        setAssignments(nextAssignments);
+        setAuditActions(nextAuditActions);
+      }
       setMessage(`${selectedUser.aasUserId} のメンバーシップ特典を取り消しました。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "メンバー特典を取り消せませんでした。");
@@ -265,6 +320,51 @@ export function AdminMembershipPage() {
         <div className="route-notice" role="note">
           新しいメンバーシップ設定DBはまだ未適用です。ユーザーへのCreator Club特典の付与・変更・取消は利用できます。note URLとプラン別機能設定は、リリース工程でmigration適用後に有効になります。
         </div>
+      )}
+      {state === "ready" && configReady && !operationsReady && (
+        <div className="route-notice" role="note">
+          メンバー一覧・期限切れ予定・監査ログ用の追加DBはまだ未適用です。基本設定、特典機能管理、ユーザーへの付与・取消は利用できます。
+        </div>
+      )}
+
+      {operationsReady && (
+        <section className="admin-panel membership-admin-section">
+          <div className="admin-panel-heading">
+            <div>
+              <p className="eyebrow">MEMBER STATUS</p>
+              <h2>現在のメンバー状況</h2>
+            </div>
+            <span className="availability-badge active">{assignments.length}人</span>
+          </div>
+          <div className="membership-status-grid">
+            <article><span>有効メンバー</span><strong>{assignments.length}</strong><small>現在有効なCreator Club系特典</small></article>
+            <article><span>7日以内に期限</span><strong>{expiringSoon.length}</strong><small>更新確認が必要なメンバー</small></article>
+            {CREATOR_MEMBERSHIP_PLANS.map((plan) => (
+              <article key={plan.code}>
+                <span>{plan.label}</span>
+                <strong>{assignmentPlanCounts.get(plan.code) ?? 0}</strong>
+                <small>現在の有効ユーザー</small>
+              </article>
+            ))}
+          </div>
+          {expiringSoon.length > 0 && (
+            <details className="membership-expiring-list">
+              <summary>7日以内に期限が切れるメンバーを見る</summary>
+              <div>
+                {expiringSoon.map((item) => (
+                  <button type="button" key={item.userId} onClick={() => {
+                    const user = users.find((candidate) => candidate.id === item.userId);
+                    if (user) void selectUser(user);
+                  }}>
+                    <strong>{item.aasUserId}</strong>
+                    <span>{item.planName}</span>
+                    <small>{formatDate(item.expiresAt)}</small>
+                  </button>
+                ))}
+              </div>
+            </details>
+          )}
+        </section>
       )}
 
       <section className="admin-panel membership-admin-section">
@@ -447,17 +547,41 @@ export function AdminMembershipPage() {
         )}
       </section>
 
+      {operationsReady && (
+        <section className="admin-panel membership-admin-section">
+          <div className="admin-panel-heading">
+            <div>
+              <p className="eyebrow">AUDIT LOG</p>
+              <h2>メンバー特典の変更履歴</h2>
+            </div>
+            <span className="availability-badge">直近{auditActions.length}件</span>
+          </div>
+          <p className="trial-admin-note">特典の付与・更新・取消をDB側で記録します。UI操作だけに依存しません。</p>
+          <div className="membership-audit-list">
+            {auditActions.map((item) => (
+              <article key={item.id}>
+                <strong>{item.targetAasUserId}</strong>
+                <span>{item.action === "grant" ? "付与" : item.action === "revoke" ? "取消" : "更新"}</span>
+                <small>{item.productCode}</small>
+                <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
+              </article>
+            ))}
+            {!auditActions.length && <p className="admin-empty-copy">まだメンバー特典の変更履歴はありません。</p>}
+          </div>
+        </section>
+      )}
+
       <section className="admin-panel membership-admin-section membership-recommendations">
         <div className="admin-panel-heading">
           <div>
-            <p className="eyebrow">RECOMMENDED NEXT</p>
-            <h2>今後追加すると便利な管理</h2>
+            <p className="eyebrow">NEXT OPTION</p>
+            <h2>次に追加できる運用機能</h2>
           </div>
         </div>
         <div className="membership-recommendation-grid">
-          <article><strong>期限切れ予定</strong><p>7日以内に期限が切れるメンバーを一覧表示・更新できるようにする。</p></article>
-          <article><strong>クラウド容量</strong><p>メンバーごとの画像保存容量と使用量を確認し、プラン別上限を設定する。</p></article>
-          <article><strong>加入確認履歴</strong><p>誰が・いつ・どの根拠で特典を付与/解除したかを専用監査ログで確認する。</p></article>
+          <article><strong>クラウド容量</strong><p>メンバーごとの画像保存容量と使用量を確認し、プラン別上限を設定できます。</p></article>
+          <article><strong>期限更新の一括操作</strong><p>同じ更新月のユーザーをまとめて延長する運用にも拡張できます。</p></article>
+          <article><strong>加入確認の自動化</strong><p>将来note側に公式な連携手段が用意された場合、手動確認から安全に切り替えられます。</p></article>
         </div>
       </section>
 
