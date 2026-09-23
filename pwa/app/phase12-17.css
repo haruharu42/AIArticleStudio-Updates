@@ -70,11 +70,28 @@
   transform: translateY(-1px);
 }
 
-.tool-card > span {
+.tool-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tool-card-meta > span {
   color: #9d7cf4;
   font-size: 9px;
   font-weight: 800;
   letter-spacing: .08em;
+}
+
+.tool-card-meta > small {
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgb(114 226 187 / 12%);
+  color: #72e2bb;
+  font-size: 8px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .tool-card h2,
