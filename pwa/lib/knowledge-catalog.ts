@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { KnowledgeKind, KnowledgeRule, KnowledgeTask } from "@/lib/knowledge-engine";
+import { isKnowledgeTask, type KnowledgeKind, type KnowledgeRule, type KnowledgeTask } from "@/lib/knowledge-engine";
 
 export type KnowledgeCandidateKind = "genre" | "subgenre";
 
@@ -54,7 +54,7 @@ function parseCatalogRow(row: Record<string, unknown>): KnowledgeRule | null {
     guidance: asStringArray(row.guidance),
     deliverables: asStringArray(row.deliverables),
     cautions: asStringArray(row.cautions),
-    tasks: asStringArray(row.tasks).filter((task): task is KnowledgeTask => task === "title" || task === "article" || task === "image" || task === "social" || task === "promotion"),
+    tasks: asStringArray(row.tasks).filter((task): task is KnowledgeTask => isKnowledgeTask(task)),
     priority: typeof row.priority === "number" && Number.isFinite(row.priority) ? Math.max(0, Math.min(100, Math.trunc(row.priority))) : 50,
     source: "cloud",
     catalogVersion: typeof row.catalog_version === "number" ? Math.max(1, Math.trunc(row.catalog_version)) : Number(row.catalog_version ?? 1) || 1,
