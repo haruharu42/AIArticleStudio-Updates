@@ -30,6 +30,23 @@ test("root layout keeps verified access state alive across client-side route cha
   assert.match(provider, /current\.kind === "ready"[\s\S]*?next\.kind === "ready"[\s\S]*?current\.profile\.status === next\.profile\.status[\s\S]*?return current/);
 });
 
+test("all client-side page changes reset the viewport to the top", async () => {
+  const [layout, scrollReset] = await Promise.all([
+    read("app/layout.tsx"),
+    read("components/route-scroll-to-top.tsx"),
+  ]);
+
+  assert.match(layout, /RouteScrollToTop/);
+  assert.match(layout, /<Suspense fallback=\{null\}><RouteScrollToTop \/><\/Suspense>/);
+  assert.match(scrollReset, /usePathname\(\)/);
+  assert.match(scrollReset, /useSearchParams\(\)/);
+  assert.match(scrollReset, /scrollRestoration = "manual"/);
+  assert.match(scrollReset, /window\.scrollTo\(\{ top: 0, left: 0, behavior: "auto" \}\)/);
+  assert.match(scrollReset, /document\.scrollingElement/);
+  assert.match(scrollReset, /requestAnimationFrame\(scrollWindowToTop\)/);
+  assert.match(scrollReset, /routeKey/);
+});
+
 test("home keeps background access verification invisible", async () => {
   const home = await read("components/phase18-beginner-home.tsx");
 
