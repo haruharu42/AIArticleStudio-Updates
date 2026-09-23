@@ -111,7 +111,7 @@ test("admin tools are removed from the user feature hub and collected in the adm
   assert.match(adminHub, /この機能を開く →/);
   assert.match(adminHub, /まず「日常の管理」を確認/);
 
-  for (const label of ["販売・プロモーション", "開発依頼プロンプト", "ナレッジ管理", "アップデート管理", "セキュリティ・運用"]) {
+  for (const label of ["メンバーシップ管理", "販売・プロモーション", "開発依頼プロンプト", "ナレッジ管理", "アップデート管理", "セキュリティ・運用"]) {
     assert.match(sections, new RegExp(label));
   }
   assert.match(guard, /profile\.role !== "admin"/);
