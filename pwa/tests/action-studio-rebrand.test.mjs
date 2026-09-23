@@ -42,7 +42,7 @@ test("home keeps quick actions while side-hustle discovery lives in the genre-gr
     "記事を作る",
     "SNS投稿を作る",
     "画像を作る",
-    "副業プロンプトを探す",
+    "プロンプトライブラリ",
     "ジャンル別に機能を見る",
   ]) {
     assert.match(hub, new RegExp(label));
@@ -75,7 +75,7 @@ test("home keeps quick actions while side-hustle discovery lives in the genre-gr
     "クラウドソーシング",
     "スキル販売",
     "デジタル商品・教材販売",
-    "営業DM・問い合わせ",
+    "営業・案件獲得",
     "リサーチ・事実確認",
     "業務効率化・SOP化",
     "AI副業プランナー",
