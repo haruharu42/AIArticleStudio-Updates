@@ -45,12 +45,13 @@ import "./phase43-content-workflow.css";
 import "./phase44-shared-presets.css";
 import "./phase46-account-presets-dev-prompts.css";
 import "./phase47-admin-usability.css";
+import "./phase48-action-studio.css";
 
 export const metadata: Metadata = {
-  title: "AI記事スタジオ PWA",
+  title: "AI Action Studio PWA",
   description:
-    "AI記事スタジオのPWA版。記事作成、画像計画、SNS投稿、公開管理をスマホとPCブラウザから分かりやすく利用できます。",
-  applicationName: "AI記事スタジオ",
+    "AI Action Studio（AAS）。記事・SNS・画像・副業支援を、スマホとPCから手軽に進められるAIアクション支援PWAです。",
+  applicationName: "AI Action Studio",
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
   other: {
