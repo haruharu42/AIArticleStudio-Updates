@@ -38,6 +38,65 @@
   box-shadow: 0 10px 30px rgb(23 69 135 / 5%);
 }
 
+.beginner-library-main .library-filter-panel {
+  display: grid;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.beginner-library-main .library-filter-toggle {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid #d7e3f1;
+  border-radius: 14px;
+  background: #fff;
+  color: #193554;
+  padding: 11px 14px;
+  text-align: left;
+  box-shadow: 0 8px 24px rgb(23 69 135 / 5%);
+  cursor: pointer;
+}
+
+.beginner-library-main .library-filter-toggle > span:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.beginner-library-main .library-filter-toggle strong {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.beginner-library-main .library-filter-toggle small {
+  color: #7186a2;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.beginner-library-main .library-filter-toggle-state {
+  flex: 0 0 auto;
+  color: #176bd9;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.beginner-library-main .library-filter-toggle:hover,
+.beginner-library-main .library-filter-toggle:focus-visible {
+  border-color: #99c2f2;
+  background: #f7fbff;
+  outline: none;
+}
+
+.beginner-library-main .library-filter-fields {
+  margin-top: 0;
+}
+
 .beginner-library-main .article-list {
   box-shadow: 0 10px 30px rgb(23 69 135 / 5%);
 }
@@ -499,6 +558,24 @@
 
   .beginner-library-main .library-toolbar {
     flex-wrap: wrap;
+  }
+
+  .beginner-library-main .library-filter-toggle {
+    min-height: 56px;
+    border-radius: 13px;
+    padding: 12px 13px;
+  }
+
+  .beginner-library-main .library-filter-toggle strong {
+    font-size: 13px;
+  }
+
+  .beginner-library-main .library-filter-toggle small {
+    font-size: 10px;
+  }
+
+  .beginner-library-main .library-filter-toggle-state {
+    font-size: 11px;
   }
 
   .beginner-library-main .library-search {
