@@ -23,6 +23,10 @@ test("side-hustle prompt library is searchable, copy-first, and uses existing ex
   assert.match(page, /副業プロンプトライブラリ/);
   assert.match(page, /navigator\.clipboard\.writeText/);
   assert.match(page, /launchAiApp/);
+  assert.match(page, /使用AI/);
+  assert.match(page, /selectedAi/);
+  assert.match(page, /recommendedAiKey/);
+  assert.match(page, /あとから何度でも変更できます/);
   assert.match(page, /loadActionPromptCatalog/);
   assert.match(page, /ACTION_PROMPT_TEMPLATES/);
   assert.match(page, /お気に入り/);
