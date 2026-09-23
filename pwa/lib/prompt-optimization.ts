@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { KnowledgeTask } from "@/lib/knowledge-engine";
+import { isKnowledgeTask, type KnowledgeTask } from "@/lib/knowledge-engine";
 import type { AiPlan, AiProvider } from "@/lib/user-personalization";
 
 export type PromptOptimizationRule = {
@@ -51,7 +51,7 @@ function parseRule(row: Record<string, unknown>): PromptOptimizationRule | null 
     !key
     || (provider !== "all" && provider !== "chatgpt" && provider !== "claude" && provider !== "gemini")
     || (plan !== "all" && plan !== "free" && plan !== "paid")
-    || (task !== "all" && task !== "title" && task !== "article" && task !== "image" && task !== "social" && task !== "promotion")
+    || (task !== "all" && !isKnowledgeTask(task))
   ) {
     return null;
   }
