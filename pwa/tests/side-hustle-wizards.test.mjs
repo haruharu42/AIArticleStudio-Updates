@@ -116,6 +116,8 @@ test("side-hustle wizard injects cloud knowledge and prompt optimization and per
   assert.match(builder, /selectedPlan/);
   assert.match(progress, /aas-side-hustle-wizard/);
   assert.match(progress, /localStorage/);
+  assert.match(progress, /resultText/);
+  assert.match(progress, /Math\.min\(4, row\.step\)/);
   assert.match(wizard, /readSideHustleDraft/);
   assert.match(wizard, /writeSideHustleDraft/);
   assert.match(wizard, /KNOWLEDGE_RUNTIME_EVENT/);
@@ -123,12 +125,19 @@ test("side-hustle wizard injects cloud knowledge and prompt optimization and per
   assert.match(wizard, /Stable/);
   assert.match(wizard, /完成プロンプト/);
   assert.match(wizard, /コピーして/);
+  assert.match(wizard, /AIの完成結果をAASへ戻す/);
+  assert.match(wizard, /クリップボードから貼り付け/);
+  assert.match(wizard, /完成結果をコピー/);
+  assert.match(wizard, /resultText/);
+  assert.match(wizard, /const nextDraft = \{ \.\.\.draft, step: 4 \}/);
+  assert.match(wizard, /writeSideHustleDraft\(userId, definition, nextDraft\)/);
   assert.match(field, /<select/);
   assert.match(field, /SIDE_HUSTLE_CUSTOM_VALUE/);
   assert.match(field, /custom &&/);
   assert.match(rail, /基本設定/);
   assert.match(rail, /詳細設定/);
   assert.match(rail, /AI設定/);
+  assert.match(rail, /AI出力/);
   assert.match(route, /generateStaticParams/);
   assert.match(route, /Phase15MemberGate/);
   assert.match(route, /params: Promise/);
