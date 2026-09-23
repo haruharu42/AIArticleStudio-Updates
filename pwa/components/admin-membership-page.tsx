@@ -71,6 +71,7 @@ export function AdminMembershipPage() {
   const [membershipReference, setMembershipReference] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [configReady, setConfigReady] = useState(true);
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -94,18 +95,24 @@ export function AdminMembershipPage() {
 
   const loadMembership = useCallback(async () => {
     const client = getSupabaseClient();
-    const [nextSettings, nextPlans, nextFeatures, nextPlanFeatures, nextUsers] = await Promise.all([
-      getMembershipSettings(client),
-      listMembershipPlans(client),
-      listMembershipFeatures(client),
-      listMembershipPlanFeatures(client),
-      listPwaAdminUsers(client),
-    ]);
-    setSettings(nextSettings);
-    setPlans(nextPlans);
-    setFeatures(nextFeatures);
-    setPlanFeatures(nextPlanFeatures);
+    const nextUsers = await listPwaAdminUsers(client);
     setUsers(nextUsers);
+
+    try {
+      const [nextSettings, nextPlans, nextFeatures, nextPlanFeatures] = await Promise.all([
+        getMembershipSettings(client),
+        listMembershipPlans(client),
+        listMembershipFeatures(client),
+        listMembershipPlanFeatures(client),
+      ]);
+      setSettings(nextSettings);
+      setPlans(nextPlans);
+      setFeatures(nextFeatures);
+      setPlanFeatures(nextPlanFeatures);
+      setConfigReady(true);
+    } catch {
+      setConfigReady(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -119,7 +126,7 @@ export function AdminMembershipPage() {
           setState("error");
           setMessage(error instanceof Error
             ? error.message
-            : "メンバーシップ管理を読み込めませんでした。新しいSupabase migrationが未適用の場合は、リリース工程で適用してください。");
+            : "ユーザー管理データを読み込めませんでした。");
         },
       );
     });
@@ -254,6 +261,11 @@ export function AdminMembershipPage() {
           {message || "メンバーシップ管理を読み込めませんでした。"}
         </div>
       )}
+      {state === "ready" && !configReady && (
+        <div className="route-notice" role="note">
+          新しいメンバーシップ設定DBはまだ未適用です。ユーザーへのCreator Club特典の付与・変更・取消は利用できます。note URLとプラン別機能設定は、リリース工程でmigration適用後に有効になります。
+        </div>
+      )}
 
       <section className="admin-panel membership-admin-section">
         <div className="admin-panel-heading">
@@ -292,7 +304,7 @@ export function AdminMembershipPage() {
           </label>
         </div>
         <div className="admin-actions">
-          <button type="button" disabled={busy || state !== "ready"} onClick={() => void saveSettings()}>基本設定を保存</button>
+          <button type="button" disabled={busy || state !== "ready" || !configReady} onClick={() => void saveSettings()}>基本設定を保存</button>
           {settings.noteMembershipUrl && (
             <a className="secondary-action" href={settings.noteMembershipUrl} target="_blank" rel="noreferrer">設定URLを確認 ↗</a>
           )}
@@ -330,7 +342,7 @@ export function AdminMembershipPage() {
                       type="button"
                       className={enabled ? "membership-feature-toggle enabled" : "membership-feature-toggle"}
                       aria-pressed={enabled}
-                      disabled={busy || state !== "ready"}
+                      disabled={busy || state !== "ready" || !configReady}
                       onClick={() => void toggleFeature(plan, feature)}
                     >
                       {enabled ? "利用可" : "利用不可"}
