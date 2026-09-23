@@ -150,13 +150,13 @@ test("tools hub keeps supporting workflows grouped and leaves article-integrated
 });
 
 
-test("article creator UI v2 keeps the seven-step rail readable and preserves two-column mobile planning", async () => {
+test("article creator UI v2 keeps the eight-step rail readable and preserves two-column mobile planning", async () => {
   const css = await read("app/phase33-reference-ui.css");
   const plannerUi = await read("components/article-create/magazine-planner.tsx");
 
   assert.match(plannerUi, /マガジンタイトル一括生成/);
-  assert.match(css, /Article creator UI v2: seven-step progress, readable type, and 390-430px two-column layout/);
-  assert.match(css, /grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
+  assert.match(css, /Article creator UI v2: eight-step progress, readable type, and 390-430px two-column layout/);
+  assert.match(css, /grid-template-columns: repeat\\(8, minmax\\(0, 1fr\\)\\)/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: 1fr/);
 });
