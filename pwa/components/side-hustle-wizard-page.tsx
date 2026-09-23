@@ -96,7 +96,7 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
         return;
       }
     }
-    patchDraft({ step: Math.min(3, draft.step + 1) });
+    patchDraft({ step: Math.min(4, draft.step + 1) });
   };
 
   const back = () => {
@@ -113,8 +113,10 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
 
   const copyPrompt = async (openAi?: AiAppKey) => {
     if (!built) return;
+    let copied = false;
     try {
       await navigator.clipboard.writeText(built.prompt);
+      copied = true;
       setMessage(
         openAi
           ? "専用プロンプトをコピーして" + AI_APP_LINKS[openAi].name + "を開きます。"
@@ -123,8 +125,39 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
     } catch {
       setMessage("自動コピーできませんでした。完成プロンプト欄からコピーしてください。");
     }
+
+    if (openAi && copied) {
+      const nextDraft = { ...draft, step: 4 };
+      writeSideHustleDraft(userId, definition, nextDraft);
+      setDraft(nextDraft);
+      launchAiApp(openAi);
+      return;
+    }
     writeSideHustleDraft(userId, definition, draft);
-    if (openAi) launchAiApp(openAi);
+  };
+
+  const pasteResult = async () => {
+    try {
+      const value = await navigator.clipboard.readText();
+      if (!value.trim()) {
+        setMessage("クリップボードに貼り付ける内容がありません。");
+        return;
+      }
+      patchDraft({ resultText: value.slice(0, 120000) });
+      setMessage("AIの出力を貼り付けました。");
+    } catch {
+      setMessage("クリップボードを読み取れませんでした。下の欄へ直接貼り付けてください。");
+    }
+  };
+
+  const copyResult = async () => {
+    if (!draft.resultText.trim()) return;
+    try {
+      await navigator.clipboard.writeText(draft.resultText);
+      setMessage("AIの完成結果をコピーしました。");
+    } catch {
+      setMessage("結果をコピーできませんでした。");
+    }
   };
 
   return (
@@ -254,6 +287,64 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
         </section>
       )}
 
+      {draft.step === 4 && (
+        <section className="side-hustle-wizard-card">
+          <div className="side-hustle-step-copy">
+            <p className="eyebrow">STEP 5</p>
+            <h2>AIの完成結果をAASへ戻す</h2>
+            <p>
+              外部AIで生成した結果をここへ貼り付けて保存できます。
+              入力内容と同じく端末内へ自動保存されるため、別画面へ移動しても続きから確認できます。
+            </p>
+          </div>
+
+          <label className="side-hustle-prompt-output side-hustle-result-output">
+            <span>AIの完成結果</span>
+            <textarea
+              value={draft.resultText}
+              rows={24}
+              onChange={(event) => patchDraft({ resultText: event.target.value.slice(0, 120000) })}
+              placeholder="ChatGPT / Claude / Gemini の完成結果をここへ貼り付けてください。"
+            />
+          </label>
+
+          <div className="side-hustle-result-actions">
+            <button className="primary-action" type="button" onClick={() => void pasteResult()}>
+              クリップボードから貼り付け
+            </button>
+            <button
+              className="secondary-action"
+              type="button"
+              disabled={!draft.resultText.trim()}
+              onClick={() => void copyResult()}
+            >
+              完成結果をコピー
+            </button>
+            <button
+              className="secondary-action"
+              type="button"
+              disabled={!draft.resultText.trim()}
+              onClick={() => {
+                patchDraft({ resultText: "" });
+                setMessage("AIの完成結果だけをクリアしました。設定内容は残しています。");
+              }}
+            >
+              結果だけクリア
+            </button>
+          </div>
+
+          <div className="side-hustle-result-summary">
+            <strong>{definition.title} の作業結果</strong>
+            <span>{draft.resultText.length.toLocaleString()}文字</span>
+            <small>
+              この結果はAAS内の副業ウィザード進捗として端末へ保存します。
+              パスワード・認証コード・決済情報などの機密情報は貼り付けないでください。
+            </small>
+          </div>
+        </section>
+      )}
+
+
       {message && <div className="route-notice" role="status">{message}</div>}
 
       <nav className="side-hustle-wizard-nav" aria-label="副業機能ステップ操作">
@@ -265,8 +356,10 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
         >
           ← 戻る
         </button>
-        {draft.step < 3 ? (
-          <button className="primary-action" type="button" onClick={next}>次へ →</button>
+        {draft.step < 4 ? (
+          <button className="primary-action" type="button" onClick={next}>
+            {draft.step === 3 ? "AI出力を貼り付ける →" : "次へ →"}
+          </button>
         ) : (
           <Link className="primary-action" href="/tools">機能一覧へ戻る</Link>
         )}
