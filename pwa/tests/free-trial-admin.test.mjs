@@ -107,7 +107,7 @@ test("global shell displays trial remaining days and daily usage", async () => {
   const layout = await read("app/layout.tsx");
   const banner = await read("components/free-trial-banner.tsx");
   assert.match(layout, /<FreeTrialBanner \/>/);
-  assert.match(banner, /残り \{status\.remainingDays/);
+  assert.match(banner, /status\.remainingDays \?\? 0/);
   assert.match(banner, /status\.totalUsed/);
   assert.match(banner, /status\.dailyTotalLimit/);
   assert.doesNotMatch(banner, /7日無料トライアル/);
