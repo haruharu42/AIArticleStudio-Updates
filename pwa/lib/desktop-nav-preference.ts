@@ -23,7 +23,7 @@ export type DesktopNavItem = {
 };
 
 export const DESKTOP_NAV_ITEM_OPTIONS: readonly DesktopNavItem[] = [
-  { key: "create", label: "記事作成", icon: "＋", href: "/create" },
+  { key: "create", label: "作成", icon: "＋", href: "/create" },
   { key: "noteOps", label: "note運営", icon: "▣", href: "/note-operations" },
   { key: "library", label: "ライブラリ", icon: "▤", href: "/?section=library" },
   { key: "images", label: "画像作成", icon: "▧", href: "/images" },
