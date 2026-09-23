@@ -61,6 +61,22 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
     writeSideHustleDraft(userId, definition, draft);
   }, [definition, draft, hydrated, userId]);
 
+  useEffect(() => {
+    if (!definition || !draft || !userId) return;
+    const persist = () => writeSideHustleDraft(userId, definition, draft);
+    const persistWhenHidden = () => {
+      if (document.visibilityState === "hidden") persist();
+    };
+    window.addEventListener("pagehide", persist);
+    window.addEventListener("beforeunload", persist);
+    document.addEventListener("visibilitychange", persistWhenHidden);
+    return () => {
+      window.removeEventListener("pagehide", persist);
+      window.removeEventListener("beforeunload", persist);
+      document.removeEventListener("visibilitychange", persistWhenHidden);
+    };
+  }, [definition, draft, userId]);
+
   const built = useMemo(
     () => definition && draft ? buildSideHustlePrompt(definition, draft) : null,
     [definition, draft, knowledgeRevision],
