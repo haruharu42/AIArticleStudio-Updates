@@ -33,7 +33,7 @@ export function initialSideHustleDraft(definition: SideHustleDefinition): SideHu
       },
     ])),
     selectedAi: definition.recommendedAi,
-    selectedPlan: "paid",
+    selectedPlan: "free",
     resultText: "",
     step: 0,
   };
