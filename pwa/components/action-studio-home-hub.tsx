@@ -83,6 +83,12 @@ const actions: readonly ActionCard[] = [
     href: "/workflow",
   },
   {
+    title: "副業プロンプトを探す",
+    description: "用途別テンプレートを選び、必要な情報だけ入力して完成プロンプトをコピーします。",
+    icon: "⌘",
+    href: "/prompts",
+  },
+  {
     title: "すべての機能を見る",
     description: "記事生成に重複しない関連機能を、用途別にまとめて確認します。",
     icon: "▦",
