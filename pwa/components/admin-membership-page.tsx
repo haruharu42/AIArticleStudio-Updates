@@ -79,6 +79,7 @@ export function AdminMembershipPage() {
   const [operationsReady, setOperationsReady] = useState(true);
   const [assignments, setAssignments] = useState<MembershipAssignment[]>([]);
   const [auditActions, setAuditActions] = useState<MembershipAuditAction[]>([]);
+  const [referenceNow, setReferenceNow] = useState(0);
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedUserId) ?? null,
@@ -101,14 +102,13 @@ export function AdminMembershipPage() {
   );
 
   const expiringSoon = useMemo(() => {
-    const now = Date.now();
-    const deadline = now + 7 * 24 * 60 * 60 * 1000;
+    const deadline = referenceNow + 7 * 24 * 60 * 60 * 1000;
     return assignments.filter((item) => {
-      if (!item.expiresAt) return false;
+      if (!item.expiresAt || referenceNow <= 0) return false;
       const expiresAt = new Date(item.expiresAt).getTime();
-      return Number.isFinite(expiresAt) && expiresAt > now && expiresAt <= deadline;
+      return Number.isFinite(expiresAt) && expiresAt > referenceNow && expiresAt <= deadline;
     });
-  }, [assignments]);
+  }, [assignments, referenceNow]);
 
   const assignmentPlanCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -120,6 +120,7 @@ export function AdminMembershipPage() {
     const client = getSupabaseClient();
     const nextUsers = await listPwaAdminUsers(client);
     setUsers(nextUsers);
+    setReferenceNow(Date.now());
 
     try {
       const [nextSettings, nextPlans, nextFeatures, nextPlanFeatures] = await Promise.all([
