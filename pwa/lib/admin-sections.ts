@@ -1,5 +1,6 @@
 export type AdminSectionId =
   | "users"
+  | "membership"
   | "free-plan"
   | "sales"
   | "promotion"
@@ -52,6 +53,15 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     title: "ユーザー・利用権",
     shortTitle: "ユーザー・利用権",
     description: "ユーザー承認、停止・再開、PWA利用権、利用コードの発行と管理。",
+  },
+  {
+    id: "membership",
+    group: "daily",
+    href: "/admin/membership",
+    eyebrow: "MEMBERSHIP",
+    title: "メンバーシップ管理",
+    shortTitle: "メンバーシップ",
+    description: "noteメンバー特典の付与・取消、参加URL、プランごとの利用可能機能を管理。",
   },
   {
     id: "free-plan",
@@ -130,6 +140,7 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
 export const ADMIN_HOME_SHORTCUT_IDS: readonly AdminSectionId[] = [
   "inquiries",
   "users",
+  "membership",
   "free-plan",
   "sales",
   "development-prompts",
