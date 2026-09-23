@@ -47,6 +47,7 @@ import "./phase46-account-presets-dev-prompts.css";
 import "./phase47-admin-usability.css";
 import "./phase48-action-studio.css";
 import "./phase49-prompt-library.css";
+import "./phase50-admin-action-prompts.css";
 
 export const metadata: Metadata = {
   title: "AI Action Studio PWA",
