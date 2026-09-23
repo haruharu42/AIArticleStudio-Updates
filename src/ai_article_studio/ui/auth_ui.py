@@ -52,7 +52,7 @@ AI_NOTICE = (
 )
 
 AI_DETAIL = (
-    "AI Action Studioは、記事・SNS・画像・副業などのAI活用を分かりやすく支援します。\n\n"
+    "AI Article Studioは、記事設計やプロンプト作成などを支援します。\n\n"
     "・ChatGPTなどのWeb AI、各社API、ローカルAIは、それぞれの提供元のアカウント・利用枠・料金・利用規約が適用されます。\n"
     "・AIの出力には誤りや古い情報が含まれる場合があります。公開前に、事実・権利・表現・リンクを必ず確認してください。\n"
     "・個人情報、機密情報、第三者の秘密情報を、必要なくAIサービスへ送信しないでください。\n"
@@ -330,7 +330,7 @@ class AuthUIController:
         self._replace_auth_frame()
         frame = self.auth_frame
         assert frame is not None
-        self._brand_panel(frame, "WELCOME BACK", "AI Action Studioへログイン")
+        self._brand_panel(frame, "WELCOME BACK", "AI Article Studioへログイン")
         card = tk.Frame(frame, bg=SURFACE, highlightthickness=1, highlightbackground=LINE)
         card.place(relx=0.66, rely=0.5, anchor="center", width=510, height=680)
         _label(card, "ログイン", size=24, weight="bold").pack(anchor="w", padx=44, pady=(38, 4))
@@ -386,7 +386,7 @@ class AuthUIController:
         self._replace_auth_frame()
         frame = self.auth_frame
         assert frame is not None
-        self._brand_panel(frame, "CREATE ACCOUNT", "AI Action Studioを始める")
+        self._brand_panel(frame, "CREATE ACCOUNT", "AI Article Studioを始める")
         card = tk.Frame(frame, bg=SURFACE, highlightthickness=1, highlightbackground=LINE)
         card.place(relx=0.66, rely=0.5, anchor="center", width=620, height=820)
         _label(card, "新規登録", size=22, weight="bold").pack(anchor="w", padx=42, pady=(28, 3))
@@ -706,12 +706,7 @@ class RoleShell:
         self.buttons: dict[str, tk.Button] = {}
         self.current_route = ""
         self.sync_status_label: tk.Label | None = None
-        try:
-            self.app._aas_cloud_sync_status_changed = self._update_cloud_status
-        except (AttributeError, TypeError):
-            # Lightweight test doubles and non-Tk hosts may not allow dynamic
-            # attributes. Cloud-sync status updates are optional in that case.
-            pass
+        self.app._aas_cloud_sync_status_changed = self._update_cloud_status
 
     def start(self) -> None:
         self._build_sidebar()
@@ -732,7 +727,7 @@ class RoleShell:
         self.sidebar = tk.Frame(self.app, bg=SIDEBAR, width=228)
         self.sidebar.place(x=0, y=0, width=228, relheight=1)
         _label(self.sidebar, "✦", size=22, color=PURPLE, bg=SIDEBAR, weight="bold").place(x=24, y=38)
-        _label(self.sidebar, "AI ACTION", size=13, bg=SIDEBAR, weight="bold").place(x=66, y=39)
+        _label(self.sidebar, "AI ARTICLE", size=13, bg=SIDEBAR, weight="bold").place(x=66, y=39)
         brand_mode = "ADMIN" if self.ui_mode == "admin" else "STUDIO"
         _label(self.sidebar, brand_mode, size=8, color=BLUE, bg=SIDEBAR).place(x=67, y=66)
         if self.ui_mode == "user" and self.profile.role == "admin":
