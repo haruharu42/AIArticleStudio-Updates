@@ -3,7 +3,6 @@
 import Link from "next/link";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
-import { OPENAI_LINKS } from "@/lib/openai-links";
 
 type ToolCard = {
   href: string;
@@ -170,21 +169,7 @@ export function PhaseToolsPage() {
         </section>
       )}
 
-      {ready && (
-        <section className="openai-tools-section" aria-labelledby="openai-tools-title">
-          <div className="openai-tools-heading">
-            <div><p className="eyebrow">EXTERNAL AI</p><h2 id="openai-tools-title">外部AIツール</h2></div>
-            <small>外部の公式サービスを新しい画面で開きます</small>
-          </div>
-          <div className="openai-tools-grid">
-            <a href={OPENAI_LINKS.chatgpt} target="_blank" rel="noreferrer"><span>ChatGPT</span><strong>相談・文章作成</strong><b>開く ↗</b></a>
-            <a href={OPENAI_LINKS.work} target="_blank" rel="noreferrer"><span>ChatGPT Work</span><strong>まとまった作業・成果物作成</strong><b>開く ↗</b></a>
-            <a href={OPENAI_LINKS.images} target="_blank" rel="noreferrer"><span>ChatGPT Images</span><strong>画像生成・画像編集</strong><b>開く ↗</b></a>
-            <a href={OPENAI_LINKS.codex} target="_blank" rel="noreferrer"><span>Codex</span><strong>コード作成・開発作業</strong><b>開く ↗</b></a>
-          </div>
-          <p className="openai-tools-note">端末の設定によってChatGPTアプリまたはWeb版で開きます。</p>
-        </section>
-      )}
+}
     </main>
   );
 }
