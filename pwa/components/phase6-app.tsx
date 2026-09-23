@@ -31,7 +31,7 @@ function Brand({ compact = false }: { compact?: boolean }) {
         ✦
       </span>
       <span>
-        <strong>AI ARTICLE</strong>
+        <strong>AI ACTION</strong>
         <small>STUDIO PWA</small>
       </span>
     </div>
@@ -221,10 +221,10 @@ function AuthScreen({
       <section className="auth-intro">
         <Brand />
         <p className="eyebrow">PWA ACCESS</p>
-        <h1>記事づくりを、<br />どこからでも。</h1>
+        <h1>AIで副業を、<br />もっと簡単に。</h1>
         <p className="lead">
           AI Action Studio PWAへ安全にログインし、
-          PC・スマホ・タブレットからクラウド記事を確認・編集できます。
+          PC・スマホ・タブレットから記事・SNS・副業プロンプトなどの作業を続けられます。
         </p>
         <div className="trust-row">
           <span>Supabase Auth</span>
@@ -441,7 +441,7 @@ function Dashboard({
           <div>
             <p className="eyebrow">PWA HOME</p>
             <h1>おかえりなさい</h1>
-            <p>記事と画像を、いつもの端末と共有できます。</p>
+            <p>記事・SNS・画像・副業プロンプトを、いつもの端末から使えます。</p>
           </div>
           <span className="access-badge">● PWA利用可能</span>
         </header>
@@ -449,9 +449,9 @@ function Dashboard({
         <section className="hero-card">
           <div>
             <span className="hero-icon">✦</span>
-            <p className="eyebrow">ARTICLE LIBRARY READY</p>
-            <h2>クラウド記事をどの端末でも確認できます</h2>
-            <p>記事の閲覧・編集から、アイキャッチや挿絵の追加まで。記事を開いて、続きから作業できます。</p>
+            <p className="eyebrow">AI ACTION STUDIO READY</p>
+            <h2>副業に必要なAI作業を、どの端末からでも続けられます</h2>
+            <p>記事の閲覧・編集に加えて、画像作成や副業プロンプトも利用できます。目的に合わせて必要な機能へ進めます。</p>
           </div>
           <div className="hero-actions">
             <button type="button" className="primary-action" onClick={() => navigate("library")}>記事ライブラリを開く</button>
@@ -468,7 +468,7 @@ function Dashboard({
 
         <section className="coming-section">
           <div className="section-title">
-            <div><p className="eyebrow">YOUR WORKSPACE</p><h2>記事制作のワークスペース</h2></div>
+            <div><p className="eyebrow">YOUR WORKSPACE</p><h2>AI副業ワークスペース</h2></div>
             <span>利用できる主な機能</span>
           </div>
           <div className="feature-grid">
