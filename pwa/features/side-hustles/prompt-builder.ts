@@ -20,7 +20,7 @@ export function resolveSideHustleFieldValue(
     return value.custom.trim() || "自由入力未記入";
   }
   const option = field.options.find((item) => item.value === value.selected);
-  return option?.label ?? value.selected || "未指定";
+  return (option?.label ?? value.selected) || "未指定";
 }
 
 export function initialSideHustleDraft(definition: SideHustleDefinition): SideHustleDraft {
