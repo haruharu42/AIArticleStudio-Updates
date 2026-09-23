@@ -20,7 +20,7 @@ AI Action Studio PWA keeps responsibilities separated so UI changes, business lo
 - `features/prompts/`: public prompt-domain boundary used by new UI; re-exports catalog, preferences, routing, and service contracts while legacy `lib/` paths remain compatible.
 - `features/tools/`: feature-directory catalog boundary. Owns genre grouping and links for the user-facing 機能一覧 so the home hub does not duplicate side-hustle definitions.
 - `features/side-hustles/`: dedicated side-hustle domain. Each side-hustle owns its own dropdown schema, custom-input fallbacks, knowledge task, prompt template, progress state, and AI-result round trip. Shared code is limited to wizard mechanics and prompt/knowledge composition.
-- `components/side-hustles/`: presentation-only controls for the dedicated side-hustle wizard.
+- `components/side-hustles/`: presentation-only controls for the dedicated side-hustle wizard. Dropdown/custom-input fields, step rail, final prompt review, and AI-result capture are split into focused components; the parent page owns only state, navigation, persistence, clipboard orchestration, and external-AI handoff.
 - `lib/access-control.ts`: authenticated profile validation and authoritative PWA entitlement checks.
 - `lib/admin-users-view.ts`: pure admin-user filtering, labels, date formatting, and summary calculations.
 - `lib/article-create-draft.ts`: pure article-draft defaults, URL parsing, tag parsing, step validation, and restored-draft validation.
