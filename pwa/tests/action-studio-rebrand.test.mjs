@@ -44,8 +44,11 @@ test("home provides side-hustle and action-first entry points without breaking a
     "アフィリエイト",
     "物販・フリマ販売",
     "クラウドソーシング",
-    "スキル販売・デジタル商品",
-    "リサーチ・業務効率化",
+    "スキル販売",
+    "デジタル商品・教材販売",
+    "営業・案件獲得",
+    "リサーチ・事実確認",
+    "業務効率化・SOP化",
     "自分に合うAI副業を探す",
     "記事を作る",
   ]) {
