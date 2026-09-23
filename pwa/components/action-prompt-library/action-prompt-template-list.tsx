@@ -1,4 +1,4 @@
-import type { ActionPromptTemplate } from "@/lib/action-prompt-catalog";
+import type { ActionPromptTemplate } from "@/features/prompts";
 
 type Props = {
   templates: readonly ActionPromptTemplate[];
