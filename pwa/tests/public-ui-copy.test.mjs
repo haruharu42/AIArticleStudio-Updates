@@ -51,17 +51,18 @@ test("active PWA access shell avoids frozen Windows and hands successful login b
   assert.match(provider, /onAuthStateChange/);
 });
 
-test("feature hub groups supporting features by purpose and avoids article-creator duplication", async () => {
+test("feature hub groups supporting features by genre and avoids article-creator duplication", async () => {
   const tools = await read("components/phase-tools-page.tsx");
-  for (const label of ["運営・アカウント", "SNS・集客", "公開・改善", "副業・収益化", "サポート"]) {
-    assert.match(tools, new RegExp(label));
+  const toolCatalog = await read("features/tools/tool-catalog.ts");
+  for (const label of ["記事・コンテンツ", "SNS・動画・集客", "販売・収益化", "受託・案件獲得", "リサーチ・業務効率化", "運営・アカウント", "公開・分析", "サポート"]) {
+    assert.match(toolCatalog, new RegExp(label));
   }
-  assert.match(tools, /memberToolGroups/);
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
   assert.match(tools, /tool-group-section/);
-  assert.doesNotMatch(tools, /href: "\/create"/);
-  assert.doesNotMatch(tools, /href: "\/images"/);
-  assert.doesNotMatch(tools, /href: "\/export"/);
-  assert.doesNotMatch(tools, /OPENAI_LINKS|外部AIツール|ChatGPT Work|ChatGPT Images/);
+  assert.doesNotMatch(toolCatalog, /href: "\/create"/);
+  assert.doesNotMatch(toolCatalog, /href: "\/images"/);
+  assert.doesNotMatch(toolCatalog, /href: "\/export"/);
+  assert.doesNotMatch(`${tools}\n${toolCatalog}`, /OPENAI_LINKS|外部AIツール|ChatGPT Work|ChatGPT Images/);
   assert.doesNotMatch(tools, /phase:\s*["']/i);
 });
 
