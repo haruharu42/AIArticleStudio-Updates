@@ -163,6 +163,225 @@
   color: #10213f;
 }
 
+.beginner-library-main .note-post-assistant {
+  display: grid;
+  gap: 16px;
+  margin: 18px 0;
+  border: 1px solid #d9e7f6;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fbfdff 0%, #f4f9ff 100%);
+  padding: clamp(16px, 3vw, 24px);
+  box-shadow: 0 10px 30px rgb(23 69 135 / 6%);
+}
+
+.beginner-library-main .note-post-assistant-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.beginner-library-main .note-post-assistant-head h3,
+.beginner-library-main .note-post-preview h4,
+.beginner-library-main .note-post-steps h4 {
+  margin: 0;
+  color: #10213f;
+}
+
+.beginner-library-main .note-post-assistant-head > div {
+  display: grid;
+  gap: 6px;
+}
+
+.beginner-library-main .note-post-image-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.beginner-library-main .note-post-image-slot {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid #dce7f4;
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px;
+}
+
+.beginner-library-main .note-post-image-slot-preview {
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px dashed #bfd1e7;
+  border-radius: 10px;
+  background: #f7faff;
+  color: #7b8ea8;
+  font-size: 10px;
+}
+
+.beginner-library-main .note-post-image-slot-preview img,
+.beginner-library-main .note-post-cover-preview img,
+.beginner-library-main .note-post-inline-preview img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.beginner-library-main .note-post-image-slot-info {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.beginner-library-main .note-post-image-slot-info small {
+  overflow-wrap: anywhere;
+  color: #7185a2;
+}
+
+.beginner-library-main .note-post-file-action {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.beginner-library-main .note-post-file-action input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.beginner-library-main .note-post-preview {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #dce7f4;
+  border-radius: 16px;
+  background: #fff;
+  padding: 16px;
+}
+
+.beginner-library-main .note-post-cover-preview,
+.beginner-library-main .note-post-inline-preview {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.beginner-library-main .note-post-cover-preview img {
+  max-height: 360px;
+}
+
+.beginner-library-main .note-post-inline-preview img {
+  max-height: 420px;
+}
+
+.beginner-library-main .note-post-cover-preview figcaption,
+.beginner-library-main .note-post-inline-preview figcaption {
+  color: #7185a2;
+  font-size: 10px;
+  text-align: center;
+}
+
+.beginner-library-main .note-post-preview-title {
+  font-size: clamp(22px, 4vw, 34px);
+  font-weight: 900;
+  line-height: 1.45;
+  color: #10213f;
+}
+
+.beginner-library-main .note-post-preview-body {
+  display: grid;
+  gap: 18px;
+}
+
+.beginner-library-main .note-post-preview-text {
+  color: #203552;
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+.beginner-library-main .note-post-preview-text h2,
+.beginner-library-main .note-post-preview-text h3 {
+  color: #10213f;
+}
+
+.beginner-library-main .note-post-preview-text blockquote {
+  margin: 12px 0;
+  border-left: 4px solid #80b8f3;
+  background: #f4f9ff;
+  padding: 10px 14px;
+}
+
+.beginner-library-main .note-post-missing-image {
+  display: grid;
+  min-height: 110px;
+  place-items: center;
+  border: 1px dashed #c7d8ea;
+  border-radius: 12px;
+  background: #f7faff;
+  color: #7a8da7;
+}
+
+.beginner-library-main .note-post-steps {
+  display: grid;
+  gap: 12px;
+}
+
+.beginner-library-main .note-post-steps ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.beginner-library-main .note-post-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #dde7f3;
+  border-radius: 13px;
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.beginner-library-main .note-post-steps li.active {
+  border-color: #8cc0ff;
+  background: #f3f8ff;
+  box-shadow: 0 0 0 2px rgb(27 128 255 / 8%);
+}
+
+.beginner-library-main .note-post-steps li.done {
+  background: #f3fbf7;
+}
+
+.beginner-library-main .note-post-step-number {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #edf4fd;
+  color: #176bd9;
+  font-weight: 900;
+}
+
+.beginner-library-main .note-post-steps li > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.beginner-library-main .note-post-steps li small {
+  color: #7185a2;
+}
+
 .beginner-library-main .detail-badges span {
   border-color: #d2e0f1;
   color: #476584;
@@ -576,6 +795,32 @@
 
   .beginner-library-main .library-filter-toggle-state {
     font-size: 11px;
+  }
+
+  .beginner-library-main .note-post-assistant-head {
+    display: grid;
+  }
+
+  .beginner-library-main .note-post-assistant-head .primary-action {
+    width: 100%;
+    text-align: center;
+  }
+
+  .beginner-library-main .note-post-image-slots {
+    grid-template-columns: 1fr;
+  }
+
+  .beginner-library-main .note-post-image-slot {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .beginner-library-main .note-post-steps li {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .beginner-library-main .note-post-steps li > button {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .beginner-library-main .library-search {
