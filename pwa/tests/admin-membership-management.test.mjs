@@ -26,9 +26,9 @@ test("membership admin exposes note URL, feature matrix and user grant/revoke wo
     "プランごとの利用可能機能",
     "ユーザーへメンバー特典を付与",
     "メンバー特典を取り消す",
-    "期限切れ予定",
+    "7日以内に期限",
     "クラウド容量",
-    "加入確認履歴",
+    "メンバー特典の変更履歴",
   ]) {
     assert.match(page, new RegExp(label));
   }
