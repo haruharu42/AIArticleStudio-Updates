@@ -52,7 +52,7 @@ import "./phase50-admin-action-prompts.css";
 export const metadata: Metadata = {
   title: "AI Action Studio PWA",
   description:
-    "AI Action Studio（AAS）。記事・SNS・画像・副業支援を、スマホとPCから手軽に進められるAIアクション支援PWAです。",
+    "AI Action Studio（AAS）— AIで副業を、もっと簡単に。記事・SNS・画像・副業支援を、スマホとPCから手軽に進められるAIアクション支援PWAです。",
   applicationName: "AI Action Studio",
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
