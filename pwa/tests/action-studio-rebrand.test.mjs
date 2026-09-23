@@ -8,9 +8,10 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 test("AI Action Studio branding is used on the active PWA shell", async () => {
-  const [layout, shell, manifest, home] = await Promise.all([
+  const [layout, shell, legacyShell, manifest, home] = await Promise.all([
     read("app/layout.tsx"),
     read("components/aas-reference-shell.tsx"),
+    read("components/phase6-app.tsx"),
     read("public/manifest.webmanifest"),
     read("components/phase18-beginner-home.tsx"),
   ]);
@@ -19,6 +20,9 @@ test("AI Action Studio branding is used on the active PWA shell", async () => {
   assert.match(layout, /AIで副業を、もっと簡単に。/);
   assert.match(shell, /AI Action Studio/);
   assert.match(shell, /AIで副業を、もっと簡単に。/);
+  assert.match(legacyShell, /AI ACTION/);
+  assert.match(legacyShell, /AIで副業を、/);
+  assert.doesNotMatch(legacyShell, /AI ARTICLE/);
   assert.match(manifest, /AI Action Studio/);
   assert.match(home, /ActionStudioHomeHub/);
 });
