@@ -38,8 +38,9 @@ export function readSideHustleDraft(
       values,
       selectedAi: row.selectedAi === "claude" || row.selectedAi === "gemini" ? row.selectedAi : "chatgpt",
       selectedPlan: row.selectedPlan === "free" ? "free" : "paid",
+      resultText: typeof row.resultText === "string" ? row.resultText.slice(0, 120000) : "",
       step: typeof row.step === "number" && Number.isInteger(row.step)
-        ? Math.max(0, Math.min(3, row.step))
+        ? Math.max(0, Math.min(4, row.step))
         : 0,
     };
   } catch {
