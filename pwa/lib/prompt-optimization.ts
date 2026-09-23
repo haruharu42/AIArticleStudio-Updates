@@ -24,6 +24,8 @@ export type KnowledgeRuntimeState = {
   nextRefreshDueAt: string | null;
 };
 
+export const KNOWLEDGE_RUNTIME_EVENT = "aas:knowledge-runtime-updated";
+
 let runtimePromptOptimizations: PromptOptimizationRule[] = [];
 let runtimeKnowledgeState: KnowledgeRuntimeState = {
   channel: "stable",
@@ -109,6 +111,9 @@ export function setRuntimePromptOptimizations(rules: PromptOptimizationRule[]): 
 
 export function setRuntimeKnowledgeState(state: KnowledgeRuntimeState): void {
   runtimeKnowledgeState = state;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(KNOWLEDGE_RUNTIME_EVENT));
+  }
 }
 
 export function getRuntimeKnowledgeState(): KnowledgeRuntimeState {
