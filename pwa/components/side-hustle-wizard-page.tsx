@@ -283,9 +283,9 @@ export function SideHustleWizardPage({ slug }: { slug: string }) {
             </label>
           </div>
           <div className="side-hustle-ai-note">
-            <strong>ナレッジ適用タスク</strong>
-            <span>{definition.knowledgeTask}</span>
-            <small>記事用の汎用ルールではなく、この副業専用タスクに紐づくKnowledge / Prompt Updateだけを優先適用します。</small>
+            <strong>ナレッジ適用範囲</strong>
+            <span>{definition.title} 専用</span>
+            <small>内部では副業ごとに別タスクへ分離し、記事用の汎用ルールではなく、この機能に関係するKnowledge / Prompt Updateだけを優先適用します。</small>
           </div>
         </section>
       )}
