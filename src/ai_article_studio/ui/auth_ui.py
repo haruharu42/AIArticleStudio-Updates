@@ -706,7 +706,12 @@ class RoleShell:
         self.buttons: dict[str, tk.Button] = {}
         self.current_route = ""
         self.sync_status_label: tk.Label | None = None
-        self.app._aas_cloud_sync_status_changed = self._update_cloud_status
+        try:
+            self.app._aas_cloud_sync_status_changed = self._update_cloud_status
+        except (AttributeError, TypeError):
+            # Lightweight test doubles and non-Tk hosts may not allow dynamic
+            # attributes. Cloud-sync status updates are optional in that case.
+            pass
 
     def start(self) -> None:
         self._build_sidebar()
@@ -727,7 +732,7 @@ class RoleShell:
         self.sidebar = tk.Frame(self.app, bg=SIDEBAR, width=228)
         self.sidebar.place(x=0, y=0, width=228, relheight=1)
         _label(self.sidebar, "✦", size=22, color=PURPLE, bg=SIDEBAR, weight="bold").place(x=24, y=38)
-        _label(self.sidebar, "AI ARTICLE", size=13, bg=SIDEBAR, weight="bold").place(x=66, y=39)
+        _label(self.sidebar, "AI ACTION", size=13, bg=SIDEBAR, weight="bold").place(x=66, y=39)
         brand_mode = "ADMIN" if self.ui_mode == "admin" else "STUDIO"
         _label(self.sidebar, brand_mode, size=8, color=BLUE, bg=SIDEBAR).place(x=67, y=66)
         if self.ui_mode == "user" and self.profile.role == "admin":
