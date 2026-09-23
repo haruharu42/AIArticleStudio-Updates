@@ -30,7 +30,7 @@ import {
 import { loadActionPromptCatalog } from "@/lib/action-prompt-service";
 
 function mergeTemplates(cloudTemplates: readonly ActionPromptTemplate[]): ActionPromptTemplate[] {
-  const merged = new Map(ACTION_PROMPT_TEMPLATES.map((template) => [template.id, template]));
+  const merged = new Map<string, ActionPromptTemplate>(ACTION_PROMPT_TEMPLATES.map((template) => [template.id, template]));
   cloudTemplates.forEach((template) => merged.set(template.id, template));
   return [...merged.values()];
 }
