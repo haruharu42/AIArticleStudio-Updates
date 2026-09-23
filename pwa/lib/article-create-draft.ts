@@ -8,6 +8,7 @@ import {
 } from "@/lib/phase18-content-options";
 
 export const ARTICLE_CREATE_STEPS = [
+  "使用AI選択",
   "記事の種類",
   "画像設定",
   "記事条件",
@@ -145,16 +146,16 @@ export function validateArticleCreateStep(
   step: number,
   draft: ArticleCreationDraft,
 ): string | null {
-  if (step === 2 && (!draft.genre.trim() || draft.genre === "その他")) {
+  if (step === 3 && (!draft.genre.trim() || draft.genre === "その他")) {
     return "「その他」を選んだ場合はジャンル名を入力してください。";
   }
-  if (step === 2 && (!draft.subgenre.trim() || draft.subgenre === "その他")) {
+  if (step === 3 && (!draft.subgenre.trim() || draft.subgenre === "その他")) {
     return "「その他」を選んだ場合はサブジャンル名を入力してください。";
   }
-  if (step === 4 && draft.articleType === "paid" && draft.body.trim() && !/<!--\s*PAID_AREA\s*-->/i.test(draft.body)) {
+  if (step === 5 && draft.articleType === "paid" && draft.body.trim() && !/<!--\s*PAID_AREA\s*-->/i.test(draft.body)) {
     return "有料記事には有料エリア開始位置が必要です。本文に「<!-- PAID_AREA -->」を入れてください。";
   }
-  if (step === 4 && draft.inlineEnabled) {
+  if (step === 5 && draft.inlineEnabled) {
     for (let index = 1; index <= draft.inlineCount; index += 1) {
       const marker = new RegExp(`<!--\\s*IMAGE:0?${index}\\s*-->`, "i");
       if (!marker.test(draft.body)) {
