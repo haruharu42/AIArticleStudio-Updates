@@ -13,7 +13,7 @@
 
 .side-hustle-step-rail {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin: 0 0 18px;
   padding: 0;
@@ -266,10 +266,49 @@
 }
 
 .side-hustle-prompt-actions,
+.side-hustle-result-actions,
 .side-hustle-wizard-nav {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.side-hustle-result-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.side-hustle-result-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
+  align-items: center;
+  border: 1px dashed #3a4f72;
+  border-radius: 12px;
+  padding: 13px 14px;
+  background: #0b1628;
+}
+
+.side-hustle-result-summary strong {
+  font-size: 11px;
+}
+
+.side-hustle-result-summary span {
+  color: #7ee1c0;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.side-hustle-result-summary small {
+  grid-column: 1 / -1;
+  color: #8497b2;
+  font-size: 9px;
+  line-height: 1.7;
+}
+
+.side-hustle-result-output textarea {
+  min-height: 460px;
 }
 
 .side-hustle-wizard-nav {
@@ -284,7 +323,7 @@
 
 @media (max-width: 720px) {
   .side-hustle-step-rail {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .side-hustle-field-grid,
@@ -331,6 +370,7 @@
   }
 
   .side-hustle-prompt-actions,
+  .side-hustle-result-actions,
   .side-hustle-wizard-nav {
     display: grid;
     grid-template-columns: 1fr;
