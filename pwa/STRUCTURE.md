@@ -19,6 +19,8 @@ AI Article Studio PWA keeps responsibilities separated so UI changes, business l
 - `components/pwa-admin-users-page.tsx`: admin user-management controller; owns loading, selection, mutation orchestration, refresh, and messages.
 - `features/prompts/`: public prompt-domain boundary used by new UI; re-exports catalog, preferences, routing, and service contracts while legacy `lib/` paths remain compatible.
 - `features/tools/`: feature-directory catalog boundary. Owns genre grouping and links for the user-facing 機能一覧 so the home hub does not duplicate side-hustle definitions.
+- `features/side-hustles/`: dedicated side-hustle domain. Each side-hustle owns its own dropdown schema, custom-input fallbacks, knowledge task, prompt template, and progress state. Shared code is limited to wizard mechanics and prompt/knowledge composition.
+- `components/side-hustles/`: presentation-only controls for the dedicated side-hustle wizard.
 - `lib/access-control.ts`: authenticated profile validation and authoritative PWA entitlement checks.
 - `lib/admin-users-view.ts`: pure admin-user filtering, labels, date formatting, and summary calculations.
 - `lib/article-create-draft.ts`: pure article-draft defaults, URL parsing, tag parsing, step validation, and restored-draft validation.
@@ -63,6 +65,7 @@ pwa/
 │  ├─ images/
 │  ├─ presets/
 │  ├─ prompts/
+│  ├─ side-hustles/
 │  ├─ tools/
 │  ├─ support/
 │  ├─ admin/
