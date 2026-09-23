@@ -6,11 +6,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import {
-  ACTION_PROMPT_CATEGORIES,
   ACTION_PROMPT_TEMPLATES,
   buildActionPrompt,
   type ActionPromptTemplate,
 } from "@/lib/action-prompt-catalog";
+import { loadActionPromptCatalog } from "@/lib/action-prompt-service";
 
 const FAVORITES_KEY = "aas-action-prompt-favorites";
 const RECENT_KEY = "aas-action-prompt-recent";
@@ -34,13 +34,16 @@ function initialValues(template: ActionPromptTemplate): Record<string, string> {
 }
 
 export function ActionPromptLibraryPage() {
-  const { state } = useSharedAccessState();
+  const { state, client } = useSharedAccessState();
   const userId = state.kind === "ready" ? state.profile.id : "";
+  const [templates, setTemplates] = useState<ActionPromptTemplate[]>(() => [...ACTION_PROMPT_TEMPLATES]);
   const [category, setCategory] = useState("すべて");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(ACTION_PROMPT_TEMPLATES[0]?.id ?? "");
-  const selected = ACTION_PROMPT_TEMPLATES.find((template) => template.id === selectedId) ?? ACTION_PROMPT_TEMPLATES[0];
-  const [values, setValues] = useState<Record<string, string>>(() => selected ? initialValues(selected) : {});
+  const selected = templates.find((template) => template.id === selectedId) ?? templates[0];
+  const [values, setValues] = useState<Record<string, string>>(
+    () => ACTION_PROMPT_TEMPLATES[0] ? initialValues(ACTION_PROMPT_TEMPLATES[0]) : {},
+  );
   const [favorites, setFavorites] = useState<string[]>([]);
   const [recent, setRecent] = useState<string[]>([]);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -56,16 +59,51 @@ export function ActionPromptLibraryPage() {
     });
   }, [userId]);
 
+  useEffect(() => {
+    if (!client || !userId) return;
+    let active = true;
+
+    void loadActionPromptCatalog(client).then(
+      (catalog) => {
+        if (!active) return;
+        const cloudTemplates = catalog.templates.filter((template) => template.status === "active");
+        if (!cloudTemplates.length) return;
+
+        setTemplates(cloudTemplates);
+        setCategory("すべて");
+        setSelectedId((currentId) => {
+          const next = cloudTemplates.find((template) => template.id === currentId) ?? cloudTemplates[0];
+          setValues((currentValues) => Object.fromEntries(
+            next.fields.map((field) => [field.key, next.id === currentId ? currentValues[field.key] ?? "" : ""]),
+          ));
+          return next.id;
+        });
+      },
+      () => {
+        // The built-in catalog remains available if cloud retrieval is temporarily unavailable.
+      },
+    );
+
+    return () => {
+      active = false;
+    };
+  }, [client, userId]);
+
+  const categories = useMemo(
+    () => ["すべて", ...Array.from(new Set(templates.map((template) => template.category)))],
+    [templates],
+  );
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return ACTION_PROMPT_TEMPLATES.filter((template) => {
+    return templates.filter((template) => {
       if (category !== "すべて" && template.category !== category) return false;
       if (favoritesOnly && !favorites.includes(template.id)) return false;
       if (!needle) return true;
       return [template.title, template.category, template.sideHustle, template.description]
         .some((value) => value.toLowerCase().includes(needle));
     });
-  }, [category, favorites, favoritesOnly, query]);
+  }, [category, favorites, favoritesOnly, query, templates]);
 
   const prompt = useMemo(
     () => selected ? buildActionPrompt(selected, values) : "",
@@ -113,7 +151,7 @@ export function ActionPromptLibraryPage() {
   if (!selected) return null;
 
   const recentTemplates = recent
-    .map((id) => ACTION_PROMPT_TEMPLATES.find((template) => template.id === id))
+    .map((id) => templates.find((template) => template.id === id))
     .filter((template): template is ActionPromptTemplate => Boolean(template));
 
   return (
@@ -135,7 +173,7 @@ export function ActionPromptLibraryPage() {
         <label>
           <span>用途</span>
           <select value={category} onChange={(event) => setCategory(event.target.value)}>
-            {ACTION_PROMPT_CATEGORIES.map((item) => <option key={item} value={item}>{item}</option>)}
+            {categories.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
         </label>
         <button className={favoritesOnly ? "active" : ""} type="button" onClick={() => setFavoritesOnly((value) => !value)}>
