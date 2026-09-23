@@ -34,6 +34,12 @@ function initialValues(template: ActionPromptTemplate): Record<string, string> {
   return Object.fromEntries(template.fields.map((field) => [field.key, ""]));
 }
 
+function recommendedAiKey(template: ActionPromptTemplate): AiAppKey {
+  if (template.recommendedAi === "Claude") return "claude";
+  if (template.recommendedAi === "Gemini") return "gemini";
+  return "chatgpt";
+}
+
 type StoredPromptProgress = {
   selectedId: string;
   values: Record<string, string>;
@@ -73,6 +79,9 @@ export function ActionPromptLibraryPage() {
   const [recent, setRecent] = useState<string[]>([]);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [message, setMessage] = useState("");
+  const [selectedAi, setSelectedAi] = useState<AiAppKey>(
+    () => ACTION_PROMPT_TEMPLATES[0] ? recommendedAiKey(ACTION_PROMPT_TEMPLATES[0]) : "chatgpt",
+  );
   const [progressReady, setProgressReady] = useState(false);
 
   useEffect(() => {
@@ -89,6 +98,7 @@ export function ActionPromptLibraryPage() {
         : null;
       if (stored && restored) {
         setSelectedId(restored.id);
+        setSelectedAi(recommendedAiKey(restored));
         setValues(Object.fromEntries(
           restored.fields.map((field) => [field.key, stored.values[field.key] ?? ""]),
         ));
@@ -115,6 +125,7 @@ export function ActionPromptLibraryPage() {
         setTemplates(cloudTemplates);
         setCategory("すべて");
         setSelectedId(next.id);
+        setSelectedAi(recommendedAiKey(next));
         setValues(Object.fromEntries(
           next.fields.map((field) => [field.key, stored?.selectedId === next.id ? stored.values[field.key] ?? "" : ""]),
         ));
@@ -160,6 +171,7 @@ export function ActionPromptLibraryPage() {
 
   const selectTemplate = (template: ActionPromptTemplate) => {
     setSelectedId(template.id);
+    setSelectedAi(recommendedAiKey(template));
     setValues(initialValues(template));
     setMessage("");
   };
@@ -306,13 +318,25 @@ export function ActionPromptLibraryPage() {
             <textarea readOnly value={prompt} />
           </label>
 
+          <div className="action-prompt-ai-step">
+            <label>
+              <span>使用AI</span>
+              <select value={selectedAi} onChange={(event) => setSelectedAi(event.target.value as AiAppKey)}>
+                {(["chatgpt", "claude", "gemini"] as const).map((key) => (
+                  <option key={key} value={key}>
+                    {AI_APP_LINKS[key].name}{key === recommendedAiKey(selected) ? "（推奨）" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <small>あとから何度でも変更できます。選択したAIに合わせてコピーして開きます。</small>
+          </div>
+
           <div className="action-prompt-actions">
-            <button className="primary-action" type="button" onClick={() => void copyPrompt()}>プロンプトをコピー</button>
-            {(["chatgpt", "claude", "gemini"] as const).map((key) => (
-              <button key={key} type="button" onClick={() => void copyPrompt(key)}>
-                コピーして{AI_APP_LINKS[key].name}を開く
-              </button>
-            ))}
+            <button className="primary-action" type="button" onClick={() => void copyPrompt(selectedAi)}>
+              コピーして{AI_APP_LINKS[selectedAi].name}を開く
+            </button>
+            <button type="button" onClick={() => void copyPrompt()}>プロンプトだけコピー</button>
           </div>
           {message && <div className="route-notice" role="status">{message}</div>}
           <p className="panel-muted">AASはプロンプトを準備して外部AIを開きます。ブラウザへAIサービスのAPIキーや秘密鍵は保存しません。</p>
