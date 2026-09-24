@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { launchAiApp } from "@/lib/ai-app-links";
 import {
+  adminGetKnowledgeAutomationAiConfig,
   adminGetKnowledgeAutomationStatus,
   adminGetKnowledgeRefreshChannels,
   adminListKnowledgeAutomationCandidates,
@@ -12,10 +13,14 @@ import {
   adminPublishKnowledgeRefreshBundle,
   adminRequestKnowledgeAutomationRun,
   adminRequestKnowledgeRefresh,
+  adminRetryKnowledgeAutomationCandidateAi,
   adminReviewKnowledgeAutomationCandidate,
+  adminSetKnowledgeAutomationAiConfig,
   adminStartKnowledgeRefresh,
+  buildKnowledgeAutomationCandidateBundle,
   buildKnowledgeRefreshResearchPrompt,
   parseKnowledgeRefreshBundle,
+  type KnowledgeAutomationAiConfig,
   type KnowledgeAutomationCandidate,
   type KnowledgeAutomationStatus,
   type KnowledgeRefreshChangeItem,
@@ -142,6 +147,11 @@ export function KnowledgeRefreshPanel() {
   const [channels, setChannels] = useState<KnowledgeRefreshChannelState[]>([]);
   const [automationStatus, setAutomationStatus] = useState<KnowledgeAutomationStatus | null>(null);
   const [automationCandidates, setAutomationCandidates] = useState<KnowledgeAutomationCandidate[]>([]);
+  const [automationAiConfig, setAutomationAiConfig] = useState<KnowledgeAutomationAiConfig | null>(null);
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiModel, setAiModel] = useState("gpt-5.6");
+  const [aiMaxCandidates, setAiMaxCandidates] = useState(6);
+  const [aiApiKey, setAiApiKey] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [bundleText, setBundleText] = useState("");
   const [diffPreview, setDiffPreview] = useState<KnowledgeRefreshDiff | null>(null);
@@ -157,16 +167,21 @@ export function KnowledgeRefreshPanel() {
 
   const reload = async () => {
     const client = getSupabaseClient();
-    const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationCandidates] = await Promise.all([
+    const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationCandidates, nextAiConfig] = await Promise.all([
       adminListKnowledgeRefreshRequests(client, null, 30),
       adminGetKnowledgeRefreshChannels(client),
       adminGetKnowledgeAutomationStatus(client),
       adminListKnowledgeAutomationCandidates(client, "pending", 50),
+      adminGetKnowledgeAutomationAiConfig(client),
     ]);
     setRequests(nextRequests);
     setChannels(nextChannels);
     setAutomationStatus(nextAutomationStatus);
     setAutomationCandidates(nextAutomationCandidates);
+    setAutomationAiConfig(nextAiConfig);
+    setAiEnabled(nextAiConfig.enabled);
+    setAiModel(nextAiConfig.model);
+    setAiMaxCandidates(nextAiConfig.maxCandidatesPerRun);
     if (selectedId === null) {
       const active = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
       if (active) setSelectedId(active.id);
@@ -178,17 +193,22 @@ export function KnowledgeRefreshPanel() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationCandidates] = await Promise.all([
+        const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationCandidates, nextAiConfig] = await Promise.all([
           adminListKnowledgeRefreshRequests(client, null, 30),
           adminGetKnowledgeRefreshChannels(client),
           adminGetKnowledgeAutomationStatus(client),
           adminListKnowledgeAutomationCandidates(client, "pending", 50),
+          adminGetKnowledgeAutomationAiConfig(client),
         ]);
         if (!active) return;
         setRequests(nextRequests);
         setChannels(nextChannels);
         setAutomationStatus(nextAutomationStatus);
         setAutomationCandidates(nextAutomationCandidates);
+        setAutomationAiConfig(nextAiConfig);
+        setAiEnabled(nextAiConfig.enabled);
+        setAiModel(nextAiConfig.model);
+        setAiMaxCandidates(nextAiConfig.maxCandidatesPerRun);
         const firstActive = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
         if (firstActive) setSelectedId(firstActive.id);
       } catch (error) {
@@ -198,6 +218,73 @@ export function KnowledgeRefreshPanel() {
     void boot();
     return () => { active = false; };
   }, []);
+
+  const saveAutomationAiConfig = async () => {
+    setBusy(true);
+    setMessage("");
+    try {
+      await adminSetKnowledgeAutomationAiConfig(getSupabaseClient(), {
+        enabled: aiEnabled,
+        provider: "openai",
+        model: aiModel,
+        maxCandidatesPerRun: aiMaxCandidates,
+        apiKey: aiApiKey,
+      });
+      setAiApiKey("");
+      await reload();
+      setMessage(aiEnabled
+        ? "AI候補JSON自動生成を有効化しました。APIキーはVaultへ保存され、画面には再表示しません。"
+        : "AI候補JSON自動生成を無効化しました。公式ソース監視は継続します。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "AI自動解析設定を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const retryAutomationAi = async (candidate: KnowledgeAutomationCandidate) => {
+    setBusy(true);
+    setMessage("");
+    try {
+      await adminRetryKnowledgeAutomationCandidateAi(getSupabaseClient(), candidate.id);
+      await reload();
+      setMessage("AI解析を再試行待ちへ戻しました。次回の自動調査で再解析されます。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "AI解析を再試行状態へ戻せませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const prepareAutomationCandidate = async (candidate: KnowledgeAutomationCandidate) => {
+    const bundle = buildKnowledgeAutomationCandidateBundle(candidate);
+    if (!bundle) {
+      setMessage("この候補にはFresh差分へ取り込めるAI提案JSONがありません。");
+      return;
+    }
+    setBusy(true);
+    setMessage("");
+    try {
+      const client = getSupabaseClient();
+      const requestId = await adminRequestKnowledgeRefresh(client, "fresh");
+      await adminReviewKnowledgeAutomationCandidate(
+        client,
+        candidate.id,
+        "converted",
+        "AI自動提案をFresh差分レビューへ変換。正式公開は差分確認と管理者確認後のみ。",
+      );
+      setSelectedId(requestId);
+      setBundleText(JSON.stringify(bundle, null, 2));
+      setDiffPreview(null);
+      await reload();
+      setSelectedId(requestId);
+      setMessage("AI提案をFresh差分レビューへ取り込みました。まだ公開されていません。「変更点を確認」から内容を確認してください。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "AI提案をFresh差分レビューへ取り込めませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const runAutomation = async () => {
     setBusy(true);
@@ -414,6 +501,63 @@ export function KnowledgeRefreshPanel() {
           <span>候補承認は「詳しく確認する価値がある」という状態変更だけです。正式反映には従来のQuality Gate・差分確認・Fresh / Stable公開操作が必要です。</span>
         </div>
 
+        <div className="knowledge-ai-config">
+          <div className="knowledge-ai-config-head">
+            <div>
+              <strong>AI候補JSON自動生成</strong>
+              <p>公式ソースの取得・差分検知後にAIが候補JSONを作成します。AIが候補を作っても自動公開はされません。</p>
+            </div>
+            <span className={automationAiConfig?.apiKeyConfigured ? "configured" : "missing"}>
+              APIキー {automationAiConfig?.apiKeyConfigured ? "Vault設定済み" : "未設定"}
+            </span>
+          </div>
+          <div className="knowledge-ai-config-grid">
+            <label className="knowledge-ai-toggle">
+              <input
+                type="checkbox"
+                checked={aiEnabled}
+                onChange={(event) => setAiEnabled(event.target.checked)}
+              />
+              <span>AI自動解析を有効にする</span>
+            </label>
+            <label>
+              <span>モデル</span>
+              <input
+                value={aiModel}
+                onChange={(event) => setAiModel(event.target.value)}
+                placeholder="gpt-5.6"
+                autoComplete="off"
+              />
+            </label>
+            <label>
+              <span>1回の最大解析候補数</span>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                value={aiMaxCandidates}
+                onChange={(event) => setAiMaxCandidates(Math.max(1, Math.min(20, Number(event.target.value) || 1)))}
+              />
+            </label>
+            <label>
+              <span>OpenAI APIキー（変更時のみ入力）</span>
+              <input
+                type="password"
+                value={aiApiKey}
+                onChange={(event) => setAiApiKey(event.target.value)}
+                placeholder={automationAiConfig?.apiKeyConfigured ? "設定済み・変更する場合だけ入力" : "APIキーを入力"}
+                autoComplete="new-password"
+              />
+            </label>
+          </div>
+          <div className="knowledge-ai-config-actions">
+            <small>APIキーはSupabase Vaultへ保存し、この画面では再表示しません。AI解析が無効でも公式ソース監視は動き続けます。</small>
+            <button type="button" disabled={busy || !aiModel.trim()} onClick={() => void saveAutomationAiConfig()}>
+              AI自動解析設定を保存
+            </button>
+          </div>
+        </div>
+
         <dl className="knowledge-automation-metrics">
           <div><dt>監視中</dt><dd>{automationStatus?.trackedSources ?? "-"} URL</dd></div>
           <div><dt>次回対象</dt><dd>{automationStatus?.dueSources ?? "-"} URL</dd></div>
@@ -466,6 +610,29 @@ export function KnowledgeRefreshPanel() {
                   </details>
                 )}
 
+                <div className={"knowledge-ai-analysis " + candidate.analysisStatus}>
+                  <div>
+                    <strong>AI解析: {candidate.analysisStatus === "completed" ? "完了" : candidate.analysisStatus === "failed" ? "失敗" : "待機中"}</strong>
+                    {candidate.analysisDecision && <span>判定: {candidate.analysisDecision}</span>}
+                    {candidate.analysisModel && <span>{candidate.analysisProvider} / {candidate.analysisModel}</span>}
+                  </div>
+                  {candidate.analysisReason && <p>{candidate.analysisReason}</p>}
+                  {candidate.analysisError && <p className="knowledge-automation-error">{candidate.analysisError}</p>}
+                  {candidate.verifiedSourceUrls.length > 0 && (
+                    <div className="knowledge-ai-sources">
+                      {candidate.verifiedSourceUrls.map((url) => (
+                        <a key={url} href={url} target="_blank" rel="noreferrer">確認済み根拠</a>
+                      ))}
+                    </div>
+                  )}
+                  {candidate.proposedPayload && (
+                    <details>
+                      <summary>AI提案JSONを見る</summary>
+                      <pre>{JSON.stringify(candidate.proposedPayload, null, 2)}</pre>
+                    </details>
+                  )}
+                </div>
+
                 <div className="knowledge-automation-actions">
                   <a href={candidate.sourceUrl} target="_blank" rel="noreferrer">公式ソースを開く</a>
                   <button type="button" disabled={busy} onClick={() => void copyAutomationPrompt(candidate)}>
@@ -474,6 +641,16 @@ export function KnowledgeRefreshPanel() {
                   <button type="button" disabled={busy} onClick={() => launchAiApp("chatgpt")}>
                     ChatGPTを開く
                   </button>
+                  {candidate.analysisStatus === "failed" && (
+                    <button type="button" disabled={busy} onClick={() => void retryAutomationAi(candidate)}>
+                      AI解析を再試行
+                    </button>
+                  )}
+                  {buildKnowledgeAutomationCandidateBundle(candidate) && (
+                    <button type="button" className="prepare" disabled={busy} onClick={() => void prepareAutomationCandidate(candidate)}>
+                      Fresh差分へ取り込む
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="approve"
