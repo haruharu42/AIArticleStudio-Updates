@@ -85,3 +85,5 @@ Implementation status: the AI enrichment control plane is additive and remains d
 Candidate lifecycle: a candidate remains pending during Fresh diff preparation and is marked converted only after the reviewed publication succeeds.
 
 Validation note: candidate conversion is intentionally coupled to successful reviewed publication, never to draft preparation alone.
+
+Final review gate: automated proposals remain non-published artifacts until the existing diff-confirmed publication action succeeds.
