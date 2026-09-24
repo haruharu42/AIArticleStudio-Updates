@@ -18,23 +18,23 @@ test("Phase 60 adds an admin-only server-enforced quality gate", async () => {
   assert.match(migration, /private\.is_active_admin/);
   assert.match(migration, /quality := private\.aas_validate_knowledge_refresh_bundle/);
   assert.match(migration, /knowledge quality gate failed/);
-  assert.match(migration, /grant execute on function public\.admin_validate_knowledge_refresh_bundle\(jsonb\) to authenticated/);
-  assert.match(migration, /grant execute on function public\.admin_publish_knowledge_refresh_bundle_v3\(bigint, jsonb\)/);
+  assert.match(migration, /grant execute on function public\.admin_validate_knowledge_refresh_bundle\(jsonb\)\s+to authenticated/);
+  assert.match(migration, /grant execute on function public\.admin_publish_knowledge_refresh_bundle_v3\(bigint, jsonb\)\s+to authenticated/);
   assert.doesNotMatch(migration, /grant execute .* to anon/i);
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_|api[_-]?key/i);
 
   assert.equal(
-    (migration.match(/create or replace function private\\.aas_validate_knowledge_refresh_bundle/g) ?? []).length,
+    (migration.match(/create or replace function private\.aas_validate_knowledge_refresh_bundle/g) ?? []).length,
     1,
     "private quality gate must be defined exactly once",
   );
   assert.equal(
-    (migration.match(/create or replace function public\\.admin_validate_knowledge_refresh_bundle/g) ?? []).length,
+    (migration.match(/create or replace function public\.admin_validate_knowledge_refresh_bundle/g) ?? []).length,
     1,
     "admin validation RPC must be defined exactly once",
   );
   assert.equal(
-    (migration.match(/create or replace function public\\.admin_publish_knowledge_refresh_bundle_v3/g) ?? []).length,
+    (migration.match(/create or replace function public\.admin_publish_knowledge_refresh_bundle_v3/g) ?? []).length,
     1,
     "v3 publish RPC must be defined exactly once",
   );
