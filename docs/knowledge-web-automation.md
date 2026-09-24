@@ -79,3 +79,5 @@ For each eligible candidate, the worker can produce one of:
 - `retire`: source/item should be reviewed for retirement.
 
 A completed `new` / `update` proposal can be sent from the admin UI to a Fresh update request. This action only pre-fills the existing review JSON. It does **not** run the publication RPC. The administrator must still run current-data diff review and confirm publication explicitly.
+
+Implementation status: the AI enrichment control plane is additive and remains disabled until an administrator stores a provider API key and enables it.
