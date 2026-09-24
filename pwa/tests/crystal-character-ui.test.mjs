@@ -37,7 +37,7 @@ test("home puts user and article library before lower quick actions", async () =
   assert.ok(library > creator);
   assert.ok(hero > library);
   assert.ok(quick > hero);
-  assert.ok(ranking > quick);
+  assert.ok(quick > ranking);
 });
 
 test("crystal UI styles desktop, mobile, controls and navigation without replacing behavior", async () => {
@@ -64,7 +64,7 @@ test("crystal UI styles desktop, mobile, controls and navigation without replaci
   }
 
   assert.match(css, /@media \(min-width: 1100px\)[\s\S]*?\.reference-home > \.aas-reference-desktop-nav/);
-  assert.match(css, /@media \(max-width: 620px\)[\s\S]*?grid-template-columns: repeat\(2,/);
+  assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.action-studio-card-grid[\s\S]*?grid-template-columns:\s*repeat\(2,/);
   assert.match(css, /font-size: 16px/);
 });
 
