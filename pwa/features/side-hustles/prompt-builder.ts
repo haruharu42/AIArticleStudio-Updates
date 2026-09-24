@@ -1,6 +1,7 @@
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
 import { compilePromptOptimizationContext } from "@/lib/prompt-optimization";
 import { compileSideHustleScenarioKnowledge } from "@/features/side-hustles/scenario-knowledge";
+import { compileSideHustleCombinationKnowledge } from "@/features/side-hustles/combination-knowledge";
 import type { AiPlan, AiProvider } from "@/lib/user-personalization";
 import {
   SIDE_HUSTLE_CUSTOM_VALUE,
@@ -80,6 +81,10 @@ export function buildSideHustlePrompt(
   });
 
   const scenarioKnowledge = compileSideHustleScenarioKnowledge(definition, resolved);
+  const selected = Object.fromEntries(
+    definition.fields.map((field) => [field.key, draft.values[field.key]?.selected ?? ""]),
+  );
+  const combinationKnowledge = compileSideHustleCombinationKnowledge(definition, selected);
 
   const provider = draft.selectedAi as AiProvider;
   const plan = draft.selectedPlan as AiPlan;
@@ -89,6 +94,7 @@ export function buildSideHustlePrompt(
     interpolate(definition.promptTemplate, definition, draft),
     knowledge.promptBlock,
     scenarioKnowledge.promptBlock,
+    combinationKnowledge.promptBlock,
     optimization,
     "【最終出力ルール】",
     "- ユーザーが入力していない実体験・実績・資格・レビュー・売上・使用経験を事実として作らない。",
@@ -99,7 +105,7 @@ export function buildSideHustlePrompt(
 
   return {
     prompt: sections.join("\n\n"),
-    appliedKnowledge: [...knowledge.applied, ...scenarioKnowledge.applied],
+    appliedKnowledge: [...knowledge.applied, ...scenarioKnowledge.applied, ...combinationKnowledge.applied],
     warnings: knowledge.warnings,
   };
 }
