@@ -142,6 +142,44 @@ export type StableReleasePreparation = {
   bundle: KnowledgeRefreshBundle;
 };
 
+export type SourceFreshnessState = "fresh" | "due" | "stale" | "missing";
+
+export type SourceFreshnessQueueItem = {
+  itemType: "knowledge" | "prompt";
+  key: string;
+  label: string;
+  state: SourceFreshnessState;
+  releaseChannel: "both" | "fresh_first";
+  catalogVersion: number;
+  sourceCheckedAt: string | null;
+  sourceUrls: string[];
+  ageDays: number | null;
+  staleAt: string | null;
+  payload: Record<string, unknown>;
+};
+
+export type SourceFreshnessQueue = {
+  warningDays: number;
+  staleDays: number;
+  missingCount: number;
+  staleCount: number;
+  dueCount: number;
+  freshCount: number;
+  nextDueAt: string | null;
+  items: SourceFreshnessQueueItem[];
+};
+
+export type SourceFreshnessPreparation = {
+  requestId: number;
+  itemCount: number;
+  missingCount: number;
+  staleCount: number;
+  dueCount: number;
+  staleDays: number;
+  warningDays: number;
+  items: SourceFreshnessQueueItem[];
+};
+
 function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
   return { added: 0, updated: 0, unchanged: 0, items: [] };
 }
@@ -259,6 +297,72 @@ export function parseStableReleaseQueue(raw: unknown): StableReleaseQueue {
     nextReadyAt: typeof value.next_ready_at === "string" ? value.next_ready_at : null,
     items: Array.isArray(value.items)
       ? value.items.map(parseStableReleaseQueueItem).filter((item): item is StableReleaseQueueItem => Boolean(item))
+      : [],
+  };
+}
+
+function parseSourceFreshnessItem(raw: unknown): SourceFreshnessQueueItem | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.key !== "string" || !value.key) return null;
+  const state: SourceFreshnessState =
+    value.state === "missing" || value.state === "stale" || value.state === "due"
+      ? value.state
+      : "fresh";
+  const payload = value.payload && typeof value.payload === "object" && !Array.isArray(value.payload)
+    ? value.payload as Record<string, unknown>
+    : {};
+  return {
+    itemType: value.item_type === "prompt" ? "prompt" : "knowledge",
+    key: value.key,
+    label: typeof value.label === "string" ? value.label : value.key,
+    state,
+    releaseChannel: value.release_channel === "both" ? "both" : "fresh_first",
+    catalogVersion: Math.max(1, asNumber(value.catalog_version, 1)),
+    sourceCheckedAt: typeof value.source_checked_at === "string" ? value.source_checked_at : null,
+    sourceUrls: Array.isArray(value.source_urls)
+      ? value.source_urls.filter((url): url is string => typeof url === "string" && /^https:\/\//i.test(url))
+      : [],
+    ageDays: value.age_days === null || value.age_days === undefined ? null : Math.max(0, asNumber(value.age_days)),
+    staleAt: typeof value.stale_at === "string" ? value.stale_at : null,
+    payload,
+  };
+}
+
+export function parseSourceFreshnessQueue(raw: unknown): SourceFreshnessQueue {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("根拠鮮度キューの応答形式が不正です。");
+  }
+  const value = raw as Record<string, unknown>;
+  return {
+    warningDays: Math.max(1, asNumber(value.warning_days, 30)),
+    staleDays: Math.max(2, asNumber(value.stale_days, 90)),
+    missingCount: Math.max(0, asNumber(value.missing_count)),
+    staleCount: Math.max(0, asNumber(value.stale_count)),
+    dueCount: Math.max(0, asNumber(value.due_count)),
+    freshCount: Math.max(0, asNumber(value.fresh_count)),
+    nextDueAt: typeof value.next_due_at === "string" ? value.next_due_at : null,
+    items: Array.isArray(value.items)
+      ? value.items.map(parseSourceFreshnessItem).filter((item): item is SourceFreshnessQueueItem => Boolean(item))
+      : [],
+  };
+}
+
+function parseSourceFreshnessPreparation(raw: unknown): SourceFreshnessPreparation {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("根拠再確認の準備結果が不正です。");
+  }
+  const value = raw as Record<string, unknown>;
+  return {
+    requestId: Math.max(1, asNumber(value.request_id, 1)),
+    itemCount: Math.max(0, asNumber(value.item_count)),
+    missingCount: Math.max(0, asNumber(value.missing_count)),
+    staleCount: Math.max(0, asNumber(value.stale_count)),
+    dueCount: Math.max(0, asNumber(value.due_count)),
+    staleDays: Math.max(2, asNumber(value.stale_days, 90)),
+    warningDays: Math.max(1, asNumber(value.warning_days, 30)),
+    items: Array.isArray(value.items)
+      ? value.items.map(parseSourceFreshnessItem).filter((item): item is SourceFreshnessQueueItem => Boolean(item))
       : [],
   };
 }
@@ -499,6 +603,30 @@ export async function adminPrepareStableRelease(
   };
 }
 
+export async function adminGetSourceFreshnessQueue(
+  client: SupabaseClient,
+  warningDays = 30,
+  staleDays = 90,
+): Promise<SourceFreshnessQueue> {
+  const { data, error } = await client.rpc("admin_get_knowledge_source_freshness_queue", {
+    p_warning_days: Math.max(1, Math.min(89, Math.trunc(warningDays))),
+    p_stale_days: Math.max(2, Math.min(365, Math.trunc(staleDays))),
+  });
+  if (error) throw new Error(error.message || "Knowledge根拠の鮮度を取得できませんでした。");
+  return parseSourceFreshnessQueue(data);
+}
+
+export async function adminPrepareSourceFreshnessRecheck(
+  client: SupabaseClient,
+  limit = 20,
+): Promise<SourceFreshnessPreparation> {
+  const { data, error } = await client.rpc("admin_prepare_knowledge_source_recheck", {
+    p_limit: Math.max(1, Math.min(30, Math.trunc(limit))),
+  });
+  if (error) throw new Error(error.message || "根拠再確認対象を準備できませんでした。");
+  return parseSourceFreshnessPreparation(data);
+}
+
 export async function adminPublishKnowledgeRefreshBundle(
   client: SupabaseClient,
   requestId: number,
@@ -653,3 +781,89 @@ ${rollout}
 - 既存仕様を確認できない場合は候補にせずsummaryへ「要確認」と書く。`;
 }
 
+
+
+export function buildSourceFreshnessResearchPrompt(
+  preparation: SourceFreshnessPreparation,
+): string {
+  const targetJson = JSON.stringify(
+    preparation.items.map((item) => ({
+      item_type: item.itemType,
+      state: item.state,
+      key: item.key,
+      source_checked_at: item.sourceCheckedAt,
+      source_urls: item.sourceUrls,
+      current: item.payload,
+    })),
+    null,
+    2,
+  );
+
+  return `あなたはAI Action Studio（AAS）のKnowledge Source Reviewerです。
+目的は、下記の既存Knowledge / Prompt Optimizationについて、現在の公式情報で根拠を再確認し、Freshレビュー用JSONだけを返すことです。
+
+【重要】
+- この依頼は新規Knowledgeを大量追加するためではなく、既存項目の根拠再確認です。
+- 各keyは変更しないでください。
+- まず現在登録されているsource_urlsを実際に確認してください。
+- URLが移転・廃止されている場合は、同じ運営主体の最新公式ページを探してください。
+- 検索結果スニペットだけで判断しないでください。
+- 料金、仕様、規約、アルゴリズム、制度など時点依存情報は、確認できた現在情報だけを使ってください。
+- 公式根拠で現在も内容が支持されている場合でも、現在の内容をそのままJSONへ含めてください。公開処理でsource_checked_atを更新するためです。
+- 公式情報と内容が食い違う場合は、根拠に合わせて最小限修正してください。
+- 十分な根拠が確認できない項目はJSONへ含めず、summaryへ「要確認」とkeyを書いてください。
+- ユーザー体験・実績・レビューを創作しないでください。
+- 成果保証や未確認の数値を追加しないでください。
+
+【再確認対象】
+件数: ${preparation.itemCount}
+根拠欠落: ${preparation.missingCount}
+期限切れ: ${preparation.staleCount}
+期限接近: ${preparation.dueCount}
+鮮度基準: ${preparation.staleDays}日
+警告開始: 失効${preparation.warningDays}日前
+
+${targetJson}
+
+【出力】
+Markdownコードフェンスや説明を付けず、次のJSONオブジェクトだけを返してください。
+
+{
+  "summary": "再確認結果。変更なし・変更あり・要確認をkey付きで簡潔に記載",
+  "knowledge_rules": [
+    {
+      "key": "既存keyをそのまま",
+      "kind": "既存または根拠に基づく値",
+      "label": "既存または最小修正版",
+      "parent_label": "",
+      "aliases": [],
+      "guidance": ["現在の公式根拠で支持されるルール"],
+      "deliverables": [],
+      "cautions": [],
+      "tasks": ["該当タスク"],
+      "priority": 70,
+      "source_urls": ["今回実際に確認した公式URL"],
+      "source_summary": "今回確認した根拠と、変更の有無"
+    }
+  ],
+  "prompt_optimizations": [
+    {
+      "key": "既存keyをそのまま",
+      "provider": "all|chatgpt|claude|gemini",
+      "plan": "all|free|paid",
+      "task": "該当タスク",
+      "rules": ["現在の公式根拠で支持される最適化ルール"],
+      "priority": 70,
+      "source_urls": ["今回実際に確認した公式URL"],
+      "source_summary": "今回確認した根拠と、変更の有無"
+    }
+  ]
+}
+
+【最終確認】
+- 各項目は公式根拠を実際に開いて確認する。
+- keyを変えない。
+- 無関係な項目を追加しない。
+- 確認できない項目を推測で通さない。
+- JSON以外を返さない。`;
+}
