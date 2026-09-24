@@ -73,7 +73,7 @@ test("admin can configure permanent mode and all daily limits", async () => {
     "SNS投稿生成 / 日",
     "画像生成 / 日",
     "AI補助 / 日",
-    "リセット時刻（0〜23時）",
+    "リセット時刻",
   ]) assert.ok(panel.includes(label), `missing free-tier admin setting: ${label}`);
 
   assert.match(helper, /admin_get_permanent_daily_free_enabled/);

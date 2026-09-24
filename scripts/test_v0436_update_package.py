@@ -83,20 +83,22 @@ def test_update(source_version: str, package: pathlib.Path) -> None:
 
 
 def main() -> None:
-    run(str(ROOT / "release" / "v0436" / "build_package.py"))
+    package_path = ROOT / "updates" / PACKAGE_NAME
     manifest = json.loads((ROOT / "candidate-v0436.json").read_text(encoding="utf-8"))
     assert manifest["version"] == "0.4.3.6"
+    assert package_path.is_file()
+    assert manifest["sha256"].upper() == digest(package_path).upper()
     run(str(ROOT / "scripts" / "validate_release.py"), str(ROOT / "candidate-v0436.json"))
 
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp)
         package = root / "v0436-package"
-        with zipfile.ZipFile(ROOT / "updates" / PACKAGE_NAME) as archive:
+        with zipfile.ZipFile(package_path) as archive:
             assert archive.testzip() is None
             archive.extractall(package)
         for source_version in ("0.4.3.4", "0.4.3.5"):
             test_update(source_version, package)
-    print("V0.4.3.6 UPDATE PACKAGE TESTS OK")
+    print("V0.4.3.6 COMMITTED UPDATE PACKAGE TESTS OK")
 
 
 if __name__ == "__main__":

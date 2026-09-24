@@ -36,12 +36,18 @@ test("Phase 13 builds cover and inline prompt plans and stores them in the artic
   assert.match(imagePrompts, /IMAGE:\$\{number\}/);
   assert.match(imagePrompts, /coverEnabled/);
   assert.match(imagePrompts, /inlineEnabled/);
+  assert.match(imagePrompts, /imageStyle/);
+  assert.match(imagePrompts, /imageStylePrompt/);
   assert.match(creator, /buildImagePromptPlan/);
   assert.match(creator, /prompt_plan: imagePrompts/);
   assert.match(creator, /image_prompt_version: 13/);
   assert.match(page, /buildImagePromptPlan/);
   assert.match(page, /アイキャッチ/);
   assert.match(page, /挿絵/);
+  assert.match(page, /IMAGE_STYLE_OPTIONS/);
+  assert.match(page, /画像の画風/);
+  assert.match(page, /useSharedAccessState/);
+  assert.doesNotMatch(page, /auth\.getUser\(\)|\.from\("profiles"\)/);
   assert.match(route, /Phase13ImagePromptPage/);
 });
 
@@ -56,11 +62,13 @@ test("Phase 14 converts owned article content into X, Instagram and Threads prom
   assert.match(page, /listCloudArticles/);
   assert.match(page, /getCloudArticleDetail/);
   assert.match(page, /buildSocialPrompt/);
+  assert.match(page, /useSharedAccessState/);
+  assert.doesNotMatch(page, /auth\.getUser\(\)|\.from\("profiles"\)/);
   assert.match(route, /Phase14SnsPage/);
   assert.doesNotMatch(`${api}\n${page}`, /sb_secret_|service[_-]?role/i);
 });
 
-test("Phase 15 ranks side jobs as an internal fit aid and exports a non-guaranteed strategy prompt", async () => {
+test("Phase 15 keeps legacy fit logic safe while the public route uses the dedicated dropdown planner", async () => {
   const api = await read("lib/phase15-sidejob.ts");
   const page = await read("components/phase15-sidejob-page.tsx");
   const route = await read("app/sidejob/page.tsx");
@@ -71,7 +79,9 @@ test("Phase 15 ranks side jobs as an internal fit aid and exports a non-guarante
   assert.match(api, /収益額・成功率・フォロワー数などを保証しない/);
   assert.match(api, /\.sort\(\(a, b\) => b\.score - a\.score/);
   assert.match(page, /適合スコアはAAS内の比較用/);
-  assert.match(route, /Phase15SideJobPage/);
+  assert.match(route, /SideHustleWizardPage/);
+  assert.match(route, /slug="sidejob-planner"/);
+  assert.doesNotMatch(route, /Phase15SideJobPage/);
 });
 
 test("Phase 16 records publication state with optimistic revision and no external auto-post", async () => {
@@ -101,22 +111,33 @@ test("Phase 17 reports only internal article metrics until external analytics ar
   assert.match(route, /Phase17AnalyticsPage/);
 });
 
-test("tools hub and beginner-first root expose all functional routes with SNS in mobile navigation", async () => {
+test("tools hub exposes grouped supporting routes while article creation keeps its own integrated tools", async () => {
   const tools = await read("components/phase-tools-page.tsx");
+  const toolCatalog = await read("features/tools/tool-catalog.ts");
   const toolsRoute = await read("app/tools/page.tsx");
   const shell = await read("components/phase18-beginner-home.tsx");
   const referenceShell = await read("components/aas-reference-shell.tsx");
+  const mobileNav = await read("components/shared-mobile-bottom-nav.tsx");
+  const mobilePrefs = await read("lib/mobile-nav-preference.ts");
   const rootPage = await read("app/page.tsx");
   const layout = await read("app/layout.tsx");
   const css = await read("app/phase12-17.css");
   const beginnerCss = await read("app/phase18-beginner.css");
   const dashboardCss = await read("app/phase19-dashboard.css");
 
-  for (const href of ["/create", "/images", "/sns", "/sidejob", "/publish", "/analytics"]) {
-    assert.match(tools, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
+  for (const href of ["/workflow", "/note-operations", "/account-design", "/sns", "/sns-plan", "/side-hustles/sidejob-planner", "/publish", "/analytics", "/inquiries"]) {
+    assert.match(toolCatalog, new RegExp(`href: \\"${href.replace("/", "\\/")}\\"`));
   }
-  assert.match(tools, /try \{/);
-  assert.match(tools, /getSupabaseClient\(\)/);
+  for (const duplicateHref of ["/create", "/images", "/export"]) {
+    assert.doesNotMatch(toolCatalog, new RegExp(`href: \\"${duplicateHref.replace("/", "\\/")}\\"`));
+  }
+  for (const group of ["記事・コンテンツ", "SNS・動画・集客", "販売・収益化", "受託・案件獲得", "リサーチ・業務効率化", "運営・アカウント", "公開・分析", "サポート"]) {
+    assert.match(toolCatalog, new RegExp(group));
+  }
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
+  assert.match(tools, /useSharedAccessState\(\)/);
+  assert.doesNotMatch(tools, /loadAccessState/);
+  assert.doesNotMatch(tools, /getSupabaseClient\(\)/);
   assert.match(toolsRoute, /PhaseToolsPage/);
   assert.match(rootPage, /Phase18BeginnerHome/);
   assert.match(shell, /Phase7App/);
@@ -126,11 +147,12 @@ test("tools hub and beginner-first root expose all functional routes with SNS in
   assert.match(shell, /href="\/tools"/);
   assert.match(shell, /href="\/images"/);
   assert.match(shell, /href="\/sns"/);
-  for (const label of ["ホーム", "作成", "ライブラリ", "ランキング", "プロフィール"]) {
-    assert.match(referenceShell, new RegExp(label));
+  assert.match(mobileNav, /ホーム/);
+  for (const label of ["作成", "ライブラリ", "ランキング", "プロフィール", "SNS"]) {
+    assert.match(mobilePrefs, new RegExp(label));
   }
   assert.match(referenceShell, /href="\/settings"/);
-  assert.doesNotMatch(referenceShell, />SNS<\/button>/);
+  assert.match(referenceShell, /SharedMobileBottomNav/);
   assert.match(layout, /phase12-17\.css/);
   assert.match(layout, /phase18-beginner\.css/);
   assert.match(layout, /phase19-dashboard\.css/);
@@ -149,7 +171,7 @@ test("tools hub and beginner-first root expose all functional routes with SNS in
 test("service worker fetches current UI assets before cache fallback and purges older cache generations", async () => {
   const sw = await read("public/sw.js");
 
-  assert.match(sw, /aas-pwa-phase17-prod-v2-runtime-v3/);
+  assert.match(sw, /aas-pwa-phase17-prod-v2-runtime-v5-crystal-release/);
   assert.match(sw, /new Request\(request, \{ cache: "no-store" \}\)/);
   assert.match(sw, /keys\.filter\(\(key\) => key !== CACHE_NAME\)/);
   assert.match(sw, /if \(request\.mode === "navigate"\)[\s\S]*fetch\(freshRequest\(request\)\)/);
@@ -164,7 +186,7 @@ test("service worker fetches current UI assets before cache fallback and purges 
 
 test("package includes the Phase 12-17 contract test and keeps dependency pins unchanged", async () => {
   const packageJson = JSON.parse(await read("package.json"));
-  assert.match(packageJson.scripts.test, /phase12-17-batch\.test\.mjs/);
+  assert.match(packageJson.scripts.test, /node --test --test-concurrency=1/);
   assert.equal(packageJson.dependencies.next, "16.3.4");
   assert.equal(packageJson.dependencies.react, "19.2.8");
   assert.equal(packageJson.dependencies["@supabase/supabase-js"], "2.112.3");

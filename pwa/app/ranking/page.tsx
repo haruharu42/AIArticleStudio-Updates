@@ -226,7 +226,7 @@ export default function CreatorRankingPage() {
               <strong>ランキングの集計について</strong>
               <small>最終更新：{displayTime(updatedAt)} ／ 次回目安：{nextRefresh(updatedAt, dashboard.rankingRefreshHours)}</small>
             </div>
-            <a href="/profile">公開設定 ›</a>
+            <Link href="/profile">公開設定 ›</Link>
           </section>
         )}
       </main>

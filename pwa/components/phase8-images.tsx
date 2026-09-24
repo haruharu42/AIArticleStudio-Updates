@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -95,7 +96,6 @@ export function Phase8Images({
   const [assets, setAssets] = useState<ImageAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     onBusyChange(false);
@@ -109,7 +109,6 @@ export function Phase8Images({
   const reload = useCallback(async () => {
     setLoading(true);
     setError("");
-    setNotice("");
     try {
       setAssets(await listArticleImages(ctx));
     } catch (caught) {
@@ -136,7 +135,7 @@ export function Phase8Images({
         </div>
         <div className="image-actions">
           <button type="button" className="secondary-action" onClick={() => void reload()} disabled={loading}>旧クラウド画像を再確認</button>
-          <a className="primary-action" href="/images">画像生成プロンプトを作る</a>
+          <Link className="primary-action" href="/images">画像生成プロンプトを作る</Link>
         </div>
       </div>
 
@@ -145,7 +144,6 @@ export function Phase8Images({
       </div>
 
       {error && <p className="library-notice error" role="alert">{error}</p>}
-      {notice && <p className="library-notice success" role="status">{notice}</p>}
       {loading ? (
         <p role="status">旧クラウド画像を確認しています…</p>
       ) : ordered.length ? (

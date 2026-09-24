@@ -1,6 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
+import { AdminPresetNumberField, AdminSelectWithCustom } from "@/components/admin-form-controls";
+import {
+  entitlementStatusLabel,
+  expiresWithin,
+  fmt,
+  fmtDate,
+  inviteStatusLabel,
+  isCurrentEntitlement,
+  isUsableInvite,
+  loadEntitlementOverview,
+  nearestExpiry,
+  roleLabel,
+  statusLabel,
+} from "@/components/phase10-admin/phase10-admin-page-helpers";
 
 import { getSupabaseClient } from "@/lib/supabase";
 import {
@@ -32,117 +49,38 @@ type AccessFilter = "all" | "pwa" | "windows" | "both" | "none";
 type InviteFilter = "all" | "usable" | "expired" | "exhausted" | "revoked";
 type OverviewState = "idle" | "loading" | "ready" | "partial";
 
+const SALES_CHANNEL_OPTIONS = [
+  { value: "admin", label: "管理者による直接付与", note: "個別対応やテスト利用など、管理者が直接付与する場合。" },
+  { value: "admin-invite", label: "管理者発行の招待コード" },
+  { value: "note", label: "note販売" },
+  { value: "tips", label: "Tips販売" },
+  { value: "brain", label: "Brain販売" },
+  { value: "stripe", label: "Stripe決済" },
+  { value: "campaign", label: "キャンペーン・配布" },
+  { value: "support", label: "問い合わせ対応・補填" },
+  { value: "migration", label: "移行・既存ユーザー対応" },
+] as const;
+
+const INVITE_LABEL_OPTIONS = [
+  "βテスター",
+  "note購入者",
+  "Tips購入者",
+  "Brain購入者",
+  "キャンペーン配布",
+  "サポート個別対応",
+  "期間限定テスト",
+  "運営確認用",
+] as const;
+
 type AccessFlags = {
   pwa: boolean;
   windows: boolean;
   implicitAdmin: boolean;
 };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function fmt(value: string | null): string {
-  if (!value) return "—";
-  try {
-    return new Intl.DateTimeFormat("ja-JP", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
-  } catch {
-    return value;
-  }
-}
-
-function fmtDate(value: string): string {
-  try {
-    return new Intl.DateTimeFormat("ja-JP", { dateStyle: "medium" }).format(new Date(value));
-  } catch {
-    return value;
-  }
-}
-
-function statusLabel(status: AdminUser["status"]): string {
-  if (status === "pending") return "承認待ち";
-  if (status === "active") return "利用中";
-  if (status === "suspended") return "停止中";
-  return "無効";
-}
-
-function roleLabel(role: AdminUser["role"]): string {
-  return role === "admin" ? "管理者" : "一般ユーザー";
-}
-
-function entitlementStatusLabel(status: string): string {
-  if (status === "active") return "有効";
-  if (status === "revoked") return "取消済み";
-  if (status === "expired") return "期限切れ";
-  return status;
-}
-
-function inviteStatusLabel(invite: AdminInvite): string {
-  if (invite.status === "revoked") return "無効";
-  if (invite.status === "exhausted") return "上限到達";
-  if (invite.expiresAt && new Date(invite.expiresAt).getTime() <= Date.now()) return "期限切れ";
-  return "利用可能";
-}
-
-function expiresWithin(value: string | null, days: number): boolean {
-  if (!value) return false;
-  const time = new Date(value).getTime();
-  const now = Date.now();
-  return Number.isFinite(time) && time > now && time <= now + days * DAY_MS;
-}
-
-function isCurrentEntitlement(item: AdminEntitlement): boolean {
-  if (item.status !== "active") return false;
-  if (!item.expiresAt) return true;
-  const time = new Date(item.expiresAt).getTime();
-  return Number.isFinite(time) && time > Date.now();
-}
-
-function isUsableInvite(invite: AdminInvite): boolean {
-  if (invite.status !== "active") return false;
-  if (!invite.expiresAt) return true;
-  const time = new Date(invite.expiresAt).getTime();
-  return Number.isFinite(time) && time > Date.now();
-}
-
-function nearestExpiry(items: AdminEntitlement[]): string | null {
-  const times = items
-    .filter((item) => isCurrentEntitlement(item) && item.expiresAt)
-    .map((item) => item.expiresAt as string)
-    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-  return times[0] ?? null;
-}
-
-async function loadEntitlementOverview(users: AdminUser[]): Promise<{
-  map: Record<string, AdminEntitlement[]>;
-  partial: boolean;
-}> {
-  const client = getSupabaseClient();
-  const targets = users.filter((user) => user.role === "user");
-  const entries: Array<[string, AdminEntitlement[]]> = [];
-  let partial = false;
-
-  for (let index = 0; index < targets.length; index += 6) {
-    const batch = targets.slice(index, index + 6);
-    const results = await Promise.allSettled(
-      batch.map(async (user) => [user.id, await listUserEntitlements(client, user.id)] as [string, AdminEntitlement[]]),
-    );
-    results.forEach((result, resultIndex) => {
-      if (result.status === "fulfilled") {
-        entries.push(result.value);
-      } else {
-        partial = true;
-        entries.push([batch[resultIndex].id, []]);
-      }
-    });
-  }
-
-  return { map: Object.fromEntries(entries), partial };
-}
-
 export function Phase10AdminPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState } = useSharedAccessState();
+  const [initError, setInitError] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [entitlementsByUser, setEntitlementsByUser] = useState<Record<string, AdminEntitlement[]>>({});
@@ -164,6 +102,25 @@ export function Phase10AdminPage() {
   const [inviteExpiry, setInviteExpiry] = useState("");
   const [inviteEntitlementExpiry, setInviteEntitlementExpiry] = useState("");
   const [maxUses, setMaxUses] = useState(1);
+
+  const activeAdminId =
+    accessState.kind === "ready" && accessState.profile.role === "admin" && accessState.profile.status === "active"
+      ? accessState.profile.id
+      : "";
+
+  const gate = useMemo<Gate>(() => {
+    if (accessState.kind === "ready") {
+      if (accessState.profile.role !== "admin" || accessState.profile.status !== "active") return { kind: "denied" };
+      if (initError) return { kind: "error", message: initError };
+      return { kind: "ready", aasId: accessState.profile.aas_user_id };
+    }
+    if (accessState.kind === "loading") return { kind: "loading" };
+    if (accessState.kind === "signed_out") return { kind: "signed_out" };
+    if (accessState.kind === "unavailable") {
+      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
+    }
+    return { kind: "denied" };
+  }, [accessState, initError]);
 
   const selected = useMemo(
     () => users.find((user) => user.id === selectedId) ?? null,
@@ -199,39 +156,17 @@ export function Phase10AdminPage() {
   }, []);
 
   useEffect(() => {
+    if (!activeAdminId) return;
     let active = true;
+    queueMicrotask(() => {
+      if (active) setInitError("");
+    });
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const {
-          data: { user },
-          error,
-        } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) {
-          setGate({ kind: "signed_out" });
-          return;
-        }
-        const { data, error: profileError } = await client
-          .from("profiles")
-          .select("id,aas_user_id,role,status")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !data || data.id !== user.id) {
-          throw new Error("管理者プロフィールを確認できません。");
-        }
-        if (data.role !== "admin" || data.status !== "active") {
-          setGate({ kind: "denied" });
-          return;
-        }
         await reloadBase();
-        if (active) setGate({ kind: "ready", aasId: data.aas_user_id });
       } catch (error) {
         if (active) {
-          setGate({
-            kind: "error",
-            message: error instanceof Error ? error.message : "管理画面の初期化に失敗しました。",
-          });
+          setInitError(error instanceof Error ? error.message : "管理画面の初期化に失敗しました。");
         }
       }
     };
@@ -239,7 +174,7 @@ export function Phase10AdminPage() {
     return () => {
       active = false;
     };
-  }, [reloadBase]);
+  }, [activeAdminId, reloadBase]);
 
   const reload = async () => {
     setBusy(true);
@@ -266,14 +201,19 @@ export function Phase10AdminPage() {
     }
   };
 
-  const runUserAction = async (action: () => Promise<void>) => {
+  const runUserAction = async (
+    action: () => Promise<void>,
+    successMessage: string,
+    confirmation?: string,
+  ) => {
     if (!selected) return;
+    if (confirmation && !window.confirm(confirmation)) return;
     setBusy(true);
     setMessage("");
     try {
       await action();
       await reloadBase();
-      setMessage("更新しました。");
+      setMessage(successMessage);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "更新に失敗しました。");
     } finally {
@@ -310,6 +250,7 @@ export function Phase10AdminPage() {
   };
 
   const disableInvite = async (inviteId: string) => {
+    if (!window.confirm("この招待コードを無効化しますか？\n無効化後は新規利用できません。")) return;
     setBusy(true);
     setMessage("");
     try {
@@ -409,17 +350,18 @@ export function Phase10AdminPage() {
     setAccessFilter("all");
   };
 
+  if (gate.kind === "loading") return null;
+
   if (gate.kind !== "ready") {
     return (
       <main className="standalone-page">
         <section className="standalone-card">
           <p className="eyebrow">ADMINISTRATION</p>
           <h1>管理ダッシュボード</h1>
-          {gate.kind === "loading" && <p className="route-notice">管理者権限を確認しています…</p>}
           {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
           {gate.kind === "denied" && <p className="route-notice error">active管理者のみ利用できます。</p>}
           {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-          <a className="route-back" href="/">← ホームへ戻る</a>
+          <Link className="route-back" href="/">← ホームへ戻る</Link>
         </section>
       </main>
     );
@@ -439,7 +381,7 @@ export function Phase10AdminPage() {
           <button disabled={busy} type="button" className="secondary-action" onClick={() => void reload()}>
             最新情報に更新
           </button>
-          <a className="route-back" href="/">← ホーム</a>
+          <Link className="route-back" href="/">← ホーム</Link>
         </div>
       </header>
 
@@ -603,9 +545,9 @@ export function Phase10AdminPage() {
               {accessFor(selected).implicitAdmin && <p className="admin-inline-note">管理者はactive状態の間、個別利用権がなくてもPWA・Windowsの両方を利用できます。</p>}
 
               <div className="admin-actions admin-primary-actions">
-                {selected.status === "pending" && <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "active"))}>承認する</button>}
-                {selected.status === "active" && !(selected.role === "admin" && selected.aasUserId === gate.aasId) && <button disabled={busy} className="danger-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "suspended"))}>利用を停止</button>}
-                {selected.status === "suspended" && <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "active"))}>利用を再開</button>}
+                {selected.status === "pending" && <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "active"), "ユーザーを承認しました。", `${selected.aasUserId} を承認して利用可能にしますか？`)}>承認する</button>}
+                {selected.status === "active" && !(selected.role === "admin" && selected.aasUserId === gate.aasId) && <button disabled={busy} className="danger-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "suspended"), "ユーザーの利用を停止しました。", `${selected.aasUserId} の利用を一時停止しますか？`)}>利用を停止</button>}
+                {selected.status === "suspended" && <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => setAdminUserStatus(getSupabaseClient(), selected.id, "active"), "ユーザーの利用を再開しました。", `${selected.aasUserId} の利用を再開しますか？`)}>利用を再開</button>}
               </div>
 
               {selected.role === "user" && (
@@ -625,15 +567,21 @@ export function Phase10AdminPage() {
                   <div className="admin-grant-section">
                     <div className="admin-subsection-heading"><h3>利用権を変更</h3><small>一般ユーザーのみ</small></div>
                     <div className="admin-form-grid admin-grant-form">
-                      <label className="route-field"><span>販売チャネル</span><input value={grantSalesChannel} onChange={(event) => setGrantSalesChannel(event.target.value)} /></label>
+                      <AdminSelectWithCustom
+                        label="販売チャネル"
+                        value={grantSalesChannel}
+                        onChange={setGrantSalesChannel}
+                        options={SALES_CHANNEL_OPTIONS}
+                        description="通常は候補から選択します。独自の販売経路だけ「その他・自由入力」を使ってください。"
+                      />
                       <label className="route-field"><span>利用期限（任意）</span><input type="datetime-local" value={grantExpiry} onChange={(event) => setGrantExpiry(event.target.value)} /></label>
-                      <label className="route-field full"><span>外部参照（任意）</span><input value={grantExternalReference} onChange={(event) => setGrantExternalReference(event.target.value)} /></label>
+                      <label className="route-field full"><span>外部参照（任意）</span><input value={grantExternalReference} onChange={(event) => setGrantExternalReference(event.target.value)} placeholder="注文番号・問い合わせ番号など、必要な場合だけ入力" /></label>
                     </div>
                     <div className="admin-actions admin-entitlement-actions">
-                      <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => grantEntitlement(getSupabaseClient(), selected.id, PWA_PRODUCT, { salesChannel: grantSalesChannel, externalReference: grantExternalReference, expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined }))}>PWAを付与</button>
-                      <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => grantEntitlement(getSupabaseClient(), selected.id, WINDOWS_PRODUCT, { salesChannel: grantSalesChannel, externalReference: grantExternalReference, expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined }))}>Windowsを付与</button>
-                      <button disabled={busy} className="secondary-action" type="button" onClick={() => void runUserAction(() => revokeEntitlement(getSupabaseClient(), selected.id, PWA_PRODUCT))}>PWAを取消</button>
-                      <button disabled={busy} className="secondary-action" type="button" onClick={() => void runUserAction(() => revokeEntitlement(getSupabaseClient(), selected.id, WINDOWS_PRODUCT))}>Windowsを取消</button>
+                      <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => grantEntitlement(getSupabaseClient(), selected.id, PWA_PRODUCT, { salesChannel: grantSalesChannel, externalReference: grantExternalReference, expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined }), "PWA利用権を付与しました。")}>PWAを付与</button>
+                      <button disabled={busy} className="primary-action" type="button" onClick={() => void runUserAction(() => grantEntitlement(getSupabaseClient(), selected.id, WINDOWS_PRODUCT, { salesChannel: grantSalesChannel, externalReference: grantExternalReference, expiresAt: grantExpiry ? new Date(grantExpiry).toISOString() : undefined }), "Windows利用権を付与しました。")}>Windowsを付与</button>
+                      <button disabled={busy} className="secondary-action" type="button" onClick={() => void runUserAction(() => revokeEntitlement(getSupabaseClient(), selected.id, PWA_PRODUCT), "PWA利用権を取り消しました。", "このユーザーのPWA利用権を取り消しますか？")}>PWAを取消</button>
+                      <button disabled={busy} className="secondary-action" type="button" onClick={() => void runUserAction(() => revokeEntitlement(getSupabaseClient(), selected.id, WINDOWS_PRODUCT), "Windows利用権を取り消しました。", "このユーザーのWindows利用権を取り消しますか？")}>Windowsを取消</button>
                     </div>
                   </div>
                 </>
@@ -652,10 +600,10 @@ export function Phase10AdminPage() {
           <div className="admin-invite-create">
             <h3>新しい招待コードを作成</h3>
             <div className="admin-form-grid">
-              <label className="route-field"><span>ラベル</span><input value={inviteLabel} onChange={(event) => setInviteLabel(event.target.value)} placeholder="note購入者 2026-09" /></label>
-              <label className="route-field"><span>販売チャネル</span><input value={inviteSalesChannel} onChange={(event) => setInviteSalesChannel(event.target.value)} /></label>
-              <label className="route-field"><span>外部参照</span><input value={inviteExternalReference} onChange={(event) => setInviteExternalReference(event.target.value)} /></label>
-              <label className="route-field"><span>最大利用回数</span><input type="number" min={1} max={10000} value={maxUses} onChange={(event) => setMaxUses(Math.max(1, Number(event.target.value) || 1))} /></label>
+              <AdminSelectWithCustom label="ラベル" value={inviteLabel} onChange={setInviteLabel} options={INVITE_LABEL_OPTIONS} customPlaceholder="例: note購入者 2026-09" />
+              <AdminSelectWithCustom label="販売チャネル" value={inviteSalesChannel} onChange={setInviteSalesChannel} options={SALES_CHANNEL_OPTIONS} />
+              <label className="route-field"><span>外部参照（任意）</span><input value={inviteExternalReference} onChange={(event) => setInviteExternalReference(event.target.value)} placeholder="注文番号・キャンペーン名など" /></label>
+              <AdminPresetNumberField label="最大利用回数" value={maxUses} onChange={setMaxUses} presets={[1, 5, 10, 50, 100, 1000]} min={1} max={10000} description="1人用なら1、複数配布なら人数に近い候補を選びます。" suffix="回" />
               <label className="route-field"><span>コード期限</span><input type="datetime-local" value={inviteExpiry} onChange={(event) => setInviteExpiry(event.target.value)} /></label>
               <label className="route-field"><span>付与利用権期限</span><input type="datetime-local" value={inviteEntitlementExpiry} onChange={(event) => setInviteEntitlementExpiry(event.target.value)} /></label>
             </div>

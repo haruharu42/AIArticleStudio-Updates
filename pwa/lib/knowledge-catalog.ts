@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { KnowledgeKind, KnowledgeRule, KnowledgeTask } from "@/lib/knowledge-engine";
+import { isKnowledgeTask, type KnowledgeKind, type KnowledgeRule, type KnowledgeTask } from "@/lib/knowledge-engine";
 
 export type KnowledgeCandidateKind = "genre" | "subgenre";
 
@@ -54,18 +54,27 @@ function parseCatalogRow(row: Record<string, unknown>): KnowledgeRule | null {
     guidance: asStringArray(row.guidance),
     deliverables: asStringArray(row.deliverables),
     cautions: asStringArray(row.cautions),
-    tasks: asStringArray(row.tasks).filter((task): task is KnowledgeTask => task === "title" || task === "article" || task === "image" || task === "social" || task === "promotion"),
+    tasks: asStringArray(row.tasks).filter((task): task is KnowledgeTask => isKnowledgeTask(task)),
     priority: typeof row.priority === "number" && Number.isFinite(row.priority) ? Math.max(0, Math.min(100, Math.trunc(row.priority))) : 50,
     source: "cloud",
+    catalogVersion: typeof row.catalog_version === "number" ? Math.max(1, Math.trunc(row.catalog_version)) : Number(row.catalog_version ?? 1) || 1,
+    sourceUrls: asStringArray(row.source_urls),
+    sourceSummary: typeof row.source_summary === "string" ? row.source_summary : "",
+    sourceCheckedAt: typeof row.source_checked_at === "string" ? row.source_checked_at : null,
   };
 }
 
 export async function loadActiveKnowledgeCatalog(client: SupabaseClient): Promise<KnowledgeRule[]> {
-  // Membership-aware RPC keeps the prompt compiler unchanged while allowing
-  // Fresh knowledge to be released before it reaches the Stable channel.
-  const { data, error } = await client.rpc("list_my_active_knowledge_catalog");
-  if (error) throw new Error("ナレッジを読み込めませんでした。");
-  return (data ?? []).map((row: Record<string, unknown>) => parseCatalogRow(row)).filter((rule: KnowledgeRule | null): rule is KnowledgeRule => Boolean(rule));
+  // Prefer the versioned catalog, but keep a fallback so the UI remains usable
+  // while an additive migration is rolling out.
+  const current = await client.rpc("list_my_active_knowledge_catalog_v2");
+  const response = current.error
+    ? await client.rpc("list_my_active_knowledge_catalog")
+    : current;
+  if (response.error) throw new Error("ナレッジを読み込めませんでした。");
+  return (response.data ?? [])
+    .map((row: Record<string, unknown>) => parseCatalogRow(row))
+    .filter((rule: KnowledgeRule | null): rule is KnowledgeRule => Boolean(rule));
 }
 
 export async function recordKnowledgeCandidate(

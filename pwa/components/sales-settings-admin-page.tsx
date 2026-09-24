@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
 
 import {
   loadAdminSalesSettings,
@@ -45,37 +48,51 @@ function Toggle({
 }
 
 export function SalesSettingsAdminPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState, client } = useSharedAccessState();
+  const [initError, setInitError] = useState("");
   const [settings, setSettings] = useState<SalesSettings>(EMPTY);
   const [saved, setSaved] = useState<SalesSettings>(EMPTY);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
+  const gate = useMemo<Gate>(() => {
+    if (accessState.kind === "ready") {
+      if (accessState.profile.role !== "admin" || accessState.profile.status !== "active") return { kind: "denied" };
+      if (initError) return { kind: "error", message: initError };
+      return { kind: "ready", aasId: accessState.profile.aas_user_id };
+    }
+    if (accessState.kind === "loading") return { kind: "loading" };
+    if (accessState.kind === "signed_out") return { kind: "signed_out" };
+    if (accessState.kind === "unavailable") {
+      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
+    }
+    return { kind: "denied" };
+  }, [accessState, initError]);
+
   useEffect(() => {
+    if (
+      accessState.kind !== "ready" ||
+      accessState.profile.role !== "admin" ||
+      accessState.profile.status !== "active" ||
+      !client
+    ) return;
     let active = true;
+    queueMicrotask(() => {
+      if (active) setInitError("");
+    });
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) { setGate({ kind: "signed_out" }); return; }
-        const { data: profile, error: profileError } = await client
-          .from("profiles")
-          .select("id,aas_user_id,role,status")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !profile || profile.id !== user.id) throw new Error("管理者プロフィールを確認できません。");
-        if (profile.role !== "admin" || profile.status !== "active") { setGate({ kind: "denied" }); return; }
         const next = await loadAdminSalesSettings(client);
         if (!active) return;
-        setSettings(next); setSaved(next); setGate({ kind: "ready", aasId: profile.aas_user_id });
+        setSettings(next);
+        setSaved(next);
       } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "販売設定を初期化できませんでした。" });
+        if (active) setInitError(error instanceof Error ? error.message : "販売設定を初期化できませんでした。");
       }
     };
     void boot();
     return () => { active = false; };
-  }, []);
+  }, [accessState, client]);
 
   const changed = JSON.stringify(settings) !== JSON.stringify(saved);
   const set = <K extends keyof SalesSettings,>(key: K, value: SalesSettings[K]) => {
@@ -95,14 +112,15 @@ export function SalesSettingsAdminPage() {
     } finally { setBusy(false); }
   };
 
+  if (gate.kind === "loading") return null;
+
   if (gate.kind !== "ready") return (
     <main className="standalone-page"><section className="standalone-card">
       <p className="eyebrow">SALES & BILLING</p><h1>販売・決済設定</h1>
-      {gate.kind === "loading" && <p className="route-notice">管理者権限を確認しています…</p>}
       {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
       {gate.kind === "denied" && <p className="route-notice error">active管理者のみ利用できます。</p>}
       {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-      <a className="route-back" href="/admin">← 管理ダッシュボード</a>
+      <Link className="route-back" href="/admin">← 管理ダッシュボード</Link>
     </section></main>
   );
 
@@ -110,7 +128,7 @@ export function SalesSettingsAdminPage() {
     <main className="admin-page sales-settings-page">
       <header className="admin-head admin-dashboard-head">
         <div><p className="eyebrow">SALES & BILLING</p><h1>販売・決済設定</h1><p>{gate.aasId} / PWA版の新規販売受付を管理します。</p></div>
-        <div className="admin-head-actions"><a className="route-back" href="/admin">← 管理ダッシュボード</a></div>
+        <div className="admin-head-actions"><Link className="route-back" href="/admin">← 管理ダッシュボード</Link></div>
       </header>
 
       <div className="route-notice">OFFにしても、既存の契約・利用期間・利用権は停止・取消しされません。新規受付だけを止めます。</div>

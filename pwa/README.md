@@ -1,4 +1,4 @@
-# AI記事スタジオ PWA — Phase 9–17
+# AI Action Studio PWA — Phase 9–17
 
 Phase 8を安定基準として残したまま、PWAを「閲覧/編集中心」から「利用開始・管理・記事制作・SNS/公開管理・内部分析」まで拡張した実装です。Phase 9–17 は PR #41 で `main` へ統合済みです。
 

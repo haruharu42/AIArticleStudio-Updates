@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -124,7 +125,7 @@ export function FreeTrialBanner() {
         {purchaseUrl ? (
           <a href={purchaseUrl} target="_blank" rel="noopener noreferrer">利用権を見る</a>
         ) : (
-          <a href="/plans">利用プランを見る</a>
+          <Link href="/plans">利用プランを見る</Link>
         )}
       </section>
 

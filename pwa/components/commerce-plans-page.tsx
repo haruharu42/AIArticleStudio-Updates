@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
 import {
   COMMERCE_PLAN_COPY,
   beginCheckout,
@@ -11,19 +13,15 @@ import {
   type CommercePlanCode,
   type PublicCommerceConfig,
 } from "@/lib/commerce";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { redeemPwaInvite } from "@/lib/phase9-invite";
 import {
   fetchPublicSalesSettings,
   planSalesEnabled,
   type SalesSettings,
 } from "@/lib/sales-settings";
-import { getSupabaseClient } from "@/lib/supabase";
-
-type PageState = AccessState | { kind: "loading" } | { kind: "unavailable" };
 
 export function CommercePlansPage() {
-  const [state, setState] = useState<PageState>({ kind: "loading" });
+  const { state, client, refresh: refreshAccess } = useSharedAccessState();
   const [config, setConfig] = useState<PublicCommerceConfig | null>(null);
   const [salesSettings, setSalesSettings] = useState<SalesSettings | null>(null);
   const [message, setMessage] = useState("");
@@ -41,17 +39,14 @@ export function CommercePlansPage() {
     void Promise.all([
       fetchCommerceConfig(),
       fetchPublicSalesSettings(),
-      loadAccessState(getSupabaseClient()).catch(() => ({ kind: "unavailable" }) as const),
     ]).then(
-      ([nextConfig, nextSalesSettings, nextState]) => {
+      ([nextConfig, nextSalesSettings]) => {
         if (!active) return;
         setConfig(nextConfig);
         setSalesSettings(nextSalesSettings);
-        setState(nextState);
       },
       (error) => {
         if (!active) return;
-        setState({ kind: "unavailable" });
         setMessage(error instanceof Error ? error.message : "販売情報を取得できませんでした。");
       },
     );
@@ -115,17 +110,15 @@ export function CommercePlansPage() {
     setInviteMessage("");
     setInviteSuccess(false);
     try {
-      const result = await redeemPwaInvite(getSupabaseClient(), inviteCode);
-      const nextState = await loadAccessState(getSupabaseClient());
-      setState(nextState);
+      if (!client) throw new Error("アカウント接続を確認できません。");
+      const result = await redeemPwaInvite(client, inviteCode);
+      await refreshAccess();
       setInviteCode("");
       setInviteSuccess(true);
       setInviteMessage(
-        nextState.kind === "ready"
-          ? "利用コードを適用し、PWA利用権を有効化しました。AI記事スタジオを利用できます。"
-          : result.profileStatus === "active"
-            ? "利用コードを適用しました。利用権を再確認してください。"
-            : "利用コードを登録しました。管理者のアカウント承認後に利用できます。",
+        result.profileStatus === "active"
+          ? "利用コードを適用し、PWA利用権を再確認しました。AI記事スタジオを利用できます。"
+          : "利用コードを登録しました。管理者のアカウント承認後に利用できます。",
       );
     } catch (error) {
       setInviteMessage(error instanceof Error ? error.message : "利用コードの登録に失敗しました。");

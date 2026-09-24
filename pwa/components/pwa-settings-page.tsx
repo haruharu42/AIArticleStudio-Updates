@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
+import { WorkspacePresetSettings } from "@/features/presets/workspace-preset-settings";
+import { signOutCurrentBrowser } from "@/lib/auth-session";
 import { readMobileNavAlways, writeMobileNavAlways } from "@/lib/mobile-nav-preference";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
@@ -26,11 +27,46 @@ import {
   type WritingTone,
 } from "@/lib/user-personalization";
 
-type SettingsState = AccessState | { kind: "loading" } | { kind: "unavailable" };
+type SettingsSection = "preset" | "navigation" | "personalization" | "account";
+
+function SettingsAccordion({
+  id,
+  title,
+  description,
+  icon,
+  open,
+  onOpen,
+  children,
+}: {
+  id: SettingsSection;
+  title: string;
+  description: string;
+  icon: string;
+  open: boolean;
+  onOpen: (id: SettingsSection) => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`settings-accordion ${open ? "open" : ""}`}>
+      <button
+        className="settings-accordion-trigger"
+        type="button"
+        aria-expanded={open}
+        aria-controls={`settings-panel-${id}`}
+        onClick={() => onOpen(id)}
+      >
+        <span className="settings-accordion-icon" aria-hidden="true">{icon}</span>
+        <span><strong>{title}</strong><small>{description}</small></span>
+        <b aria-hidden="true">{open ? "−" : "＋"}</b>
+      </button>
+      {open && <div className="settings-accordion-panel" id={`settings-panel-${id}`}>{children}</div>}
+    </section>
+  );
+}
 
 export function PwaSettingsPage() {
-  const router = useRouter();
-  const [state, setState] = useState<SettingsState>({ kind: "loading" });
+  const { state } = useSharedAccessState();
+  const [openSection, setOpenSection] = useState<SettingsSection | null>(null);
   const [alwaysShowNav, setAlwaysShowNav] = useState(true);
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
   const [writingBusy, setWritingBusy] = useState(false);
@@ -44,31 +80,7 @@ export function PwaSettingsPage() {
     queueMicrotask(() => {
       if (active) setAlwaysShowNav(readMobileNavAlways());
     });
-
-    let client: ReturnType<typeof getSupabaseClient>;
-    try {
-      client = getSupabaseClient();
-    } catch {
-      queueMicrotask(() => {
-        if (active) setState({ kind: "unavailable" });
-      });
-      return () => {
-        active = false;
-      };
-    }
-
-    void loadAccessState(client).then(
-      (next) => {
-        if (active) setState(next);
-      },
-      () => {
-        if (active) setState({ kind: "unavailable" });
-      },
-    );
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -93,10 +105,12 @@ export function PwaSettingsPage() {
     ).finally(() => {
       if (active) setWritingLoading(false);
     });
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [profileId]);
+
+  const toggleSection = (id: SettingsSection) => {
+    setOpenSection((current) => current === id ? null : id);
+  };
 
   const toggleAlwaysShowNav = () => {
     const next = !alwaysShowNav;
@@ -140,18 +154,16 @@ export function PwaSettingsPage() {
 
   const logout = async () => {
     try {
-      const client = getSupabaseClient();
-      await client.auth.signOut({ scope: "local" });
+      await signOutCurrentBrowser(getSupabaseClient());
     } finally {
-      router.push("/");
-      router.refresh();
+      window.location.replace("/");
     }
   };
 
   return (
     <div className="beginner-shell persistent-settings-shell">
       <header className="beginner-topbar">
-        <Link className="beginner-brand" href="/" aria-label="AI Article Studio ホーム"><span aria-hidden="true">✦</span><strong>AI ARTICLE <em>STUDIO</em></strong></Link>
+        <Link className="beginner-brand" href="/" aria-label="AI Action Studio ホーム"><span aria-hidden="true">✦</span><strong>AI ACTION <em>STUDIO</em></strong></Link>
         {profile && <div className="beginner-account"><span>{profile.display_name || "ユーザー"}</span><small>{profile.aas_user_id}</small></div>}
       </header>
 
@@ -159,104 +171,156 @@ export function PwaSettingsPage() {
         <section className="beginner-settings-page persistent-settings-page">
           <p className="eyebrow">SETTINGS</p>
           <h1>設定</h1>
-          <p>表示・ナビ・AI・あなた向け最適化・アカウントに関する設定を確認できます。</p>
+          <p>変更したい項目を選ぶと、その設定だけを下に表示します。</p>
 
-          <section className="persistent-settings-section" aria-labelledby="navigation-settings-title">
-            <div>
-              <strong id="navigation-settings-title">下部ナビを常に表示</strong>
-              <small>ONにすると、記事作成・SNS・画像・各機能画面へ移動しても下部ナビを表示します。OFFではホームと設定画面だけに表示します。</small>
-            </div>
-            <button className={`persistent-toggle ${alwaysShowNav ? "on" : ""}`} type="button" role="switch" aria-checked={alwaysShowNav} onClick={toggleAlwaysShowNav}>
-              <span aria-hidden="true" />
-              <b>{alwaysShowNav ? "ON" : "OFF"}</b>
-            </button>
-          </section>
+          <div className="settings-accordion-list">
+            <SettingsAccordion
+              id="preset"
+              icon="✦"
+              title="共通プリセット"
+              description="記事・画像・SNS・note運営などへ同じ運営方針を反映"
+              open={openSection === "preset"}
+              onOpen={toggleSection}
+            >
+              <WorkspacePresetSettings />
+            </SettingsAccordion>
 
-          <MobileNavCustomizer />
-
-          {profile && (
-            <section className="personalization-settings" aria-labelledby="personalization-settings-title">
-              <div className="personalization-settings-head">
+            <SettingsAccordion
+              id="navigation"
+              icon="☰"
+              title="表示・ナビ"
+              description="下部ナビの表示と4枠の入れ替え"
+              open={openSection === "navigation"}
+              onOpen={toggleSection}
+            >
+              <section className="persistent-settings-section" aria-labelledby="navigation-settings-title">
                 <div>
-                  <p className="eyebrow">PERSONALIZATION</p>
-                  <h2 id="personalization-settings-title">あなた向け最適化</h2>
-                  <p>使用するAIと文章の好みをクラウドへ保存し、記事プロンプトへ反映します。</p>
+                  <strong id="navigation-settings-title">下部ナビを常に表示</strong>
+                  <small>ONにすると、記事作成・SNS・画像・各機能画面へ移動しても下部ナビを表示します。OFFではホームと設定画面だけに表示します。</small>
                 </div>
-                {writingProfile && (
-                  <button
-                    className={`persistent-toggle ${writingProfile.personalizationEnabled ? "on" : ""}`}
-                    type="button"
-                    role="switch"
-                    aria-checked={writingProfile.personalizationEnabled}
-                    onClick={() => patchWritingProfile("personalizationEnabled", !writingProfile.personalizationEnabled)}
-                  >
-                    <span aria-hidden="true" />
-                    <b>{writingProfile.personalizationEnabled ? "ON" : "OFF"}</b>
-                  </button>
-                )}
+                <button className={`persistent-toggle ${alwaysShowNav ? "on" : ""}`} type="button" role="switch" aria-checked={alwaysShowNav} onClick={toggleAlwaysShowNav}>
+                  <span aria-hidden="true" />
+                  <b>{alwaysShowNav ? "ON" : "OFF"}</b>
+                </button>
+              </section>
+
+              <section className="persistent-settings-section" aria-labelledby="navigation-common-title">
+                <div>
+                  <strong id="navigation-common-title">スマホ下部ナビは全画面で共通</strong>
+                  <small>ホームは固定、残り4枠は下の設定で変更できます。選んだ並びはホーム・作成・設定・note運営などすべてのスマホ画面で同じ内容になります。</small>
+                </div>
+              </section>
+
+              {profile
+                ? <MobileNavCustomizer userId={profile.id} isAdmin={profile.role === "admin" && profile.status === "active"} />
+                : <div className="persistent-settings-status">ナビ設定を読み込んでいます…</div>}
+            </SettingsAccordion>
+
+            <SettingsAccordion
+              id="personalization"
+              icon="◎"
+              title="AI・文章の好み"
+              description="使用AI・文体・CTA・個人最適化"
+              open={openSection === "personalization"}
+              onOpen={toggleSection}
+            >
+              {profile ? (
+                <section className="personalization-settings embedded" aria-labelledby="personalization-settings-title">
+                  <div className="personalization-settings-head">
+                    <div>
+                      <p className="eyebrow">PERSONALIZATION</p>
+                      <h2 id="personalization-settings-title">あなた向け最適化</h2>
+                      <p>使用するAIと文章の好みをクラウドへ保存し、記事プロンプトへ反映します。</p>
+                    </div>
+                    {writingProfile && (
+                      <button
+                        className={`persistent-toggle ${writingProfile.personalizationEnabled ? "on" : ""}`}
+                        type="button"
+                        role="switch"
+                        aria-checked={writingProfile.personalizationEnabled}
+                        onClick={() => patchWritingProfile("personalizationEnabled", !writingProfile.personalizationEnabled)}
+                      >
+                        <span aria-hidden="true" />
+                        <b>{writingProfile.personalizationEnabled ? "ON" : "OFF"}</b>
+                      </button>
+                    )}
+                  </div>
+
+                  {writingLoading && <p className="persistent-settings-status">個人設定を読み込んでいます…</p>}
+
+                  {writingProfile && !writingLoading && (
+                    <>
+                      <div className="personalization-grid">
+                        <label><span>普段使うAI</span><select value={writingProfile.preferredAi} onChange={(event) => patchWritingProfile("preferredAi", event.target.value as AiProvider)}>{(Object.keys(AI_PROVIDER_LABELS) as AiProvider[]).map((key) => <option key={key} value={key}>{AI_PROVIDER_LABELS[key]}</option>)}</select></label>
+                        <label><span>利用プラン</span><select value={writingProfile.preferredPlan} onChange={(event) => patchWritingProfile("preferredPlan", event.target.value as AiPlan)}>{(Object.keys(AI_PLAN_LABELS) as AiPlan[]).map((key) => <option key={key} value={key}>{AI_PLAN_LABELS[key]}</option>)}</select></label>
+                        <label><span>文章の雰囲気</span><select value={writingProfile.tone} onChange={(event) => patchWritingProfile("tone", event.target.value as WritingTone)}><option value="balanced">バランス</option><option value="friendly">やさしく親しみやすい</option><option value="professional">落ち着いた専門的</option><option value="casual">自然な会話調</option></select></label>
+                        <label><span>見出し</span><select value={writingProfile.headingStyle} onChange={(event) => patchWritingProfile("headingStyle", event.target.value as HeadingStyle)}><option value="balanced">バランス</option><option value="short">短め</option><option value="descriptive">具体的・説明型</option></select></label>
+                        <label><span>箇条書き</span><select value={writingProfile.listPreference} onChange={(event) => patchWritingProfile("listPreference", event.target.value as ListPreference)}><option value="balanced">必要に応じて</option><option value="low">少なめ</option><option value="high">多め</option></select></label>
+                        <label><span>CTA</span><select value={writingProfile.ctaStyle} onChange={(event) => patchWritingProfile("ctaStyle", event.target.value as CtaStyle)}><option value="balanced">バランス</option><option value="soft">柔らかめ</option><option value="direct">行動を明確に</option></select></label>
+                        <label><span>普段の掲載先</span><select value={writingProfile.preferredPlatform ?? ""} onChange={(event) => patchWritingProfile("preferredPlatform", (event.target.value || null) as PreferredPlatform | null)}><option value="">指定なし</option><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></select></label>
+                        <label><span>普段のジャンル</span><input maxLength={100} value={writingProfile.preferredGenre} onChange={(event) => patchWritingProfile("preferredGenre", event.target.value)} placeholder="例: AI副業" /></label>
+                      </div>
+
+                      <label className="personalization-check"><input type="checkbox" checked={writingProfile.avoidHype} onChange={(event) => patchWritingProfile("avoidHype", event.target.checked)} /><span><strong>煽り表現を特に避ける</strong><small>成果保証・過度な期待・強すぎる販売表現を避ける方向へ寄せます。</small></span></label>
+
+                      <div className="personalization-learned">
+                        <strong>AASが保持している小さな利用傾向</strong>
+                        <div>{summarizeWritingProfile(writingProfile).map((line) => <span key={line}>{line}</span>)}</div>
+                        <small>個人最適化がONのとき、記事を保存すると掲載先・ジャンルなどの集計だけを更新します。</small>
+                      </div>
+
+                      <div className="personalization-privacy">
+                        <strong>保存しないもの</strong>
+                        <p>記事本文・AI回答全文・プロンプト全文を、個人最適化プロフィールとして複製保存しません。個人設定は本人だけが読み書きできるRLSで分離します。</p>
+                      </div>
+
+                      {writingMessage && <p className="personalization-message" role="status">{writingMessage}</p>}
+                      <div className="personalization-actions">
+                        <button type="button" disabled={writingBusy} onClick={() => void savePersonalization()}>{writingBusy ? "保存中…" : "最適化設定を保存"}</button>
+                        <button type="button" className="danger" disabled={writingBusy} onClick={() => void resetPersonalization()}>学習内容をリセット</button>
+                      </div>
+                    </>
+                  )}
+                </section>
+              ) : state.kind === "loading" ? null : <div className="persistent-settings-status">アカウント情報を取得できませんでした。</div>}
+            </SettingsAccordion>
+
+            <SettingsAccordion
+              id="account"
+              icon="◉"
+              title="アカウント・ヘルプ"
+              description="アカウント状態・各種設計・問い合わせ・規約"
+              open={openSection === "account"}
+              onOpen={toggleSection}
+            >
+              {profile ? (
+                <div className="beginner-settings-card">
+                  <div><strong>{profile.display_name || "ユーザー"}</strong><span>{profile.aas_user_id}</span><small>{profile.role} / {profile.status}</small></div>
+                  <span className="beginner-access-badge">● PWA利用可能</span>
+                </div>
+              ) : state.kind === "loading" ? null : (
+                <div className="persistent-settings-status" role="status">
+                  {state.kind === "signed_out" ? "ログイン状態を確認できませんでした。" : "アカウント情報を取得できませんでした。"}
+                </div>
+              )}
+
+              <div className="beginner-settings-links">
+                {profile?.role === "admin" && <Link href="/admin">管理者画面 <span>›</span></Link>}
+                <Link href="/account-design">note / Tips / Brain アカウント設計 <span>›</span></Link>
+                <Link href="/inquiries">お問い合わせ・返信確認 <span>›</span></Link>
+                <Link href="/manual">使い方マニュアル <span>›</span></Link>
+                <Link href="/faq">Q&A・よくある質問 <span>›</span></Link>
+                <Link href="/tools">機能一覧 <span>›</span></Link>
+                <Link href="/terms">利用規約 <span>›</span></Link>
+                <Link href="/privacy">プライバシーポリシー <span>›</span></Link>
+                <Link href="/ai-terms">AI利用条件 <span>›</span></Link>
               </div>
 
-              {writingLoading && <p className="persistent-settings-status">個人設定を読み込んでいます…</p>}
-
-              {writingProfile && !writingLoading && (
-                <>
-                  <div className="personalization-grid">
-                    <label><span>普段使うAI</span><select value={writingProfile.preferredAi} onChange={(event) => patchWritingProfile("preferredAi", event.target.value as AiProvider)}>{(Object.keys(AI_PROVIDER_LABELS) as AiProvider[]).map((key) => <option key={key} value={key}>{AI_PROVIDER_LABELS[key]}</option>)}</select></label>
-                    <label><span>利用プラン</span><select value={writingProfile.preferredPlan} onChange={(event) => patchWritingProfile("preferredPlan", event.target.value as AiPlan)}>{(Object.keys(AI_PLAN_LABELS) as AiPlan[]).map((key) => <option key={key} value={key}>{AI_PLAN_LABELS[key]}</option>)}</select></label>
-                    <label><span>文章の雰囲気</span><select value={writingProfile.tone} onChange={(event) => patchWritingProfile("tone", event.target.value as WritingTone)}><option value="balanced">バランス</option><option value="friendly">やさしく親しみやすい</option><option value="professional">落ち着いた専門的</option><option value="casual">自然な会話調</option></select></label>
-                    <label><span>見出し</span><select value={writingProfile.headingStyle} onChange={(event) => patchWritingProfile("headingStyle", event.target.value as HeadingStyle)}><option value="balanced">バランス</option><option value="short">短め</option><option value="descriptive">具体的・説明型</option></select></label>
-                    <label><span>箇条書き</span><select value={writingProfile.listPreference} onChange={(event) => patchWritingProfile("listPreference", event.target.value as ListPreference)}><option value="balanced">必要に応じて</option><option value="low">少なめ</option><option value="high">多め</option></select></label>
-                    <label><span>CTA</span><select value={writingProfile.ctaStyle} onChange={(event) => patchWritingProfile("ctaStyle", event.target.value as CtaStyle)}><option value="balanced">バランス</option><option value="soft">柔らかめ</option><option value="direct">行動を明確に</option></select></label>
-                    <label><span>普段の掲載先</span><select value={writingProfile.preferredPlatform ?? ""} onChange={(event) => patchWritingProfile("preferredPlatform", (event.target.value || null) as PreferredPlatform | null)}><option value="">指定なし</option><option value="note">note</option><option value="tips">Tips</option><option value="brain">Brain</option><option value="blog">ブログ</option></select></label>
-                    <label><span>普段のジャンル</span><input maxLength={100} value={writingProfile.preferredGenre} onChange={(event) => patchWritingProfile("preferredGenre", event.target.value)} placeholder="例: AI副業" /></label>
-                  </div>
-
-                  <label className="personalization-check"><input type="checkbox" checked={writingProfile.avoidHype} onChange={(event) => patchWritingProfile("avoidHype", event.target.checked)} /><span><strong>煽り表現を特に避ける</strong><small>成果保証・過度な期待・強すぎる販売表現を避ける方向へ寄せます。</small></span></label>
-
-                  <div className="personalization-learned">
-                    <strong>AASが保持している小さな利用傾向</strong>
-                    <div>{summarizeWritingProfile(writingProfile).map((line) => <span key={line}>{line}</span>)}</div>
-                    <small>個人最適化がONのとき、記事を保存すると掲載先・ジャンルなどの集計だけを更新します。</small>
-                  </div>
-
-                  <div className="personalization-privacy">
-                    <strong>保存しないもの</strong>
-                    <p>記事本文・AI回答全文・プロンプト全文を、個人最適化プロフィールとして複製保存しません。個人設定は本人だけが読み書きできるRLSで分離します。</p>
-                  </div>
-
-                  {writingMessage && <p className="personalization-message" role="status">{writingMessage}</p>}
-                  <div className="personalization-actions">
-                    <button type="button" disabled={writingBusy} onClick={() => void savePersonalization()}>{writingBusy ? "保存中…" : "最適化設定を保存"}</button>
-                    <button type="button" className="danger" disabled={writingBusy} onClick={() => void resetPersonalization()}>学習内容をリセット</button>
-                  </div>
-                </>
-              )}
-            </section>
-          )}
-
-          {profile ? (
-            <div className="beginner-settings-card">
-              <div><strong>{profile.display_name || "ユーザー"}</strong><span>{profile.aas_user_id}</span><small>{profile.role} / {profile.status}</small></div>
-              <span className="beginner-access-badge">● PWA利用可能</span>
-            </div>
-          ) : (
-            <div className="persistent-settings-status" role="status">
-              {state.kind === "loading" ? "アカウント情報を確認しています…" : state.kind === "signed_out" ? "ログイン状態を確認できませんでした。" : "アカウント情報を取得できませんでした。"}
-            </div>
-          )}
-
-          <div className="beginner-settings-links">
-            <Link href="/manual">使い方マニュアル <span>›</span></Link>
-            <Link href="/faq">Q&A・よくある質問 <span>›</span></Link>
-            <Link href="/tools">機能一覧 <span>›</span></Link>
-            <Link href="/terms">利用規約 <span>›</span></Link>
-            <Link href="/privacy">プライバシーポリシー <span>›</span></Link>
-            <Link href="/ai-terms">AI利用条件 <span>›</span></Link>
-          </div>
-
-          <div className="beginner-settings-actions">
-            <Link className="persistent-settings-home" href="/">ホームへ戻る</Link>
-            {profile && <button className="danger" type="button" onClick={() => void logout()}>ログアウト</button>}
+              <div className="beginner-settings-actions">
+                <Link className="persistent-settings-home" href="/">ホームへ戻る</Link>
+                {profile && <button className="danger" type="button" onClick={() => void logout()}>ログアウト</button>}
+              </div>
+            </SettingsAccordion>
           </div>
         </section>
       </main>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { redeemPwaInvite } from "@/lib/phase9-invite";
 
 type State =
@@ -12,49 +13,37 @@ type State =
   | { kind: "error"; message: string };
 
 export function Phase9InvitePage() {
-  const [state, setState] = useState<State>({ kind: "loading" });
+  const { state: accessState, client, refresh } = useSharedAccessState();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
 
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) {
-          setState({ kind: "signed_out" });
-          return;
-        }
-        const { data, error: profileError } = await client
-          .from("profiles")
-          .select("id,aas_user_id,status,role")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !data || data.id !== user.id || data.role !== "user") {
-          throw new Error("招待コードを利用できるユーザー情報を確認できません。");
-        }
-        if (data.status !== "pending" && data.status !== "active") {
-          throw new Error("現在のアカウント状態では招待コードを利用できません。");
-        }
-        setState({ kind: "ready", aasId: data.aas_user_id, status: data.status });
-      } catch (error) {
-        if (active) setState({ kind: "error", message: error instanceof Error ? error.message : "初期化に失敗しました。" });
-      }
-    };
-    void load();
-    return () => { active = false; };
-  }, []);
+  const state = useMemo<State>(() => {
+    if (accessState.kind === "loading") return { kind: "loading" };
+    if (accessState.kind === "signed_out") return { kind: "signed_out" };
+    if (accessState.kind === "unavailable") {
+      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
+    }
+
+    const profile = accessState.profile;
+    if (profile.role !== "user") {
+      return { kind: "error", message: "招待コードは一般ユーザーアカウントで利用してください。" };
+    }
+    if (profile.status !== "pending" && profile.status !== "active") {
+      return { kind: "error", message: "現在のアカウント状態では招待コードを利用できません。" };
+    }
+    return { kind: "ready", aasId: profile.aas_user_id, status: profile.status };
+  }, [accessState]);
 
   const redeem = async () => {
+    if (!client) return;
     setBusy(true);
     setMessage("");
     setSuccess(false);
     try {
-      const result = await redeemPwaInvite(getSupabaseClient(), code);
+      const result = await redeemPwaInvite(client, code);
+      await refresh();
       setSuccess(true);
       setMessage(
         result.profileStatus === "active"
@@ -69,6 +58,8 @@ export function Phase9InvitePage() {
     }
   };
 
+  if (state.kind === "loading") return null;
+
   return (
     <main className="standalone-page">
       <section className="standalone-card">
@@ -76,7 +67,6 @@ export function Phase9InvitePage() {
         <h1>PWA招待コード</h1>
         <p className="standalone-lead">購入・招待で受け取ったコードを、このAASアカウントへ登録します。Windows利用権とは別に管理されます。</p>
 
-        {state.kind === "loading" && <p className="route-notice">アカウントを確認しています…</p>}
         {state.kind === "signed_out" && (
           <div className="route-notice error">先にホームからログインしてください。</div>
         )}
@@ -97,7 +87,7 @@ export function Phase9InvitePage() {
             </button>
           </>
         )}
-        <a className="route-back" href="/">← ホームへ戻る</a>
+        <Link className="route-back" href="/">← ホームへ戻る</Link>
       </section>
     </main>
   );

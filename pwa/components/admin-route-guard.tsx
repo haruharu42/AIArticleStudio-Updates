@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { useSharedAccessState } from "@/components/access-state-provider";
 
 const ADMIN_MFA_FRIENDLY_NAME = "AAS PWA Admin";
 // Temporary development switch. Keep the MFA flow in place, but do not require it
@@ -27,6 +27,7 @@ type Enrollment = {
 };
 
 export function AdminRouteGuard({ children }: { children: ReactNode }) {
+  const { state: accessState, client } = useSharedAccessState();
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [code, setCode] = useState("");
@@ -35,38 +36,35 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    let unsubscribe: (() => void) | undefined;
 
     const verify = async () => {
+      if (accessState.kind === "loading") {
+        if (active) setGate({ kind: "loading" });
+        return;
+      }
+      if (accessState.kind === "signed_out") {
+        if (active) setGate({ kind: "signed_out" });
+        return;
+      }
+      if (accessState.kind === "unavailable" || !client) {
+        if (active) setGate({ kind: "error", message: "アカウント権限を確認できませんでした。" });
+        return;
+      }
+      if (
+        accessState.kind !== "ready" ||
+        accessState.profile.role !== "admin" ||
+        accessState.profile.status !== "active"
+      ) {
+        if (active) setGate({ kind: "denied" });
+        return;
+      }
+
+      if (!ADMIN_MFA_REQUIRED) {
+        if (active) setGate({ kind: "ready" });
+        return;
+      }
+
       try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) {
-          setGate({ kind: "signed_out" });
-          return;
-        }
-
-        const { data: profile, error: profileError } = await client
-          .from("profiles")
-          .select("id,role,status")
-          .eq("id", user.id)
-          .single();
-        if (!active) return;
-        if (profileError || !profile || profile.id !== user.id) {
-          setGate({ kind: "error", message: "アカウント権限を確認できませんでした。" });
-          return;
-        }
-        if (profile.role !== "admin" || profile.status !== "active") {
-          setGate({ kind: "denied" });
-          return;
-        }
-
-        if (!ADMIN_MFA_REQUIRED) {
-          setGate({ kind: "ready" });
-          return;
-        }
-
         const { data: factors, error: factorsError } = await client.auth.mfa.listFactors();
         if (!active) return;
         if (factorsError) {
@@ -96,28 +94,16 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
     };
 
     void verify();
-    try {
-      const client = getSupabaseClient();
-      const { data } = client.auth.onAuthStateChange(() => {
-        window.setTimeout(() => { if (active) void verify(); }, 0);
-      });
-      unsubscribe = () => data.subscription.unsubscribe();
-    } catch {
-      // Initial verification renders the safe error state when the client cannot be created.
-    }
-
     return () => {
       active = false;
-      unsubscribe?.();
     };
-  }, []);
+  }, [accessState, client]);
 
   const beginEnrollment = async () => {
+    if (!client) return;
     setBusy(true);
     setActionError("");
     try {
-      const client = getSupabaseClient();
-
       // A browser refresh or interrupted setup can leave an unverified TOTP factor behind.
       // Remove only the unfinished primary-admin factor before creating a fresh enrollment.
       const { data: factors, error: factorsError } = await client.auth.mfa.listFactors();
@@ -149,11 +135,10 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
   };
 
   const cancelEnrollment = async () => {
-    if (!enrollment) return;
+    if (!enrollment || !client) return;
     setBusy(true);
     setActionError("");
     try {
-      const client = getSupabaseClient();
       const { error } = await client.auth.mfa.unenroll({ factorId: enrollment.factorId });
       if (error) throw error;
       setEnrollment(null);
@@ -166,6 +151,7 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
   };
 
   const verifyTotp = async (factorId: string) => {
+    if (!client) return;
     const normalized = code.replace(/\s+/g, "");
     if (!/^\d{6}$/.test(normalized)) {
       setActionError("認証アプリに表示された6桁のコードを入力してください。");
@@ -174,7 +160,6 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
     setBusy(true);
     setActionError("");
     try {
-      const client = getSupabaseClient();
       const { data: challenge, error: challengeError } = await client.auth.mfa.challenge({ factorId });
       if (challengeError) throw challengeError;
       const { error: verifyError } = await client.auth.mfa.verify({
@@ -191,11 +176,11 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
   };
 
   if (gate.kind === "ready") return <>{children}</>;
+  if (gate.kind === "loading") return null;
 
   return (
     <main className="standalone-page">
       <section className="standalone-card">
-        {gate.kind === "loading" && <p className="route-notice">権限を確認しています…</p>}
         {gate.kind === "signed_out" && <p className="route-notice error">このページを表示するにはログインが必要です。</p>}
         {gate.kind === "denied" && <p className="route-notice error">このページを表示する権限がありません。</p>}
         {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
@@ -249,7 +234,7 @@ export function AdminRouteGuard({ children }: { children: ReactNode }) {
         )}
 
         {actionError && <p className="route-notice error">{actionError}</p>}
-        {gate.kind !== "loading" && <Link className="route-back" href="/">← ホームへ戻る</Link>}
+        <Link className="route-back" href="/">← ホームへ戻る</Link>
       </section>
     </main>
   );

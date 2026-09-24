@@ -11,6 +11,8 @@ import {
   type MagazinePlanDraft,
 } from "@/lib/magazine-planner";
 import { PWA_PRODUCT_CODE } from "@/lib/phase6-access";
+import { buildPlatformAccountPromptContext, getRuntimePlatformAccountDesign } from "@/lib/platform-account-design";
+import { getRuntimeKnowledgeState } from "@/lib/prompt-optimization";
 import { getPromptSpecialization } from "@/lib/phase12-prompt-profiles";
 import { buildImagePromptPlan } from "@/lib/phase13-image-prompts";
 import { isCustomGenre, isCustomSubgenre } from "@/lib/phase18-content-options";
@@ -43,6 +45,7 @@ export type ArticleCreationDraft = {
   coverEnabled: boolean;
   inlineEnabled: boolean;
   inlineCount: number;
+  imageStyle: string;
   body: string;
   saveStatus: SaveStatus;
 };
@@ -64,12 +67,49 @@ function normalizeLines(value: string): string {
   return value.replace(/\r\n?/g, "\n").trim();
 }
 
+function normalizedTitleLine(value: string): string {
+  return value
+    .trim()
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/^\*\*(.+)\*\*$/, "$1")
+    .replace(/^["'「『](.+)["'」』]$/, "$1")
+    .trim();
+}
+
+export function stripLeadingArticleTitle(value: string, title: string): string {
+  const normalized = value.replace(/\r\n?/g, "\n").trimStart();
+  const selectedTitle = normalizedTitleLine(title);
+  if (!normalized || !selectedTitle) return normalized;
+
+  const lines = normalized.split("\n");
+  if (normalizedTitleLine(lines[0] ?? "") !== selectedTitle) return normalized;
+
+  lines.shift();
+  while (lines[0]?.trim() === "") lines.shift();
+  return lines.join("\n").trimStart();
+}
+
+export function publicationEditorLink(target: PublicationTarget): string | null {
+  if (target === "note") return "https://note.com/new";
+  if (target === "tips") return "https://tips.jp/";
+  if (target === "brain") return "https://brain-market.com/";
+  return null;
+}
+
+export function publicationBodyForCopy(body: string, title: string): string {
+  return stripLeadingArticleTitle(body, title)
+    .replace(/^\s*<!--\s*IMAGE:(\d+)\s*-->\s*$/gim, (_match, order: string) => `**【挿絵${Number(order)}をここに挿入】**`)
+    .replace(/^\s*<!--\s*PAID_AREA\s*-->\s*$/gim, "---\n**【ここから有料エリア】**\n---")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function compactTags(tags: string[]): string[] {
   return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))].slice(0, 50);
 }
 
-function promptContextBlock(): string {
-  const value = buildUserPromptContext(getRuntimeWritingProfile());
+function promptContextBlock(task: "title" | "article"): string {
+  const value = buildUserPromptContext(getRuntimeWritingProfile(), task);
   return value ? `\n\n${value}` : "";
 }
 
@@ -122,17 +162,43 @@ export function suggestLocalTitles(
   ];
 }
 
+export function parseTitleCandidates(value: string): string[] {
+  const candidates: string[] = [];
+  const lines = value.replace(/```[a-z0-9_-]*\s*/gi, "").replace(/```/g, "").split(/\r?\n/);
+  for (const rawLine of lines) {
+    let line = rawLine.trim();
+    if (!line) continue;
+    line = line.replace(/^#{1,6}\s+/, "").trim();
+    if (/^(?:記事)?タイトル候補(?:\s*[（(]?5(?:個|案)[）)]?)?\s*[:：]?$/i.test(line)) continue;
+    line = line.replace(/^\*\*(.+)\*\*$/, "$1").trim();
+    line = line.replace(/^(?:候補\s*)?\d{1,2}\s*[.)、:：-]\s*/, "").trim();
+    line = line.replace(/^[-*•・]\s*/, "").trim();
+    line = line.replace(/^\*\*(.+)\*\*$/, "$1").trim();
+    line = line.replace(/^[\"'「『](.+)[\"'」』]$/, "$1").trim();
+    if (line.length < 2 || line.length > 500 || candidates.includes(line)) continue;
+    candidates.push(line);
+    if (candidates.length >= 5) break;
+  }
+  return candidates;
+}
+
 export function buildTitlePrompt(draft: ArticleCreationDraft, magazinePlan?: MagazinePlanDraft): string {
   const specialization = specializationFor(draft, "title");
-  return `あなたは日本語の編集者です。次の条件で記事タイトル候補を10個作成してください。\n\n【絶対ルール】\n- 実体験・実績・レビューを創作しない。\n- 未確認の価格・在庫・評価・ランキング・統計を断定しない。\n- 競合記事のコピーや近似模倣をしない。\n- 根拠のない成果保証や過度な煽りを使わない。${promptContextBlock()}\n\n【条件】\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\nテーマ: ${draft.theme || "記事テーマから提案"}\n\n${specialization}${magazinePromptContext(magazinePlan)}\n\n一目で内容が分かり、誇張せず、読者がクリック後の内容を想像できるタイトルにしてください。タイトルだけを番号付きで出力してください。`;
+  return `あなたは日本語の編集者です。次の条件で記事タイトル候補を5個作成してください。\n\n【絶対ルール】\n- 実体験・実績・レビューを創作しない。\n- 未確認の価格・在庫・評価・ランキング・統計を断定しない。\n- 競合記事のコピーや近似模倣をしない。\n- 根拠のない成果保証や過度な煽りを使わない。${promptContextBlock("title")}\n\n【条件】\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\n${draft.theme.trim() ? `補足テーマ: ${draft.theme.trim()}\\n` : ""}\n${specialization}${magazinePromptContext(magazinePlan)}\n\n${buildPlatformAccountPromptContext(draft.publicationTarget)}
+
+一目で内容が分かり、誇張せず、読者がクリック後の内容を想像できるタイトルにしてください。
+必ず5個だけ、1〜5の番号付きで1行に1候補を出力してください。前置き・解説・まとめは不要です。`;
 }
 
 export function buildArticlePrompt(draft: ArticleCreationDraft, magazinePlan?: MagazinePlanDraft): string {
   const imageRule = draft.coverEnabled || draft.inlineEnabled
-    ? `画像計画: アイキャッチ=${draft.coverEnabled ? "あり" : "なし"}、挿絵=${draft.inlineEnabled ? `${draft.inlineCount}枚` : "なし"}。本文中で挿絵が有効な場合は「<!-- IMAGE:01 -->」のような差し込み候補位置を自然な区切りに置いてください。`
+    ? `画像計画: アイキャッチ=${draft.coverEnabled ? "あり" : "なし"}、挿絵=${draft.inlineEnabled ? `${draft.inlineCount}枚` : "なし"}、画風=${draft.imageStyle || "auto"}。本文中で挿絵が有効な場合は「<!-- IMAGE:01 -->」のような差し込み候補位置を自然な区切りに、必要枚数ぶん必ず単独行で置いてください。`
     : "画像計画: なし。";
+  const paidAreaRule = draft.articleType === "paid"
+    ? "有料記事: 無料で読める導入・問題提起・価値提示を先に用意し、その後、有料本文が始まる直前に <!-- PAID_AREA --> を必ず1回だけ単独行で置いてください。マーカーより前だけでも購入判断ができる説明を入れ、核心となる具体策・手順・テンプレート・詳細解説はマーカーより後へ配置してください。"
+    : "無料記事: <!-- PAID_AREA --> は出力しないでください。";
   const specialization = specializationFor(draft, "article");
-  return `あなたは日本語の編集者兼記事ライターです。\n目的は、指定された掲載先へそのまま掲載できる、具体的で読みやすく、読者が行動できる完成記事を作ることです。\n\n【絶対ルール】\n- ユーザーが入力していない実体験・実績・レビュー・購入経験・使用経験を事実として作らない。\n- 価格、在庫、評価、キャンペーン、統計、販売数、ランキング、最新仕様など変動する情報を未確認のまま断定しない。\n- 競合記事の文章をコピー・近似模倣しない。\n- 根拠のない成果保証、過度な煽り、架空の権威づけをしない。\n- 架空例を使う場合は「例」「想定」と明示する。\n- 文字数を水増しせず、手順・判断基準・具体例・チェックリスト等で価値を作る。\n\n【出力】\n- 日本語。\n- Markdown見出しで明確に構造化する。\n- 余計な前置き、メタ説明、生成方針の説明は付けない。\n- 完成記事本文だけを返す。${promptContextBlock()}\n\n【ARTICLE BRIEF】\nタイトル: ${draft.title || "タイトル候補から選択"}\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\nテーマ: ${draft.theme || "タイトルから推定"}\n文字数目安: 約${draft.targetLength}文字\n価格: ${draft.articleType === "paid" && draft.price !== null ? `${draft.price}円` : "設定なし"}\nアフィリエイト: ${draft.affiliateEnabled ? "ON" : "OFF"}\nマガジン: ${draft.magazineEnabled ? "ON" : "OFF"}\n${imageRule}\n\n${specialization}${magazinePromptContext(magazinePlan)}\n\n掲載先と無料/有料の性質に合わせ、導入、見出し構成、具体例、手順、注意点、必要に応じたCTAを自然に最適化してください。`;
+  return `あなたは日本語の編集者兼記事ライターです。\n目的は、指定された掲載先へそのまま掲載できる、具体的で読みやすく、読者が行動できる完成記事を作ることです。\n\n【絶対ルール】\n- ユーザーが入力していない実体験・実績・レビュー・購入経験・使用経験を事実として作らない。\n- 価格、在庫、評価、キャンペーン、統計、販売数、ランキング、最新仕様など変動する情報を未確認のまま断定しない。\n- 競合記事の文章をコピー・近似模倣しない。\n- 根拠のない成果保証、過度な煽り、架空の権威づけをしない。\n- 架空例を使う場合は「例」「想定」と明示する。\n- 文字数を水増しせず、手順・判断基準・具体例・チェックリスト等で価値を作る。\n\n【出力】\n- 日本語。\n- 選択済みタイトルは構成条件として参照するだけにし、出力本文の先頭や見出しに記事タイトルを再掲しない。\n- H1（#）は使わない。最初の行から導入本文またはH2（##）以下の本文を出力する。\n- Markdown見出し（## / ###）で明確に構造化する。\n- 読者に必ず覚えてほしい結論・重要語・判断基準は **太字** で強調する。\n- 特に重要な注意点・要点・行動指針は > 引用形式の強調ブロックを自然に使う。\n- 手順・比較・チェック項目は箇条書きまたは番号付きリストを使い、長い文章だけが続かないようにする。\n- セクションの大きな切り替わりでは必要に応じて --- を使う。\n- 装飾は重要箇所に絞り、全文章を太字にするなど過剰な装飾はしない。\n- 挿絵マーカー <!-- IMAGE:01 --> 等は単独行に置き、太字・引用・リストの中へ入れない。\n- 余計な前置き、メタ説明、生成方針の説明は付けない。\n- 完成記事の本文だけを返す。タイトル・「タイトル：」表記・末尾の解説は出力しない。${promptContextBlock("article")}\n\n【ARTICLE BRIEF】\nタイトル: ${draft.title || "タイトル候補から選択"}\n掲載先: ${targetName[draft.publicationTarget]}\n記事タイプ: ${draft.articleType === "paid" ? "有料" : "無料"}\nジャンル: ${draft.genre || "未指定"}\nサブジャンル: ${draft.subgenre || "AIおまかせ"}\n対象年齢: ${draft.ageGroup || "AIおまかせ"}\n対象性別: ${draft.gender || "AIおまかせ"}\n${draft.theme.trim() ? `補足テーマ: ${draft.theme.trim()}\\n` : ""}文字数目安: 約${draft.targetLength}文字\n価格: ${draft.articleType === "paid" && draft.price !== null ? `${draft.price}円` : "設定なし"}\nアフィリエイト: ${draft.affiliateEnabled ? "ON" : "OFF"}\nマガジン: ${draft.magazineEnabled ? "ON" : "OFF"}\n${imageRule}\n${paidAreaRule}\n\n${specialization}${magazinePromptContext(magazinePlan)}${buildPlatformAccountPromptContext(draft.publicationTarget)}\n\n掲載先と無料/有料の性質に合わせ、導入、見出し構成、具体例、手順、注意点、必要に応じたCTAを自然に最適化してください。`;
 }
 
 async function requireAccess(
@@ -200,6 +266,9 @@ export function validateCreationDraft(
   ) {
     throw new Error("有料記事は1以上の整数価格を設定してください。");
   }
+  if (draft.articleType === "paid" && draft.body.trim() && !/<!--\s*PAID_AREA\s*-->/i.test(draft.body)) {
+    throw new Error("有料記事の本文に有料エリア開始位置がありません。本文工程で「ここから有料エリア」を設定してください。");
+  }
   if (draft.articleType === "free") draft.price = null;
   if (!draft.inlineEnabled) draft.inlineCount = 0;
   return draft;
@@ -210,6 +279,7 @@ export async function createArticleFromWizard(
   ownerId: string,
   input: ArticleCreationDraft,
   magazinePlan?: MagazinePlanDraft,
+  presetId?: string | null,
 ): Promise<CreatedArticle> {
   const draft = validateCreationDraft(input);
   if (draft.magazineEnabled) {
@@ -257,17 +327,28 @@ export async function createArticleFromWizard(
     subgenre: draft.subgenre,
     ageGroup: draft.ageGroup,
     gender: draft.gender,
+    body: draft.body,
     coverEnabled: draft.coverEnabled,
     inlineEnabled: draft.inlineEnabled,
     inlineCount: draft.inlineCount,
+    imageStyle: draft.imageStyle,
   });
+  const knowledgeRuntime = getRuntimeKnowledgeState();
+  const accountDesign = getRuntimePlatformAccountDesign(draft.publicationTarget);
   let workspaceJson: Record<string, unknown> = {
     wizard_version: 11,
     prompt_profile_version: 12,
     image_prompt_version: 13,
     knowledge_engine_version: 1,
-    user_personalization_version: 1,
+    cloud_knowledge_channel: knowledgeRuntime.channel,
+    cloud_knowledge_version: knowledgeRuntime.effectiveVersion,
+    prompt_optimization_version: knowledgeRuntime.effectiveVersion,
+    user_personalization_version: 2,
     personalization_enabled: writingProfile?.personalizationEnabled ?? false,
+    article_preset_id: presetId ?? null,
+    account_design_applied: Boolean(accountDesign),
+    account_design_platform: accountDesign?.platform ?? null,
+    account_design_updated_at: accountDesign?.updatedAt ?? null,
     selected_title: draft.title,
     generation_method: draft.generationMode,
     local_status: draft.saveStatus === "ready" ? "完成" : draft.saveStatus,
@@ -323,6 +404,7 @@ export async function createArticleFromWizard(
       gender: draft.gender,
       target_length: draft.targetLength,
       price_jpy: draft.price,
+      image_style: draft.imageStyle,
       affiliate_enabled: draft.affiliateEnabled,
       magazine_enabled: draft.magazineEnabled,
       magazine_name: draft.magazineEnabled ? magazinePlan?.name || null : null,
@@ -336,6 +418,8 @@ export async function createArticleFromWizard(
       generation_method: draft.generationMode,
       ai_provider: writingProfile?.preferredAi ?? null,
       ai_plan: writingProfile?.preferredPlan ?? null,
+      account_design_applied: Boolean(accountDesign),
+      account_design_updated_at: accountDesign?.updatedAt ?? null,
     },
     workspace_json: workspaceJson,
     image_plan_json: {
@@ -348,6 +432,7 @@ export async function createArticleFromWizard(
         enabled: draft.inlineEnabled,
         count: draft.inlineCount,
       },
+      style: draft.imageStyle,
       prompt_plan: imagePrompts,
     },
     source_body: draft.body || null,
@@ -390,8 +475,12 @@ export async function createArticleFromWizard(
   void recordPersonalizationSignal(client, {
     platform: draft.publicationTarget,
     genre: draft.genre,
+    subgenre: draft.subgenre,
     articleType: draft.articleType,
     generationMode: draft.generationMode,
+    ageGroup: draft.ageGroup,
+    targetLength: draft.targetLength,
+    presetId: presetId ?? null,
   }).catch(() => undefined);
   if (customGenre) {
     void recordKnowledgeCandidate(client, { kind: "genre", value: draft.genre }).catch(() => undefined);

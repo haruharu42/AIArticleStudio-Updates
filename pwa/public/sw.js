@@ -1,4 +1,4 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v3";
+const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v5-crystal-release";
 const APP_SHELL = [
   "/offline.html",
   "/manifest.webmanifest",
@@ -26,7 +26,12 @@ async function networkFirst(request) {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "AAS_ACTIVATE_RELEASE") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {

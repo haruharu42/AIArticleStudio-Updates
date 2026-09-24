@@ -1,11 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import Link from "next/link";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { ActionStudioHomeHero, ActionStudioQuickActions } from "@/components/action-studio-home-hub";
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { Phase7App } from "@/components/phase6-app";
 import { Phase7Library } from "@/components/phase7-library";
+import { NoteTodayPanel } from "@/components/note-today-panel";
+import { ReleasePreviewHomeStatus } from "@/components/release-preview-home-status";
 import { AI_APP_LINKS, launchAiApp, type AiAppKey } from "@/lib/ai-app-links";
 import {
   getCreatorRanking,
@@ -16,8 +20,8 @@ import {
   type CreatorMission,
   type RankingRow,
 } from "@/lib/creator-system";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { listCloudArticles, type ArticleStatus, type ArticleSummary } from "@/lib/phase7-articles";
+import { getSupportNotificationSummary } from "@/lib/support-center";
 import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
@@ -25,9 +29,7 @@ import {
   TARGET_LENGTH_OPTIONS,
   subgenreOptionsFor,
 } from "@/lib/phase18-content-options";
-import { getSupabaseClient } from "@/lib/supabase";
 
-type HomeState = AccessState | { kind: "loading" } | { kind: "unavailable" };
 type Section = "home" | "library";
 
 type QuickSetup = {
@@ -103,16 +105,16 @@ function BeginnerAccessFallback({ unavailable = false }: { unavailable?: boolean
     <div className="reference-home">
       <AasReferenceHeader />
       <main className="reference-home-main">
-        <section className="beginner-recommend" role={unavailable ? "alert" : "status"} aria-live="polite">
-          <div>
-            <span className="beginner-recommend-label">{unavailable ? "CONNECTION" : "LOADING"}</span>
-            <h2>{unavailable ? "接続状態を確認できませんでした" : "アカウントと利用権を確認しています"}</h2>
-            <p>{unavailable ? "通信状態を確認して、もう一度読み込んでください。" : "確認が終わるとホーム画面を表示します。"}</p>
-          </div>
-          {unavailable
-            ? <button type="button" onClick={() => window.location.reload()}>再読み込み</button>
-            : <span className="beginner-access-badge">確認中…</span>}
-        </section>
+        {unavailable ? (
+          <section className="beginner-recommend" role="alert">
+            <div>
+              <span className="beginner-recommend-label">CONNECTION</span>
+              <h2>接続状態を確認できませんでした</h2>
+              <p>通信状態を確認して、もう一度読み込んでください。</p>
+            </div>
+            <button type="button" onClick={() => window.location.reload()}>再読み込み</button>
+          </section>
+        ) : null}
       </main>
     </div>
   );
@@ -124,22 +126,21 @@ function MissionRows({ missions }: { missions: CreatorMission[] }) {
   return (
     <div className="reference-mission-list">
       {visible.map((mission) => (
-        <a className={`reference-mission-row ${mission.completed ? "done" : ""}`} href="/missions" key={mission.missionCode}>
+        <Link className={`reference-mission-row ${mission.completed ? "done" : ""}`} href="/missions" key={mission.missionCode}>
           <span aria-hidden="true">{mission.completed ? "✓" : "○"}</span>
           <span>
             <strong>{mission.title}</strong>
             <small>{mission.description}</small>
           </span>
           <b>+{mission.rewardXp} XP</b>
-        </a>
+        </Link>
       ))}
     </div>
   );
 }
 
 export function Phase18BeginnerHome() {
-  const [state, setState] = useState<HomeState>({ kind: "loading" });
-  const [client, setClient] = useState<SupabaseClient | null>(null);
+  const { state, client } = useSharedAccessState();
   const [section, setSection] = useState<Section>("home");
   const [imageUnsaved, setImageUnsaved] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
@@ -154,44 +155,12 @@ export function Phase18BeginnerHome() {
   const [rankingLoaded, setRankingLoaded] = useState(false);
   const [rankingError, setRankingError] = useState(false);
   const [quickSetup, setQuickSetup] = useState<QuickSetup>(QUICK_SETUP_INITIAL);
-
-  const refresh = useCallback(async (nextClient?: SupabaseClient) => {
-    try {
-      const activeClient = nextClient ?? getSupabaseClient();
-      setClient(activeClient);
-      setState(await loadAccessState(activeClient));
-    } catch {
-      setState({ kind: "unavailable" });
-    }
-  }, []);
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("section") !== "library") return;
     queueMicrotask(() => setSection("library"));
   }, []);
-
-  useEffect(() => {
-    let active = true;
-    let activeClient: SupabaseClient;
-    try {
-      activeClient = getSupabaseClient();
-    } catch {
-      queueMicrotask(() => { if (active) setState({ kind: "unavailable" }); });
-      return;
-    }
-    queueMicrotask(() => {
-      if (!active) return;
-      setClient(activeClient);
-      void refresh(activeClient);
-    });
-    const { data } = activeClient.auth.onAuthStateChange(() => {
-      window.setTimeout(() => { if (active) void refresh(activeClient); }, 0);
-    });
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-    };
-  }, [refresh]);
 
   useEffect(() => {
     if (state.kind !== "ready" || !client) return;
@@ -255,12 +224,17 @@ export function Phase18BeginnerHome() {
         setRankingError(true);
       },
     );
+    void getSupportNotificationSummary(client).then(
+      (value) => {
+        if (active) setSupportUnreadCount(value.unreadCount);
+      },
+      () => {
+        if (active) setSupportUnreadCount(0);
+      },
+    );
     return () => { active = false; };
   }, [client, state]);
 
-  const handleAccessReady = useCallback(() => {
-    void refresh();
-  }, [refresh]);
 
   const quickSubgenres = useMemo(() => subgenreOptionsFor(quickSetup.genre), [quickSetup.genre]);
   const quickCreateHref = useMemo(() => {
@@ -286,11 +260,19 @@ export function Phase18BeginnerHome() {
 
   if (state.kind === "loading") return <BeginnerAccessFallback />;
   if (state.kind === "unavailable") return <BeginnerAccessFallback unavailable />;
-  if (state.kind !== "ready") return <Phase7App onAccessReady={handleAccessReady} />;
+  if (state.kind !== "ready") return <Phase7App />;
   if (!client) return <BeginnerAccessFallback />;
 
   const profile = state.profile;
   const displayName = dashboard?.publicName || profile.display_name || "ユーザー";
+  const activeAdmin = profile.role === "admin" && profile.status === "active";
+  const supportNotificationHref = activeAdmin ? "/admin/inquiries" : "/inquiries";
+  const hasSupportNotification = supportUnreadCount > 0;
+  const headerNotificationHref = hasSupportNotification ? supportNotificationHref : "/missions";
+  const headerNotificationLabel = hasSupportNotification
+    ? `問い合わせ通知 ${supportUnreadCount}件`
+    : "ミッション・お知らせ";
+  const hasHeaderNotification = Boolean(dashboard?.claimableMissions) || hasSupportNotification;
   const mayLeave = () => !imageBusy && (!imageUnsaved || window.confirm("未保存の画像情報・選択した画像を破棄して移動しますか？"));
 
   const openSection = (next: Section) => {
@@ -311,11 +293,11 @@ export function Phase18BeginnerHome() {
   if (section === "library") {
     return (
       <div className="reference-home">
-        <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
+        <AasReferenceHeader hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
         <main className="reference-home-main beginner-library-main">
           <div className="beginner-library-toolbar">
             <button type="button" onClick={() => openSection("home")}>← ホーム</button>
-            <a href="/create">＋ 新しい記事を作る</a>
+            <Link href="/create">＋ 新しい記事を作る</Link>
           </div>
           <Phase7Library
             client={client}
@@ -324,18 +306,18 @@ export function Phase18BeginnerHome() {
             onBusyChange={setImageBusy}
           />
         </main>
-        <AasReferenceBottomNav active="library" onLibrary={() => openSection("library")} />
+        <AasReferenceBottomNav active="library" onHome={() => openSection("home")} onLibrary={() => openSection("library")} />
       </div>
     );
   }
 
   return (
     <div className="reference-home">
-      <AasReferenceHeader hasUnreadNotifications={Boolean(dashboard?.claimableMissions)} />
+      <AasReferenceHeader hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
       <main className="reference-home-main">
         <div className="reference-home-heading">
           <h1>⌂ ホーム</h1>
-          <p>今日も、いい記事をつくりましょう！</p>
+          <p>AIで副業を、もっと簡単に。</p>
         </div>
 
         <section className="reference-creator-card" aria-label="Creatorステータス">
@@ -365,10 +347,12 @@ export function Phase18BeginnerHome() {
           </div>
         </section>
 
+        <NoteTodayPanel client={client} ownerId={profile.id} />
+
         <section className="reference-home-section">
           <div className="reference-section-heading">
             <h2>🎯 今日のミッション</h2>
-            <a href="/missions">すべて見る ›</a>
+            <Link href="/missions">すべて見る ›</Link>
           </div>
           {missionsError ? (
             <p className="beginner-right-muted" role="alert">ミッションを取得できませんでした。再読み込みしてお試しください。</p>
@@ -391,7 +375,7 @@ export function Phase18BeginnerHome() {
                     : `レベルに応じて記事ストック上限が増えます。現在 +${dashboard.creatorArticleQuotaBonus}`}
                 </small>
               </div>
-              <a href="/membership">特典を見る ›</a>
+              <Link href="/membership">特典を見る ›</Link>
             </div>
           </section>
         )}
@@ -425,24 +409,28 @@ export function Phase18BeginnerHome() {
           ) : (
             <div className="reference-empty-inline">
               <strong>まだ記事がありません</strong>
-              <a href="/create">最初の記事を作る →</a>
+              <Link href="/create">最初の記事を作る →</Link>
             </div>
           )}
         </section>
 
+        <ReleasePreviewHomeStatus />
+
+        <ActionStudioHomeHero />
+
         <section className="reference-home-section">
           <div className="reference-section-heading">
             <h2>⚡ クイックスタート / 使い方</h2>
-            <a href="/manual">詳しい使い方 ›</a>
+            <Link href="/manual">詳しい使い方 ›</Link>
           </div>
           <div className="reference-quick-grid">
-            <a className="reference-quick-step" href="/create"><span>1</span><b>▧</b><strong>条件を選ぶ</strong><small>掲載先やジャンルをプルダウンで選択</small></a>
-            <a className="reference-quick-step" href="/create"><span>2</span><b>✎</b><strong>記事を作る</strong><small>AI用プロンプトまたは手入力で作成</small></a>
+            <Link className="reference-quick-step" href="/create"><span>1</span><b>▧</b><strong>条件を選ぶ</strong><small>掲載先やジャンルをプルダウンで選択</small></Link>
+            <Link className="reference-quick-step" href="/create"><span>2</span><b>✎</b><strong>記事を作る</strong><small>AI用プロンプトまたは手入力で作成</small></Link>
             <button className="reference-quick-step" type="button" onClick={() => openSection("library")}><span>3</span><b>✓</b><strong>保存して管理</strong><small>ライブラリで編集・画像管理</small></button>
           </div>
           <div className="reference-help-links">
-            <a className="secondary" href="/manual">使い方を見る</a>
-            <a href="/faq">Q&A・よくある質問</a>
+            <Link className="secondary" href="/manual">使い方を見る</Link>
+            <Link href="/faq">Q&A・よくある質問</Link>
           </div>
         </section>
 
@@ -461,30 +449,33 @@ export function Phase18BeginnerHome() {
             <QuickSelect label="文字数目安" value={quickSetup.targetLength} onChange={(value) => setQuickSetup((current) => ({ ...current, targetLength: Number(value) }))}>{TARGET_LENGTH_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</QuickSelect>
             <QuickSelect label="挿絵枚数" value={quickSetup.inlineCount} onChange={(value) => setQuickSetup((current) => ({ ...current, inlineCount: Number(value) }))}><option value={0}>なし</option><option value={1}>1枚</option><option value={2}>2枚</option><option value={3}>3枚</option><option value={4}>4枚</option><option value={5}>5枚</option></QuickSelect>
           </div>
-          <a className="beginner-quick-start" href={quickCreateHref}>この条件で記事作成を始める →</a>
+          <Link className="beginner-quick-start" href={quickCreateHref}>この条件で記事作成を始める →</Link>
         </section>
 
         <section className="reference-home-section">
-          <div className="reference-section-heading"><h2>🔗 AIアプリを開く</h2><a href="/tools">すべての機能 ›</a></div>
+          <div className="reference-section-heading"><h2>🔗 AIアプリを開く</h2><Link href="/tools">すべての機能 ›</Link></div>
           <div className="beginner-ai-grid"><AiLaunchCard appKey="chatgpt" /><AiLaunchCard appKey="claude" /><AiLaunchCard appKey="gemini" /></div>
           <p className="reference-ai-note">iPhone / iPadでは「アプリを開く」と「Web版を開く」を選べます。Androidはアプリを優先し、開けない場合はGoogle Playの公式ページへ移動します。PCではWeb版を開きます。</p>
           <div className="reference-feature-links">
-            <a href="/images"><span>▧</span><strong>画像作成</strong><small>アイキャッチ・挿絵を準備</small></a>
-            <a href="/sns"><span>↗</span><strong>SNS投稿</strong><small>記事から投稿文を作成</small></a>
+            <Link href="/workflow"><span>◎</span><strong>運営コックピット</strong><small>今日の作業・公開前チェック・再利用</small></Link>
+            <Link href="/images"><span>▧</span><strong>画像作成</strong><small>アイキャッチ・挿絵を準備</small></Link>
+            <Link href="/sns"><span>↗</span><strong>SNS投稿</strong><small>記事から投稿文を作成</small></Link>
           </div>
         </section>
 
         <section className="reference-home-section">
-          <div className="reference-section-heading"><h2>🏆 週間ランキング</h2><a href="/ranking">ランキングを見る ›</a></div>
+          <div className="reference-section-heading"><h2>🏆 週間ランキング</h2><Link href="/ranking">ランキングを見る ›</Link></div>
           <div className="reference-rank-summary">
             <span aria-hidden="true">🏆</span>
             <div>
               <strong>{rankingError || dashboardError ? "ランキング情報を取得できません" : dashboard ? (dashboard.rankingOptIn ? "あなたの現在の順位" : "ランキングは現在非参加") : "ランキングを読み込んでいます…"}</strong>
               <b>{myRank ? `第 ${myRank.rankPosition} 位` : rankingLoaded && dashboard?.rankingOptIn ? (ranking.length ? "圏外" : "未集計") : "—"}</b>
             </div>
-            <a href="/profile">{dashboard?.rankingOptIn ? "公開設定 ›" : "プロフィール設定 ›"}</a>
+            <Link href="/profile">{dashboard?.rankingOptIn ? "公開設定 ›" : "プロフィール設定 ›"}</Link>
           </div>
         </section>
+        <ActionStudioQuickActions showAdmin={activeAdmin} />
+
       </main>
 
       <AasReferenceBottomNav active="home" onLibrary={() => openSection("library")} />

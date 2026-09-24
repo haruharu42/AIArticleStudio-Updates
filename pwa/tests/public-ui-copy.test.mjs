@@ -31,23 +31,38 @@ test("public feature surfaces do not expose development phase numbers", async ()
 test("active PWA access shell avoids frozen Windows and hands successful login back to the current home", async () => {
   const accessShell = await read("components/phase6-app.tsx");
   const home = await read("components/phase18-beginner-home.tsx");
+  const provider = await read("components/access-state-provider.tsx");
 
   assert.doesNotMatch(accessShell, /Windows版/);
   assert.doesNotMatch(accessShell, /PWA ARTICLE LIBRARY · PHASE|<p className="eyebrow">PHASE\s+\d/);
   assert.match(accessShell, /PWA ACCESS/);
-  assert.match(accessShell, /onAccessReady/);
-  assert.match(accessShell, /ホームを準備しています/);
+  assert.doesNotMatch(accessShell, /onAccessReady/);
+  assert.match(accessShell, /useSharedAccessState\(\)/);
+  assert.doesNotMatch(accessShell, /loadAccessState|アカウントと利用権を確認しています/);
+  assert.doesNotMatch(accessShell, /recoveryRef/);
+  assert.match(accessShell, /setAuthMode\("login"\);[\s\S]*?await refreshAccess\(\)/);
   assert.match(accessShell, /navigateRoute\("\/create"\)/);
-  assert.match(home, /<Phase7App onAccessReady=\{handleAccessReady\} \/>/);
-  assert.match(home, /const activeClient = nextClient \?\? getSupabaseClient\(\)/);
-  assert.match(home, /const refresh = useCallback[\s\S]*?\}, \[\]\);/);
+  assert.match(home, /<Phase7App \/>/);
+  assert.doesNotMatch(home, /handleAccessReady|onAccessReady/);
+  assert.match(home, /useSharedAccessState\(\)/);
+  assert.match(provider, /const loadAccessStateOnce = useCallback/);
+  assert.match(provider, /inFlightRef/);
+  assert.match(provider, /const refresh = useCallback[\s\S]*?loadAccessStateOnce\(activeClient\)/);
+  assert.match(provider, /onAuthStateChange/);
 });
 
-test("feature hub uses user-facing categories instead of phase badges", async () => {
+test("feature hub groups supporting features by genre and avoids article-creator duplication", async () => {
   const tools = await read("components/phase-tools-page.tsx");
-  for (const label of ["記事制作", "画像", "SNS", "副業支援", "SNS設計", "出力", "公開", "分析"]) {
-    assert.match(tools, new RegExp(label));
+  const toolCatalog = await read("features/tools/tool-catalog.ts");
+  for (const label of ["記事・コンテンツ", "SNS・動画・集客", "販売・収益化", "受託・案件獲得", "リサーチ・業務効率化", "運営・アカウント", "公開・分析", "サポート"]) {
+    assert.match(toolCatalog, new RegExp(label));
   }
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
+  assert.match(tools, /tool-group-section/);
+  assert.doesNotMatch(toolCatalog, /href: "\/create"/);
+  assert.doesNotMatch(toolCatalog, /href: "\/images"/);
+  assert.doesNotMatch(toolCatalog, /href: "\/export"/);
+  assert.doesNotMatch(`${tools}\n${toolCatalog}`, /OPENAI_LINKS|外部AIツール|ChatGPT Work|ChatGPT Images/);
   assert.doesNotMatch(tools, /phase:\s*["']/i);
 });
 
@@ -78,24 +93,45 @@ test("admin dashboard keeps two-column summary cards on narrow mobile screens", 
   assert.match(css, /\.admin-invite-layout/);
 });
 
-test("admin-only promotion tools are hidden behind active admin state", async () => {
+test("admin tools are removed from the user feature hub and collected in the admin card hub", async () => {
   const tools = await read("components/phase-tools-page.tsx");
+  const adminHub = await read("app/admin/page.tsx");
+  const sections = await read("lib/admin-sections.ts");
+  const guard = await read("components/admin-route-guard.tsx");
   const promotion = await read("components/admin-promotion-page.tsx");
   const route = await read("app/admin/promotion/page.tsx");
-  for (const label of ["管理者専用", "販売・宣伝記事作成", "SNSプロモーション", "キャンペーン設計", "製品情報管理"]) {
-    assert.match(tools, new RegExp(label));
+
+  assert.doesNotMatch(tools, /管理者専用/);
+  assert.doesNotMatch(tools, /\/admin\/promotion/);
+  assert.doesNotMatch(tools, /\/admin\/development-prompts/);
+
+  assert.match(adminHub, /className="admin-only-tools-section admin-management-hub"/);
+  assert.match(adminHub, /className="admin-section-groups"/);
+  assert.match(adminHub, /className="admin-section-group-grid"/);
+  assert.match(adminHub, /className="admin-only-tool-card"/);
+  assert.match(adminHub, /ADMIN_SECTION_GROUPS\.map/);
+  assert.match(adminHub, /ADMIN_SECTIONS\.filter/);
+  assert.match(adminHub, /<span>\{section\.eyebrow\}<\/span>/);
+  assert.match(adminHub, /<h3>\{section\.title\}<\/h3>/);
+  assert.match(adminHub, /<p>\{section\.description\}<\/p>/);
+  assert.match(adminHub, /管理機能/);
+  assert.match(adminHub, /この機能を開く →/);
+  assert.match(adminHub, /まず「日常の管理」を確認/);
+
+  for (const label of ["メンバーシップ管理", "販売・プロモーション", "開発依頼プロンプト", "ナレッジ管理", "アップデート管理", "セキュリティ・運用"]) {
+    assert.match(sections, new RegExp(label));
   }
-  assert.match(tools, /state\.profile\.role === "admin"/);
-  assert.match(tools, /state\.profile\.status === "active"/);
+  assert.match(guard, /profile\.role !== "admin"/);
+  assert.match(guard, /profile\.status !== "active"/);
   assert.match(promotion, /active管理者のみ利用できます/);
   assert.match(promotion, /販売・プロモーションセンター/);
   assert.match(route, /AdminPromotionPage/);
-  assert.doesNotMatch(`${tools}\n${promotion}`, /sb_secret_|service[_-]?role/i);
+  assert.doesNotMatch(`${tools}\n${adminHub}\n${promotion}`, /sb_secret_|service[_-]?role/i);
 });
 
 test("admin promotion prompts protect confirmed product facts and cover article plus social sales", async () => {
   const api = await read("lib/admin-promotion.ts");
-  for (const label of ["確認済み製品情報", "紹介・販売", "Instagram", "Threads", "TikTok", "YouTube Shorts", "14日分の投稿カレンダー"]) {
+  for (const label of ["確認済み製品情報", "紹介・販売", "販売前", "実運用テスト", "Instagram", "Threads", "TikTok", "YouTube Shorts", "14日分の投稿カレンダー"]) {
     assert.match(api, new RegExp(label));
   }
   assert.match(api, /価格、実績、利用者数、売上、レビュー、キャンペーン/);
@@ -104,23 +140,25 @@ test("admin promotion prompts protect confirmed product facts and cover article 
   assert.doesNotMatch(api, /service[_-]?role|sb_secret_/i);
 });
 
-test("active admins receive a top-of-home dashboard shortcut and an admin nav item", async () => {
+test("active admins keep admin access without changing the shared five-item mobile nav", async () => {
   const topbar = await read("components/admin-home-topbar.tsx");
   const sections = await read("lib/admin-sections.ts");
   const nav = await read("components/persistent-mobile-nav.tsx");
-  const css = await read("app/phase24-admin-promotion.css");
+  const settings = await read("components/pwa-settings-page.tsx");
   const layout = await read("app/layout.tsx");
   assert.match(topbar, /pathname !== "\/"/);
-  assert.match(topbar, /data\.role === "admin"/);
+  assert.match(topbar, /useSharedAccessState\(\)/);
+  assert.match(topbar, /state\.profile\.role === "admin"/);
+  assert.match(topbar, /state\.profile\.status === "active"/);
   assert.match(topbar, /管理ダッシュボード/);
   assert.match(topbar, /ADMIN_HOME_SHORTCUT_IDS/);
-  assert.match(sections, /販売促進・SNS/);
+  assert.match(sections, /販売・プロモーション/);
   assert.match(sections, /\/admin\/promotion/);
-  assert.match(nav, /data\.role === "admin"/);
-  assert.match(nav, />管理<\/button>/);
-  assert.match(nav, /go\("\/admin"\)/);
-  assert.match(css, /\.persistent-mobile-nav\.admin-enabled/);
-  assert.match(css, /repeat\(6,/);
+  assert.match(nav, /AasReferenceBottomNav/);
+  assert.match(nav, /activeKeyForPathname/);
+  assert.doesNotMatch(nav, />管理<\/button>|go\("\/admin"\)|admin-enabled|CANONICAL_NAV_ITEMS/);
+  assert.match(settings, /profile\?\.role === "admin"/);
+  assert.match(settings, /href="\/admin">管理者画面/);
   assert.match(layout, /AdminHomeTopbar/);
-  assert.match(layout, /phase24-admin-promotion\.css/);
+  assert.match(layout, /PersistentMobileNav/);
 });

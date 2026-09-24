@@ -6,7 +6,7 @@ import {
 } from "@/lib/magazine-planner";
 import type { ArticleCreationDraft } from "@/lib/phase11-create";
 
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 const STORAGE_PREFIX = "aas:pwa:article-wizard-progress:v1:";
 
 export type ArticleWizardProgress = {
@@ -14,11 +14,13 @@ export type ArticleWizardProgress = {
   draft: ArticleCreationDraft;
   magazinePlan: MagazinePlanDraft;
   tagsText: string;
+  titleCandidatesText: string;
+  activePresetId: string | null;
   updatedAt: string;
 };
 
 type StoredArticleWizardProgress = ArticleWizardProgress & {
-  version: typeof STORAGE_VERSION;
+  version: 1 | 2;
 };
 
 function storageKey(ownerId: string): string {
@@ -45,15 +47,21 @@ export function loadArticleWizardProgress(ownerId: string): ArticleWizardProgres
 
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed)
-      || parsed.version !== STORAGE_VERSION
+      || (parsed.version !== 1 && parsed.version !== STORAGE_VERSION)
       || !Number.isInteger(parsed.step)
       || (parsed.step as number) < 0
-      || (parsed.step as number) > 6
+      || (parsed.version === 1 ? (parsed.step as number) > 6 : (parsed.step as number) > 7)
       || typeof parsed.tagsText !== "string"
       || typeof parsed.updatedAt !== "string") {
       window.localStorage.removeItem(storageKey(ownerId));
       return null;
     }
+
+    // v2 inserted "使用AI選択" before the former first step.
+    // Existing in-progress drafts must resume at the same logical screen.
+    const restoredStep = parsed.version === 1
+      ? Math.min(7, (parsed.step as number) + 1)
+      : parsed.step as number;
 
     const draft = parseStoredArticleDraft(parsed.draft);
     if (!draft) {
@@ -70,10 +78,12 @@ export function loadArticleWizardProgress(ownerId: string): ArticleWizardProgres
     }
 
     return {
-      step: parsed.step as number,
+      step: restoredStep,
       draft,
       magazinePlan,
       tagsText: parsed.tagsText,
+      titleCandidatesText: typeof parsed.titleCandidatesText === "string" ? parsed.titleCandidatesText.slice(0, 10000) : "",
+      activePresetId: typeof parsed.activePresetId === "string" ? parsed.activePresetId : null,
       updatedAt: parsed.updatedAt,
     };
   } catch {

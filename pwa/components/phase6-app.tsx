@@ -1,37 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
+import { signOutCurrentBrowser } from "@/lib/auth-session";
 import {
   authMessage,
-  loadAccessState,
   PWA_PRODUCT_CODE,
   type AccessState,
   type AasProfile,
 } from "@/lib/phase6-access";
-import {
-  getSupabaseClient,
-  PublicConfigurationError,
-  publicLinks,
-} from "@/lib/supabase";
+import { publicLinks } from "@/lib/supabase";
 import { Phase7Library } from "@/components/phase7-library";
 
 type AuthMode = "login" | "register" | "reset" | "recovery";
-type Screen =
-  | { kind: "loading" }
-  | { kind: "auth" }
-  | { kind: "access"; value: Exclude<AccessState, { kind: "signed_out" }> }
-  | { kind: "configuration_error"; message: string }
-  | { kind: "error"; message: string };
-
 type InstallPrompt = Event & {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
 
 const callbackUrl = () => `${window.location.origin}/auth/callback`;
+const AAS_BUILD_SHA = (process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev").slice(0, 7);
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
@@ -40,19 +32,9 @@ function Brand({ compact = false }: { compact?: boolean }) {
         ✦
       </span>
       <span>
-        <strong>AI ARTICLE</strong>
+        <strong>AI ACTION</strong>
         <small>STUDIO PWA</small>
       </span>
-    </div>
-  );
-}
-
-function Spinner({ label }: { label: string }) {
-  return (
-    <div className="center-screen" role="status" aria-live="polite">
-      <Brand />
-      <span className="spinner" aria-hidden="true" />
-      <p>{label}</p>
     </div>
   );
 }
@@ -236,26 +218,37 @@ function AuthScreen({
   }[mode];
 
   return (
-    <main className="auth-page">
-      <section className="auth-intro">
+    <main className="auth-page auth-crystal-page">
+      <section className="auth-intro auth-crystal-intro">
         <Brand />
-        <p className="eyebrow">PWA ACCESS</p>
-        <h1>記事づくりを、<br />どこからでも。</h1>
-        <p className="lead">
-          AI Article Studio PWAへ安全にログインし、
-          PC・スマホ・タブレットからクラウド記事を確認・編集できます。
-        </p>
-        <div className="trust-row">
-          <span>Supabase Auth</span>
-          <span>RLS</span>
-          <span>PKCE</span>
+        <div className="auth-character-stage">
+          <div className="auth-character-copy">
+            <p className="eyebrow">AAS CREATIVE PARTNER</p>
+            <h1>AIで副業を、<br />もっと簡単に。</h1>
+            <p className="lead">
+              アクシアとルーモが、記事・SNS・画像・副業ワークを
+              ひとつのスタジオで進めるお手伝いをします。
+            </p>
+            <div className="trust-row">
+              <span>記事生成</span>
+              <span>副業機能</span>
+              <span>プロンプト</span>
+              <span>画像・SNS</span>
+            </div>
+          </div>
+          <div className="auth-character-visual" aria-hidden="true" />
+          <div className="auth-character-label">
+            <strong>アクシア × ルーモ</strong>
+            <small>AI Action Studio official guides</small>
+          </div>
         </div>
       </section>
 
-      <section className="auth-panel">
-        <div className="auth-card">
+      <section className="auth-panel auth-crystal-panel">
+        <div className="auth-card auth-crystal-card">
+          <span className="auth-build-stamp">build {AAS_BUILD_SHA}</span>
           <div className="mobile-brand"><Brand compact /></div>
-          <p className="eyebrow">AI ARTICLE STUDIO</p>
+          <p className="eyebrow">AI ACTION STUDIO</p>
           <h2>{title}</h2>
           <p className="form-caption">
             {mode === "login" && "登録済みのアカウントで続けます。"}
@@ -408,13 +401,14 @@ function Dashboard({
   onRetry: () => Promise<void>;
   onLogout: () => Promise<void>;
 }) {
+  const router = useRouter();
   const [installPrompt, setInstallPrompt] = useState<InstallPrompt | null>(null);
   const [section, setSection] = useState<"home" | "library">("home");
   const [imageUnsaved,setImageUnsaved] = useState(false);
   const [imageBusy,setImageBusy] = useState(false);
   const mayLeave = () => !imageBusy && (!imageUnsaved || window.confirm("未保存の画像情報・選択した画像を破棄して移動しますか？"));
   const navigate = (next: "home" | "library") => { if (next === section || mayLeave()) setSection(next); };
-  const navigateRoute = (path: string) => { if (mayLeave()) window.location.assign(path); };
+  const navigateRoute = (path: string) => { if (mayLeave()) router.push(path); };
   const logout = async () => { if (mayLeave()) await onLogout(); };
 
   useEffect(() => {
@@ -459,7 +453,7 @@ function Dashboard({
           <div>
             <p className="eyebrow">PWA HOME</p>
             <h1>おかえりなさい</h1>
-            <p>記事と画像を、いつもの端末と共有できます。</p>
+            <p>記事・SNS・画像・副業プロンプトを、いつもの端末から使えます。</p>
           </div>
           <span className="access-badge">● PWA利用可能</span>
         </header>
@@ -467,9 +461,9 @@ function Dashboard({
         <section className="hero-card">
           <div>
             <span className="hero-icon">✦</span>
-            <p className="eyebrow">ARTICLE LIBRARY READY</p>
-            <h2>クラウド記事をどの端末でも確認できます</h2>
-            <p>記事の閲覧・編集から、アイキャッチや挿絵の追加まで。記事を開いて、続きから作業できます。</p>
+            <p className="eyebrow">AI ACTION STUDIO READY</p>
+            <h2>副業に必要なAI作業を、どの端末からでも続けられます</h2>
+            <p>記事の閲覧・編集に加えて、画像作成や副業プロンプトも利用できます。目的に合わせて必要な機能へ進めます。</p>
           </div>
           <div className="hero-actions">
             <button type="button" className="primary-action" onClick={() => navigate("library")}>記事ライブラリを開く</button>
@@ -486,7 +480,7 @@ function Dashboard({
 
         <section className="coming-section">
           <div className="section-title">
-            <div><p className="eyebrow">YOUR WORKSPACE</p><h2>記事制作のワークスペース</h2></div>
+            <div><p className="eyebrow">YOUR WORKSPACE</p><h2>AI副業ワークスペース</h2></div>
             <span>利用できる主な機能</span>
           </div>
           <div className="feature-grid">
@@ -517,132 +511,78 @@ function FeatureCard({ mark, title, description, ready = false }: { mark: string
   return <article className={ready ? "feature-card ready" : "feature-card"}><span>{mark}</span><div><h3>{title}</h3><p>{description}</p></div><b>{ready ? "利用可能" : "準備中"}</b></article>;
 }
 
-async function resolveAccess(
-  client: SupabaseClient,
-  setScreen: (next: Screen) => void,
-): Promise<void> {
-  setScreen({ kind: "loading" });
-  try {
-    const access = await loadAccessState(client);
-    if (access.kind === "signed_out") setScreen({ kind: "auth" });
-    else setScreen({ kind: "access", value: access });
-  } catch (error) {
-    setScreen({ kind: "error", message: authMessage(error) });
-  }
-}
-
-export function Phase7App({ onAccessReady }: { onAccessReady?: () => void | Promise<void> }) {
-  const recoveryRef = useRef(false);
-  const [client, setClient] = useState<SupabaseClient | null>(null);
-  const [screen, setScreen] = useState<Screen>({ kind: "loading" });
+export function Phase7App() {
+  const { state, client, refresh: refreshAccess } = useSharedAccessState();
   const [authMode, setAuthMode] = useState<AuthMode>("login");
 
   const refresh = useCallback(async () => {
-    if (!client) return;
-    recoveryRef.current = false;
-    await resolveAccess(client, setScreen);
-  }, [client]);
+    setAuthMode("login");
+    await refreshAccess();
+  }, [refreshAccess]);
 
   const logout = useCallback(async () => {
     if (!client) return;
-    await client.auth.signOut({ scope: "local" });
-    setAuthMode("login");
-    setScreen({ kind: "auth" });
+    await signOutCurrentBrowser(client);
+    window.location.replace("/");
   }, [client]);
 
   useEffect(() => {
-    let active = true;
-    let authClient: SupabaseClient;
-    try {
-      authClient = getSupabaseClient();
-    } catch (error) {
-      const message =
-        error instanceof PublicConfigurationError
-          ? error.message
-          : "PWAの初期化に失敗しました。";
-      queueMicrotask(() => {
-        if (active) setScreen({ kind: "configuration_error", message });
-      });
-      return;
+    if (new URLSearchParams(window.location.search).get("mode") === "recovery") {
+      queueMicrotask(() => setAuthMode("recovery"));
     }
-
-    recoveryRef.current =
-      new URLSearchParams(window.location.search).get("mode") === "recovery";
-    queueMicrotask(() => {
-      if (!active) return;
-      setClient(authClient);
-      if (recoveryRef.current) {
-        setAuthMode("recovery");
-        setScreen({ kind: "auth" });
-      } else {
-        void resolveAccess(authClient, setScreen);
-      }
-    });
-
-    const { data } = authClient.auth.onAuthStateChange((event, session) => {
-      if (!active) return;
-      if (event === "SIGNED_OUT" || !session) {
-        setAuthMode("login");
-        setScreen({ kind: "auth" });
-        return;
-      }
-      if (event === "PASSWORD_RECOVERY" || recoveryRef.current) {
-        recoveryRef.current = true;
-        setAuthMode("recovery");
-        setScreen({ kind: "auth" });
-        return;
-      }
-      window.setTimeout(() => void resolveAccess(authClient, setScreen), 0);
-    });
-
-    const registerServiceWorker = () =>
-      void navigator.serviceWorker.register("/sw.js");
-    if ("serviceWorker" in navigator) {
-      if (document.readyState === "complete") registerServiceWorker();
-      else window.addEventListener("load", registerServiceWorker, { once: true });
-    }
-
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-      window.removeEventListener("load", registerServiceWorker);
-    };
   }, []);
 
   useEffect(() => {
-    if (screen.kind === "access" && screen.value.kind === "ready" && onAccessReady) {
-      void onAccessReady();
-    }
-  }, [onAccessReady, screen]);
+    if (!client) return;
+    const { data } = client.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setAuthMode("recovery");
+      } else if (event === "SIGNED_OUT") {
+        setAuthMode("login");
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, [client]);
 
-  if (screen.kind === "loading") return <Spinner label="アカウントと利用権を確認しています…" />;
+  useEffect(() => {
+    const registerServiceWorker = () =>
+      void navigator.serviceWorker.register("/sw.js");
+    if (!("serviceWorker" in navigator)) return;
+    if (document.readyState === "complete") registerServiceWorker();
+    else window.addEventListener("load", registerServiceWorker, { once: true });
+    return () => window.removeEventListener("load", registerServiceWorker);
+  }, []);
 
-  if (screen.kind === "configuration_error" || screen.kind === "error") {
+
+  if (authMode === "recovery" && client) {
+    return <AuthScreen client={client} mode="recovery" setMode={setAuthMode} refresh={refresh} />;
+  }
+
+  if (state.kind === "loading") return null;
+
+  if (state.kind === "unavailable" || !client) {
     return (
       <main className="status-page">
         <section className="status-card">
           <Brand compact />
           <span className="status-symbol">!</span>
           <p className="eyebrow">PWA ACCESS</p>
-          <h1>{screen.kind === "configuration_error" ? "公開設定が必要です" : "接続を確認できません"}</h1>
-          <p>{screen.message}</p>
-          {screen.kind === "error" && <button className="primary-action" type="button" onClick={() => void refresh()}>再試行</button>}
+          <h1>接続を確認できません</h1>
+          <p>AASへ接続できませんでした。通信状態と公開設定を確認してください。</p>
+          <button className="primary-action" type="button" onClick={() => void refresh()}>再試行</button>
         </section>
       </main>
     );
   }
 
-  if (!client) return <Spinner label="初期化しています…" />;
-
-  if (screen.kind === "auth") {
+  if (state.kind === "signed_out") {
     return <AuthScreen client={client} mode={authMode} setMode={setAuthMode} refresh={refresh} />;
   }
 
-  if (screen.value.kind !== "ready") {
-    return <AccessIssue value={screen.value} onRetry={refresh} onLogout={logout} />;
+  if (state.kind !== "ready") {
+    return <AccessIssue value={state} onRetry={refresh} onLogout={logout} />;
   }
 
-  if (onAccessReady) return <Spinner label="ホームを準備しています…" />;
 
-  return <Dashboard client={client} profile={screen.value.profile} onRetry={refresh} onLogout={logout} />;
+  return <Dashboard client={client} profile={state.profile} onRetry={refresh} onLogout={logout} />;
 }

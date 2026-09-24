@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
 
 import { FreeTrialAdminPanel } from "@/components/free-trial-admin-panel";
 import { listAdminUsers, type AdminUser } from "@/lib/phase10-admin";
-import { getSupabaseClient } from "@/lib/supabase";
 
 type Gate =
   | { kind: "loading" }
@@ -14,12 +16,27 @@ type Gate =
   | { kind: "error"; message: string };
 
 export function FreeTrialAdminPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState, client } = useSharedAccessState();
+  const [initError, setInitError] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const gate = useMemo<Gate>(() => {
+    if (accessState.kind === "ready") {
+      if (accessState.profile.role !== "admin" || accessState.profile.status !== "active") return { kind: "denied" };
+      if (initError) return { kind: "error", message: initError };
+      return { kind: "ready", aasId: accessState.profile.aas_user_id };
+    }
+    if (accessState.kind === "loading") return { kind: "loading" };
+    if (accessState.kind === "signed_out") return { kind: "signed_out" };
+    if (accessState.kind === "unavailable") {
+      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
+    }
+    return { kind: "denied" };
+  }, [accessState, initError]);
 
   const selected = useMemo(
     () => users.find((user) => user.id === selectedId) ?? null,
@@ -36,43 +53,35 @@ export function FreeTrialAdminPage() {
   }, [search, users]);
 
   const reloadUsers = async () => {
-    const next = await listAdminUsers(getSupabaseClient());
+    if (!client) throw new Error("AASへ接続できませんでした。");
+    const next = await listAdminUsers(client);
     setUsers(next);
     if (selectedId && !next.some((user) => user.id === selectedId)) setSelectedId("");
   };
 
   useEffect(() => {
+    if (
+      accessState.kind !== "ready" ||
+      accessState.profile.role !== "admin" ||
+      accessState.profile.status !== "active" ||
+      !client
+    ) return;
     let active = true;
+    queueMicrotask(() => {
+      if (active) setInitError("");
+    });
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) {
-          setGate({ kind: "signed_out" });
-          return;
-        }
-        const { data: profile, error: profileError } = await client
-          .from("profiles")
-          .select("id,aas_user_id,role,status")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !profile || profile.id !== user.id) throw new Error("管理者プロフィールを確認できません。");
-        if (profile.role !== "admin" || profile.status !== "active") {
-          setGate({ kind: "denied" });
-          return;
-        }
         const nextUsers = await listAdminUsers(client);
         if (!active) return;
         setUsers(nextUsers);
-        setGate({ kind: "ready", aasId: profile.aas_user_id });
       } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "管理画面を初期化できませんでした。" });
+        if (active) setInitError(error instanceof Error ? error.message : "管理画面を初期化できませんでした。");
       }
     };
     void boot();
     return () => { active = false; };
-  }, []);
+  }, [accessState, client]);
 
   const reload = async () => {
     setBusy(true); setMessage("");
@@ -86,15 +95,16 @@ export function FreeTrialAdminPage() {
     }
   };
 
+  if (gate.kind === "loading") return null;
+
   if (gate.kind !== "ready") {
     return (
       <main className="standalone-page"><section className="standalone-card">
         <p className="eyebrow">FREE TRIAL ADMIN</p><h1>無料トライアル管理</h1>
-        {gate.kind === "loading" && <p className="route-notice">管理者権限を確認しています…</p>}
         {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
         {gate.kind === "denied" && <p className="route-notice error">active管理者のみ利用できます。</p>}
         {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-        <a className="route-back" href="/">← ホームへ戻る</a>
+        <Link className="route-back" href="/">← ホームへ戻る</Link>
       </section></main>
     );
   }
@@ -109,7 +119,7 @@ export function FreeTrialAdminPage() {
         </div>
         <div className="admin-head-actions">
           <button disabled={busy} type="button" className="secondary-action" onClick={() => void reload()}>ユーザーを更新</button>
-          <a className="route-back" href="/admin">← 管理ダッシュボード</a>
+          <Link className="route-back" href="/admin">← 管理ダッシュボード</Link>
         </div>
       </header>
 

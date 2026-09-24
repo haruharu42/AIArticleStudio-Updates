@@ -23,7 +23,9 @@ test("admin operations exposes Supabase usage, billing, and pricing guidance", a
   assert.match(guide, /\$25〜 \/ 月/);
   assert.match(guide, /Team/);
   assert.match(guide, /\$599〜 \/ 月/);
-  assert.match(guide, /2026-09-17/);
+  assert.match(guide, /料金は20\d{2}-\d{2}-\d{2}時点/);
+  assert.match(guide, /終値付近/);
   assert.match(guide, /最新料金/);
-  assert.match(guide, /税・為替・請求額/);
+  assert.match(guide, /為替・税/);
+  assert.match(guide, /請求額/);
 });

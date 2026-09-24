@@ -90,6 +90,7 @@ test("runtime catalog loads only active membership-aware rules and admin review 
   const admin = await read("components/admin-knowledge-page.tsx");
   const route = await read("app/admin/knowledge/page.tsx");
   const tools = await read("components/phase-tools-page.tsx");
+  const sections = await read("lib/admin-sections.ts");
 
   assert.match(catalog, /client\.rpc\("list_my_active_knowledge_catalog"\)/);
   assert.match(membershipMigration, /catalog\.status = 'active'/);
@@ -102,5 +103,6 @@ test("runtime catalog loads only active membership-aware rules and admin review 
   assert.match(admin, /adminListKnowledgeCandidates/);
   assert.match(admin, /adminReviewKnowledgeCandidate/);
   assert.match(route, /AdminKnowledgePage/);
-  assert.match(tools, /href: "\/admin\/knowledge"/);
+  assert.match(sections, /href: "\/admin\/knowledge"/);
+  assert.doesNotMatch(tools, /href: "\/admin\/knowledge"/);
 });

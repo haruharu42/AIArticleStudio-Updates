@@ -9,6 +9,7 @@ const vite = await createServer({ appType: 'custom', configFile: false, root, re
 after(() => vite.close());
 
 const rich = await vite.ssrLoadModule('/lib/note-rich-text.ts');
+const postAssistant = await vite.ssrLoadModule('/lib/note-post-assistant.ts');
 const exporter = await vite.ssrLoadModule('/lib/article-export.ts');
 const exportUi = await fs.readFile(`${root}/components/article-export-page.tsx`, 'utf8');
 const richSource = await fs.readFile(`${root}/lib/note-rich-text.ts`, 'utf8');
@@ -37,7 +38,7 @@ const safe = true;
 
 test('note rich renderer preserves supported structural decoration and escapes raw html', () => {
   const html = rich.markdownToNoteHtml(`${markdown}\n\n<script>alert(1)</script>`);
-  assert.match(html, /<h1>大見出し<\/h1>/);
+  assert.match(html, /<h2>大見出し<\/h2>/);
   assert.match(html, /<h2>小見出し<\/h2>/);
   assert.match(html, /<strong>重要<\/strong>/);
   assert.match(html, /<a href="https:\/\/example\.com">公式<\/a>/);
@@ -60,10 +61,36 @@ test('plain text conversion removes markdown decoration while keeping readable c
   assert.doesNotMatch(text, /^##/m);
 });
 
+test('note post assistant splits article body around inline image markers in posting order', () => {
+  const body = `導入です。
+
+<!-- IMAGE:01 -->
+
+## 続き
+本文です。
+
+<!-- IMAGE:02 -->
+
+まとめです。`;
+  const sequence = postAssistant.buildNotePostSequence(body, '別タイトル');
+  assert.deepEqual(sequence.map((item) => item.kind === 'inline-image' ? `image-${item.order}` : item.id), [
+    'body-1',
+    'image-1',
+    'body-2',
+    'image-2',
+    'body-3',
+  ]);
+  assert.deepEqual(postAssistant.inlineImageOrders(sequence), [1, 2]);
+  assert.match(sequence[1].id, /inline-1/);
+  assert.doesNotMatch(sequence.filter((item) => item.kind === 'body').map((item) => item.markdown).join('\n'), /挿絵1をここに挿入/);
+});
+
 test('clipboard implementation writes html and plain text with a browser fallback', () => {
   assert.match(richSource, /"text\/html"/);
   assert.match(richSource, /"text\/plain"/);
   assert.match(richSource, /navigator\.clipboard\.write/);
+  assert.match(richSource, /catch \{/);
+  assert.match(richSource, /fallbackRichCopy\(html\)/);
   assert.match(richSource, /document\.execCommand\("copy"\)/);
 });
 
@@ -85,7 +112,7 @@ test('html export renders structured article html and txt export is plain', () =
   };
   const html = exporter.articleExportHtml(detail);
   const text = exporter.articleExportText(detail);
-  assert.match(html, /<h1>大見出し<\/h1>/);
+  assert.match(html, /<h2>大見出し<\/h2>/);
   assert.match(html, /<strong>重要<\/strong>/);
   assert.doesNotMatch(html, /<pre style="white-space:pre-wrap;font:inherit">/);
   assert.doesNotMatch(text, /\*\*重要\*\*/);

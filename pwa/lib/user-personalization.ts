@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { buildWorkspacePresetPromptContext } from "@/features/presets/workspace-presets";
+import type { KnowledgeTask } from "@/lib/knowledge-engine";
+import { compilePromptOptimizationContext } from "@/lib/prompt-optimization";
+
 export type AiProvider = "chatgpt" | "claude" | "gemini";
 export type AiPlan = "free" | "paid";
 export type WritingTone = "balanced" | "friendly" | "professional" | "casual";
@@ -23,6 +27,11 @@ export type UserWritingProfile = {
   articleCount: number;
   platformCounts: Record<string, number>;
   genreCounts: Record<string, number>;
+  subgenreCounts: Record<string, number>;
+  articleTypeCounts: Record<string, number>;
+  ageGroupCounts: Record<string, number>;
+  targetLengthCounts: Record<string, number>;
+  presetCounts: Record<string, number>;
   lastArticleType: "free" | "paid" | null;
   lastGenerationMode: "prompt_export" | "manual" | null;
   lastUsedAt: string | null;
@@ -66,6 +75,11 @@ export function createDefaultWritingProfile(userId: string): UserWritingProfile 
     articleCount: 0,
     platformCounts: {},
     genreCounts: {},
+    subgenreCounts: {},
+    articleTypeCounts: {},
+    ageGroupCounts: {},
+    targetLengthCounts: {},
+    presetCounts: {},
     lastArticleType: null,
     lastGenerationMode: null,
     lastUsedAt: null,
@@ -126,6 +140,11 @@ function parseProfile(userId: string, row: unknown): UserWritingProfile {
     articleCount: typeof data.article_count === "number" && Number.isSafeInteger(data.article_count) && data.article_count >= 0 ? data.article_count : 0,
     platformCounts: numericCounts(data.platform_counts),
     genreCounts: numericCounts(data.genre_counts),
+    subgenreCounts: numericCounts(data.subgenre_counts),
+    articleTypeCounts: numericCounts(data.article_type_counts),
+    ageGroupCounts: numericCounts(data.age_group_counts),
+    targetLengthCounts: numericCounts(data.target_length_counts),
+    presetCounts: numericCounts(data.preset_counts),
     lastArticleType: data.last_article_type === "free" || data.last_article_type === "paid" ? data.last_article_type : null,
     lastGenerationMode: data.last_generation_mode === "prompt_export" || data.last_generation_mode === "manual" ? data.last_generation_mode : null,
     lastUsedAt: typeof data.last_used_at === "string" ? data.last_used_at : null,
@@ -139,7 +158,7 @@ export async function loadWritingProfile(
 ): Promise<UserWritingProfile> {
   const { data, error } = await client
     .from("user_writing_profiles")
-    .select("user_id,personalization_enabled,preferred_ai,preferred_plan,tone,heading_style,list_preference,cta_style,avoid_hype,preferred_platform,preferred_genre,article_count,platform_counts,genre_counts,last_article_type,last_generation_mode,last_used_at,updated_at")
+    .select("user_id,personalization_enabled,preferred_ai,preferred_plan,tone,heading_style,list_preference,cta_style,avoid_hype,preferred_platform,preferred_genre,article_count,platform_counts,genre_counts,subgenre_counts,article_type_counts,age_group_counts,target_length_counts,preset_counts,last_article_type,last_generation_mode,last_used_at,updated_at")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -167,7 +186,7 @@ export async function saveWritingProfile(
   const { data, error } = await client
     .from("user_writing_profiles")
     .upsert(payload, { onConflict: "user_id" })
-    .select("user_id,personalization_enabled,preferred_ai,preferred_plan,tone,heading_style,list_preference,cta_style,avoid_hype,preferred_platform,preferred_genre,article_count,platform_counts,genre_counts,last_article_type,last_generation_mode,last_used_at,updated_at")
+    .select("user_id,personalization_enabled,preferred_ai,preferred_plan,tone,heading_style,list_preference,cta_style,avoid_hype,preferred_platform,preferred_genre,article_count,platform_counts,genre_counts,subgenre_counts,article_type_counts,age_group_counts,target_length_counts,preset_counts,last_article_type,last_generation_mode,last_used_at,updated_at")
     .single();
   if (error || !data) throw new Error("あなた向け最適化の設定を保存できませんでした。");
   return parseProfile(profile.userId, data);
@@ -207,8 +226,14 @@ export function summarizeWritingProfile(profile: UserWritingProfile): string[] {
   if (profile.articleCount > 0) lines.push(`最適化ONで保存した記事: ${profile.articleCount}件`);
   const platform = topCount(profile.platformCounts);
   const genre = topCount(profile.genreCounts);
+  const subgenre = topCount(profile.subgenreCounts);
+  const ageGroup = topCount(profile.ageGroupCounts);
+  const targetLength = topCount(profile.targetLengthCounts);
   if (platform) lines.push(`よく使う掲載先: ${platform}`);
   if (genre) lines.push(`よく使うジャンル: ${genre}`);
+  if (subgenre) lines.push(`よく使うサブジャンル: ${subgenre}`);
+  if (ageGroup) lines.push(`よく使う読者層: ${ageGroup}`);
+  if (targetLength) lines.push(`よく使う文字数: 約${targetLength.replace(/（.*$/, "")}文字`);
   return lines;
 }
 
@@ -229,12 +254,15 @@ const providerRules: Record<AiProvider, string[]> = {
 
 const planRules: Record<AiPlan, string[]> = {
   free: [
-    "無料版で扱いやすいよう、重複する指示や不要な前置きを避けて重要条件を優先する",
-    "長文でも途中で説明方針を脱線させず、最終出力だけを簡潔に返す",
+    "無料版で扱いやすいよう、重複する指示や不要な前置きを削り、記事の必須条件・安全ルール・出力形式を最優先する",
+    "複雑な検討を何段階も要求せず、1回の回答で安定して完結できる構成にする",
+    "長文でも途中で説明方針を脱線させず、最終成果物だけを簡潔に返す",
   ],
   paid: [
-    "与えられた詳細条件を最後まで保持し、構成・具体性・安全性をまとめて高い粒度で確認する",
-    "長文では全体構成の整合性と重複を内部確認してから最終出力を返す",
+    "与えられた詳細条件を最後まで保持し、構成・具体性・安全性・掲載先適合をまとめて高い粒度で確認する",
+    "最終出力前に、見出しの重複、論理の飛躍、説明不足、同じ内容の言い換え反復がないか内部で推敲する",
+    "読者の悩み→理解→判断→行動までの流れを内部で設計し、長文全体の一貫性を保ってから完成稿だけを返す",
+    "ARTICLE BRIEFの条件をチェックリストとして内部確認し、指定漏れがない状態で最終出力する",
   ],
 };
 
@@ -260,8 +288,12 @@ const ctaRule: Record<CtaStyle, string> = {
   direct: "CTAは次に取る行動が明確に分かる直接的な表現にする",
 };
 
-export function buildUserPromptContext(profile: UserWritingProfile | null): string {
-  if (!profile) return "";
+export function buildUserPromptContext(
+  profile: UserWritingProfile | null,
+  task: KnowledgeTask = "article",
+): string {
+  const workspacePresetContext = buildWorkspacePresetPromptContext(task);
+  if (!profile) return workspacePresetContext;
   const lines = [
     "【使用AI向けAAS最適化】",
     `使用AI: ${AI_PROVIDER_LABELS[profile.preferredAi]}`,
@@ -269,6 +301,15 @@ export function buildUserPromptContext(profile: UserWritingProfile | null): stri
     ...providerRules[profile.preferredAi].map((rule) => `- ${rule}`),
     ...planRules[profile.preferredPlan].map((rule) => `- ${rule}`),
   ];
+
+  const cloudOptimization = compilePromptOptimizationContext(
+    profile.preferredAi,
+    profile.preferredPlan,
+    task,
+  );
+  if (cloudOptimization) {
+    lines.push("", cloudOptimization);
+  }
 
   if (profile.personalizationEnabled) {
     lines.push(
@@ -284,10 +325,20 @@ export function buildUserPromptContext(profile: UserWritingProfile | null): stri
     if (profile.preferredGenre) lines.push(`- 通常よく使うジャンル: ${profile.preferredGenre}。今回のARTICLE BRIEF指定が異なる場合は今回指定を優先する`);
     const learnedPlatform = topCount(profile.platformCounts);
     const learnedGenre = topCount(profile.genreCounts);
+    const learnedSubgenre = topCount(profile.subgenreCounts);
+    const learnedArticleType = topCount(profile.articleTypeCounts);
+    const learnedAgeGroup = topCount(profile.ageGroupCounts);
+    const learnedTargetLength = topCount(profile.targetLengthCounts);
     if (learnedPlatform) lines.push(`- 利用履歴上よく使う掲載先: ${learnedPlatform}`);
     if (learnedGenre) lines.push(`- 利用履歴上よく使うジャンル: ${learnedGenre}`);
+    if (learnedSubgenre) lines.push(`- 利用履歴上よく使うサブジャンル: ${learnedSubgenre}`);
+    if (learnedArticleType) lines.push(`- 利用履歴上よく使う記事タイプ: ${learnedArticleType}`);
+    if (learnedAgeGroup) lines.push(`- 利用履歴上よく使う読者層: ${learnedAgeGroup}`);
+    if (learnedTargetLength) lines.push(`- 利用履歴上よく使う文字数帯: 約${learnedTargetLength.replace(/（.*$/, "")}文字`);
+    lines.push("- 利用履歴は補助的な好みとして扱い、今回のARTICLE BRIEFやユーザー指定が異なる場合は今回指定を優先する");
     lines.push("- この設定は文体・構成の好みとして扱い、絶対ルールや今回の記事条件より優先しない");
   }
+  if (workspacePresetContext) lines.push("", workspacePresetContext);
   return lines.join("\n");
 }
 
@@ -296,15 +347,42 @@ export async function recordPersonalizationSignal(
   input: {
     platform: PreferredPlatform;
     genre: string;
+    subgenre?: string;
     articleType: "free" | "paid";
     generationMode: "prompt_export" | "manual";
+    ageGroup?: string;
+    targetLength?: number;
+    presetId?: string | null;
   },
 ): Promise<void> {
-  const { error } = await client.rpc("record_my_personalization_signal", {
+  const richSignal = await client.rpc("record_my_article_workflow_signal", {
+    p_platform: input.platform,
+    p_genre: input.genre.trim().slice(0, 100) || null,
+    p_subgenre: (input.subgenre ?? "AIおまかせ").trim().slice(0, 100) || "AIおまかせ",
+    p_article_type: input.articleType,
+    p_generation_mode: input.generationMode,
+    p_age_group: (input.ageGroup ?? "AIおまかせ").trim().slice(0, 60) || "AIおまかせ",
+    p_target_length: Number.isSafeInteger(input.targetLength) ? input.targetLength : 5000,
+    p_preset_id: input.presetId ?? null,
+  });
+
+  if (!richSignal.error) return;
+
+  const richErrorCode = String(richSignal.error.code ?? "").toUpperCase();
+  const richErrorMessage = String(richSignal.error.message ?? "").toLowerCase();
+  const missingRichRpc = richErrorCode === "PGRST202"
+    || richErrorCode === "42883"
+    || richErrorMessage.includes("record_my_article_workflow_signal")
+      && (richErrorMessage.includes("not found") || richErrorMessage.includes("does not exist"));
+  if (!missingRichRpc) {
+    throw new Error("個人最適化の利用傾向を更新できませんでした。");
+  }
+
+  const legacy = await client.rpc("record_my_personalization_signal", {
     p_platform: input.platform,
     p_genre: input.genre.trim().slice(0, 100) || null,
     p_article_type: input.articleType,
     p_generation_mode: input.generationMode,
   });
-  if (error) throw new Error("個人最適化の利用傾向を更新できませんでした。");
+  if (legacy.error) throw new Error("個人最適化の利用傾向を更新できませんでした。");
 }
