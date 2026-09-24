@@ -76,3 +76,29 @@ test("Stable review UI previews the gate and blocks publish until it passes", as
   assert.match(css, /\.knowledge-stable-gate/);
   assert.match(css, /\.knowledge-stable-gate-grid/);
 });
+
+
+test("Phase 63 separates mutable Fresh rows from durable Stable snapshots", async () => {
+  const migration = await readRepo("supabase/migrations/20260924202500_stable_promotion_gate_v1.sql");
+
+  assert.match(migration, /create table if not exists public\.knowledge_stable_catalog/);
+  assert.match(migration, /create table if not exists public\.prompt_optimization_stable_catalog/);
+  assert.match(migration, /alter table public\.knowledge_stable_catalog enable row level security/);
+  assert.match(migration, /revoke all on table public\.knowledge_stable_catalog from public, anon, authenticated/);
+  assert.match(migration, /from public\.knowledge_stable_catalog as catalog/);
+  assert.match(migration, /from public\.prompt_optimization_stable_catalog as item/);
+  assert.match(migration, /Stableへ昇格するKnowledgeは、先に同じkeyをFreshで公開/);
+  assert.match(migration, /stable_wait_window_active/);
+  assert.match(migration, /if member_access then/);
+  assert.doesNotMatch(migration, /or catalog\.stable_available_at <= now\(\)/);
+});
+
+test("v4 publication snapshots only gate-approved Stable bundle keys", async () => {
+  const migration = await readRepo("supabase/migrations/20260924202500_stable_promotion_gate_v1.sql");
+
+  assert.match(migration, /if request_channel = 'stable' then[\s\S]*insert into public\.knowledge_stable_catalog/);
+  assert.match(migration, /jsonb_array_elements\(coalesce\(p_bundle -> 'knowledge_rules'/);
+  assert.match(migration, /insert into public\.prompt_optimization_stable_catalog/);
+  assert.match(migration, /on conflict \(key\) do update/);
+  assert.match(migration, /promoted_at=now\(\)/);
+});
