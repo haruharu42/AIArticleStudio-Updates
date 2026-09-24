@@ -10,13 +10,13 @@ const read = (relative) => readFile(path.join(root, relative), "utf8");
 test("Axia and Rumo are local presentation assets and the crystal theme loads last", async () => {
   const [layout, css, asset, hub] = await Promise.all([
     read("app/layout.tsx"),
-    read("app/phase53-crystal-character-ui.css"),
+    read("app/phase53-crystal-ui.css"),
     read("public/aas-axia-rumo-hero.svg"),
     read("components/action-studio-home-hub.tsx"),
   ]);
 
-  assert.match(layout, /phase52-infrastructure-usage\.css";[\s\S]*?phase53-crystal-ui\.css";[\s\S]*?phase53-crystal-character-ui\.css"/);
-  assert.ok(layout.indexOf("phase53-crystal-ui.css") < layout.indexOf("phase53-crystal-character-ui.css"));
+  assert.ok(layout.lastIndexOf('import "./phase53-crystal-ui.css";') > layout.lastIndexOf('import "./phase52-infrastructure-usage.css";'));
+  assert.doesNotMatch(layout, /phase53-crystal-character-ui/);
   assert.match(asset, /data:image\/webp;base64,/);
   assert.doesNotMatch(asset, /<image[^>]+href="https?:\/\//);
   assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
@@ -41,7 +41,7 @@ test("home puts user and article library before lower quick actions", async () =
 });
 
 test("crystal UI styles desktop, mobile, controls and navigation without replacing behavior", async () => {
-  const css = await read("app/phase53-crystal-character-ui.css");
+  const css = await read("app/phase53-crystal-ui.css");
 
   for (const selector of [
     ".aas-reference-header",
@@ -51,12 +51,13 @@ test("crystal UI styles desktop, mobile, controls and navigation without replaci
     ".reference-creator-card",
     ".reference-home-section",
     ".aas-reference-bottom-nav",
-    ".reference-home select",
-    ".reference-create-shell textarea",
-    ".side-hustle-wizard-card select",
-    ".admin-page input",
+    "main select",
+    "main textarea",
+    ".side-hustle-wizard-card",
     ".tool-card",
     ".admin-panel",
+    ".editor-card",
+    ".reference-home > .aas-reference-desktop-nav",
   ]) {
     assert.ok(css.includes(selector), `missing crystal selector: ${selector}`);
   }
