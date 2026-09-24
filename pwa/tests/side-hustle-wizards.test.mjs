@@ -218,3 +218,50 @@ test("database and refresh pipeline accept every dedicated side-hustle knowledge
   assert.match(optimizer, /isKnowledgeTask/);
   assert.doesNotMatch([migration, autoUpdate].join("\n"), /service[_-]?role|sb_secret_/i);
 });
+
+
+test("every side-hustle has 5-10+ situation-specific knowledge rules and prompt injection", async () => {
+  const [scenario, builder, autoUpdate] = await Promise.all([
+    read("features/side-hustles/scenario-knowledge.ts"),
+    read("features/side-hustles/prompt-builder.ts"),
+    read("lib/knowledge-auto-update.ts"),
+  ]);
+
+  const slugs = [
+    "content-sales",
+    "sns-management",
+    "youtube-video",
+    "affiliate",
+    "resale",
+    "skill-sales",
+    "digital-product",
+    "crowdsourcing",
+    "outreach",
+    "sidejob-planner",
+    "research",
+    "workflow-efficiency",
+  ];
+
+  assert.equal((scenario.match(/\bR\("/g) ?? []).length, 72);
+  for (const slug of slugs) {
+    const start = scenario.indexOf('"' + slug + '": [');
+    assert.notEqual(start, -1, "missing scenario knowledge for " + slug);
+    const rest = scenario.slice(start);
+    const end = rest.indexOf("\n  ],");
+    const block = end >= 0 ? rest.slice(0, end) : rest;
+    const count = (block.match(/\bR\("/g) ?? []).length;
+    assert.ok(count >= 5, slug + " must have at least 5 scenario knowledge rules");
+    assert.ok(count <= 10, slug + " should stay reviewable at 10 or fewer top-level scenario rules");
+  }
+
+  for (const category of ["medium", "experience", "objective", "production", "sales", "risk"]) {
+    assert.match(scenario, new RegExp('"' + category + '"'));
+  }
+
+  assert.match(builder, /compileSideHustleScenarioKnowledge/);
+  assert.match(builder, /scenarioKnowledge\.promptBlock/);
+  assert.match(builder, /\.\.\.scenarioKnowledge\.applied/);
+  assert.match(scenario, /状況別副業KNOWLEDGE/);
+  assert.match(autoUpdate, /媒体・用途・初心者\/経験者・販売\/集客\/制作・リスク/);
+  assert.match(autoUpdate, /状況別候補/);
+});
