@@ -1442,6 +1442,19 @@ body.aas-crystal-theme .status-card::after {
   pointer-events: none;
 }
 
+@media (min-width: 901px) {
+  body.aas-crystal-theme .auth-character-stage {
+    grid-template-columns: minmax(240px, .74fr) minmax(420px, 1.26fr);
+  }
+
+  body.aas-crystal-theme .auth-character-visual {
+    align-self: center;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+    background: url("/aas-axia-rumo-hero-hq.webp") center / contain no-repeat;
+  }
+}
+
 @media (max-width: 900px) {
   body.aas-crystal-theme .auth-page.auth-crystal-page {
     grid-template-columns: 1fr;
