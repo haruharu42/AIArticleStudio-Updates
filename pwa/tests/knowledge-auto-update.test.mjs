@@ -291,7 +291,7 @@ test("AI enrichment drafts Knowledge candidates but keeps final publication admi
   assert.match(panel, /APIキー.*Vault設定済み/);
   assert.match(panel, /type="password"/);
   assert.match(panel, /Fresh差分へ取り込む/);
-  assert.match(panel, /まだ公開されていません/);
+  assert.match(panel, /候補状態もまだ確定していません/);
   assert.match(panel, /変更点を確認/);
   assert.match(panel, /adminSetKnowledgeAutomationAiConfig/);
   assert.match(panel, /buildKnowledgeAutomationCandidateBundle/);
