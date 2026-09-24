@@ -1500,7 +1500,7 @@
 
 .knowledge-regression-grid dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   margin: 0;
 }
@@ -1544,6 +1544,30 @@
   line-height: 1.5;
 }
 
+.knowledge-contract-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.knowledge-contract-groups > span {
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-size: 7px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.knowledge-contract-groups > span.pass {
+  background: #e5f6ed;
+  color: #287458;
+}
+
+.knowledge-contract-groups > span.fail {
+  background: #ffe7e2;
+  color: #a24d40;
+}
+
 .knowledge-regression-ok {
   margin: 0;
   color: #36775e;
@@ -1568,6 +1592,10 @@
 
 @media (max-width: 900px) {
   .knowledge-regression-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .knowledge-regression-grid dl {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

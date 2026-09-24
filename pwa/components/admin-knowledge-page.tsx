@@ -353,11 +353,19 @@ export function AdminKnowledgePage() {
                 <div><dt>Top 5</dt><dd>{result.selectedCount}/5</dd></div>
                 <div><dt>候補</dt><dd>{result.eligibleCount}</dd></div>
                 <div><dt>副業固有</dt><dd>{result.taskSpecificSelected}</dd></div>
+                <div><dt>選択契約</dt><dd>{result.contractGroups.filter((group) => group.passed).length}/{result.contractGroups.length}</dd></div>
               </dl>
               <p className="knowledge-regression-top">
                 <span>最上位</span>
                 <strong>{result.topRuleLabel ?? "該当なし"}</strong>
               </p>
+              <div className="knowledge-contract-groups">
+                {result.contractGroups.map((group) => (
+                  <span key={group.id} className={group.passed ? "pass" : "fail"} title={group.description}>
+                    {group.passed ? "✓" : "!"} {group.label}
+                  </span>
+                ))}
+              </div>
               {result.issues.length === 0 ? (
                 <p className="knowledge-regression-ok">選択品質に問題はありません。</p>
               ) : (
