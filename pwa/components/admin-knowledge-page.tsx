@@ -53,7 +53,7 @@ function lines(value: string): string[] {
   return value.split("\n").map((item) => item.trim().replace(/^[-・]\s*/, "")).filter(Boolean).slice(0, 40);
 }
 
-function formatDate(value: string): string {
+function formatDate(value: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ja-JP");
