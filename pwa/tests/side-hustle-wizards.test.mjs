@@ -261,7 +261,8 @@ test("every side-hustle has 5-10+ situation-specific knowledge rules and prompt 
   assert.match(builder, /compileSideHustleScenarioKnowledge/);
   assert.match(builder, /scenarioKnowledge\.promptBlock/);
   assert.match(builder, /\.\.\.scenarioKnowledge\.applied/);
-  assert.match(scenario, /状況別副業KNOWLEDGE/);\n  assert.match(scenario, /状況別: \\$\\{rule\\.label\\}/);
+  assert.match(scenario, /状況別副業KNOWLEDGE/);
+  assert.match(scenario, /状況別: \\$\\{rule\\.label\\}/);
   assert.match(autoUpdate, /媒体・用途・初心者\/経験者・販売\/集客\/制作・リスク/);
   assert.match(autoUpdate, /状況別候補/);
 });
