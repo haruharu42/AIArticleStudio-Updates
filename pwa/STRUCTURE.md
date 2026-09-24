@@ -17,6 +17,8 @@ AI Action Studio PWA keeps responsibilities separated so UI changes, business lo
 - `components/phase7-library.tsx`: article-library controller; owns paging, detail loading, mutation orchestration, async request ordering, and image/tool composition.
 - `components/admin-users/`: admin user-management presentation panels; callbacks only, with no direct Supabase mutation ownership.
 - `components/pwa-admin-users-page.tsx`: admin user-management controller; owns loading, selection, mutation orchestration, refresh, and messages.
+- `components/admin-infrastructure-usage-page.tsx`: active-admin infrastructure dashboard; combines the existing admin-only Supabase capacity RPC with read-only public GitHub usage endpoints.
+- `lib/infrastructure-usage.ts`: pure-ish infrastructure usage adapter; owns GitHub plan allowances, public repository/Actions usage parsing, pricing-reference constants, and Supabase plan reference text.
 - `features/prompts/`: public prompt-domain boundary used by new UI; re-exports catalog, preferences, routing, and service contracts while legacy `lib/` paths remain compatible.
 - `features/tools/`: feature-directory catalog boundary. Owns genre grouping and links for the user-facing 機能一覧 so the home hub does not duplicate side-hustle definitions.
 - `features/side-hustles/`: dedicated side-hustle domain. Each side-hustle owns its own dropdown schema, custom-input fallbacks, knowledge task, prompt template, progress state, and AI-result round trip. Shared code is limited to wizard mechanics and prompt/knowledge composition.
