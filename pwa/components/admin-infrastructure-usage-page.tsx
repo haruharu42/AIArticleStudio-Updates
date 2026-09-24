@@ -308,6 +308,7 @@ export function AdminInfrastructureUsagePage() {
                 <option value="team">GitHub Team</option>
                 <option value="enterprise">GitHub Enterprise Cloud</option>
               </select>
+              <small>プラン選択は表示用の基準として、この端末に保存します。</small>
             </label>
             <a
               className="secondary-action"
