@@ -14,7 +14,7 @@ test("Phase 58 balances cloud rule priority with specificity before the five-rul
 
   assert.match(engine, /function cloudRuleRank/);
   assert.match(engine, /rule\.priority \+ cloudRuleSpecificity\(rule\)/);
-  assert.match(engine, /cloudRuleRank\\(b, input\\) - cloudRuleRank\\(a, input\\)/);
+  assert.match(engine, /cloudRuleRank\(b, input\) - cloudRuleRank\(a, input\)/);
   assert.match(engine, /MAX_CLOUD_RULES_PER_COMPILE = 5/);
   assert.match(engine, /if \(rule\.kind === "task"\) return 30/);
   assert.match(engine, /return 5;/);
