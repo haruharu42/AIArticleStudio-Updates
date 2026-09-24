@@ -89,6 +89,7 @@ export function AdminKnowledgePage() {
   const [busy, setBusy] = useState(false);
   const [compilerTask, setCompilerTask] = useState<KnowledgeTask>("sidejob_content");
   const [compilerChannel, setCompilerChannel] = useState<"fresh" | "stable">("fresh");
+  const [compilerReferenceTime, setCompilerReferenceTime] = useState(0);
 
   const reload = async () => {
     if (!client) throw new Error("AASへ接続できませんでした。");
@@ -104,6 +105,7 @@ export function AdminKnowledgePage() {
     setCandidates(nextCandidates);
     setCatalog((catalogResult.data ?? []) as CatalogRow[]);
     setHealth(nextHealth);
+    setCompilerReferenceTime(Date.now());
   };
 
   const isAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
@@ -126,6 +128,7 @@ export function AdminKnowledgePage() {
         setCandidates(nextCandidates);
         setCatalog((catalogResult.data ?? []) as CatalogRow[]);
         setHealth(nextHealth);
+        setCompilerReferenceTime(Date.now());
       } catch (error) {
         if (active) setMessage(error instanceof Error ? error.message : "ナレッジ管理を初期化できませんでした。");
       }
@@ -176,28 +179,26 @@ export function AdminKnowledgePage() {
   const staleSidejobCount = sidejobCoverage.filter((item) => item.stale).length;
 
   const compilerPreview = useMemo(() => {
-    const now = Date.now();
     const rules = catalog
       .filter((item) => item.status === "active")
       .filter((item) => compilerChannel === "fresh"
         || item.release_channel === "both"
-        || new Date(item.stable_available_at).getTime() <= now)
+        || new Date(item.stable_available_at).getTime() <= compilerReferenceTime)
       .map((item) => parseKnowledgeCatalogRow(item as unknown as Record<string, unknown>))
       .filter((rule): rule is NonNullable<typeof rule> => Boolean(rule));
 
     return previewCloudKnowledgeSelection(rules, { task: compilerTask });
-  }, [catalog, compilerChannel, compilerTask]);
+  }, [catalog, compilerChannel, compilerReferenceTime, compilerTask]);
 
   const compilerStableWaiting = useMemo(() => {
     if (compilerChannel !== "stable") return 0;
-    const now = Date.now();
     return catalog.filter((item) =>
       item.status === "active"
       && item.tasks.includes(compilerTask)
       && item.release_channel === "fresh_first"
-      && new Date(item.stable_available_at).getTime() > now
+      && new Date(item.stable_available_at).getTime() > compilerReferenceTime
     ).length;
-  }, [catalog, compilerChannel, compilerTask]);
+  }, [catalog, compilerChannel, compilerReferenceTime, compilerTask]);
 
   const open = (candidate: KnowledgeCandidate) => {
     setSelected(candidate);
