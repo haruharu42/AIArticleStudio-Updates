@@ -242,7 +242,7 @@ export function KnowledgeRefreshPanel() {
       await adminCancelKnowledgeRefresh(getSupabaseClient(), request.id);
       setBundleText("");
       setDiffPreview(null);
-    setQualityReport(null);
+      setQualityReport(null);
       if (selectedId === request.id) setSelectedId(null);
       await reload();
       setMessage(`更新 #${request.id} を中止しました。必要なら履歴から再試行できます。`);
@@ -312,7 +312,7 @@ export function KnowledgeRefreshPanel() {
         : `品質ゲートで ${quality.blocking.length}件の修正必須項目が見つかりました。公開前に修正してください。`);
     } catch (error) {
       setDiffPreview(null);
-    setQualityReport(null);
+      setQualityReport(null);
       setMessage(error instanceof Error ? error.message : "変更点を比較できませんでした。");
     } finally {
       setBusy(false);
@@ -338,7 +338,7 @@ export function KnowledgeRefreshPanel() {
       const result = await adminPublishKnowledgeRefreshBundle(getSupabaseClient(), selected.id, bundle);
       setBundleText("");
       setDiffPreview(null);
-    setQualityReport(null);
+      setQualityReport(null);
       await reload();
       setMessage(
         `${result.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）"} v${result.publishedVersion} を公開しました。Knowledge ${result.knowledgeCount}件 / Prompt ${result.promptCount}件です。`,
@@ -422,7 +422,7 @@ export function KnowledgeRefreshPanel() {
               <button type="button" className="knowledge-refresh-select" onClick={() => {
                 setSelectedId(request.id);
                 setDiffPreview(null);
-    setQualityReport(null);
+      setQualityReport(null);
                 setBundleText("");
               }}>
                 <span className={"channel-label " + request.channel}>
@@ -457,7 +457,6 @@ export function KnowledgeRefreshPanel() {
               setBundleText(event.target.value);
               setDiffPreview(null);
               setQualityReport(null);
-    setQualityReport(null);
             }}
             placeholder='{"summary":"...","knowledge_rules":[],"prompt_optimizations":[]}'
             spellCheck={false}
