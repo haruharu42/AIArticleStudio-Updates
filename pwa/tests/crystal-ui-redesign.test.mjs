@@ -81,6 +81,15 @@ test("crystal UI restyles dropdowns text inputs textareas cards and navigation",
   assert.match(css, /backdrop-filter: blur/);
 });
 
+test("new mobile defaults match the preview information architecture while preserving customization support", async () => {
+  const nav = await read("lib/mobile-nav-preference.ts");
+
+  assert.match(nav, /DEFAULT_MOBILE_NAV_ITEMS:[^\n]+\["tools", "create", "library", "settings"\]/);
+  assert.match(nav, /readMobileNavItems/);
+  assert.match(nav, /writeMobileNavItems/);
+  assert.match(nav, /mobileNavItemsStorageKey/);
+});
+
 test("current implemented feature links stay wired into the redesigned home", async () => {
   const hub = await read("components/action-studio-home-hub.tsx");
   const home = await read("components/phase18-beginner-home.tsx");
