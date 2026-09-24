@@ -22,6 +22,22 @@ test("Phase 60 adds an admin-only server-enforced quality gate", async () => {
   assert.match(migration, /grant execute on function public\.admin_publish_knowledge_refresh_bundle_v3\(bigint, jsonb\)/);
   assert.doesNotMatch(migration, /grant execute .* to anon/i);
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_|api[_-]?key/i);
+
+  assert.equal(
+    (migration.match(/create or replace function private\\.aas_validate_knowledge_refresh_bundle/g) ?? []).length,
+    1,
+    "private quality gate must be defined exactly once",
+  );
+  assert.equal(
+    (migration.match(/create or replace function public\\.admin_validate_knowledge_refresh_bundle/g) ?? []).length,
+    1,
+    "admin validation RPC must be defined exactly once",
+  );
+  assert.equal(
+    (migration.match(/create or replace function public\\.admin_publish_knowledge_refresh_bundle_v3/g) ?? []).length,
+    1,
+    "v3 publish RPC must be defined exactly once",
+  );
 });
 
 test("quality gate blocks malformed or ungrounded Knowledge and Prompt items", async () => {
