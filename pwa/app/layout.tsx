@@ -50,6 +50,7 @@ import "./phase49-prompt-library.css";
 import "./phase50-admin-action-prompts.css";
 import "./phase51-side-hustle-wizard.css";
 import "./phase52-infrastructure-usage.css";
+import "./phase53-crystal-ui.css";
 import "./phase53-crystal-character-ui.css";
 
 export const metadata: Metadata = {
@@ -80,7 +81,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ja">
-      <body>
+      <body className="aas-crystal-theme">
         <ReleaseAudienceGate>
           <AccessStateProvider>
             <WorkspacePresetProvider>
