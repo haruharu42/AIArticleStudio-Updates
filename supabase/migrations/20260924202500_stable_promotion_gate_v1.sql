@@ -2,6 +2,69 @@
 -- Replays the production Cloud Knowledge rank against the prospective Stable catalog
 -- and blocks Stable publication when required side-hustle selection contracts regress.
 
+-- Stable is a durable snapshot, not a time-based view of mutable Fresh rows.
+create table if not exists public.knowledge_stable_catalog (
+  key text primary key,
+  kind text not null,
+  label text not null,
+  parent_label text,
+  aliases text[] not null default '{}',
+  guidance text[] not null default '{}',
+  deliverables text[] not null default '{}',
+  cautions text[] not null default '{}',
+  tasks text[] not null default '{}',
+  priority smallint not null default 50,
+  status text not null default 'active',
+  catalog_version bigint not null default 1,
+  source_urls text[] not null default '{}',
+  source_summary text,
+  source_checked_at timestamptz,
+  promoted_at timestamptz not null default now()
+);
+
+create table if not exists public.prompt_optimization_stable_catalog (
+  key text primary key,
+  provider text not null,
+  plan text not null,
+  task text not null,
+  rules text[] not null default '{}',
+  priority smallint not null default 70,
+  catalog_version bigint not null default 1,
+  source_urls text[] not null default '{}',
+  source_summary text,
+  source_checked_at timestamptz,
+  status text not null default 'active',
+  promoted_at timestamptz not null default now()
+);
+
+alter table public.knowledge_stable_catalog enable row level security;
+alter table public.prompt_optimization_stable_catalog enable row level security;
+revoke all on table public.knowledge_stable_catalog from public, anon, authenticated;
+revoke all on table public.prompt_optimization_stable_catalog from public, anon, authenticated;
+
+-- Preserve any already-explicit Stable rows if a legacy environment has them.
+insert into public.knowledge_stable_catalog (
+  key,kind,label,parent_label,aliases,guidance,deliverables,cautions,tasks,
+  priority,status,catalog_version,source_urls,source_summary,source_checked_at,promoted_at
+)
+select
+  key,kind,label,parent_label,aliases,guidance,deliverables,cautions,tasks,
+  priority,status,catalog_version,source_urls,source_summary,source_checked_at,now()
+from public.knowledge_catalog
+where status='active' and release_channel='both'
+on conflict (key) do nothing;
+
+insert into public.prompt_optimization_stable_catalog (
+  key,provider,plan,task,rules,priority,catalog_version,
+  source_urls,source_summary,source_checked_at,status,promoted_at
+)
+select
+  key,provider,plan,task,rules,priority,catalog_version,
+  source_urls,source_summary,source_checked_at,status,now()
+from public.prompt_optimization_catalog
+where status='active' and release_channel='both'
+on conflict (key) do nothing;
+
 create or replace function private.aas_validate_stable_promotion_bundle(p_bundle jsonb)
 returns jsonb
 language plpgsql
@@ -23,6 +86,10 @@ declare
   missing_source_count integer;
   stale_source_count integer;
   stale_days integer := 90;
+  item jsonb;
+  clean_key text;
+  existing_release text;
+  existing_stable_at timestamptz;
 begin
   quality := private.aas_validate_knowledge_refresh_bundle(bundle);
 
@@ -34,6 +101,65 @@ begin
       'stale_days', stale_days
     );
   end if;
+
+  -- Stable may only promote a key that was first published to Fresh and completed its wait window.
+  for item in
+    select value from jsonb_array_elements(coalesce(bundle -> 'knowledge_rules','[]'::jsonb))
+  loop
+    clean_key := left(trim(coalesce(item ->> 'key','')),180);
+    existing_release := null;
+    existing_stable_at := null;
+
+    select catalog.release_channel,catalog.stable_available_at
+    into existing_release,existing_stable_at
+    from public.knowledge_catalog as catalog
+    where catalog.key=clean_key and catalog.status='active';
+
+    if not found or existing_release <> 'fresh_first' then
+      blocking := blocking || jsonb_build_array(jsonb_build_object(
+        'code','stable_requires_fresh_trial',
+        'item_type','knowledge',
+        'key',clean_key,
+        'message','Stableへ昇格するKnowledgeは、先に同じkeyをFreshで公開して検証してください。'
+      ));
+    elsif existing_stable_at > now() then
+      blocking := blocking || jsonb_build_array(jsonb_build_object(
+        'code','stable_wait_window_active',
+        'item_type','knowledge',
+        'key',clean_key,
+        'message','Fresh検証期間がまだ終了していません。Stable昇格可能時刻: ' || existing_stable_at::text
+      ));
+    end if;
+  end loop;
+
+  for item in
+    select value from jsonb_array_elements(coalesce(bundle -> 'prompt_optimizations','[]'::jsonb))
+  loop
+    clean_key := left(trim(coalesce(item ->> 'key','')),180);
+    existing_release := null;
+    existing_stable_at := null;
+
+    select catalog.release_channel,catalog.stable_available_at
+    into existing_release,existing_stable_at
+    from public.prompt_optimization_catalog as catalog
+    where catalog.key=clean_key and catalog.status='active';
+
+    if not found or existing_release <> 'fresh_first' then
+      blocking := blocking || jsonb_build_array(jsonb_build_object(
+        'code','stable_requires_fresh_trial',
+        'item_type','prompt',
+        'key',clean_key,
+        'message','Stableへ昇格するPrompt最適化は、先に同じkeyをFreshで公開して検証してください。'
+      ));
+    elsif existing_stable_at > now() then
+      blocking := blocking || jsonb_build_array(jsonb_build_object(
+        'code','stable_wait_window_active',
+        'item_type','prompt',
+        'key',clean_key,
+        'message','Fresh検証期間がまだ終了していません。Stable昇格可能時刻: ' || existing_stable_at::text
+      ));
+    end if;
+  end loop;
 
   with
   contract_tasks(task, support_prefixes) as (
@@ -75,12 +201,8 @@ begin
       catalog.priority::integer as priority,
       catalog.source_urls,
       catalog.source_checked_at
-    from public.knowledge_catalog as catalog
+    from public.knowledge_stable_catalog as catalog
     where catalog.status = 'active'
-      and (
-        catalog.release_channel = 'both'
-        or catalog.stable_available_at <= now()
-      )
       and not exists (
         select 1
         from bundle_knowledge as incoming
@@ -345,6 +467,65 @@ begin
   into result_row
   from public.admin_publish_knowledge_refresh_bundle_v3(p_request_id,p_bundle);
 
+  if request_channel = 'stable' then
+    insert into public.knowledge_stable_catalog (
+      key,kind,label,parent_label,aliases,guidance,deliverables,cautions,tasks,
+      priority,status,catalog_version,source_urls,source_summary,source_checked_at,promoted_at
+    )
+    select
+      catalog.key,catalog.kind,catalog.label,catalog.parent_label,catalog.aliases,
+      catalog.guidance,catalog.deliverables,catalog.cautions,catalog.tasks,
+      catalog.priority,catalog.status,catalog.catalog_version,catalog.source_urls,
+      catalog.source_summary,catalog.source_checked_at,now()
+    from public.knowledge_catalog as catalog
+    where catalog.key in (
+      select left(trim(coalesce(value ->> 'key','')),180)
+      from jsonb_array_elements(coalesce(p_bundle -> 'knowledge_rules','[]'::jsonb)) as value
+    )
+    on conflict (key) do update set
+      kind=excluded.kind,
+      label=excluded.label,
+      parent_label=excluded.parent_label,
+      aliases=excluded.aliases,
+      guidance=excluded.guidance,
+      deliverables=excluded.deliverables,
+      cautions=excluded.cautions,
+      tasks=excluded.tasks,
+      priority=excluded.priority,
+      status=excluded.status,
+      catalog_version=excluded.catalog_version,
+      source_urls=excluded.source_urls,
+      source_summary=excluded.source_summary,
+      source_checked_at=excluded.source_checked_at,
+      promoted_at=now();
+
+    insert into public.prompt_optimization_stable_catalog (
+      key,provider,plan,task,rules,priority,catalog_version,
+      source_urls,source_summary,source_checked_at,status,promoted_at
+    )
+    select
+      catalog.key,catalog.provider,catalog.plan,catalog.task,catalog.rules,
+      catalog.priority,catalog.catalog_version,catalog.source_urls,
+      catalog.source_summary,catalog.source_checked_at,catalog.status,now()
+    from public.prompt_optimization_catalog as catalog
+    where catalog.key in (
+      select left(trim(coalesce(value ->> 'key','')),180)
+      from jsonb_array_elements(coalesce(p_bundle -> 'prompt_optimizations','[]'::jsonb)) as value
+    )
+    on conflict (key) do update set
+      provider=excluded.provider,
+      plan=excluded.plan,
+      task=excluded.task,
+      rules=excluded.rules,
+      priority=excluded.priority,
+      catalog_version=excluded.catalog_version,
+      source_urls=excluded.source_urls,
+      source_summary=excluded.source_summary,
+      source_checked_at=excluded.source_checked_at,
+      status=excluded.status,
+      promoted_at=now();
+  end if;
+
   return query
   select
     result_row.channel::text,
@@ -359,3 +540,108 @@ revoke all on function public.admin_publish_knowledge_refresh_bundle_v4(bigint,j
 from public, anon;
 grant execute on function public.admin_publish_knowledge_refresh_bundle_v4(bigint,jsonb)
 to authenticated;
+
+
+-- Admins/Creator Membership keep seeing Fresh. Ordinary users see only explicitly promoted Stable snapshots.
+create or replace function public.list_my_active_knowledge_catalog_v2()
+returns table (
+  key text,kind text,label text,parent_label text,aliases text[],
+  guidance text[],deliverables text[],cautions text[],tasks text[],
+  priority smallint,status text,catalog_version bigint,source_urls text[],
+  source_summary text,source_checked_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path to ''
+as $function$
+declare
+  current_user_id uuid := (select auth.uid());
+  member_access boolean := false;
+begin
+  if current_user_id is null
+     or not (select private.is_active_profile())
+     or not (select public.can_access_product('AAS-PWA-BETA'))
+  then
+    raise exception 'active PWA access required' using errcode='42501';
+  end if;
+
+  member_access := (select private.is_active_admin())
+    or (select public.has_active_creator_membership());
+
+  if member_access then
+    return query
+    select
+      catalog.key,catalog.kind,catalog.label,catalog.parent_label,catalog.aliases,
+      catalog.guidance,catalog.deliverables,catalog.cautions,catalog.tasks,
+      catalog.priority,catalog.status,catalog.catalog_version,catalog.source_urls,
+      catalog.source_summary,catalog.source_checked_at
+    from public.knowledge_catalog as catalog
+    where catalog.status='active'
+    order by catalog.priority desc,catalog.catalog_version desc,catalog.key
+    limit 500;
+  else
+    return query
+    select
+      catalog.key,catalog.kind,catalog.label,catalog.parent_label,catalog.aliases,
+      catalog.guidance,catalog.deliverables,catalog.cautions,catalog.tasks,
+      catalog.priority,catalog.status,catalog.catalog_version,catalog.source_urls,
+      catalog.source_summary,catalog.source_checked_at
+    from public.knowledge_stable_catalog as catalog
+    where catalog.status='active'
+    order by catalog.priority desc,catalog.catalog_version desc,catalog.key
+    limit 500;
+  end if;
+end;
+$function$;
+
+create or replace function public.list_my_active_prompt_optimizations()
+returns table (
+  key text,provider text,plan text,task text,rules text[],priority smallint,
+  catalog_version bigint,source_urls text[],source_summary text,source_checked_at timestamptz
+)
+language plpgsql
+stable
+security definer
+set search_path to ''
+as $function$
+declare
+  current_user_id uuid := (select auth.uid());
+  member_access boolean := false;
+begin
+  if current_user_id is null
+     or not (select private.is_active_profile())
+     or not (select public.can_access_product('AAS-PWA-BETA'))
+  then
+    raise exception 'active PWA access required' using errcode='42501';
+  end if;
+
+  member_access := (select private.is_active_admin())
+    or (select public.has_active_creator_membership());
+
+  if member_access then
+    return query
+    select
+      item.key,item.provider,item.plan,item.task,item.rules,item.priority,
+      item.catalog_version,item.source_urls,item.source_summary,item.source_checked_at
+    from public.prompt_optimization_catalog as item
+    where item.status='active'
+    order by item.priority desc,item.catalog_version desc,item.key
+    limit 300;
+  else
+    return query
+    select
+      item.key,item.provider,item.plan,item.task,item.rules,item.priority,
+      item.catalog_version,item.source_urls,item.source_summary,item.source_checked_at
+    from public.prompt_optimization_stable_catalog as item
+    where item.status='active'
+    order by item.priority desc,item.catalog_version desc,item.key
+    limit 300;
+  end if;
+end;
+$function$;
+
+revoke all on function public.list_my_active_knowledge_catalog_v2() from public, anon;
+grant execute on function public.list_my_active_knowledge_catalog_v2() to authenticated;
+revoke all on function public.list_my_active_prompt_optimizations() from public, anon;
+grant execute on function public.list_my_active_prompt_optimizations() to authenticated;
