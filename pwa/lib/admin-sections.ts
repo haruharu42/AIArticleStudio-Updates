@@ -9,6 +9,7 @@ export type AdminSectionId =
   | "knowledge"
   | "releases"
   | "security"
+  | "infrastructure"
   | "operations"
   | "inquiries";
 
@@ -137,6 +138,15 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
     description: "管理者のTOTP認証器を確認し、紛失対策用の予備認証器を管理。",
   },
   {
+    id: "infrastructure",
+    group: "system",
+    href: "/admin/infrastructure",
+    eyebrow: "INFRASTRUCTURE USAGE",
+    title: "インフラ使用量・料金",
+    shortTitle: "インフラ使用量",
+    description: "SupabaseとGitHubの容量、残量、Actions利用状況、料金基準と公式Billing導線を確認。",
+  },
+  {
     id: "operations",
     group: "system",
     href: "/admin/operations",
@@ -157,5 +167,6 @@ export const ADMIN_HOME_SHORTCUT_IDS: readonly AdminSectionId[] = [
   "prompts",
   "releases",
   "security",
+  "infrastructure",
   "operations",
 ];
