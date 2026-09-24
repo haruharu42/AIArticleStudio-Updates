@@ -897,3 +897,178 @@ body.aas-crystal-theme :where(
     font-size: 9px;
   }
 }
+
+
+/* Preview-alignment overrides: keep this file as the single Phase 53 visual authority. */
+body.aas-crystal-theme :where(.creator-page, .admin-page, .side-hustle-wizard-page, .action-prompt-page, .auth-page, .status-page, .pwa-shell) {
+  min-height: 100dvh;
+  color: var(--aas-crystal-ink);
+  background:
+    radial-gradient(circle at 8% 8%, rgb(103 218 255 / 14%), transparent 24rem),
+    radial-gradient(circle at 93% 7%, rgb(165 126 255 / 15%), transparent 28rem),
+    linear-gradient(180deg, #f9fcff 0%, #eef6ff 54%, #f8f4ff 100%);
+}
+
+body.aas-crystal-theme :where(
+  .editor-card,
+  .article-row,
+  .panel-muted,
+  .auth-panel,
+  .auth-card,
+  .status-card,
+  .hero-card,
+  .status-tile,
+  .coming-section,
+  .feature-grid > *,
+  .account-block,
+  .admin-only-tool-card,
+  .admin-quick-guide article,
+  .admin-section-group
+) {
+  border-color: var(--aas-crystal-line) !important;
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 95%), rgb(247 251 255 / 89%) 65%, rgb(249 245 255 / 84%)) !important;
+  color: #29416f !important;
+  box-shadow: var(--aas-crystal-shadow-soft);
+}
+
+body.aas-crystal-theme :where(.creator-head h1, .admin-head h1, .library-head h1, .auth-intro h1, .auth-card h2, .status-card h1) {
+  color: #263e76 !important;
+}
+
+body.aas-crystal-theme :where(
+  .creator-head > div > p:last-child,
+  .admin-head > div > p:last-child,
+  .library-head > div > p:last-child,
+  .auth-intro p,
+  .auth-card p,
+  .status-card p,
+  .account-block small,
+  .admin-only-tool-card p,
+  .admin-section-group p,
+  .admin-quick-guide p
+) {
+  color: #7487a7 !important;
+}
+
+body.aas-crystal-theme .route-back,
+body.aas-crystal-theme .library-filter-toggle,
+body.aas-crystal-theme .back-action,
+body.aas-crystal-theme .google-action,
+body.aas-crystal-theme .text-action {
+  border: 1px solid rgb(130 155 222 / 28%) !important;
+  border-radius: 11px;
+  background: rgb(255 255 255 / 76%) !important;
+  color: #566aaa !important;
+  box-shadow: 0 5px 16px rgb(72 91 166 / 6%);
+}
+
+body.aas-crystal-theme .article-row:hover {
+  border-color: rgb(118 136 235 / 48%) !important;
+  box-shadow: 0 14px 32px rgb(80 95 190 / 12%);
+}
+
+body.aas-crystal-theme .library-notice {
+  border-color: rgb(122 166 231 / 32%);
+  background: rgb(239 248 255 / 88%);
+  color: #4d6b9b;
+}
+
+body.aas-crystal-theme main select {
+  appearance: none;
+  padding-right: 35px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #6677c9 50%),
+    linear-gradient(135deg, #6677c9 50%, transparent 50%),
+    linear-gradient(145deg, rgb(255 255 255 / 96%), rgb(247 251 255 / 93%));
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 11px) 50%,
+    0 0;
+  background-size: 5px 5px, 5px 5px, 100% 100%;
+  background-repeat: no-repeat;
+}
+
+body.aas-crystal-theme :where(.brand-mark, .mobile-brand) {
+  color: #4053b0 !important;
+}
+
+body.aas-crystal-theme :where(.pwa-shell .side-nav, .pwa-shell .bottom-nav) {
+  border-color: rgb(126 151 216 / 24%) !important;
+  background: rgb(255 255 255 / 88%) !important;
+  backdrop-filter: blur(20px);
+}
+
+body.aas-crystal-theme :where(.pwa-shell .side-nav a, .pwa-shell .side-nav button, .pwa-shell .bottom-nav a) {
+  color: #4d638f !important;
+}
+
+/* Match the approved PC preview only on the home screen.
+   Other routes keep the stable desktop dock placement. */
+@media (min-width: 1100px) {
+  body.aas-crystal-theme .reference-home > .aas-reference-desktop-nav {
+    inset: 88px auto 18px 16px;
+    left: 16px;
+    right: auto;
+    bottom: 18px;
+    width: 188px;
+    max-height: calc(100dvh - 106px);
+    transform: none;
+    display: grid;
+    grid-auto-flow: row;
+    grid-template-columns: 1fr;
+    align-content: start;
+    gap: 5px;
+    overflow-y: auto;
+    border-radius: 20px;
+    padding: 10px;
+  }
+
+  body.aas-crystal-theme .reference-home > .aas-reference-desktop-nav a,
+  body.aas-crystal-theme .reference-home > .aas-reference-desktop-nav button {
+    min-height: 45px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    grid-auto-flow: column;
+    justify-content: start;
+    place-items: center start;
+    gap: 8px;
+    text-align: left;
+  }
+
+  body.aas-crystal-theme .reference-home > .aas-reference-desktop-nav .active {
+    background: linear-gradient(110deg, #66d8ff, #627df0 58%, #9e72ed);
+    color: #fff;
+    box-shadow: 0 8px 22px rgb(85 104 211 / 22%);
+  }
+
+  body.aas-crystal-theme .reference-home > .aas-reference-desktop-nav .active span {
+    background: rgb(255 255 255 / 20%);
+    color: #fff;
+  }
+
+  body.aas-crystal-theme .reference-home > .aas-reference-desktop-nav .customize {
+    margin-top: auto;
+  }
+
+  body.aas-crystal-theme .reference-home-main {
+    width: min(1320px, calc(100% - 238px));
+    margin-left: 216px;
+    margin-right: 18px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  body.aas-crystal-theme .reference-home > .aas-desktop-nav-customizer {
+    right: auto;
+    left: 214px;
+    bottom: 18px;
+  }
+}
+
+@media (max-width: 620px) {
+  body.aas-crystal-theme main input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  body.aas-crystal-theme main select,
+  body.aas-crystal-theme main textarea {
+    font-size: 16px;
+  }
+}
