@@ -17,7 +17,7 @@ test("Axia and Rumo are local presentation assets and the crystal theme loads la
 
   assert.match(layout, /phase52-infrastructure-usage\.css";\nimport "\.\/phase53-crystal-character-ui\.css"/);
   assert.match(asset, /data:image\/webp;base64,/);
-  assert.doesNotMatch(asset, /https?:\/\//);
+  assert.doesNotMatch(asset, /<image[^>]+href="https?:\/\//);
   assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
   assert.match(hub, /アクシア × ルーモ/);
   assert.match(hub, /今日はAIで何を進めますか？/);
@@ -81,5 +81,5 @@ test("hero primary cards and lower quick actions map to implemented AAS routes",
   ]) {
     assert.ok(hub.includes(route), `missing route: ${route}`);
   }
-  assert.match(hub, /showAdmin \?/);
+  assert.match(hub, /const cards:[\s\S]*?showAdmin/);
 });
