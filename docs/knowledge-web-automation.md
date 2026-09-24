@@ -45,3 +45,8 @@ The Edge Function has no call to the Knowledge publication RPC.
 Normal official pages are change monitors only. New-page discovery is intentionally disabled for ordinary pages to avoid noisy candidates.
 
 Official changelog / release sources are tracked separately. When a changelog's own content hash changes, the worker creates a `new` candidate so an administrator can verify whether a new reusable Knowledge / Prompt rule is warranted.
+
+
+## Provider update hubs
+
+The monitored source set includes provider update hubs for OpenAI API changes, Gemini API release notes, and Anthropic model lifecycle / prompting guidance. These hubs establish a baseline hash on first observation; only later changes create review candidates.
