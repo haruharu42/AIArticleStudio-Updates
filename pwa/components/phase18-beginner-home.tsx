@@ -186,11 +186,69 @@ export function Phase18BeginnerHome() {
   const [rankingError, setRankingError] = useState(false);
   const [quickSetup, setQuickSetup] = useState<QuickSetup>(QUICK_SETUP_INITIAL);
   const [supportUnreadCount, setSupportUnreadCount] = useState(0);
+  const [homeWidgetDevice, setHomeWidgetDevice] = useState<HomeWidgetDevice>("desktop");
+  const [homeWidgetPreferences, setHomeWidgetPreferences] = useState(() => defaultHomeWidgetPreferences());
+  const homeWidgetUserId = state.kind === "ready" ? state.profile.id : "";
+
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("section") !== "library") return;
     queueMicrotask(() => setSection("library"));
   }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 820px)");
+    const syncDevice = () => setHomeWidgetDevice(media.matches ? "mobile" : "desktop");
+    syncDevice();
+    media.addEventListener("change", syncDevice);
+    return () => media.removeEventListener("change", syncDevice);
+  }, []);
+
+  useEffect(() => {
+    if (!homeWidgetUserId) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setHomeWidgetPreferences({
+        desktop: readLocalHomeWidgetLayout(homeWidgetUserId, "desktop"),
+        mobile: readLocalHomeWidgetLayout(homeWidgetUserId, "mobile"),
+      });
+    });
+
+    if (client) {
+      void loadHomeWidgetPreferences(client, homeWidgetUserId).then(
+        (cloud) => {
+          if (!active) return;
+          setHomeWidgetPreferences(cloud);
+          writeLocalHomeWidgetLayout(homeWidgetUserId, "desktop", cloud.desktop);
+          writeLocalHomeWidgetLayout(homeWidgetUserId, "mobile", cloud.mobile);
+        },
+        () => {
+          // Keep the local layout when cloud preferences are temporarily unavailable.
+        },
+      );
+    }
+
+    return () => { active = false; };
+  }, [client, homeWidgetUserId]);
+
+  useEffect(() => {
+    if (!homeWidgetUserId) return;
+    const handlePreference = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        userId: string;
+        device: HomeWidgetDevice;
+        layout: HomeWidgetLayoutItem[];
+      }>).detail;
+      if (!detail || detail.userId !== homeWidgetUserId) return;
+      setHomeWidgetPreferences((current) => ({
+        ...current,
+        [detail.device]: detail.layout,
+      }));
+    };
+    window.addEventListener(HOME_WIDGET_PREFERENCE_EVENT, handlePreference);
+    return () => window.removeEventListener(HOME_WIDGET_PREFERENCE_EVENT, handlePreference);
+  }, [homeWidgetUserId]);
 
   useEffect(() => {
     if (state.kind !== "ready" || !client) return;
@@ -318,6 +376,21 @@ export function Phase18BeginnerHome() {
       genre,
       subgenre: nextSubgenres.includes(current.subgenre) ? current.subgenre : nextSubgenres[0] ?? "AIおまかせ",
     }));
+  };
+
+  const activeHomeWidgetLayout = homeWidgetDevice === "mobile"
+    ? homeWidgetPreferences.mobile
+    : homeWidgetPreferences.desktop;
+
+  const renderHomeWidget = (key: HomeWidgetKey, children: ReactNode) => {
+    const index = activeHomeWidgetLayout.findIndex((item) => item.key === key);
+    const item = index >= 0 ? activeHomeWidgetLayout[index] : null;
+    if (!item) return children;
+    return (
+      <HomeWidgetSlot key={key} item={item} index={index} device={homeWidgetDevice}>
+        {children}
+      </HomeWidgetSlot>
+    );
   };
 
   if (section === "library") {
