@@ -832,3 +832,114 @@
     flex: 1 1 100%;
   }
 }
+
+
+/* Phase 56: side-hustle Knowledge coverage dashboard. */
+.knowledge-coverage-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.knowledge-coverage-panel .knowledge-panel-head > strong {
+  display: grid;
+  place-items: center;
+  min-width: 72px;
+  min-height: 44px;
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.knowledge-coverage-panel .knowledge-panel-head > strong.complete {
+  border: 1px solid #9ed5b9;
+  background: #eefaf4;
+  color: #267657;
+}
+
+.knowledge-coverage-panel .knowledge-panel-head > strong.incomplete {
+  border: 1px solid #e9c48c;
+  background: #fff8ea;
+  color: #9a681d;
+}
+
+.knowledge-coverage-panel .knowledge-panel-head p:last-child {
+  margin: 5px 0 0;
+  color: #71859d;
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+.knowledge-coverage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.knowledge-coverage-grid article {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  border: 1px solid #d9e5f0;
+  border-radius: 13px;
+  background: #fbfdff;
+  padding: 12px;
+}
+
+.knowledge-coverage-grid article.covered {
+  border-color: #b7dcc9;
+  background: linear-gradient(145deg, #fbfffd, #f1faf6);
+}
+
+.knowledge-coverage-grid article.missing {
+  border-color: #ead2a9;
+  background: linear-gradient(145deg, #fffefb, #fff8ea);
+}
+
+.knowledge-coverage-grid article > span {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-size: 7px;
+  font-weight: 950;
+}
+
+.knowledge-coverage-grid article.covered > span {
+  background: #e4f6ec;
+  color: #28755a;
+}
+
+.knowledge-coverage-grid article.missing > span {
+  background: #fff0d3;
+  color: #9a681d;
+}
+
+.knowledge-coverage-grid article > strong {
+  color: #294d70;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.knowledge-coverage-grid article > small {
+  color: #7d90a7;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .knowledge-coverage-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .knowledge-coverage-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-coverage-panel .knowledge-panel-head > strong {
+    min-width: 64px;
+    min-height: 38px;
+    font-size: 12px;
+  }
+}
