@@ -81,3 +81,5 @@ For each eligible candidate, the worker can produce one of:
 A completed `new` / `update` proposal can be sent from the admin UI to a Fresh update request. This action only pre-fills the existing review JSON. It does **not** run the publication RPC. The administrator must still run current-data diff review and confirm publication explicitly.
 
 Implementation status: the AI enrichment control plane is additive and remains disabled until an administrator stores a provider API key and enables it.
+
+Candidate lifecycle: a candidate remains pending during Fresh diff preparation and is marked converted only after the reviewed publication succeeds.
