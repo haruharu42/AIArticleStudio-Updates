@@ -61,8 +61,10 @@ function interpolate(template: string, definition: SideHustleDefinition, draft: 
 
 function experienceScenarioTags(value: string | undefined): string[] {
   const normalized = (value ?? "").normalize("NFKC");
-  if (/未経験|初心者/.test(normalized)) return ["experience:beginner"];
-  if (/経験者|実務|販売経験/.test(normalized)) return ["experience:experienced"];
+  if (/未経験|初心者|始めたばかり|個人制作経験/.test(normalized)) return ["experience:beginner"];
+  if (/経験者|実務|業務経験|販売経験|有償案件経験|継続中/.test(normalized)) {
+    return ["experience:experienced"];
+  }
   return [];
 }
 
