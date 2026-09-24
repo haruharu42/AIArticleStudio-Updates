@@ -1219,3 +1219,135 @@
     display: grid;
   }
 }
+
+
+/* Phase 60: Knowledge publish quality gate. */
+.knowledge-quality-gate {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #cfdeeb;
+  border-radius: 13px;
+  padding: 12px;
+}
+
+.knowledge-quality-gate.pass {
+  border-color: #a8d6bf;
+  background: #f2fbf6;
+}
+
+.knowledge-quality-gate.blocked {
+  border-color: #e3b7ae;
+  background: #fff7f5;
+}
+
+.knowledge-quality-gate > header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.knowledge-quality-gate > header > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.knowledge-quality-gate > header strong {
+  color: #294f70;
+  font-size: 10px;
+}
+
+.knowledge-quality-gate.pass > header strong {
+  color: #267457;
+}
+
+.knowledge-quality-gate.blocked > header strong {
+  color: #a05245;
+}
+
+.knowledge-quality-gate > header p {
+  margin: 0;
+  color: #72869b;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.knowledge-quality-gate > header > span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #fff;
+  color: #607991;
+  padding: 5px 8px;
+  font-size: 7px;
+  font-weight: 950;
+}
+
+.knowledge-quality-issues,
+.knowledge-quality-warnings > div {
+  display: grid;
+  gap: 7px;
+}
+
+.knowledge-quality-issues article,
+.knowledge-quality-warnings article {
+  display: grid;
+  gap: 4px;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 84%);
+  padding: 9px 10px;
+}
+
+.knowledge-quality-issues.blocking article {
+  border-left: 3px solid #c76958;
+}
+
+.knowledge-quality-warnings article {
+  border-left: 3px solid #d19a3f;
+}
+
+.knowledge-quality-issues strong,
+.knowledge-quality-warnings strong {
+  color: #48657f;
+  font-size: 8px;
+}
+
+.knowledge-quality-issues.blocking strong {
+  color: #a44e42;
+}
+
+.knowledge-quality-warnings strong {
+  color: #96671f;
+}
+
+.knowledge-quality-issues p,
+.knowledge-quality-warnings p {
+  margin: 0;
+  color: #61788f;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.knowledge-quality-issues small,
+.knowledge-quality-warnings small {
+  overflow-wrap: anywhere;
+  color: #8898a8;
+  font-size: 7px;
+}
+
+.knowledge-quality-warnings {
+  border-top: 1px solid #e4e8ec;
+  padding-top: 8px;
+}
+
+.knowledge-quality-warnings summary {
+  color: #8d6729;
+  font-size: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.knowledge-quality-warnings > div {
+  margin-top: 8px;
+}
