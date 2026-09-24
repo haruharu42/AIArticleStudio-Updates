@@ -81,6 +81,22 @@ export type CompiledKnowledge = {
   warnings: string[];
 };
 
+export type CloudKnowledgeSelectionItem = {
+  rule: KnowledgeRule;
+  score: number;
+  specificity: number;
+  selected: boolean;
+  position: number | null;
+  reason: string;
+};
+
+export type CloudKnowledgeSelectionPreview = {
+  limit: number;
+  eligibleCount: number;
+  selected: CloudKnowledgeSelectionItem[];
+  skipped: CloudKnowledgeSelectionItem[];
+};
+
 let runtimeCloudRules: KnowledgeRule[] = [];
 
 export function setRuntimeKnowledgeCatalog(rules: KnowledgeRule[]): void {
@@ -314,6 +330,48 @@ function matchesCloudRule(rule: KnowledgeRule, input: KnowledgeCompileInput): bo
   return rule.kind === "combination";
 }
 
+function cloudRuleReason(rule: KnowledgeRule): string {
+  if (rule.kind === "task") return "タスク固有ルール";
+  if (rule.kind === "subgenre") return "サブジャンル一致";
+  if (rule.kind === "genre") return "ジャンル一致";
+  if (rule.kind === "publication") return "掲載先一致";
+  if (rule.kind === "age") return "対象条件一致";
+  return "複数機能に共通する横断ルール";
+}
+
+export function previewCloudKnowledgeSelection(
+  rules: KnowledgeRule[],
+  input: KnowledgeCompileInput,
+  limit = MAX_CLOUD_RULES_PER_COMPILE,
+): CloudKnowledgeSelectionPreview {
+  const safeLimit = Math.max(1, Math.min(MAX_CLOUD_RULES_PER_COMPILE, Math.trunc(limit || MAX_CLOUD_RULES_PER_COMPILE)));
+  const ranked = rules
+    .filter((rule) => rule.source === "cloud")
+    .filter((rule) => matchesCloudRule(rule, input))
+    .sort((a, b) =>
+      cloudRuleRank(b) - cloudRuleRank(a)
+      || b.priority - a.priority
+      || cloudRuleSpecificity(b) - cloudRuleSpecificity(a)
+      || a.key.localeCompare(b.key, "ja"),
+    );
+
+  const items = ranked.map((rule, index): CloudKnowledgeSelectionItem => ({
+    rule,
+    score: cloudRuleRank(rule),
+    specificity: cloudRuleSpecificity(rule),
+    selected: index < safeLimit,
+    position: index < safeLimit ? index + 1 : null,
+    reason: cloudRuleReason(rule),
+  }));
+
+  return {
+    limit: safeLimit,
+    eligibleCount: items.length,
+    selected: items.filter((item) => item.selected),
+    skipped: items.filter((item) => !item.selected),
+  };
+}
+
 function allRules(input: KnowledgeCompileInput): KnowledgeRule[] {
   const seedRules: KnowledgeRule[] = [commonRule, taskRules[input.task]];
   const age = ageRules.find((rule) => matches(rule, input.ageGroup ?? ""));
@@ -325,15 +383,9 @@ function allRules(input: KnowledgeCompileInput): KnowledgeRule[] {
   const publication = publicationRules.find((rule) => matches(rule, input.publicationTarget ?? ""));
   if (publication) seedRules.push(publication);
 
-  const cloudRules = runtimeCloudRules
-    .filter((rule) => matchesCloudRule(rule, input))
-    .sort((a, b) =>
-      cloudRuleRank(b) - cloudRuleRank(a)
-      || b.priority - a.priority
-      || cloudRuleSpecificity(b) - cloudRuleSpecificity(a)
-      || a.key.localeCompare(b.key, "ja"),
-    )
-    .slice(0, MAX_CLOUD_RULES_PER_COMPILE);
+  const cloudRules = previewCloudKnowledgeSelection(runtimeCloudRules, input)
+    .selected
+    .map((item) => item.rule);
 
   return [...seedRules, ...cloudRules].sort((a, b) => b.priority - a.priority || a.key.localeCompare(b.key, "ja"));
 }
