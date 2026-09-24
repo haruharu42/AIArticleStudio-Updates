@@ -6,9 +6,11 @@ import { launchAiApp } from "@/lib/ai-app-links";
 import {
   adminCancelKnowledgeRefresh,
   adminGetKnowledgeRefreshChannels,
+  adminGetSourceFreshnessQueue,
   adminGetStableReleaseQueue,
   adminListKnowledgeRefreshRequests,
   adminPreviewKnowledgeRefreshBundleDiff,
+  adminPrepareSourceFreshnessRecheck,
   adminPrepareStableRelease,
   adminPublishKnowledgeRefreshBundle,
   adminRequestKnowledgeRefresh,
@@ -18,12 +20,14 @@ import {
   adminValidateKnowledgeRefreshBundle,
   adminValidateStablePromotionBundle,
   buildKnowledgeRefreshResearchPrompt,
+  buildSourceFreshnessResearchPrompt,
   parseKnowledgeRefreshBundle,
   type KnowledgeQualityReport,
   type KnowledgeRefreshChangeItem,
   type KnowledgeRefreshChannelState,
   type KnowledgeRefreshDiff,
   type KnowledgeRefreshRequest,
+  type SourceFreshnessQueue,
   type StablePromotionReport,
   type StableReleaseQueue,
 } from "@/lib/knowledge-auto-update";
@@ -141,6 +145,7 @@ export function KnowledgeRefreshPanel() {
   const [qualityReport, setQualityReport] = useState<KnowledgeQualityReport | null>(null);
   const [stablePromotionReport, setStablePromotionReport] = useState<StablePromotionReport | null>(null);
   const [stableQueue, setStableQueue] = useState<StableReleaseQueue | null>(null);
+  const [sourceQueue, setSourceQueue] = useState<SourceFreshnessQueue | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -171,14 +176,16 @@ export function KnowledgeRefreshPanel() {
 
   const reload = async () => {
     const client = getSupabaseClient();
-    const [nextRequests, nextChannels, nextStableQueue] = await Promise.all([
+    const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue] = await Promise.all([
       adminListKnowledgeRefreshRequests(client, null, 30),
       adminGetKnowledgeRefreshChannels(client),
       adminGetStableReleaseQueue(client),
+      adminGetSourceFreshnessQueue(client),
     ]);
     setRequests(nextRequests);
     setChannels(nextChannels);
     setStableQueue(nextStableQueue);
+    setSourceQueue(nextSourceQueue);
     if (selectedId === null) {
       const active = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
       if (active) setSelectedId(active.id);
@@ -190,15 +197,17 @@ export function KnowledgeRefreshPanel() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const [nextRequests, nextChannels, nextStableQueue] = await Promise.all([
+        const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue] = await Promise.all([
           adminListKnowledgeRefreshRequests(client, null, 30),
           adminGetKnowledgeRefreshChannels(client),
           adminGetStableReleaseQueue(client),
+          adminGetSourceFreshnessQueue(client),
         ]);
         if (!active) return;
         setRequests(nextRequests);
         setChannels(nextChannels);
         setStableQueue(nextStableQueue);
+        setSourceQueue(nextSourceQueue);
         const firstActive = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
         if (firstActive) setSelectedId(firstActive.id);
       } catch (error) {
@@ -318,6 +327,30 @@ export function KnowledgeRefreshPanel() {
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Stableレビュー候補を準備できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const prepareSourceRecheck = async () => {
+    if (!sourceQueue || sourceQueue.missingCount + sourceQueue.staleCount + sourceQueue.dueCount < 1) return;
+    setBusy(true);
+    setMessage("");
+    setDiffPreview(null);
+    setQualityReport(null);
+    setStablePromotionReport(null);
+    setBundleText("");
+    try {
+      const prepared = await adminPrepareSourceFreshnessRecheck(getSupabaseClient(), 20);
+      const prompt = buildSourceFreshnessResearchPrompt(prepared);
+      await navigator.clipboard.writeText(prompt);
+      await reload();
+      setSelectedId(prepared.requestId);
+      setMessage(
+        `根拠再確認対象 ${prepared.itemCount}件をFresh更新 #${prepared.requestId} に準備し、専用調査プロンプトをコピーしました。Web検索できるAIで再確認し、JSONを貼り付けてください。`,
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "根拠再確認を準備できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -467,6 +500,54 @@ export function KnowledgeRefreshPanel() {
         <strong>自動収集＝自動公開ではありません</strong>
         <span>外部Webの内容はそのまま採用しません。公式情報・根拠URL・現在データとの差分を管理者が確認し、「変更点を確認」後にだけ公開できます。</span>
       </div>
+
+      <section className="knowledge-source-freshness-queue">
+        <header>
+          <div>
+            <p className="eyebrow">SOURCE FRESHNESS QUEUE</p>
+            <strong>公式根拠の再確認</strong>
+            <p>Knowledge / Promptの根拠確認日を監視し、{sourceQueue?.staleDays ?? 90}日失効の{sourceQueue?.warningDays ?? 30}日前から再確認対象へ入れます。確認済み扱いへの自動更新はしません。</p>
+          </div>
+          <div className="knowledge-source-freshness-counts">
+            <span className={(sourceQueue?.missingCount ?? 0) > 0 ? "missing" : ""}>MISSING {sourceQueue?.missingCount ?? 0}</span>
+            <span className={(sourceQueue?.staleCount ?? 0) > 0 ? "stale" : ""}>STALE {sourceQueue?.staleCount ?? 0}</span>
+            <span className={(sourceQueue?.dueCount ?? 0) > 0 ? "due" : ""}>DUE {sourceQueue?.dueCount ?? 0}</span>
+            <span className="fresh">FRESH {sourceQueue?.freshCount ?? 0}</span>
+          </div>
+        </header>
+        <div className="knowledge-source-freshness-meta">
+          <span>次の再確認開始: {formatDate(sourceQueue?.nextDueAt ?? null)}</span>
+          <span>期限基準: {sourceQueue?.staleDays ?? 90}日</span>
+        </div>
+        {(sourceQueue?.items.filter((item) => item.state !== "fresh").length ?? 0) > 0 ? (
+          <div className="knowledge-source-freshness-items">
+            {sourceQueue?.items.filter((item) => item.state !== "fresh").slice(0, 12).map((item) => (
+              <article key={item.itemType + ":" + item.key} className={item.state}>
+                <div>
+                  <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{item.catalogVersion}</span>
+                  <strong>{item.label}</strong>
+                  <small>{item.key}</small>
+                </div>
+                <div>
+                  <b>{item.state === "missing" ? "根拠不足" : item.state === "stale" ? "期限切れ" : "再確認時期"}</b>
+                  <small>確認 {formatDate(item.sourceCheckedAt)}{item.ageDays !== null ? ` · ${item.ageDays}日経過` : ""}</small>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="knowledge-empty">現在、再確認が必要な根拠はありません。</p>
+        )}
+        <button
+          type="button"
+          className="knowledge-source-recheck"
+          disabled={busy || !sourceQueue || sourceQueue.missingCount + sourceQueue.staleCount + sourceQueue.dueCount < 1}
+          onClick={() => void prepareSourceRecheck()}
+        >
+          再確認プロンプトを準備・コピー
+        </button>
+        <p className="knowledge-review-note">最大20件をFresh更新へ準備します。公式ページを実際に確認したJSONを貼り付け、既存の差分・品質ゲートを通してから公開してください。</p>
+      </section>
 
       <section className="knowledge-stable-release-queue">
         <header>
