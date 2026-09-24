@@ -86,7 +86,7 @@ export const MOBILE_NAV_ITEM_OPTIONS: readonly MobileNavItem[] = [
   ...ADMIN_MOBILE_NAV_ITEM_OPTIONS,
 ] as const;
 
-export const DEFAULT_MOBILE_NAV_ITEMS: readonly MobileNavItemKey[] = ["create", "library", "ranking", "profile"];
+export const DEFAULT_MOBILE_NAV_ITEMS: readonly MobileNavItemKey[] = ["tools", "create", "library", "settings"];
 export const MAX_CUSTOM_MOBILE_NAV_ITEMS = 4;
 
 const USER_VALID_MOBILE_NAV_KEYS = new Set<MobileNavItemKey>(USER_MOBILE_NAV_ITEM_OPTIONS.map((item) => item.key));
