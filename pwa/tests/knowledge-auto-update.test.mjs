@@ -162,3 +162,79 @@ test("side-hustle knowledge migration expands task constraints without changing 
   assert.match(migration, /admin_review_knowledge_candidate/);
   assert.doesNotMatch(migration, /grant .* to anon/i);
 });
+
+
+test("official-source automation detects changes but never auto-publishes Knowledge", async () => {
+  const [foundation, scheduler, snapshot, tuning, worker, panel, client] = await Promise.all([
+    readRepo("supabase/migrations/20260924194519_knowledge_web_automation_foundation_v1.sql"),
+    readRepo("supabase/migrations/20260924195007_knowledge_web_automation_scheduler_v1.sql"),
+    readRepo("supabase/migrations/20260924195224_knowledge_web_automation_snapshot_rpc_v1.sql"),
+    readRepo("supabase/migrations/20260924195615_knowledge_web_automation_discovery_tuning_v1.sql"),
+    readRepo("supabase/functions/knowledge-research-worker/index.ts"),
+    readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("lib/knowledge-auto-update.ts"),
+  ]);
+
+  assert.match(foundation, /knowledge_automation_sources/);
+  assert.match(foundation, /knowledge_automation_runs/);
+  assert.match(foundation, /knowledge_automation_candidates/);
+  assert.match(foundation, /candidate_action in \('new','update','recheck','retire'\)/);
+  assert.match(foundation, /aas_knowledge_worker_token/);
+  assert.match(foundation, /worker_token_hash/);
+  assert.match(foundation, /enable row level security/);
+  assert.match(foundation, /revoke all on table public\.knowledge_automation_candidates from anon, authenticated/);
+
+  assert.match(scheduler, /private\.invoke_knowledge_automation_worker/);
+  assert.match(scheduler, /vault\.decrypted_secrets/);
+  assert.match(scheduler, /net\.http_post/);
+  assert.match(scheduler, /aas-knowledge-research-worker-6h/);
+  assert.match(scheduler, /23 \*\/6 \* \* \*/);
+
+  assert.match(snapshot, /get_knowledge_automation_catalog_snapshot/);
+  assert.match(snapshot, /security definer/);
+  assert.match(snapshot, /revoke all on function public\.get_knowledge_automation_catalog_snapshot\(\) from public, anon, authenticated/);
+  assert.match(snapshot, /grant execute on function public\.get_knowledge_automation_catalog_snapshot\(\) to service_role/);
+
+  assert.match(tuning, /max_discovered_links_per_source=0/);
+  assert.match(tuning, /official_changelog/);
+  assert.match(tuning, /gemini-api\/docs\/changelog/);
+
+  assert.match(worker, /x-aas-worker-token/);
+  assert.match(worker, /get_knowledge_automation_catalog_snapshot/);
+  assert.match(worker, /last_content_hash/);
+  assert.match(worker, /official_changelog/);
+  assert.match(worker, /candidate\(runId,source,action/);
+  assert.match(worker, /404 \|\| res\.status === 410/);
+  assert.doesNotMatch(worker, /admin_publish_knowledge_refresh_bundle/);
+  assert.doesNotMatch(worker, /knowledge_catalog"\)\.insert|knowledge_catalog"\)\.update/);
+
+  assert.match(panel, /公式ソース自動監視/);
+  assert.match(panel, /自動調査 ≠ 自動公開/);
+  assert.match(panel, /今すぐ公式ソースを調査/);
+  assert.match(panel, /候補承認（公開しない）/);
+  assert.match(panel, /adminReviewKnowledgeAutomationCandidate/);
+
+  assert.match(client, /admin_get_knowledge_automation_status/);
+  assert.match(client, /admin_list_knowledge_automation_candidates/);
+  assert.match(client, /admin_request_knowledge_automation_run/);
+  assert.match(client, /admin_publish_knowledge_refresh_bundle_v4/);
+  assert.match(client, /isMissingRpc/);
+  assert.match(client, /admin_publish_knowledge_refresh_bundle_v3/);
+  assert.match(client, /admin_publish_knowledge_refresh_bundle_v2/);
+});
+
+test("automation approval is candidate review only and remains separate from publication", async () => {
+  const [foundation, panel, client] = await Promise.all([
+    readRepo("supabase/migrations/20260924194519_knowledge_web_automation_foundation_v1.sql"),
+    readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("lib/knowledge-auto-update.ts"),
+  ]);
+
+  assert.match(foundation, /status='approved'|approved/);
+  assert.match(foundation, /admin_review_knowledge_automation_candidate/);
+  assert.doesNotMatch(foundation, /admin_review_knowledge_automation_candidate[\s\S]*admin_publish_knowledge_refresh_bundle/);
+
+  assert.match(panel, /まだ正式Knowledgeには公開されていません/);
+  assert.match(panel, /正式反映には従来のQuality Gate・差分確認・Fresh \/ Stable公開操作が必要/);
+  assert.match(client, /decision: "approved" \| "rejected" \| "converted"/);
+});
