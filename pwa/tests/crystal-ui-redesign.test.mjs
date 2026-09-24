@@ -27,7 +27,7 @@ test("home prioritizes creator through article library before the AAS hero and k
 test("Axia and Rumo hero is bundled locally and used by the home hero", async () => {
   const [asset, css, hub, layout] = await Promise.all([
     read("public/aas-axia-rumo-hero.svg"),
-    read("app/phase53-crystal-character-ui.css"),
+    read("app/phase53-crystal-ui.css"),
     read("components/action-studio-home-hub.tsx"),
     read("app/layout.tsx"),
   ]);
@@ -43,7 +43,7 @@ test("Axia and Rumo hero is bundled locally and used by the home hero", async ()
 
 test("desktop and mobile keep separate responsive treatments without replacing route behavior", async () => {
   const [css, shell] = await Promise.all([
-    read("app/phase53-crystal-character-ui.css"),
+    read("app/phase53-crystal-ui.css"),
     read("components/aas-reference-shell.tsx"),
   ]);
 
@@ -58,7 +58,7 @@ test("desktop and mobile keep separate responsive treatments without replacing r
 });
 
 test("crystal UI restyles dropdowns text inputs textareas cards and navigation", async () => {
-  const css = await read("app/phase53-crystal-character-ui.css");
+  const css = await read("app/phase53-crystal-ui.css");
 
   for (const token of [
     ".reference-home select",
