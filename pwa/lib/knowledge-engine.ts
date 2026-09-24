@@ -22,6 +22,26 @@ export const KNOWLEDGE_TASKS = [
 
 export type KnowledgeTask = (typeof KNOWLEDGE_TASKS)[number];
 
+export const KNOWLEDGE_TASK_LABELS: Record<KnowledgeTask, string> = {
+  title: "タイトル",
+  article: "記事",
+  image: "画像",
+  social: "SNS",
+  promotion: "販促",
+  sidejob_content: "記事・コンテンツ販売",
+  sidejob_sns: "SNS運用・集客",
+  sidejob_video: "YouTube・ショート動画",
+  sidejob_affiliate: "アフィリエイト",
+  sidejob_resale: "物販・フリマ販売",
+  sidejob_crowdsourcing: "クラウドソーシング",
+  sidejob_skill_sales: "スキル販売",
+  sidejob_digital_product: "デジタル商品・教材販売",
+  sidejob_outreach: "営業・案件獲得",
+  sidejob_research: "リサーチ・事実確認",
+  sidejob_efficiency: "業務効率化・SOP化",
+  sidejob_planning: "AI副業選定",
+};
+
 export function isKnowledgeTask(value: unknown): value is KnowledgeTask {
   return typeof value === "string" && (KNOWLEDGE_TASKS as readonly string[]).includes(value);
 }

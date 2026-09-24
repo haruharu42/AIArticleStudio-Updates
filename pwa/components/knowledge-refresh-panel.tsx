@@ -4,11 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 
 import { launchAiApp } from "@/lib/ai-app-links";
 import {
+  adminCancelKnowledgeRefresh,
   adminGetKnowledgeRefreshChannels,
   adminListKnowledgeRefreshRequests,
   adminPreviewKnowledgeRefreshBundleDiff,
   adminPublishKnowledgeRefreshBundle,
   adminRequestKnowledgeRefresh,
+  adminRetryKnowledgeRefresh,
+  adminRunKnowledgeScheduler,
   adminStartKnowledgeRefresh,
   buildKnowledgeRefreshResearchPrompt,
   parseKnowledgeRefreshBundle,
@@ -131,6 +134,24 @@ export function KnowledgeRefreshPanel() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const reviewedSources = useMemo(() => {
+    if (!diffPreview || !bundleText.trim()) return [] as string[];
+    try {
+      const bundle = parseKnowledgeRefreshBundle(bundleText);
+      const values = [...bundle.knowledge_rules, ...bundle.prompt_optimizations];
+      const urls = values.flatMap((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+        const sourceUrls = (item as Record<string, unknown>).source_urls;
+        return Array.isArray(sourceUrls)
+          ? sourceUrls.filter((value): value is string => typeof value === "string" && /^https:\/\//i.test(value))
+          : [];
+      });
+      return [...new Set(urls)].slice(0, 40);
+    } catch {
+      return [];
+    }
+  }, [bundleText, diffPreview]);
+
   const selected = useMemo(
     () => requests.find((request) => request.id === selectedId) ?? null,
     [requests, selectedId],
@@ -208,6 +229,55 @@ export function KnowledgeRefreshPanel() {
     }
   };
 
+  const cancel = async (request: KnowledgeRefreshRequest) => {
+    if (!window.confirm(`更新 #${request.id} を中止しますか？公開済みKnowledge / Promptには影響しません。`)) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      await adminCancelKnowledgeRefresh(getSupabaseClient(), request.id);
+      setBundleText("");
+      setDiffPreview(null);
+      if (selectedId === request.id) setSelectedId(null);
+      await reload();
+      setMessage(`更新 #${request.id} を中止しました。必要なら履歴から再試行できます。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "更新を中止できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const retry = async (request: KnowledgeRefreshRequest) => {
+    setBusy(true);
+    setMessage("");
+    setDiffPreview(null);
+    try {
+      const nextId = await adminRetryKnowledgeRefresh(getSupabaseClient(), request.id);
+      setSelectedId(nextId);
+      setBundleText("");
+      await reload();
+      setMessage(`更新 #${request.id} を再キュー化しました。現在の更新IDは #${nextId} です。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "更新を再試行できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const syncScheduler = async () => {
+    setBusy(true);
+    setMessage("");
+    try {
+      await adminRunKnowledgeScheduler(getSupabaseClient());
+      await reload();
+      setMessage("更新期限を再確認し、必要なFresh / Stable要求を同期しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "更新スケジューラを同期できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const copyResearchPrompt = async (request: KnowledgeRefreshRequest) => {
     const prompt = buildKnowledgeRefreshResearchPrompt(request.channel);
     try {
@@ -276,7 +346,10 @@ export function KnowledgeRefreshPanel() {
           <h2>Knowledge / Prompt 更新</h2>
           <p>記事・SNS・画像に加え、各副業専用Knowledge / Promptも更新対象です。更新期限は自動でキュー化し、管理者が差分と根拠を確認してからFresh / Stableへ版管理して公開します。</p>
         </div>
-        <button type="button" disabled={busy} onClick={() => void reload()}>再読込</button>
+        <div className="knowledge-panel-actions">
+          <button type="button" disabled={busy} onClick={() => void syncScheduler()}>更新期限を同期</button>
+          <button type="button" disabled={busy} onClick={() => void reload()}>再読込</button>
+        </div>
       </div>
 
       <div className="knowledge-channel-guide" aria-label="FreshとStableの違い">
@@ -345,7 +418,10 @@ export function KnowledgeRefreshPanel() {
               <div className="knowledge-refresh-row-actions">
                 {request.status === "pending" && <button type="button" disabled={busy} onClick={() => void start(request)}>調査開始</button>}
                 <button type="button" disabled={busy} onClick={() => void copyResearchPrompt(request)}>調査プロンプトをコピー</button>
-                <button type="button" disabled={busy} onClick={() => launchAiApp("chatgpt")}>ChatGPTを開く</button>
+                <button type="button" disabled={busy} onClick={() => launchAiApp("chatgpt")}>ChatGPT</button>
+                <button type="button" disabled={busy} onClick={() => launchAiApp("claude")}>Claude</button>
+                <button type="button" disabled={busy} onClick={() => launchAiApp("gemini")}>Gemini</button>
+                <button type="button" className="danger" disabled={busy} onClick={() => void cancel(request)}>中止</button>
               </div>
             </article>
           ))}
@@ -385,6 +461,13 @@ export function KnowledgeRefreshPanel() {
                 <p>「追加」「変更」「変更なし」を正式データと比較した結果です。変更箇所と根拠要約を確認してください。</p>
               </div>
               <DiffSummary diff={diffPreview} />
+              {reviewedSources.length > 0 && (
+                <div className="knowledge-source-review">
+                  <strong>今回の根拠URL</strong>
+                  <p>公開前に一次情報の内容・更新日・対象地域/プランを確認してください。</p>
+                  <div>{reviewedSources.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">{url}</a>)}</div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -421,6 +504,11 @@ export function KnowledgeRefreshPanel() {
                   <small>この更新は旧形式の履歴のため詳細差分は記録されていません。</small>
                 )}
                 {request.errorMessage && <p className="error">{refreshErrorLabel(request.errorMessage)}</p>}
+                {(request.status === "failed" || request.status === "cancelled") && (
+                  <div className="knowledge-refresh-row-actions">
+                    <button type="button" disabled={busy} onClick={() => void retry(request)}>この更新を再試行</button>
+                  </div>
+                )}
               </article>
             );
           })}

@@ -12,6 +12,15 @@ import {
   adminReviewKnowledgeCandidate,
   type KnowledgeCandidate,
 } from "@/lib/knowledge-catalog";
+import {
+  adminGetKnowledgeProductionHealth,
+  type KnowledgeProductionHealth,
+} from "@/lib/knowledge-auto-update";
+import {
+  KNOWLEDGE_TASKS,
+  KNOWLEDGE_TASK_LABELS,
+  type KnowledgeTask,
+} from "@/lib/knowledge-engine";
 
 type Filter = "all" | "pending" | "approved" | "rejected";
 type CatalogRow = {
@@ -21,6 +30,12 @@ type CatalogRow = {
   parent_label: string | null;
   status: string;
   priority: number;
+  release_channel: string;
+  catalog_version: number;
+  source_urls: string[];
+  source_summary: string | null;
+  source_checked_at: string | null;
+  stable_available_at: string;
   updated_at: string;
 };
 
@@ -29,24 +44,16 @@ type Editor = {
   guidance: string;
   deliverables: string;
   cautions: string;
-  tasks: string[];
+  tasks: KnowledgeTask[];
   priority: number;
   notes: string;
 };
-
-const TASKS = [
-  ["title", "タイトル"],
-  ["article", "記事"],
-  ["image", "画像"],
-  ["social", "SNS"],
-  ["promotion", "販促"],
-] as const;
 
 function lines(value: string): string[] {
   return value.split("\n").map((item) => item.trim().replace(/^[-・]\s*/, "")).filter(Boolean).slice(0, 40);
 }
 
-function formatDate(value: string): string {
+function formatDate(value: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ja-JP");
@@ -56,21 +63,27 @@ export function AdminKnowledgePage() {
   const { state, client } = useSharedAccessState();
   const [candidates, setCandidates] = useState<KnowledgeCandidate[]>([]);
   const [catalog, setCatalog] = useState<CatalogRow[]>([]);
+  const [health, setHealth] = useState<KnowledgeProductionHealth | null>(null);
   const [filter, setFilter] = useState<Filter>("pending");
   const [selected, setSelected] = useState<KnowledgeCandidate | null>(null);
-  const [editor, setEditor] = useState<Editor>({ canonicalLabel: "", guidance: "", deliverables: "", cautions: "", tasks: ["title", "article", "image", "social", "promotion"], priority: 70, notes: "" });
+  const [editor, setEditor] = useState<Editor>({ canonicalLabel: "", guidance: "", deliverables: "", cautions: "", tasks: [...KNOWLEDGE_TASKS], priority: 70, notes: "" });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   const reload = async () => {
     if (!client) throw new Error("AASへ接続できませんでした。");
-    const [nextCandidates, catalogResult] = await Promise.all([
+    const [nextCandidates, catalogResult, nextHealth] = await Promise.all([
       adminListKnowledgeCandidates(client, null),
-      client.from("knowledge_catalog").select("key,kind,label,parent_label,status,priority,updated_at").order("updated_at", { ascending: false }).limit(300),
+      client.from("knowledge_catalog")
+        .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,source_urls,source_summary,source_checked_at,stable_available_at,updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(300),
+      adminGetKnowledgeProductionHealth(client),
     ]);
     if (catalogResult.error) throw new Error("正式ナレッジ一覧を取得できませんでした。");
     setCandidates(nextCandidates);
     setCatalog((catalogResult.data ?? []) as CatalogRow[]);
+    setHealth(nextHealth);
   };
 
   const isAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
@@ -80,14 +93,19 @@ export function AdminKnowledgePage() {
     let active = true;
     const boot = async () => {
       try {
-        const [nextCandidates, catalogResult] = await Promise.all([
+        const [nextCandidates, catalogResult, nextHealth] = await Promise.all([
           adminListKnowledgeCandidates(client, null),
-          client.from("knowledge_catalog").select("key,kind,label,parent_label,status,priority,updated_at").order("updated_at", { ascending: false }).limit(300),
+          client.from("knowledge_catalog")
+            .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,source_urls,source_summary,source_checked_at,stable_available_at,updated_at")
+            .order("updated_at", { ascending: false })
+            .limit(300),
+          adminGetKnowledgeProductionHealth(client),
         ]);
         if (!active) return;
         if (catalogResult.error) throw new Error("正式ナレッジ一覧を取得できませんでした。");
         setCandidates(nextCandidates);
         setCatalog((catalogResult.data ?? []) as CatalogRow[]);
+        setHealth(nextHealth);
       } catch (error) {
         if (active) setMessage(error instanceof Error ? error.message : "ナレッジ管理を初期化できませんでした。");
       }
@@ -101,7 +119,8 @@ export function AdminKnowledgePage() {
     approved: candidates.filter((item) => item.decisionStatus === "approved").length,
     rejected: candidates.filter((item) => item.decisionStatus === "rejected").length,
     activeCatalog: catalog.filter((item) => item.status === "active").length,
-  }), [candidates, catalog]);
+    activePrompt: health?.activePromptOptimizations ?? 0,
+  }), [candidates, catalog, health]);
 
   const open = (candidate: KnowledgeCandidate) => {
     setSelected(candidate);
@@ -110,7 +129,7 @@ export function AdminKnowledgePage() {
       guidance: "",
       deliverables: "",
       cautions: "",
-      tasks: ["title", "article", "image", "social", "promotion"],
+      tasks: [...KNOWLEDGE_TASKS],
       priority: 70,
       notes: candidate.notes,
     });
@@ -133,7 +152,7 @@ export function AdminKnowledgePage() {
         guidance: lines(editor.guidance),
         deliverables: lines(editor.deliverables),
         cautions: lines(editor.cautions),
-        tasks: editor.tasks as Array<"title" | "article" | "image" | "social" | "promotion">,
+        tasks: editor.tasks,
         priority: editor.priority,
         notes: editor.notes,
       });
@@ -172,9 +191,9 @@ export function AdminKnowledgePage() {
 
       <section className="knowledge-stat-grid">
         <article><span>承認待ち</span><strong>{stats.pending}</strong></article>
-        <article><span>承認済み候補</span><strong>{stats.approved}</strong></article>
-        <article><span>却下</span><strong>{stats.rejected}</strong></article>
-        <article><span>有効なクラウドKnowledge</span><strong>{stats.activeCatalog}</strong></article>
+        <article><span>クラウドKnowledge</span><strong>{stats.activeCatalog}</strong></article>
+        <article><span>Prompt最適化</span><strong>{stats.activePrompt}</strong></article>
+        <article><span>Fresh / Stable</span><strong>v{health?.freshVersion ?? "-"} / v{health?.stableVersion ?? "-"}</strong></article>
       </section>
 
       <KnowledgeRefreshPanel />
@@ -210,7 +229,7 @@ export function AdminKnowledgePage() {
           <label className="full"><span>制作ルール（1行1項目）</span><textarea rows={5} value={editor.guidance} onChange={(event) => setEditor((current) => ({ ...current, guidance: event.target.value }))} placeholder="例: 初心者が実行できる順番で説明する" /></label>
           <label className="full"><span>価値が出やすい成果物（1行1項目）</span><textarea rows={4} value={editor.deliverables} onChange={(event) => setEditor((current) => ({ ...current, deliverables: event.target.value }))} placeholder="例: チェックリスト" /></label>
           <label className="full"><span>注意・禁止（1行1項目）</span><textarea rows={4} value={editor.cautions} onChange={(event) => setEditor((current) => ({ ...current, cautions: event.target.value }))} placeholder="例: 未確認の効果を断定しない" /></label>
-          <fieldset className="full"><legend>適用する機能</legend><div className="knowledge-task-grid">{TASKS.map(([key, label]) => <label key={key}><input type="checkbox" checked={editor.tasks.includes(key)} onChange={(event) => setEditor((current) => ({ ...current, tasks: event.target.checked ? [...current.tasks, key] : current.tasks.filter((item) => item !== key) }))} />{label}</label>)}</div></fieldset>
+          <fieldset className="full"><legend>適用する機能</legend><div className="knowledge-task-grid">{KNOWLEDGE_TASKS.map((key) => <label key={key}><input type="checkbox" checked={editor.tasks.includes(key)} onChange={(event) => setEditor((current) => ({ ...current, tasks: event.target.checked ? [...current.tasks, key] : current.tasks.filter((item) => item !== key) }))} />{KNOWLEDGE_TASK_LABELS[key]}</label>)}</div></fieldset>
           <label className="full"><span>管理メモ</span><textarea rows={3} value={editor.notes} onChange={(event) => setEditor((current) => ({ ...current, notes: event.target.value.slice(0, 1000) }))} /></label>
         </div>
         <p className="knowledge-review-note">承認後は同じ候補名が記事・タイトル・画像・SNSなどで選ばれた際、ここで設定したルールが共通Prompt Compilerへ追加されます。ルール未入力でも一般Knowledgeは維持されます。</p>
@@ -219,7 +238,13 @@ export function AdminKnowledgePage() {
 
       <section className="knowledge-admin-panel">
         <div className="knowledge-panel-head"><div><p className="eyebrow">CATALOG</p><h2>クラウドKnowledge一覧</h2></div></div>
-        {catalog.length === 0 ? <p className="knowledge-empty">まだ管理者承認済みの追加Knowledgeはありません。基本Knowledgeはアプリ内に内蔵されています。</p> : <div className="knowledge-catalog-list">{catalog.map((item) => <article key={item.key}><span>{item.kind}{item.parent_label ? ` / ${item.parent_label}` : ""}</span><strong>{item.label}</strong><small>{item.status} / priority {item.priority}</small></article>)}</div>}
+        {catalog.length === 0 ? <p className="knowledge-empty">まだ管理者承認済みの追加Knowledgeはありません。基本Knowledgeはアプリ内に内蔵されています。</p> : <div className="knowledge-catalog-list">{catalog.map((item) => <article key={item.key}>
+          <span>{item.kind}{item.parent_label ? ` / ${item.parent_label}` : ""} · {item.release_channel === "fresh_first" ? "Fresh先行" : "Fresh/Stable"}</span>
+          <strong>{item.label}</strong>
+          <small>{item.status} / priority {item.priority} / v{item.catalog_version} / 根拠確認 {formatDate(item.source_checked_at)}</small>
+          {item.source_summary && <p>{item.source_summary}</p>}
+          {item.source_urls.length > 0 && <div className="knowledge-source-links">{item.source_urls.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">根拠を開く</a>)}</div>}
+        </article>)}</div>}
       </section>
     </main>
   );
