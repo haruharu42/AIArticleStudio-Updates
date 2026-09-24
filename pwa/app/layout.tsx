@@ -62,6 +62,7 @@ export const metadata: Metadata = {
   other: {
     "aas-phase": "17",
     "aas-release-stage": "production-preview",
+    "aas-build-sha": process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev",
   },
   icons: {
     icon: "/favicon.svg",
