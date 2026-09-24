@@ -227,7 +227,7 @@ function scenarioSpecificity(rule: KnowledgeRule, input: KnowledgeCompileInput):
   const required = explicitScenarioTags(rule);
   if (required.length === 0 || !scenarioRuleMatches(rule, input)) return 0;
   const groupCount = new Set(required.map((tag) => tag.split(":", 1)[0])).size;
-  return Math.min(72, 54 + Math.max(0, groupCount - 1) * 10 + Math.min(required.length, 4) * 2);
+  return Math.min(52, 34 + Math.max(0, groupCount - 1) * 8 + Math.min(required.length, 4) * 2);
 }
 
 const commonRule: KnowledgeRule = {
