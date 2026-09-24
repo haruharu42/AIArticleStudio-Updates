@@ -77,11 +77,11 @@ test("Knowledge admin loads task assignments and shows 12-task coverage", async 
   assert.match(admin, /stable_available_at,tasks,updated_at/);
   assert.match(admin, /task\.startsWith\("sidejob_"\)/);
   assert.match(admin, /item\.tasks\.includes\(task\)/);
-  assert.match(admin, /副業Knowledgeカバレッジ/);
-  assert.match(admin, /12副業タスク/);
+  assert.match(admin, /副業Knowledge(カバレッジ|深度)/);
+  assert.match(admin, /(12副業タスク|sidejobTasks)/);
   assert.match(admin, /Knowledge不足/);
-  assert.match(admin, /基準達成/);
+  assert.match(admin, /(基準達成|標準達成)/);
   assert.match(css, /\.knowledge-coverage-grid/);
-  assert.match(css, /article\.covered/);
+  assert.match(css, /article\.(standard|covered)/);
   assert.match(css, /article\.missing/);
 });

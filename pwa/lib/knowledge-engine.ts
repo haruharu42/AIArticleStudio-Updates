@@ -286,34 +286,58 @@ function unique(lines: string[]): string[] {
   return [...new Set(lines.map((line) => line.trim()).filter(Boolean))];
 }
 
-function allRules(input: KnowledgeCompileInput): KnowledgeRule[] {
-  const rules: KnowledgeRule[] = [commonRule, taskRules[input.task]];
-  const age = ageRules.find((rule) => matches(rule, input.ageGroup ?? ""));
-  if (age) rules.push(age);
-  const genre = genreRules.find((rule) => matches(rule, input.genre ?? ""));
-  if (genre) rules.push(genre);
-  const subgenre = subgenreRules.find((rule) => matches(rule, input.subgenre ?? "", input.genre));
-  if (subgenre) rules.push(subgenre);
-  const publication = publicationRules.find((rule) => matches(rule, input.publicationTarget ?? ""));
-  if (publication) rules.push(publication);
+const MAX_CLOUD_RULES_PER_COMPILE = 5;
+const MAX_GUIDANCE_LINES = 18;
+const MAX_DELIVERABLE_LINES = 12;
+const MAX_CAUTION_LINES = 18;
 
-  for (const rule of runtimeCloudRules) {
-    if (rule.tasks?.length && !rule.tasks.includes(input.task)) continue;
-    if (rule.kind === "genre" && matches(rule, input.genre ?? "")) rules.push(rule);
-    if (rule.kind === "subgenre" && matches(rule, input.subgenre ?? "", input.genre)) rules.push(rule);
-    if (rule.kind === "age" && matches(rule, input.ageGroup ?? "")) rules.push(rule);
-    if (rule.kind === "publication" && matches(rule, input.publicationTarget ?? "")) rules.push(rule);
-    if (rule.kind === "task" && (!rule.tasks?.length || rule.tasks.includes(input.task))) rules.push(rule);
-    if (rule.kind === "combination") rules.push(rule);
-  }
-  return rules.sort((a, b) => b.priority - a.priority || a.key.localeCompare(b.key, "ja"));
+function cloudRuleSpecificity(rule: KnowledgeRule): number {
+  if (rule.kind === "task") return 30;
+  if (rule.kind === "subgenre") return 25;
+  if (rule.kind === "genre") return 20;
+  if (rule.kind === "publication") return 15;
+  if (rule.kind === "age") return 10;
+  return 5;
+}
+
+function matchesCloudRule(rule: KnowledgeRule, input: KnowledgeCompileInput): boolean {
+  if (rule.tasks?.length && !rule.tasks.includes(input.task)) return false;
+  if (rule.kind === "genre") return matches(rule, input.genre ?? "");
+  if (rule.kind === "subgenre") return matches(rule, input.subgenre ?? "", input.genre);
+  if (rule.kind === "age") return matches(rule, input.ageGroup ?? "");
+  if (rule.kind === "publication") return matches(rule, input.publicationTarget ?? "");
+  if (rule.kind === "task") return !rule.tasks?.length || rule.tasks.includes(input.task);
+  return rule.kind === "combination";
+}
+
+function allRules(input: KnowledgeCompileInput): KnowledgeRule[] {
+  const seedRules: KnowledgeRule[] = [commonRule, taskRules[input.task]];
+  const age = ageRules.find((rule) => matches(rule, input.ageGroup ?? ""));
+  if (age) seedRules.push(age);
+  const genre = genreRules.find((rule) => matches(rule, input.genre ?? ""));
+  if (genre) seedRules.push(genre);
+  const subgenre = subgenreRules.find((rule) => matches(rule, input.subgenre ?? "", input.genre));
+  if (subgenre) seedRules.push(subgenre);
+  const publication = publicationRules.find((rule) => matches(rule, input.publicationTarget ?? ""));
+  if (publication) seedRules.push(publication);
+
+  const cloudRules = runtimeCloudRules
+    .filter((rule) => matchesCloudRule(rule, input))
+    .sort((a, b) =>
+      b.priority - a.priority
+      || cloudRuleSpecificity(b) - cloudRuleSpecificity(a)
+      || a.key.localeCompare(b.key, "ja"),
+    )
+    .slice(0, MAX_CLOUD_RULES_PER_COMPILE);
+
+  return [...seedRules, ...cloudRules].sort((a, b) => b.priority - a.priority || a.key.localeCompare(b.key, "ja"));
 }
 
 export function compileKnowledgeContext(input: KnowledgeCompileInput): CompiledKnowledge {
   const rules = allRules(input);
-  const guidance = unique(rules.flatMap((rule) => rule.guidance));
-  const deliverables = unique(rules.flatMap((rule) => rule.deliverables));
-  const cautions = unique(rules.flatMap((rule) => rule.cautions));
+  const guidance = unique(rules.flatMap((rule) => rule.guidance)).slice(0, MAX_GUIDANCE_LINES);
+  const deliverables = unique(rules.flatMap((rule) => rule.deliverables)).slice(0, MAX_DELIVERABLE_LINES);
+  const cautions = unique(rules.flatMap((rule) => rule.cautions)).slice(0, MAX_CAUTION_LINES);
   const warnings: string[] = [];
 
   const knownGenre = !input.genre || normalize(input.genre) === "その他" || genreRules.some((rule) => matches(rule, input.genre ?? "")) || runtimeCloudRules.some((rule) => rule.kind === "genre" && matches(rule, input.genre ?? ""));
