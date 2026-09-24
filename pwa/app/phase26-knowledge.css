@@ -1022,3 +1022,181 @@
     width: 100%;
   }
 }
+
+
+.knowledge-ai-config {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #d7e7e1;
+  border-radius: 14px;
+  background: #fbfefd;
+  padding: 14px;
+}
+
+.knowledge-ai-config-head,
+.knowledge-ai-config-actions,
+.knowledge-ai-analysis > div,
+.knowledge-ai-sources {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.knowledge-ai-config-head > div {
+  flex: 1 1 280px;
+}
+
+.knowledge-ai-config-head p,
+.knowledge-ai-config-actions small,
+.knowledge-ai-analysis p {
+  margin: 4px 0 0;
+  color: #6b817a;
+  font-size: 8px;
+  line-height: 1.6;
+}
+
+.knowledge-ai-config-head > span {
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.knowledge-ai-config-head > span.configured {
+  background: #e7f7ef;
+  color: #25765a;
+}
+
+.knowledge-ai-config-head > span.missing {
+  background: #fff1df;
+  color: #9b681e;
+}
+
+.knowledge-ai-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.knowledge-ai-config-grid label {
+  display: grid;
+  gap: 5px;
+  color: #4b6f64;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.knowledge-ai-config-grid input[type="text"],
+.knowledge-ai-config-grid input[type="password"],
+.knowledge-ai-config-grid input[type="number"],
+.knowledge-ai-config-grid input:not([type]) {
+  min-height: 40px;
+  width: 100%;
+  border: 1px solid #c8dcd5;
+  border-radius: 10px;
+  background: #fff;
+  color: #294d43;
+  padding: 8px 10px;
+  font-size: 9px;
+}
+
+.knowledge-ai-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  align-self: end;
+  min-height: 40px;
+  border: 1px solid #d8e7e2;
+  border-radius: 10px;
+  background: #f4faf8;
+  padding: 8px 10px;
+}
+
+.knowledge-ai-toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.knowledge-ai-config-actions {
+  justify-content: space-between;
+}
+
+.knowledge-ai-config-actions small {
+  flex: 1 1 300px;
+}
+
+.knowledge-ai-config-actions button,
+.knowledge-automation-actions button.prepare {
+  min-height: 38px;
+  border: 1px solid #6f9fcf;
+  border-radius: 9px;
+  background: #eaf4ff;
+  color: #2f6398;
+  padding: 8px 11px;
+  font-size: 8px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.knowledge-ai-analysis {
+  display: grid;
+  gap: 7px;
+  border: 1px solid #dfeae6;
+  border-radius: 10px;
+  background: #f8fbfa;
+  padding: 9px;
+}
+
+.knowledge-ai-analysis.completed {
+  border-color: #b9ddcf;
+  background: #f2fbf7;
+}
+
+.knowledge-ai-analysis.failed {
+  border-color: #ebc4c4;
+  background: #fff8f8;
+}
+
+.knowledge-ai-analysis > div > span {
+  border-radius: 999px;
+  background: #e8f1ee;
+  color: #58786f;
+  padding: 3px 6px;
+  font-size: 7px;
+  font-weight: 850;
+}
+
+.knowledge-ai-sources a {
+  color: #397b69;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.knowledge-ai-analysis pre {
+  max-height: 320px;
+  overflow: auto;
+  margin: 8px 0 0;
+  border-radius: 8px;
+  background: #182622;
+  color: #e7f4ef;
+  padding: 10px;
+  font-size: 8px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .knowledge-ai-config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge-ai-config-actions {
+    display: grid;
+  }
+
+  .knowledge-ai-config-actions button {
+    width: 100%;
+  }
+}
