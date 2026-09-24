@@ -2316,3 +2316,209 @@
     justify-content: flex-start;
   }
 }
+
+
+/* Phase 67: Knowledge source diversity dashboard. */
+.knowledge-source-risk-report {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #c9d9ea;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #fbfdff, #f4f9ff);
+  padding: 14px;
+}
+
+.knowledge-source-risk-report > header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.knowledge-source-risk-report > header > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.knowledge-source-risk-report > header strong {
+  color: #315777;
+  font-size: 11px;
+}
+
+.knowledge-source-risk-report > header p {
+  margin: 0;
+  color: #70879c;
+  font-size: 8px;
+  line-height: 1.6;
+}
+
+.knowledge-source-risk-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: flex-end;
+}
+
+.knowledge-source-risk-summary span {
+  border-radius: 999px;
+  background: #e9f2fb;
+  color: #446b8d;
+  padding: 5px 8px;
+  font-size: 7px;
+  font-weight: 950;
+}
+
+.knowledge-source-risk-summary span.attention {
+  background: #fff0d3;
+  color: #91651b;
+}
+
+.knowledge-source-risk-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.knowledge-source-risk-metrics article {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  border: 1px solid #d8e5f1;
+  border-radius: 11px;
+  background: #fff;
+  padding: 10px;
+}
+
+.knowledge-source-risk-metrics span,
+.knowledge-source-risk-metrics small {
+  color: #7c90a6;
+  font-size: 7px;
+}
+
+.knowledge-source-risk-metrics strong {
+  color: #315777;
+  font-size: 15px;
+}
+
+.knowledge-source-domain-list {
+  display: grid;
+  gap: 7px;
+}
+
+.knowledge-source-domain-list > strong,
+.knowledge-source-risk-items > strong {
+  color: #486b88;
+  font-size: 9px;
+}
+
+.knowledge-source-domain-list > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.knowledge-source-domain-list > div > span {
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #dce8f3;
+  border-radius: 9px;
+  background: #fff;
+  padding: 8px 9px;
+}
+
+.knowledge-source-domain-list b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #41627f;
+  font-size: 8px;
+}
+
+.knowledge-source-domain-list small {
+  flex: 0 0 auto;
+  color: #8194a8;
+  font-size: 7px;
+}
+
+.knowledge-source-risk-items {
+  display: grid;
+  gap: 7px;
+}
+
+.knowledge-source-risk-items > article {
+  min-width: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #e3dfcf;
+  border-radius: 10px;
+  background: #fffef9;
+  padding: 10px;
+}
+
+.knowledge-source-risk-items > article > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.knowledge-source-risk-items > article > div:last-child {
+  flex: 0 0 min(190px, 40%);
+  justify-items: end;
+  text-align: right;
+}
+
+.knowledge-source-risk-items span,
+.knowledge-source-risk-items small {
+  color: #827b67;
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+.knowledge-source-risk-items strong {
+  overflow-wrap: anywhere;
+  color: #5f604e;
+  font-size: 9px;
+}
+
+.knowledge-source-risk-items b {
+  border-radius: 999px;
+  background: #fff0d3;
+  color: #91651b;
+  padding: 4px 7px;
+  font-size: 7px;
+}
+
+@media (max-width: 760px) {
+  .knowledge-source-risk-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .knowledge-source-domain-list > div {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .knowledge-source-risk-report > header,
+  .knowledge-source-risk-items > article {
+    flex-direction: column;
+  }
+
+  .knowledge-source-risk-summary {
+    justify-content: flex-start;
+  }
+
+  .knowledge-source-risk-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .knowledge-source-risk-items > article > div:last-child {
+    flex: 0 0 auto;
+    width: 100%;
+    justify-items: start;
+    text-align: left;
+  }
+}
