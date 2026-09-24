@@ -5,6 +5,10 @@ import {
   type KnowledgeRule,
   type KnowledgeTask,
 } from "@/lib/knowledge-engine";
+import {
+  evaluateKnowledgeSelectionContract,
+  type KnowledgeSelectionContractGroupResult,
+} from "@/lib/knowledge-selection-contracts";
 
 export const SIDEJOB_REGRESSION_TASKS = KNOWLEDGE_TASKS.filter(
   (task): task is KnowledgeTask => task.startsWith("sidejob_"),
@@ -25,6 +29,9 @@ export type KnowledgeRegressionResult = {
   missingSourceCount: number;
   staleSourceCount: number;
   emptyContentCount: number;
+  contractPassed: boolean;
+  contractGroups: KnowledgeSelectionContractGroupResult[];
+  missingContractGroups: KnowledgeSelectionContractGroupResult[];
   issues: string[];
 };
 
@@ -83,6 +90,10 @@ export function evaluateSidejobKnowledgeRegression(
     ).length;
     const emptyContentCount = selectedRules.filter((rule) => !hasUsefulContent(rule)).length;
     const topRuleIsTaskSpecific = topRule ? isTaskSpecificRule(topRule, task) : false;
+    const contract = evaluateKnowledgeSelectionContract(task, selectedRules);
+    const contractPassed = contract?.passed ?? false;
+    const contractGroups = contract?.groups ?? [];
+    const missingContractGroups = contract?.missingGroups ?? [];
 
     const issues: string[] = [];
     if (selectedRules.length < minSelected) {
@@ -103,13 +114,19 @@ export function evaluateSidejobKnowledgeRegression(
     if (staleSourceCount > 0) {
       issues.push(`根拠確認から${staleDays}日超過 ${staleSourceCount}件`);
     }
+    if (!contractPassed) {
+      for (const group of missingContractGroups) {
+        issues.push(`選択契約不足: ${group.label}`);
+      }
+    }
 
     const hasBlockingRegression =
       selectedRules.length < minSelected
       || taskSpecificSelected < 1
       || !topRuleIsTaskSpecific
       || missingSourceCount > 0
-      || emptyContentCount > 0;
+      || emptyContentCount > 0
+      || !contractPassed;
 
     return {
       task,
@@ -124,6 +141,9 @@ export function evaluateSidejobKnowledgeRegression(
       missingSourceCount,
       staleSourceCount,
       emptyContentCount,
+      contractPassed,
+      contractGroups,
+      missingContractGroups,
       issues,
     };
   });
