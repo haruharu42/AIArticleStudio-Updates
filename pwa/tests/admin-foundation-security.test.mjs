@@ -64,6 +64,7 @@ test("admin home is navigation-only and sections are centralized", () => {
     "/admin/sales",
     "/admin/promotion",
     "/admin/knowledge",
+    "/admin/infrastructure",
     "/admin/operations",
   ]) {
     assert.match(registry, new RegExp(route.replaceAll("/", "\\/")));
