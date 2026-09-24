@@ -44,7 +44,7 @@ test("client builds a non-gaming source diversity research prompt", async () => 
   assert.match(client, /buildSourceDiversityResearchPrompt/);
   assert.match(client, /source_urlsの件数を増やすこと自体を目標にしない/);
   assert.match(client, /低品質な2件目を無理に追加しない/);
-  assert.match(client, /独立した公式\/一次情報/);
+  assert.match(client, /独立した公式[・\/]一次情報/);
   assert.match(client, /追加根拠なし/);
   assert.match(client, /既存keyは絶対に変更しない/);
 });
