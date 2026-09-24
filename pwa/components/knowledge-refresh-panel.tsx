@@ -9,9 +9,11 @@ import {
   adminGetSourceFreshnessQueue,
   adminGetStableReleaseQueue,
   adminListKnowledgeRefreshRequests,
+  adminListSourceRecheckReceipts,
   adminPreviewKnowledgeRefreshBundleDiff,
   adminPrepareSourceFreshnessRecheck,
   adminPrepareStableRelease,
+  adminRecordSourceRecheckReceipt,
   adminPublishKnowledgeRefreshBundle,
   adminRequestKnowledgeRefresh,
   adminRetryKnowledgeRefresh,
@@ -28,6 +30,9 @@ import {
   type KnowledgeRefreshDiff,
   type KnowledgeRefreshRequest,
   type SourceFreshnessQueue,
+  type SourceFreshnessQueueItem,
+  type SourceRecheckOutcome,
+  type SourceRecheckReceipt,
   type StablePromotionReport,
   type StableReleaseQueue,
 } from "@/lib/knowledge-auto-update";
@@ -53,6 +58,13 @@ function statusLabel(status: KnowledgeRefreshRequest["status"]): string {
     case "failed": return "失敗";
     case "cancelled": return "キャンセル";
   }
+}
+
+function sourceOutcomeLabel(outcome: SourceRecheckOutcome): string {
+  if (outcome === "unchanged") return "変更なし";
+  if (outcome === "changed") return "変更あり";
+  if (outcome === "removed") return "URL失効";
+  return "取得不可";
 }
 
 function refreshErrorLabel(value: string): string {
@@ -146,6 +158,7 @@ export function KnowledgeRefreshPanel() {
   const [stablePromotionReport, setStablePromotionReport] = useState<StablePromotionReport | null>(null);
   const [stableQueue, setStableQueue] = useState<StableReleaseQueue | null>(null);
   const [sourceQueue, setSourceQueue] = useState<SourceFreshnessQueue | null>(null);
+  const [sourceReceipts, setSourceReceipts] = useState<SourceRecheckReceipt[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -176,16 +189,18 @@ export function KnowledgeRefreshPanel() {
 
   const reload = async () => {
     const client = getSupabaseClient();
-    const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue] = await Promise.all([
+    const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue, nextSourceReceipts] = await Promise.all([
       adminListKnowledgeRefreshRequests(client, null, 30),
       adminGetKnowledgeRefreshChannels(client),
       adminGetStableReleaseQueue(client),
       adminGetSourceFreshnessQueue(client),
+      adminListSourceRecheckReceipts(client, 30),
     ]);
     setRequests(nextRequests);
     setChannels(nextChannels);
     setStableQueue(nextStableQueue);
     setSourceQueue(nextSourceQueue);
+    setSourceReceipts(nextSourceReceipts);
     if (selectedId === null) {
       const active = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
       if (active) setSelectedId(active.id);
@@ -197,17 +212,19 @@ export function KnowledgeRefreshPanel() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue] = await Promise.all([
+        const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue, nextSourceReceipts] = await Promise.all([
           adminListKnowledgeRefreshRequests(client, null, 30),
           adminGetKnowledgeRefreshChannels(client),
           adminGetStableReleaseQueue(client),
           adminGetSourceFreshnessQueue(client),
+          adminListSourceRecheckReceipts(client, 30),
         ]);
         if (!active) return;
         setRequests(nextRequests);
         setChannels(nextChannels);
         setStableQueue(nextStableQueue);
         setSourceQueue(nextSourceQueue);
+        setSourceReceipts(nextSourceReceipts);
         const firstActive = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
         if (firstActive) setSelectedId(firstActive.id);
       } catch (error) {
@@ -355,6 +372,54 @@ export function KnowledgeRefreshPanel() {
       setBusy(false);
     }
   };
+
+  const recordSourceReceipt = async (
+    item: SourceFreshnessQueueItem,
+    sourceUrl: string,
+    outcome: SourceRecheckOutcome,
+  ) => {
+    const outcomeLabel = outcome === "unchanged"
+      ? "変更なし"
+      : outcome === "changed"
+        ? "変更あり"
+        : outcome === "removed"
+          ? "URL失効"
+          : "取得不可";
+    if (!window.confirm(`公式ページを実際に確認し、「${outcomeLabel}」として記録しますか？`)) return;
+
+    const notes = outcome === "unchanged"
+      ? ""
+      : window.prompt("確認メモ（任意）", "") ?? "";
+
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await adminRecordSourceRecheckReceipt(getSupabaseClient(), {
+        itemType: item.itemType,
+        itemKey: item.key,
+        sourceUrl,
+        outcome,
+        notes,
+        requestId: selected?.channel === "fresh" && (selected.status === "pending" || selected.status === "processing")
+          ? selected.id
+          : null,
+      });
+      await reload();
+      if (result.completedCycle) {
+        setMessage(`${item.label} の全根拠URLを「変更なし」で確認しました。確認日を更新しました。`);
+      } else if (result.followupRequestId) {
+        setSelectedId(result.followupRequestId);
+        setMessage(`${item.label} の根拠に「${outcomeLabel}」を記録しました。Fresh更新 #${result.followupRequestId} で内容更新を確認してください。`);
+      } else {
+        setMessage(`${item.label}: ${result.checkedSourceCount}/${result.totalSourceCount} URLを確認済みです。残り ${result.remainingSourceCount} 件です。`);
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "根拠再確認の記録を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
   const copyResearchPrompt = async (request: KnowledgeRefreshRequest) => {
     const prompt = buildKnowledgeRefreshResearchPrompt(request.channel);
@@ -523,15 +588,34 @@ export function KnowledgeRefreshPanel() {
           <div className="knowledge-source-freshness-items">
             {sourceQueue?.items.filter((item) => item.state !== "fresh").slice(0, 12).map((item) => (
               <article key={item.itemType + ":" + item.key} className={item.state}>
-                <div>
-                  <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{item.catalogVersion}</span>
-                  <strong>{item.label}</strong>
-                  <small>{item.key}</small>
+                <div className="knowledge-source-freshness-card-head">
+                  <div>
+                    <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{item.catalogVersion}</span>
+                    <strong>{item.label}</strong>
+                    <small>{item.key}</small>
+                  </div>
+                  <div>
+                    <b>{item.state === "missing" ? "根拠不足" : item.state === "stale" ? "期限切れ" : "再確認時期"}</b>
+                    <small>確認 {formatDate(item.sourceCheckedAt)}{item.ageDays !== null ? ` · ${item.ageDays}日経過` : ""}</small>
+                  </div>
                 </div>
-                <div>
-                  <b>{item.state === "missing" ? "根拠不足" : item.state === "stale" ? "期限切れ" : "再確認時期"}</b>
-                  <small>確認 {formatDate(item.sourceCheckedAt)}{item.ageDays !== null ? ` · ${item.ageDays}日経過` : ""}</small>
-                </div>
+                {item.sourceUrls.length > 0 ? (
+                  <div className="knowledge-source-receipt-actions">
+                    {item.sourceUrls.map((url) => (
+                      <div key={url} className="knowledge-source-receipt-row">
+                        <a href={url} target="_blank" rel="noreferrer">公式根拠を開く</a>
+                        <small title={url}>{url}</small>
+                        <div>
+                          <button type="button" disabled={busy} onClick={() => void recordSourceReceipt(item, url, "unchanged")}>変更なし</button>
+                          <button type="button" disabled={busy} onClick={() => void recordSourceReceipt(item, url, "changed")}>変更あり</button>
+                          <button type="button" disabled={busy} onClick={() => void recordSourceReceipt(item, url, "unreachable")}>取得不可</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="knowledge-source-missing-note">根拠URLがありません。Fresh更新で公式URLを追加してください。</p>
+                )}
               </article>
             ))}
           </div>
@@ -547,6 +631,30 @@ export function KnowledgeRefreshPanel() {
           再確認プロンプトを準備・コピー
         </button>
         <p className="knowledge-review-note">最大20件をFresh更新へ準備します。公式ページを実際に確認したJSONを貼り付け、既存の差分・品質ゲートを通してから公開してください。</p>
+
+        {sourceReceipts.length > 0 && (
+          <details className="knowledge-source-receipt-history">
+            <summary>最近の根拠再確認履歴 {sourceReceipts.length}件</summary>
+            <div>
+              {sourceReceipts.slice(0, 20).map((receipt) => (
+                <article key={receipt.id} className={receipt.outcome}>
+                  <div>
+                    <span>{receipt.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{receipt.catalogVersion}</span>
+                    <strong>{receipt.itemKey}</strong>
+                    <small>{formatDate(receipt.checkedAt)}</small>
+                  </div>
+                  <div>
+                    <b>{sourceOutcomeLabel(receipt.outcome)}</b>
+                    {receipt.completedCycle && <em>全URL確認完了</em>}
+                    {receipt.requestId && <small>更新 #{receipt.requestId}</small>}
+                  </div>
+                  <a href={receipt.sourceUrl} target="_blank" rel="noreferrer">{receipt.sourceUrl}</a>
+                  {receipt.notes && <p>{receipt.notes}</p>}
+                </article>
+              ))}
+            </div>
+          </details>
+        )}
       </section>
 
       <section className="knowledge-stable-release-queue">
