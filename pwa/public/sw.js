@@ -1,4 +1,4 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v4-release-control";
+const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v5-crystal-release";
 const APP_SHELL = [
   "/offline.html",
   "/manifest.webmanifest",
