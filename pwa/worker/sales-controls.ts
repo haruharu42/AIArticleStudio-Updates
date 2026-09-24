@@ -1,5 +1,6 @@
 export interface SalesControlEnv {
   AAS_SUPABASE_URL?: string;
+  AAS_SUPABASE_PUBLISHABLE_KEY?: string;
   AAS_SUPABASE_SERVICE_ROLE_KEY?: string;
 }
 
@@ -34,18 +35,22 @@ function jsonResponse(payload: unknown, status = 200): Response {
 
 async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | null> {
   const baseUrl = clean(env.AAS_SUPABASE_URL).replace(/\/$/, "");
-  const serviceKey = clean(env.AAS_SUPABASE_SERVICE_ROLE_KEY);
-  if (!baseUrl || !serviceKey) return null;
+  const apiKey = clean(env.AAS_SUPABASE_PUBLISHABLE_KEY) || clean(env.AAS_SUPABASE_SERVICE_ROLE_KEY);
+  if (!baseUrl || !apiKey) return null;
 
   const response = await fetch(
-    `${baseUrl}/rest/v1/commerce_sales_settings?id=eq.1&select=external_sales_enabled,access_code_enabled,external_sales_url,stripe_checkout_enabled,pwa_7day_enabled,pwa_monthly_enabled&limit=1`,
+    `${baseUrl}/rest/v1/rpc/get_public_commerce_sales_settings`,
     {
-      method: "GET",
+      method: "POST",
       headers: {
-        apikey: serviceKey,
-        ...(!serviceKey.startsWith("sb_secret_") ? { authorization: `Bearer ${serviceKey}` } : {}),
+        apikey: apiKey,
+        ...(!apiKey.startsWith("sb_publishable_") && !apiKey.startsWith("sb_secret_")
+          ? { authorization: `Bearer ${apiKey}` }
+          : {}),
         accept: "application/json",
+        "content-type": "application/json",
       },
+      body: "{}",
     },
   );
   if (!response.ok) return null;
