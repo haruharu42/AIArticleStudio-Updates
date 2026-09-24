@@ -463,8 +463,6 @@ export function Phase18BeginnerHome() {
           </div>
         </section>
 
-        <ActionStudioQuickActions showAdmin={activeAdmin} />
-
         <section className="reference-home-section">
           <div className="reference-section-heading"><h2>🏆 週間ランキング</h2><Link href="/ranking">ランキングを見る ›</Link></div>
           <div className="reference-rank-summary">
@@ -476,6 +474,8 @@ export function Phase18BeginnerHome() {
             <Link href="/profile">{dashboard?.rankingOptIn ? "公開設定 ›" : "プロフィール設定 ›"}</Link>
           </div>
         </section>
+        <ActionStudioQuickActions showAdmin={activeAdmin} />
+
       </main>
 
       <AasReferenceBottomNav active="home" onLibrary={() => openSection("library")} />
