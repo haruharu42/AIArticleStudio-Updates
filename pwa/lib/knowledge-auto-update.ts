@@ -85,6 +85,22 @@ export type KnowledgeAutomationStatus = {
   latestRunCandidatesCreated: number;
 };
 
+export type KnowledgeAutomationAiConfig = {
+  enabled: boolean;
+  provider: "openai";
+  model: string;
+  maxCandidatesPerRun: number;
+  apiKeyConfigured: boolean;
+};
+
+export type KnowledgeAutomationAiConfigUpdate = {
+  enabled: boolean;
+  provider: "openai";
+  model: string;
+  maxCandidatesPerRun: number;
+  apiKey?: string;
+};
+
 export type KnowledgeAutomationCandidate = {
   id: number;
   candidateAction: KnowledgeAutomationCandidateAction;
@@ -104,6 +120,15 @@ export type KnowledgeAutomationCandidate = {
   reviewNotes: string;
   detectedAt: string;
   reviewedAt: string | null;
+  analysisStatus: "pending" | "completed" | "failed";
+  analysisDecision: "" | "no_change" | "new" | "update" | "recheck" | "retire";
+  proposalItemType: "knowledge" | "prompt" | null;
+  analysisProvider: string;
+  analysisModel: string;
+  analysisReason: string;
+  analysisError: string;
+  verifiedSourceUrls: string[];
+  analyzedAt: string | null;
 };
 
 function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
@@ -328,12 +353,16 @@ export async function adminListKnowledgeAutomationCandidates(
   status: KnowledgeAutomationCandidateStatus | null = "pending",
   limit = 50,
 ): Promise<KnowledgeAutomationCandidate[]> {
-  const { data, error } = await client.rpc("admin_list_knowledge_automation_candidates", {
+  const args = {
     p_status: status,
     p_limit: Math.max(1, Math.min(200, Math.trunc(limit))),
-  });
-  if (error) throw new Error(error.message || "自動調査候補を取得できませんでした。");
-  return (data ?? []).map((raw: Record<string, unknown>) => ({
+  };
+  let response = await client.rpc("admin_list_knowledge_automation_candidates_v2", args);
+  if (response.error && isMissingRpc(response.error)) {
+    response = await client.rpc("admin_list_knowledge_automation_candidates", args);
+  }
+  if (response.error) throw new Error(response.error.message || "自動調査候補を取得できませんでした。");
+  return (response.data ?? []).map((raw: Record<string, unknown>) => ({
     id: asNumber(raw.id),
     candidateAction:
       raw.candidate_action === "update" || raw.candidate_action === "recheck" || raw.candidate_action === "retire"
@@ -362,6 +391,25 @@ export async function adminListKnowledgeAutomationCandidates(
     reviewNotes: typeof raw.review_notes === "string" ? raw.review_notes : "",
     detectedAt: typeof raw.detected_at === "string" ? raw.detected_at : "",
     reviewedAt: typeof raw.reviewed_at === "string" ? raw.reviewed_at : null,
+    analysisStatus:
+      raw.analysis_status === "completed" || raw.analysis_status === "failed"
+        ? raw.analysis_status
+        : "pending",
+    analysisDecision:
+      raw.analysis_decision === "no_change" || raw.analysis_decision === "new" ||
+      raw.analysis_decision === "update" || raw.analysis_decision === "recheck" ||
+      raw.analysis_decision === "retire"
+        ? raw.analysis_decision
+        : "",
+    proposalItemType: raw.proposal_item_type === "knowledge" || raw.proposal_item_type === "prompt"
+      ? raw.proposal_item_type
+      : null,
+    analysisProvider: typeof raw.analysis_provider === "string" ? raw.analysis_provider : "",
+    analysisModel: typeof raw.analysis_model === "string" ? raw.analysis_model : "",
+    analysisReason: typeof raw.analysis_reason === "string" ? raw.analysis_reason : "",
+    analysisError: typeof raw.analysis_error === "string" ? raw.analysis_error : "",
+    verifiedSourceUrls: asStringArray(raw.verified_source_urls),
+    analyzedAt: typeof raw.analyzed_at === "string" ? raw.analyzed_at : null,
   }));
 }
 
@@ -386,6 +434,68 @@ export async function adminRequestKnowledgeAutomationRun(client: SupabaseClient)
   if (id < 1) throw new Error("自動調査IDを確認できませんでした。");
   return id;
 }
+
+export async function adminGetKnowledgeAutomationAiConfig(
+  client: SupabaseClient,
+): Promise<KnowledgeAutomationAiConfig> {
+  const { data, error } = await client.rpc("admin_get_knowledge_automation_ai_config");
+  if (error) throw new Error(error.message || "AI自動解析設定を取得できませんでした。");
+  const raw = Array.isArray(data) ? data[0] : data;
+  const row = asObject(raw);
+  if (!row) {
+    return { enabled:false,provider:"openai",model:"gpt-5.6",maxCandidatesPerRun:6,apiKeyConfigured:false };
+  }
+  return {
+    enabled: row.enabled === true,
+    provider: "openai",
+    model: typeof row.model === "string" && row.model.trim() ? row.model.trim() : "gpt-5.6",
+    maxCandidatesPerRun: Math.max(1,Math.min(20,asNumber(row.max_candidates_per_run,6))),
+    apiKeyConfigured: row.api_key_configured === true,
+  };
+}
+
+export async function adminSetKnowledgeAutomationAiConfig(
+  client: SupabaseClient,
+  config: KnowledgeAutomationAiConfigUpdate,
+): Promise<void> {
+  const { error } = await client.rpc("admin_set_knowledge_automation_ai_config", {
+    p_enabled: config.enabled,
+    p_provider: config.provider,
+    p_model: config.model.trim(),
+    p_max_candidates_per_run: Math.max(1,Math.min(20,Math.trunc(config.maxCandidatesPerRun))),
+    p_api_key: config.apiKey?.trim() || null,
+  });
+  if (error) throw new Error(error.message || "AI自動解析設定を保存できませんでした。");
+}
+
+export async function adminRetryKnowledgeAutomationCandidateAi(
+  client: SupabaseClient,
+  candidateId: number,
+): Promise<void> {
+  const { error } = await client.rpc("admin_retry_knowledge_automation_candidate_ai", {
+    p_candidate_id: candidateId,
+  });
+  if (error) throw new Error(error.message || "AI解析候補を再試行状態へ戻せませんでした。");
+}
+
+export function buildKnowledgeAutomationCandidateBundle(
+  candidate: KnowledgeAutomationCandidate,
+): KnowledgeRefreshBundle | null {
+  if (
+    candidate.analysisStatus !== "completed" ||
+    (candidate.analysisDecision !== "new" && candidate.analysisDecision !== "update") ||
+    !candidate.proposedPayload ||
+    !candidate.proposalItemType
+  ) return null;
+
+  return {
+    summary:
+      `自動公式ソース調査候補 #${candidate.id}: ${candidate.analysisReason || candidate.reason} / ${candidate.sourceUrl}`.slice(0,2000),
+    knowledge_rules: candidate.proposalItemType === "knowledge" ? [candidate.proposedPayload] : [],
+    prompt_optimizations: candidate.proposalItemType === "prompt" ? [candidate.proposedPayload] : [],
+  };
+}
+
 
 export function parseKnowledgeRefreshBundle(text: string): KnowledgeRefreshBundle {
   const raw: unknown = JSON.parse(text);
