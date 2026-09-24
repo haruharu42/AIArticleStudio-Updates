@@ -693,7 +693,7 @@ body.aas-crystal-theme .tool-group-heading {
   }
 
   body.aas-crystal-theme .action-studio-hero::after {
-    inset-top: 178px;
+    top: 178px;
   }
 
   body.aas-crystal-theme .action-studio-primary-grid,
