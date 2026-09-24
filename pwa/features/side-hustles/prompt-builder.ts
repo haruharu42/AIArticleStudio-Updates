@@ -59,6 +59,13 @@ function interpolate(template: string, definition: SideHustleDefinition, draft: 
     resolveSideHustleFieldValue(definition, key, draft.values[key]));
 }
 
+function experienceScenarioTags(value: string | undefined): string[] {
+  const normalized = (value ?? "").normalize("NFKC");
+  if (/未経験|初心者/.test(normalized)) return ["experience:beginner"];
+  if (/経験者|実務|販売経験/.test(normalized)) return ["experience:experienced"];
+  return [];
+}
+
 export function buildSideHustlePrompt(
   definition: SideHustleDefinition,
   draft: SideHustleDraft,
@@ -77,6 +84,7 @@ export function buildSideHustlePrompt(
     audience: resolved.buyer_stage ?? resolved.reader_stage ?? resolved.target ?? resolved.buyer_level ?? "",
     purpose: resolved.objective ?? resolved.goal ?? resolved.decision ?? resolved.outcome ?? resolved.video_goal ?? "",
     scenarioText: Object.values(resolved).join(" "),
+    scenarioTags: experienceScenarioTags(resolved.experience_level),
   });
 
   const provider = draft.selectedAi as AiProvider;
