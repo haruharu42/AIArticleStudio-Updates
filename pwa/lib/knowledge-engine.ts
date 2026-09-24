@@ -300,6 +300,10 @@ function cloudRuleSpecificity(rule: KnowledgeRule): number {
   return 5;
 }
 
+function cloudRuleRank(rule: KnowledgeRule): number {
+  return rule.priority + cloudRuleSpecificity(rule);
+}
+
 function matchesCloudRule(rule: KnowledgeRule, input: KnowledgeCompileInput): boolean {
   if (rule.tasks?.length && !rule.tasks.includes(input.task)) return false;
   if (rule.kind === "genre") return matches(rule, input.genre ?? "");
@@ -324,7 +328,8 @@ function allRules(input: KnowledgeCompileInput): KnowledgeRule[] {
   const cloudRules = runtimeCloudRules
     .filter((rule) => matchesCloudRule(rule, input))
     .sort((a, b) =>
-      b.priority - a.priority
+      cloudRuleRank(b) - cloudRuleRank(a)
+      || b.priority - a.priority
       || cloudRuleSpecificity(b) - cloudRuleSpecificity(a)
       || a.key.localeCompare(b.key, "ja"),
     )
