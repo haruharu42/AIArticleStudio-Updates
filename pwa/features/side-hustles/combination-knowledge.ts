@@ -1,4 +1,4 @@
-import type { SideHustleDefinition } from "@/features/side-hustles/types";
+// Curated high-value combination rules; avoid generating a full cartesian product of user conditions.\nimport type { SideHustleDefinition } from "@/features/side-hustles/types";
 
 export type SideHustleCombinationKnowledge = {
   key: string;
