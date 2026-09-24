@@ -90,6 +90,7 @@ declare
   clean_key text;
   existing_release text;
   existing_stable_at timestamptz;
+  existing_matches boolean;
 begin
   quality := private.aas_validate_knowledge_refresh_bundle(bundle);
 
@@ -109,9 +110,25 @@ begin
     clean_key := left(trim(coalesce(item ->> 'key','')),180);
     existing_release := null;
     existing_stable_at := null;
+    existing_matches := null;
 
-    select catalog.release_channel,catalog.stable_available_at
-    into existing_release,existing_stable_at
+    select
+      catalog.release_channel,
+      catalog.stable_available_at,
+      (
+        lower(trim(coalesce(item ->> 'kind',''))) = catalog.kind
+        and left(trim(coalesce(item ->> 'label','')),120) = catalog.label
+        and nullif(left(trim(coalesce(item ->> 'parent_label','')),120),'') is not distinct from catalog.parent_label
+        and private.aas_json_text_array(item -> 'aliases',40,120) = catalog.aliases
+        and private.aas_json_text_array(item -> 'guidance',40,600) = catalog.guidance
+        and private.aas_json_text_array(item -> 'deliverables',40,300) = catalog.deliverables
+        and private.aas_json_text_array(item -> 'cautions',40,600) = catalog.cautions
+        and private.aas_json_text_array(item -> 'tasks',20,32) = catalog.tasks
+        and greatest(0,least(100,coalesce(nullif(item ->> 'priority','')::integer,70))) = catalog.priority::integer
+        and private.aas_json_text_array(item -> 'source_urls',20,500) = catalog.source_urls
+        and nullif(left(trim(coalesce(item ->> 'source_summary','')),1000),'') is not distinct from catalog.source_summary
+      )
+    into existing_release,existing_stable_at,existing_matches
     from public.knowledge_catalog as catalog
     where catalog.key=clean_key and catalog.status='active';
 
@@ -129,6 +146,13 @@ begin
         'key',clean_key,
         'message','Fresh検証期間がまだ終了していません。Stable昇格可能時刻: ' || existing_stable_at::text
       ));
+    elsif existing_matches is not true then
+      blocking := blocking || jsonb_build_array(jsonb_build_object(
+        'code','stable_bundle_differs_from_fresh',
+        'item_type','knowledge',
+        'key',clean_key,
+        'message','Stable候補の内容がFreshで検証した同一keyの内容と一致しません。変更は先にFreshへ公開してください。'
+      ));
     end if;
   end loop;
 
@@ -138,9 +162,21 @@ begin
     clean_key := left(trim(coalesce(item ->> 'key','')),180);
     existing_release := null;
     existing_stable_at := null;
+    existing_matches := null;
 
-    select catalog.release_channel,catalog.stable_available_at
-    into existing_release,existing_stable_at
+    select
+      catalog.release_channel,
+      catalog.stable_available_at,
+      (
+        lower(trim(coalesce(item ->> 'provider','all'))) = catalog.provider
+        and lower(trim(coalesce(item ->> 'plan','all'))) = catalog.plan
+        and lower(trim(coalesce(item ->> 'task','all'))) = catalog.task
+        and private.aas_json_text_array(item -> 'rules',40,600) = catalog.rules
+        and greatest(0,least(100,coalesce(nullif(item ->> 'priority','')::integer,70))) = catalog.priority::integer
+        and private.aas_json_text_array(item -> 'source_urls',20,500) = catalog.source_urls
+        and nullif(left(trim(coalesce(item ->> 'source_summary','')),1000),'') is not distinct from catalog.source_summary
+      )
+    into existing_release,existing_stable_at,existing_matches
     from public.prompt_optimization_catalog as catalog
     where catalog.key=clean_key and catalog.status='active';
 
@@ -157,6 +193,13 @@ begin
         'item_type','prompt',
         'key',clean_key,
         'message','Fresh検証期間がまだ終了していません。Stable昇格可能時刻: ' || existing_stable_at::text
+      ));
+    elsif existing_matches is not true then
+      blocking := blocking || jsonb_build_array(jsonb_build_object(
+        'code','stable_bundle_differs_from_fresh',
+        'item_type','prompt',
+        'key',clean_key,
+        'message','Stable候補の内容がFreshで検証した同一keyのPrompt最適化と一致しません。変更は先にFreshへ公開してください。'
       ));
     end if;
   end loop;
