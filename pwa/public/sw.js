@@ -1,10 +1,11 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v5-crystal-release";
+const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v6-hq-illustration";
 const APP_SHELL = [
   "/offline.html",
   "/manifest.webmanifest",
   "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
+  "/aas-axia-rumo-hero-hq.webp",
 ];
 
 function freshRequest(request) {

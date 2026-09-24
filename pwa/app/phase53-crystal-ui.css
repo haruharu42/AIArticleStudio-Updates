@@ -228,7 +228,7 @@ body.aas-crystal-theme .action-studio-hero::after {
   z-index: -1;
   inset: 0 0 0 auto;
   width: 58%;
-  background: url("/aas-axia-rumo-hero.svg") center right / cover no-repeat;
+  background: url("/aas-axia-rumo-hero-hq.webp") right center / contain no-repeat;
   -webkit-mask-image: linear-gradient(to right, transparent 0%, black 18%, black 100%);
   mask-image: linear-gradient(to right, transparent 0%, black 18%, black 100%);
   pointer-events: none;
@@ -1271,7 +1271,7 @@ body.aas-crystal-theme .auth-character-visual {
   align-self: stretch;
   min-height: 560px;
   z-index: 1;
-  background: url("/aas-axia-rumo-hero.svg") center / cover no-repeat;
+  background: url("/aas-axia-rumo-hero-hq.webp") center / cover no-repeat;
   filter: saturate(.98) drop-shadow(0 22px 42px rgb(86 113 170 / 16%));
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 6% 89%, transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0%, #000 6% 89%, transparent 100%);
@@ -1438,8 +1438,21 @@ body.aas-crystal-theme .status-card::after {
   right: -12px;
   bottom: -8px;
   opacity: .22;
-  background: url("/aas-axia-rumo-hero.svg") center / cover no-repeat;
+  background: url("/aas-axia-rumo-hero-hq.webp") center / cover no-repeat;
   pointer-events: none;
+}
+
+@media (min-width: 901px) {
+  body.aas-crystal-theme .auth-character-stage {
+    grid-template-columns: minmax(240px, .74fr) minmax(420px, 1.26fr);
+  }
+
+  body.aas-crystal-theme .auth-character-visual {
+    align-self: center;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+    background: url("/aas-axia-rumo-hero-hq.webp") center / contain no-repeat;
+  }
 }
 
 @media (max-width: 900px) {

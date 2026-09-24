@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -8,21 +8,20 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 test("Axia and Rumo are local presentation assets and the crystal theme loads last", async () => {
-  const [layout, css, asset, hub] = await Promise.all([
+  const [layout, css, assetStats, hub] = await Promise.all([
     read("app/layout.tsx"),
     read("app/phase53-crystal-ui.css"),
-    read("public/aas-axia-rumo-hero.svg"),
+    stat(path.join(root, "public/aas-axia-rumo-hero-hq.webp")),
     read("components/action-studio-home-hub.tsx"),
   ]);
 
   assert.ok(layout.lastIndexOf('import "./phase53-crystal-ui.css";') > layout.lastIndexOf('import "./phase52-infrastructure-usage.css";'));
   assert.doesNotMatch(layout, /phase53-crystal-character-ui/);
-  assert.match(asset, /data:image\/webp;base64,/);
-  assert.doesNotMatch(asset, /<image[^>]+href="https?:\/\//);
-  assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
+  assert.ok(assetStats.size >= 40000, "HQ character asset should not regress to the old tiny embedded image");
+  assert.match(css, /url\("\/aas-axia-rumo-hero-hq\.webp"\)/);
   assert.match(hub, /アクシア × ルーモ/);
   assert.match(hub, /今日はAIで何を進めますか？/);
-  assert.doesNotMatch(`${css}\n${asset}\n${hub}`, /service[_-]?role|sb_secret_|ghp_|github_token/i);
+  assert.doesNotMatch(`${css}\n${hub}`, /service[_-]?role|sb_secret_|ghp_|github_token/i);
 });
 
 test("home puts user and article library before lower quick actions", async () => {
