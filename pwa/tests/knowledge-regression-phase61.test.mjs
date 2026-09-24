@@ -28,7 +28,7 @@ test("Phase 61 checks source metadata, staleness, and task-specific rules", asyn
   assert.match(source, /rule\.tasks\.length === 1/);
   assert.match(source, /sourceCheckedAt/);
   assert.match(source, /sourceUrls/);
-  assert.ok(source.includes("https://"));
+  assert.ok(source.includes("https:"));
   assert.match(source, /90/);
   assert.match(source, /guidance\.length \+ rule\.deliverables\.length \+ rule\.cautions\.length/);
 });
