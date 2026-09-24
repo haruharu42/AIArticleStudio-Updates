@@ -76,6 +76,27 @@ export type KnowledgeRefreshBundle = {
   prompt_optimizations: unknown[];
 };
 
+export type KnowledgeQualityIssue = {
+  code: string;
+  itemType: "bundle" | "knowledge" | "prompt";
+  key: string;
+  message: string;
+};
+
+export type KnowledgeQualityStats = {
+  knowledgeCount: number;
+  promptCount: number;
+  sourceUrlCount: number;
+  taskReferenceCount: number;
+};
+
+export type KnowledgeQualityReport = {
+  valid: boolean;
+  blocking: KnowledgeQualityIssue[];
+  warnings: KnowledgeQualityIssue[];
+  stats: KnowledgeQualityStats;
+};
+
 function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
   return { added: 0, updated: 0, unchanged: 0, items: [] };
 }
@@ -87,6 +108,53 @@ export function emptyKnowledgeRefreshDiff(): KnowledgeRefreshDiff {
 function asNumber(value: unknown, fallback = 0): number {
   const number = typeof value === "number" ? value : Number(value);
   return Number.isFinite(number) ? number : fallback;
+}
+
+function parseQualityIssue(raw: unknown): KnowledgeQualityIssue | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const value = raw as Record<string, unknown>;
+  const itemType = value.item_type === "knowledge" || value.item_type === "prompt" ? value.item_type : "bundle";
+  const message = typeof value.message === "string" ? value.message : "";
+  if (!message) return null;
+  return {
+    code: typeof value.code === "string" ? value.code : "",
+    itemType,
+    key: typeof value.key === "string" ? value.key : "",
+    message,
+  };
+}
+
+export function parseKnowledgeQualityReport(raw: unknown): KnowledgeQualityReport {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("品質ゲートの応答形式が不正です。");
+  }
+  const value = raw as Record<string, unknown>;
+  const stats = value.stats && typeof value.stats === "object" && !Array.isArray(value.stats)
+    ? value.stats as Record<string, unknown>
+    : {};
+  const blocking = Array.isArray(value.blocking)
+    ? value.blocking.map(parseQualityIssue).filter((item): item is KnowledgeQualityIssue => Boolean(item))
+    : [];
+  const warnings = Array.isArray(value.warnings)
+    ? value.warnings.map(parseQualityIssue).filter((item): item is KnowledgeQualityIssue => Boolean(item))
+    : [];
+  return {
+    valid: value.valid === true && blocking.length === 0,
+    blocking,
+    warnings,
+    stats: {
+      knowledgeCount: Math.max(0, asNumber(stats.knowledge_count)),
+      promptCount: Math.max(0, asNumber(stats.prompt_count)),
+      sourceUrlCount: Math.max(0, asNumber(stats.source_url_count)),
+      taskReferenceCount: Math.max(0, asNumber(stats.task_reference_count)),
+    },
+  };
+}
+
+function isMissingRpcError(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  return error.code === "PGRST202"
+    || /could not find the function|function .* does not exist/i.test(error.message ?? "");
 }
 
 function parseChangeItem(raw: unknown, fallbackType: "knowledge" | "prompt"): KnowledgeRefreshChangeItem | null {
@@ -272,15 +340,29 @@ export async function adminPreviewKnowledgeRefreshBundleDiff(
   return parseKnowledgeRefreshDiff(data);
 }
 
+export async function adminValidateKnowledgeRefreshBundle(
+  client: SupabaseClient,
+  bundle: KnowledgeRefreshBundle,
+): Promise<KnowledgeQualityReport> {
+  const { data, error } = await client.rpc("admin_validate_knowledge_refresh_bundle", { p_bundle: bundle });
+  if (error) throw new Error(error.message || "Knowledge品質ゲートを実行できませんでした。");
+  return parseKnowledgeQualityReport(data);
+}
+
 export async function adminPublishKnowledgeRefreshBundle(
   client: SupabaseClient,
   requestId: number,
   bundle: KnowledgeRefreshBundle,
 ): Promise<KnowledgeRefreshPublishResult> {
-  const { data, error } = await client.rpc("admin_publish_knowledge_refresh_bundle_v2", {
+  const args = {
     p_request_id: requestId,
     p_bundle: bundle,
-  });
+  };
+  const current = await client.rpc("admin_publish_knowledge_refresh_bundle_v3", args);
+  const response = current.error && isMissingRpcError(current.error)
+    ? await client.rpc("admin_publish_knowledge_refresh_bundle_v2", args)
+    : current;
+  const { data, error } = response;
   if (error) throw new Error(error.message || "ナレッジ更新Bundleを公開できませんでした。");
   const row = Array.isArray(data) ? data[0] : data;
   if (!row || typeof row !== "object" || Array.isArray(row)) {

@@ -13,8 +13,10 @@ import {
   adminRetryKnowledgeRefresh,
   adminRunKnowledgeScheduler,
   adminStartKnowledgeRefresh,
+  adminValidateKnowledgeRefreshBundle,
   buildKnowledgeRefreshResearchPrompt,
   parseKnowledgeRefreshBundle,
+  type KnowledgeQualityReport,
   type KnowledgeRefreshChangeItem,
   type KnowledgeRefreshChannelState,
   type KnowledgeRefreshDiff,
@@ -131,6 +133,7 @@ export function KnowledgeRefreshPanel() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [bundleText, setBundleText] = useState("");
   const [diffPreview, setDiffPreview] = useState<KnowledgeRefreshDiff | null>(null);
+  const [qualityReport, setQualityReport] = useState<KnowledgeQualityReport | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -199,6 +202,7 @@ export function KnowledgeRefreshPanel() {
     setBusy(true);
     setMessage("");
     setDiffPreview(null);
+    setQualityReport(null);
     try {
       const id = await adminRequestKnowledgeRefresh(getSupabaseClient(), channel);
       setSelectedId(id);
@@ -217,6 +221,7 @@ export function KnowledgeRefreshPanel() {
     setBusy(true);
     setMessage("");
     setDiffPreview(null);
+    setQualityReport(null);
     try {
       await adminStartKnowledgeRefresh(getSupabaseClient(), request.id);
       setSelectedId(request.id);
@@ -237,6 +242,7 @@ export function KnowledgeRefreshPanel() {
       await adminCancelKnowledgeRefresh(getSupabaseClient(), request.id);
       setBundleText("");
       setDiffPreview(null);
+      setQualityReport(null);
       if (selectedId === request.id) setSelectedId(null);
       await reload();
       setMessage(`更新 #${request.id} を中止しました。必要なら履歴から再試行できます。`);
@@ -251,6 +257,7 @@ export function KnowledgeRefreshPanel() {
     setBusy(true);
     setMessage("");
     setDiffPreview(null);
+    setQualityReport(null);
     try {
       const nextId = await adminRetryKnowledgeRefresh(getSupabaseClient(), request.id);
       setSelectedId(nextId);
@@ -294,11 +301,18 @@ export function KnowledgeRefreshPanel() {
     setMessage("");
     try {
       const bundle = parseKnowledgeRefreshBundle(bundleText);
-      const diff = await adminPreviewKnowledgeRefreshBundleDiff(getSupabaseClient(), bundle);
+      const [diff, quality] = await Promise.all([
+        adminPreviewKnowledgeRefreshBundleDiff(getSupabaseClient(), bundle),
+        adminValidateKnowledgeRefreshBundle(getSupabaseClient(), bundle),
+      ]);
       setDiffPreview(diff);
-      setMessage("現在の正式データとの差分を確認しました。内容を確認してから公開してください。");
+      setQualityReport(quality);
+      setMessage(quality.valid
+        ? "差分と品質ゲートを確認しました。ブロック項目はありません。"
+        : `品質ゲートで ${quality.blocking.length}件の修正必須項目が見つかりました。公開前に修正してください。`);
     } catch (error) {
       setDiffPreview(null);
+      setQualityReport(null);
       setMessage(error instanceof Error ? error.message : "変更点を比較できませんでした。");
     } finally {
       setBusy(false);
@@ -306,7 +320,7 @@ export function KnowledgeRefreshPanel() {
   };
 
   const publish = async () => {
-    if (!selected || !diffPreview || (selected.status !== "pending" && selected.status !== "processing")) return;
+    if (!selected || !diffPreview || !qualityReport?.valid || (selected.status !== "pending" && selected.status !== "processing")) return;
 
     const changedCount =
       diffPreview.knowledge.added + diffPreview.knowledge.updated +
@@ -314,7 +328,7 @@ export function KnowledgeRefreshPanel() {
     const channelLabel = selected.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）";
 
     if (!window.confirm(
-      `${channelLabel}へ公開しますか？\n追加・変更される項目は合計 ${changedCount}件です。\n差分内容を確認済みの場合のみ続行してください。`,
+      `${channelLabel}へ公開しますか？\n追加・変更される項目は合計 ${changedCount}件です。\n品質ゲート: ブロック0件 / 警告 ${qualityReport.warnings.length}件\n差分と根拠を確認済みの場合のみ続行してください。`,
     )) return;
 
     setBusy(true);
@@ -324,6 +338,7 @@ export function KnowledgeRefreshPanel() {
       const result = await adminPublishKnowledgeRefreshBundle(getSupabaseClient(), selected.id, bundle);
       setBundleText("");
       setDiffPreview(null);
+      setQualityReport(null);
       await reload();
       setMessage(
         `${result.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）"} v${result.publishedVersion} を公開しました。Knowledge ${result.knowledgeCount}件 / Prompt ${result.promptCount}件です。`,
@@ -407,6 +422,7 @@ export function KnowledgeRefreshPanel() {
               <button type="button" className="knowledge-refresh-select" onClick={() => {
                 setSelectedId(request.id);
                 setDiffPreview(null);
+      setQualityReport(null);
                 setBundleText("");
               }}>
                 <span className={"channel-label " + request.channel}>
@@ -440,6 +456,7 @@ export function KnowledgeRefreshPanel() {
             onChange={(event) => {
               setBundleText(event.target.value);
               setDiffPreview(null);
+              setQualityReport(null);
             }}
             placeholder='{"summary":"...","knowledge_rules":[],"prompt_optimizations":[]}'
             spellCheck={false}
@@ -448,7 +465,7 @@ export function KnowledgeRefreshPanel() {
             <button type="button" disabled={busy || !bundleText.trim()} onClick={() => void previewDiff()}>
               変更点を確認
             </button>
-            <button type="button" className="approve" disabled={busy || !diffPreview} onClick={() => void publish()}>
+            <button type="button" className="approve" disabled={busy || !diffPreview || !qualityReport?.valid} onClick={() => void publish()}>
               差分確認後に公開
             </button>
           </div>
@@ -461,6 +478,42 @@ export function KnowledgeRefreshPanel() {
                 <p>「追加」「変更」「変更なし」を正式データと比較した結果です。変更箇所と根拠要約を確認してください。</p>
               </div>
               <DiffSummary diff={diffPreview} />
+              {qualityReport && (
+                <section className={`knowledge-quality-gate ${qualityReport.valid ? "pass" : "blocked"}`}>
+                  <header>
+                    <div>
+                      <strong>{qualityReport.valid ? "✓ 品質ゲート通過" : "公開前の修正が必要"}</strong>
+                      <p>Knowledge {qualityReport.stats.knowledgeCount}件 / Prompt {qualityReport.stats.promptCount}件 / 根拠URL {qualityReport.stats.sourceUrlCount}件</p>
+                    </div>
+                    <span>{qualityReport.blocking.length} BLOCK / {qualityReport.warnings.length} WARN</span>
+                  </header>
+                  {qualityReport.blocking.length > 0 && (
+                    <div className="knowledge-quality-issues blocking">
+                      {qualityReport.blocking.map((issue, index) => (
+                        <article key={`blocking:${issue.code}:${issue.key}:${index}`}>
+                          <strong>修正必須</strong>
+                          <p>{issue.message}</p>
+                          {issue.key && <small>{issue.key}</small>}
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                  {qualityReport.warnings.length > 0 && (
+                    <details className="knowledge-quality-warnings">
+                      <summary>警告 {qualityReport.warnings.length}件を確認</summary>
+                      <div>
+                        {qualityReport.warnings.map((issue, index) => (
+                          <article key={`warning:${issue.code}:${issue.key}:${index}`}>
+                            <strong>確認推奨</strong>
+                            <p>{issue.message}</p>
+                            {issue.key && <small>{issue.key}</small>}
+                          </article>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </section>
+              )}
               {reviewedSources.length > 0 && (
                 <div className="knowledge-source-review">
                   <strong>今回の根拠URL</strong>
