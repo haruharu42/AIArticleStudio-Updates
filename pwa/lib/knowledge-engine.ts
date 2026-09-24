@@ -62,6 +62,7 @@ export type KnowledgeRule = {
   sourceUrls?: string[];
   sourceSummary?: string;
   sourceCheckedAt?: string | null;
+  scenarioTags?: string[];
 };
 
 export type KnowledgeCompileInput = {
@@ -73,6 +74,8 @@ export type KnowledgeCompileInput = {
   subgenre?: string;
   audience?: string;
   purpose?: string;
+  scenarioText?: string;
+  scenarioTags?: string[];
 };
 
 export type CompiledKnowledge = {
@@ -113,6 +116,118 @@ function normalize(value: string | null | undefined): string {
 
 function list(...items: string[]): string[] {
   return items;
+}
+
+function scenarioTagFromRuleKey(key: string): string | null {
+  const match = /^auto:scenario:[^:]+:([a-z0-9_-]+):([a-z0-9._-]+):/i.exec(key);
+  return match ? \`\${match[1].toLowerCase()}:\${match[2].toLowerCase()}\` : null;
+}
+
+function explicitScenarioTags(rule: KnowledgeRule): string[] {
+  const fromKey = scenarioTagFromRuleKey(rule.key);
+  return unique([
+    ...(rule.scenarioTags ?? []),
+    ...(fromKey ? [fromKey] : []),
+  ]).map((tag) => tag.toLowerCase());
+}
+
+function addScenarioTag(tags: Set<string>, group: string, value: string): void {
+  tags.add(\`\${group}:\${value}\`);
+}
+
+function hasScenarioText(text: string, patterns: RegExp[]): boolean {
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+export function buildKnowledgeScenarioTags(input: KnowledgeCompileInput): string[] {
+  const tags = new Set(
+    (input.scenarioTags ?? [])
+      .map((tag) => normalize(tag))
+      .filter((tag) => /^[a-z0-9_-]+:[a-z0-9._-]+$/.test(tag)),
+  );
+  const text = normalize([
+    input.publicationTarget,
+    input.articleType,
+    input.genre,
+    input.subgenre,
+    input.audience,
+    input.purpose,
+    input.scenarioText,
+  ].filter(Boolean).join(" "));
+
+  if (hasScenarioText(text, [/初心者/, /未経験/, /始めたばかり/, /基礎は少し/, /これから開始/, /新規/, /\bbeginner\b/, /\bzero\b/])) {
+    addScenarioTag(tags, "experience", "beginner");
+  }
+  if (hasScenarioText(text, [/経験者/, /中級/, /上級/, /実務/, /業務経験/, /有償案件経験/, /継続運用中/, /\bprofessional\b/, /\bintermediate\b/])) {
+    addScenarioTag(tags, "experience", "experienced");
+  }
+
+  const mediumPatterns: Array<[string, RegExp[]]> = [
+    ["note", [/\bnote\b/]],
+    ["tips", [/\btips\b/]],
+    ["brain", [/\bbrain\b/]],
+    ["blog", [/ブログ/, /\bseo\b/, /\bblog\b/]],
+    ["newsletter", [/ニュースレター/, /\bnewsletter\b/]],
+    ["x", [/(^|\s)x(\s|$)/]],
+    ["instagram", [/instagram/]],
+    ["threads", [/threads/]],
+    ["tiktok", [/tiktok/]],
+    ["youtube", [/youtube/]],
+    ["mercari", [/メルカリ/, /mercari/]],
+    ["rakuma", [/ラクマ/, /rakuma/]],
+    ["yahoo", [/yahoo/]],
+    ["amazon", [/amazon/]],
+    ["crowdworks", [/クラウドワークス/, /crowdworks/]],
+    ["coconala", [/ココナラ/, /coconala/]],
+    ["email", [/メール/, /\bemail\b/]],
+    ["dm", [/(^|\s)dm(\s|$)/, /sns dm/]],
+    ["pdf", [/(^|\s)pdf(\s|$)/]],
+    ["notion", [/notion/]],
+  ];
+  for (const [value, patterns] of mediumPatterns) {
+    if (hasScenarioText(text, patterns)) addScenarioTag(tags, "medium", value);
+  }
+
+  const modePatterns: Array<[string, RegExp[]]> = [
+    ["sales", [/販売/, /購入/, /商品/, /収益化/, /有料/, /出品/, /価格/, /見積/]],
+    ["acquisition", [/集客/, /認知/, /信頼/, /流入/, /プロフィール閲覧/, /問い合わせ/, /相談/, /リード/]],
+    ["production", [/制作/, /作成/, /執筆/, /台本/, /編集/, /デザイン/, /動画/, /画像/, /投稿/, /成果物/, /納品物/]],
+    ["operation", [/運用/, /継続/, /改善/, /分析/, /検証/, /再開/, /sop/, /自動化/, /テンプレート化/]],
+    ["outreach", [/営業/, /応募/, /提案/, /案件獲得/, /初回連絡/, /追客/]],
+    ["delivery", [/納品/, /修正/, /検収/, /契約/, /要件/, /作業範囲/]],
+    ["research", [/調査/, /リサーチ/, /比較/, /根拠/, /一次情報/, /事実確認/]],
+    ["planning", [/計画/, /選定/, /始め方/, /候補/, /30日/, /使える時間/, /初期予算/]],
+  ];
+  for (const [value, patterns] of modePatterns) {
+    if (hasScenarioText(text, patterns)) addScenarioTag(tags, "mode", value);
+  }
+
+  return [...tags].sort();
+}
+
+function scenarioRuleMatches(rule: KnowledgeRule, input: KnowledgeCompileInput): boolean {
+  const required = explicitScenarioTags(rule);
+  if (required.length === 0) return true;
+  const available = new Set(buildKnowledgeScenarioTags(input));
+  if (available.size === 0) return false;
+
+  const groups = new Map<string, string[]>();
+  for (const tag of required) {
+    const separator = tag.indexOf(":");
+    if (separator <= 0) continue;
+    const group = tag.slice(0, separator);
+    const values = groups.get(group) ?? [];
+    values.push(tag);
+    groups.set(group, values);
+  }
+  return [...groups.values()].every((options) => options.some((tag) => available.has(tag)));
+}
+
+function scenarioSpecificity(rule: KnowledgeRule, input: KnowledgeCompileInput): number {
+  const required = explicitScenarioTags(rule);
+  if (required.length === 0 || !scenarioRuleMatches(rule, input)) return 0;
+  const groupCount = new Set(required.map((tag) => tag.split(":", 1)[0])).size;
+  return Math.min(72, 54 + Math.max(0, groupCount - 1) * 10 + Math.min(required.length, 4) * 2);
 }
 
 const commonRule: KnowledgeRule = {
@@ -316,12 +431,13 @@ function cloudRuleSpecificity(rule: KnowledgeRule): number {
   return 5;
 }
 
-function cloudRuleRank(rule: KnowledgeRule): number {
-  return rule.priority + cloudRuleSpecificity(rule);
+function cloudRuleRank(rule: KnowledgeRule, input: KnowledgeCompileInput): number {
+  return rule.priority + cloudRuleSpecificity(rule) + scenarioSpecificity(rule, input);
 }
 
 function matchesCloudRule(rule: KnowledgeRule, input: KnowledgeCompileInput): boolean {
   if (rule.tasks?.length && !rule.tasks.includes(input.task)) return false;
+  if (!scenarioRuleMatches(rule, input)) return false;
   if (rule.kind === "genre") return matches(rule, input.genre ?? "");
   if (rule.kind === "subgenre") return matches(rule, input.subgenre ?? "", input.genre);
   if (rule.kind === "age") return matches(rule, input.ageGroup ?? "");
@@ -331,6 +447,7 @@ function matchesCloudRule(rule: KnowledgeRule, input: KnowledgeCompileInput): bo
 }
 
 function cloudRuleReason(rule: KnowledgeRule): string {
+  if (explicitScenarioTags(rule).length > 0) return "今回の状況に一致する専用ルール";
   if (rule.kind === "task") return "タスク固有ルール";
   if (rule.kind === "subgenre") return "サブジャンル一致";
   if (rule.kind === "genre") return "ジャンル一致";
@@ -349,7 +466,7 @@ export function previewCloudKnowledgeSelection(
     .filter((rule) => rule.source === "cloud")
     .filter((rule) => matchesCloudRule(rule, input))
     .sort((a, b) =>
-      cloudRuleRank(b) - cloudRuleRank(a)
+      cloudRuleRank(b, input) - cloudRuleRank(a, input)
       || b.priority - a.priority
       || cloudRuleSpecificity(b) - cloudRuleSpecificity(a)
       || a.key.localeCompare(b.key, "ja"),
@@ -357,7 +474,7 @@ export function previewCloudKnowledgeSelection(
 
   const items = ranked.map((rule, index): CloudKnowledgeSelectionItem => ({
     rule,
-    score: cloudRuleRank(rule),
+    score: cloudRuleRank(rule, input),
     specificity: cloudRuleSpecificity(rule),
     selected: index < safeLimit,
     position: index < safeLimit ? index + 1 : null,
