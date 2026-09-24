@@ -165,11 +165,12 @@ test("side-hustle knowledge migration expands task constraints without changing 
 
 
 test("official-source automation detects changes but never auto-publishes Knowledge", async () => {
-  const [foundation, scheduler, snapshot, tuning, worker, panel, client] = await Promise.all([
+  const [foundation, scheduler, snapshot, tuning, providerHubs, worker, panel, client] = await Promise.all([
     readRepo("supabase/migrations/20260924194519_knowledge_web_automation_foundation_v1.sql"),
     readRepo("supabase/migrations/20260924195007_knowledge_web_automation_scheduler_v1.sql"),
     readRepo("supabase/migrations/20260924195224_knowledge_web_automation_snapshot_rpc_v1.sql"),
     readRepo("supabase/migrations/20260924195615_knowledge_web_automation_discovery_tuning_v1.sql"),
+    readRepo("supabase/migrations/20260924200421_knowledge_web_automation_provider_hubs_v1.sql"),
     readRepo("supabase/functions/knowledge-research-worker/index.ts"),
     readPwa("components/knowledge-refresh-panel.tsx"),
     readPwa("lib/knowledge-auto-update.ts"),
@@ -198,6 +199,11 @@ test("official-source automation detects changes but never auto-publishes Knowle
   assert.match(tuning, /max_discovered_links_per_source=0/);
   assert.match(tuning, /official_changelog/);
   assert.match(tuning, /gemini-api\/docs\/changelog/);
+
+  assert.match(providerHubs, /developers\.openai\.com\/api\/docs\/changelog/);
+  assert.match(providerHubs, /docs\.anthropic\.com\/en\/docs\/about-claude\/model-deprecations/);
+  assert.match(providerHubs, /prompt-engineering\/prompt-templates-and-variables/);
+  assert.match(providerHubs, /official_changelog/);
 
   assert.match(worker, /x-aas-worker-token/);
   assert.match(worker, /get_knowledge_automation_catalog_snapshot/);
