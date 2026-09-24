@@ -23,6 +23,7 @@ import {
   previewCloudKnowledgeSelection,
   type KnowledgeTask,
 } from "@/lib/knowledge-engine";
+import { evaluateSidejobKnowledgeRegression } from "@/lib/knowledge-regression";
 
 type Filter = "all" | "pending" | "approved" | "rejected";
 type CatalogRow = {
@@ -178,17 +179,28 @@ export function AdminKnowledgePage() {
   const deepSidejobCount = sidejobCoverage.filter((item) => item.count >= KNOWLEDGE_DEEP_DEPTH).length;
   const staleSidejobCount = sidejobCoverage.filter((item) => item.stale).length;
 
-  const compilerPreview = useMemo(() => {
-    const rules = catalog
-      .filter((item) => item.status === "active")
-      .filter((item) => compilerChannel === "fresh"
-        || item.release_channel === "both"
-        || new Date(item.stable_available_at).getTime() <= compilerReferenceTime)
-      .map((item) => parseKnowledgeCatalogRow(item as unknown as Record<string, unknown>))
-      .filter((rule): rule is NonNullable<typeof rule> => Boolean(rule));
+  const compilerRules = useMemo(() => catalog
+    .filter((item) => item.status === "active")
+    .filter((item) => compilerChannel === "fresh"
+      || item.release_channel === "both"
+      || new Date(item.stable_available_at).getTime() <= compilerReferenceTime)
+    .map((item) => parseKnowledgeCatalogRow(item as unknown as Record<string, unknown>))
+    .filter((rule): rule is NonNullable<typeof rule> => Boolean(rule)),
+  [catalog, compilerChannel, compilerReferenceTime]);
 
-    return previewCloudKnowledgeSelection(rules, { task: compilerTask });
-  }, [catalog, compilerChannel, compilerReferenceTime, compilerTask]);
+  const compilerPreview = useMemo(
+    () => previewCloudKnowledgeSelection(compilerRules, { task: compilerTask }),
+    [compilerRules, compilerTask],
+  );
+
+  const regressionSummary = useMemo(
+    () => evaluateSidejobKnowledgeRegression(compilerRules, {
+      referenceTime: compilerReferenceTime,
+      staleDays: KNOWLEDGE_SOURCE_STALE_DAYS,
+      minSelected: 5,
+    }),
+    [compilerRules, compilerReferenceTime],
+  );
 
   const compilerStableWaiting = useMemo(() => {
     if (compilerChannel !== "stable") return 0;
@@ -300,6 +312,57 @@ export function AdminKnowledgePage() {
               <strong>{item.label}</strong>
               <small>{item.count}件 · 最終根拠確認 {formatDate(item.latestCheckedAt)}</small>
               {item.stale && <small className="stale-note">根拠の再確認が必要です</small>}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="knowledge-admin-panel knowledge-regression-lab">
+        <div className="knowledge-panel-head">
+          <div>
+            <p className="eyebrow">REGRESSION LAB</p>
+            <h2>Knowledge選択 回帰テスト</h2>
+            <p>本番Compilerと同じTop 5選択で、12副業すべての選択品質を自動診断します。副業固有Knowledgeが横断ルールに押し出されていないかも確認します。</p>
+          </div>
+          <strong className={regressionSummary.fail === 0 ? "complete" : "incomplete"}>
+            PASS {regressionSummary.pass}/{regressionSummary.total}
+          </strong>
+        </div>
+
+        <div className="knowledge-regression-summary">
+          <span className="pass">PASS {regressionSummary.pass}</span>
+          <span className="warn">WARN {regressionSummary.warn}</span>
+          <span className="fail">FAIL {regressionSummary.fail}</span>
+          <span>{compilerChannel === "fresh" ? "Fresh" : "Stable"}基準</span>
+        </div>
+
+        {compilerChannel === "stable" && (
+          <p className="knowledge-regression-channel-note">
+            StableはFresh先行Knowledgeの待機中に一時的なFAILが出る場合があります。公開済みStableだけで成立するかを確認する診断です。
+          </p>
+        )}
+
+        <div className="knowledge-regression-grid">
+          {regressionSummary.results.map((result) => (
+            <article key={result.task} className={result.status}>
+              <div className="knowledge-regression-card-head">
+                <span>{result.status.toUpperCase()}</span>
+                <strong>{result.label}</strong>
+              </div>
+              <dl>
+                <div><dt>Top 5</dt><dd>{result.selectedCount}/5</dd></div>
+                <div><dt>候補</dt><dd>{result.eligibleCount}</dd></div>
+                <div><dt>副業固有</dt><dd>{result.taskSpecificSelected}</dd></div>
+              </dl>
+              <p className="knowledge-regression-top">
+                <span>最上位</span>
+                <strong>{result.topRuleLabel ?? "該当なし"}</strong>
+              </p>
+              {result.issues.length === 0 ? (
+                <p className="knowledge-regression-ok">選択品質に問題はありません。</p>
+              ) : (
+                <ul>{result.issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>
+              )}
             </article>
           ))}
         </div>
