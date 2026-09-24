@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
-import { ActionStudioHomeHub } from "@/components/action-studio-home-hub";
+import { ActionStudioHomeHero, ActionStudioQuickActions } from "@/components/action-studio-home-hub";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { Phase7App } from "@/components/phase6-app";
 import { Phase7Library } from "@/components/phase7-library";
@@ -322,7 +322,7 @@ export function Phase18BeginnerHome() {
 
         <ReleasePreviewHomeStatus />
 
-        <ActionStudioHomeHub />
+        <ActionStudioHomeHero />
 
         <section className="reference-creator-card" aria-label="Creatorステータス">
           <span className="reference-avatar" aria-hidden="true">
@@ -462,6 +462,8 @@ export function Phase18BeginnerHome() {
             <Link href="/sns"><span>↗</span><strong>SNS投稿</strong><small>記事から投稿文を作成</small></Link>
           </div>
         </section>
+
+        <ActionStudioQuickActions showAdmin={activeAdmin} />
 
         <section className="reference-home-section">
           <div className="reference-section-heading"><h2>🏆 週間ランキング</h2><Link href="/ranking">ランキングを見る ›</Link></div>
