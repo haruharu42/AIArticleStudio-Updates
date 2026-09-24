@@ -36,6 +36,7 @@ type CatalogRow = {
   source_summary: string | null;
   source_checked_at: string | null;
   stable_available_at: string;
+  tasks: KnowledgeTask[];
   updated_at: string;
 };
 
@@ -75,7 +76,7 @@ export function AdminKnowledgePage() {
     const [nextCandidates, catalogResult, nextHealth] = await Promise.all([
       adminListKnowledgeCandidates(client, null),
       client.from("knowledge_catalog")
-        .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,source_urls,source_summary,source_checked_at,stable_available_at,updated_at")
+        .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,source_urls,source_summary,source_checked_at,stable_available_at,tasks,updated_at")
         .order("updated_at", { ascending: false })
         .limit(300),
       adminGetKnowledgeProductionHealth(client),
@@ -96,7 +97,7 @@ export function AdminKnowledgePage() {
         const [nextCandidates, catalogResult, nextHealth] = await Promise.all([
           adminListKnowledgeCandidates(client, null),
           client.from("knowledge_catalog")
-            .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,source_urls,source_summary,source_checked_at,stable_available_at,updated_at")
+            .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,source_urls,source_summary,source_checked_at,stable_available_at,tasks,updated_at")
             .order("updated_at", { ascending: false })
             .limit(300),
           adminGetKnowledgeProductionHealth(client),
@@ -121,6 +122,27 @@ export function AdminKnowledgePage() {
     activeCatalog: catalog.filter((item) => item.status === "active").length,
     activePrompt: health?.activePromptOptimizations ?? 0,
   }), [candidates, catalog, health]);
+
+  const sidejobTasks = useMemo(
+    () => KNOWLEDGE_TASKS.filter((task): task is KnowledgeTask => task.startsWith("sidejob_")),
+    [],
+  );
+  const sidejobCoverage = useMemo(() => sidejobTasks.map((task) => {
+    const matching = catalog.filter((item) => item.status === "active" && item.tasks.includes(task));
+    const latestCheckedAt = matching
+      .map((item) => item.source_checked_at)
+      .filter((value): value is string => Boolean(value))
+      .sort()
+      .at(-1) ?? null;
+    return {
+      task,
+      label: KNOWLEDGE_TASK_LABELS[task],
+      count: matching.length,
+      latestCheckedAt,
+      covered: matching.length > 0,
+    };
+  }), [catalog, sidejobTasks]);
+  const coveredSidejobCount = sidejobCoverage.filter((item) => item.covered).length;
 
   const open = (candidate: KnowledgeCandidate) => {
     setSelected(candidate);
@@ -194,6 +216,28 @@ export function AdminKnowledgePage() {
         <article><span>クラウドKnowledge</span><strong>{stats.activeCatalog}</strong></article>
         <article><span>Prompt最適化</span><strong>{stats.activePrompt}</strong></article>
         <article><span>Fresh / Stable</span><strong>v{health?.freshVersion ?? "-"} / v{health?.stableVersion ?? "-"}</strong></article>
+      </section>
+
+      <section className="knowledge-admin-panel knowledge-coverage-panel">
+        <div className="knowledge-panel-head">
+          <div>
+            <p className="eyebrow">SIDE-HUSTLE COVERAGE</p>
+            <h2>副業Knowledgeカバレッジ</h2>
+            <p>12副業タスクのうち、出典付きCloud Knowledgeが最低1件あるかを確認します。</p>
+          </div>
+          <strong className={coveredSidejobCount === sidejobCoverage.length ? "complete" : "incomplete"}>
+            {coveredSidejobCount}/{sidejobCoverage.length}
+          </strong>
+        </div>
+        <div className="knowledge-coverage-grid">
+          {sidejobCoverage.map((item) => (
+            <article key={item.task} className={item.covered ? "covered" : "missing"}>
+              <span>{item.covered ? "✓ 基準達成" : "! Knowledge不足"}</span>
+              <strong>{item.label}</strong>
+              <small>{item.count}件 · 最終根拠確認 {formatDate(item.latestCheckedAt)}</small>
+            </article>
+          ))}
+        </div>
       </section>
 
       <KnowledgeRefreshPanel />
