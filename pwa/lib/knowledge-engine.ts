@@ -120,7 +120,7 @@ function list(...items: string[]): string[] {
 
 function scenarioTagFromRuleKey(key: string): string | null {
   const match = /^auto:scenario:[^:]+:([a-z0-9_-]+):([a-z0-9._-]+):/i.exec(key);
-  return match ? \`\${match[1].toLowerCase()}:\${match[2].toLowerCase()}\` : null;
+  return match ? `${match[1].toLowerCase()}:${match[2].toLowerCase()}` : null;
 }
 
 function explicitScenarioTags(rule: KnowledgeRule): string[] {
@@ -132,7 +132,7 @@ function explicitScenarioTags(rule: KnowledgeRule): string[] {
 }
 
 function addScenarioTag(tags: Set<string>, group: string, value: string): void {
-  tags.add(\`\${group}:\${value}\`);
+  tags.add(`${group}:${value}`);
 }
 
 function hasScenarioText(text: string, patterns: RegExp[]): boolean {
