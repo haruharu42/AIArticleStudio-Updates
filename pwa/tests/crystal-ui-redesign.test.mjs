@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -25,16 +25,15 @@ test("home prioritizes creator through article library before the AAS hero and k
 });
 
 test("Axia and Rumo hero is bundled locally and used by the home hero", async () => {
-  const [asset, css, hub, layout] = await Promise.all([
-    read("public/aas-axia-rumo-hero.svg"),
+  const [assetStats, css, hub, layout] = await Promise.all([
+    stat(path.join(pwaRoot, "public/aas-axia-rumo-hero-hq.webp")),
     read("app/phase53-crystal-ui.css"),
     read("components/action-studio-home-hub.tsx"),
     read("app/layout.tsx"),
   ]);
 
-  assert.match(asset, /AAS アクシアとルーモ/);
-  assert.match(asset, /data:image\/webp;base64,/);
-  assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
+  assert.ok(assetStats.size >= 40000);
+  assert.match(css, /url\("\/aas-axia-rumo-hero-hq\.webp"\)/);
   assert.match(hub, /アクシア × ルーモ/);
   assert.match(hub, /今日はAIで何を進めますか？/);
   assert.match(layout, /phase53-crystal-ui\.css/);
@@ -103,12 +102,13 @@ test("signed-out auth and access surfaces use the Axia and Rumo crystal design",
   assert.match(app, /アクシア × ルーモ/);
   assert.match(app, /auth-build-stamp/);
   assert.match(css, /auth-character-visual/);
-  assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
+  assert.match(css, /url\("\/aas-axia-rumo-hero-hq\.webp"\)/);
   assert.match(css, /status-card::after/);
   assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-stage/);
   assert.match(layout, /"aas-build-sha"/);
   assert.match(config, /NEXT_PUBLIC_AAS_BUILD_SHA/);
-  assert.match(sw, /runtime-v5-crystal-release/);
+  assert.match(sw, /runtime-v6-hq-illustration/);
+  assert.match(sw, /\/aas-axia-rumo-hero-hq\.webp/);
 });
 
 test("shared header exposes build identity for live deployment verification", async () => {
