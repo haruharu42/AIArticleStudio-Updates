@@ -85,6 +85,9 @@ export function buildSideHustlePrompt(
 
   const sections = [
     interpolate(definition.promptTemplate, definition, draft),
+    resolved.experience_level && resolved.experience_level !== "指定しない"
+      ? `【今回の取り組み経験】\n- ${resolved.experience_level}`
+      : "",
     knowledge.promptBlock,
     optimization,
     "【最終出力ルール】",
