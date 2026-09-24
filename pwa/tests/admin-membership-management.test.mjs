@@ -166,3 +166,14 @@ test("membership defaults make cloud image storage a member-only capability acro
   assert.match(migration, /'CREATOR_CLUB_PLUS', 'plus_missions', true/);
   assert.match(migration, /'CREATOR_CLUB_PRO', 'pro_missions', true/);
 });
+
+test("membership management foreign keys have covering indexes", () => {
+  const migration = readRepo("supabase/migrations/20260924035200_membership_management_fk_indexes.sql");
+
+  assert.match(migration, /creator_membership_admin_actions_actor_idx/);
+  assert.match(migration, /creator_membership_plan_features_feature_idx/);
+  assert.match(migration, /creator_membership_plan_features_updated_by_idx/);
+  assert.match(migration, /creator_membership_settings_updated_by_idx/);
+  assert.doesNotMatch(migration, /drop table|drop column|truncate|delete from/i);
+});
+
