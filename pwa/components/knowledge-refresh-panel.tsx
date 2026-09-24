@@ -60,6 +60,13 @@ function statusLabel(status: KnowledgeRefreshRequest["status"]): string {
   }
 }
 
+function sourceOutcomeLabel(outcome: SourceRecheckOutcome): string {
+  if (outcome === "unchanged") return "変更なし";
+  if (outcome === "changed") return "変更あり";
+  if (outcome === "removed") return "URL失効";
+  return "取得不可";
+}
+
 function refreshErrorLabel(value: string): string {
   if (value.startsWith("AAS auto-recovery: processing exceeded 24 hours")) {
     return "24時間以上処理中だったため自動解除しました。次回の更新サイクルで再試行できます。";
@@ -581,15 +588,34 @@ export function KnowledgeRefreshPanel() {
           <div className="knowledge-source-freshness-items">
             {sourceQueue?.items.filter((item) => item.state !== "fresh").slice(0, 12).map((item) => (
               <article key={item.itemType + ":" + item.key} className={item.state}>
-                <div>
-                  <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{item.catalogVersion}</span>
-                  <strong>{item.label}</strong>
-                  <small>{item.key}</small>
+                <div className="knowledge-source-freshness-card-head">
+                  <div>
+                    <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{item.catalogVersion}</span>
+                    <strong>{item.label}</strong>
+                    <small>{item.key}</small>
+                  </div>
+                  <div>
+                    <b>{item.state === "missing" ? "根拠不足" : item.state === "stale" ? "期限切れ" : "再確認時期"}</b>
+                    <small>確認 {formatDate(item.sourceCheckedAt)}{item.ageDays !== null ? ` · ${item.ageDays}日経過` : ""}</small>
+                  </div>
                 </div>
-                <div>
-                  <b>{item.state === "missing" ? "根拠不足" : item.state === "stale" ? "期限切れ" : "再確認時期"}</b>
-                  <small>確認 {formatDate(item.sourceCheckedAt)}{item.ageDays !== null ? ` · ${item.ageDays}日経過` : ""}</small>
-                </div>
+                {item.sourceUrls.length > 0 ? (
+                  <div className="knowledge-source-receipt-actions">
+                    {item.sourceUrls.map((url) => (
+                      <div key={url} className="knowledge-source-receipt-row">
+                        <a href={url} target="_blank" rel="noreferrer">公式根拠を開く</a>
+                        <small title={url}>{url}</small>
+                        <div>
+                          <button type="button" disabled={busy} onClick={() => void recordSourceReceipt(item, url, "unchanged")}>変更なし</button>
+                          <button type="button" disabled={busy} onClick={() => void recordSourceReceipt(item, url, "changed")}>変更あり</button>
+                          <button type="button" disabled={busy} onClick={() => void recordSourceReceipt(item, url, "unreachable")}>取得不可</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="knowledge-source-missing-note">根拠URLがありません。Fresh更新で公式URLを追加してください。</p>
+                )}
               </article>
             ))}
           </div>
@@ -605,6 +631,30 @@ export function KnowledgeRefreshPanel() {
           再確認プロンプトを準備・コピー
         </button>
         <p className="knowledge-review-note">最大20件をFresh更新へ準備します。公式ページを実際に確認したJSONを貼り付け、既存の差分・品質ゲートを通してから公開してください。</p>
+
+        {sourceReceipts.length > 0 && (
+          <details className="knowledge-source-receipt-history">
+            <summary>最近の根拠再確認履歴 {sourceReceipts.length}件</summary>
+            <div>
+              {sourceReceipts.slice(0, 20).map((receipt) => (
+                <article key={receipt.id} className={receipt.outcome}>
+                  <div>
+                    <span>{receipt.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{receipt.catalogVersion}</span>
+                    <strong>{receipt.itemKey}</strong>
+                    <small>{formatDate(receipt.checkedAt)}</small>
+                  </div>
+                  <div>
+                    <b>{sourceOutcomeLabel(receipt.outcome)}</b>
+                    {receipt.completedCycle && <em>全URL確認完了</em>}
+                    {receipt.requestId && <small>更新 #{receipt.requestId}</small>}
+                  </div>
+                  <a href={receipt.sourceUrl} target="_blank" rel="noreferrer">{receipt.sourceUrl}</a>
+                  {receipt.notes && <p>{receipt.notes}</p>}
+                </article>
+              ))}
+            </div>
+          </details>
+        )}
       </section>
 
       <section className="knowledge-stable-release-queue">
