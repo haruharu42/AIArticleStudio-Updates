@@ -57,6 +57,7 @@ test("crystal UI styles desktop, mobile, controls and navigation without replaci
     ".tool-card",
     ".admin-panel",
     ".editor-card",
+    ".infra-summary-grid",
     ".reference-home > .aas-reference-desktop-nav",
   ]) {
     assert.ok(css.includes(selector), `missing crystal selector: ${selector}`);
