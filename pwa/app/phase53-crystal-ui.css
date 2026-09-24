@@ -1072,3 +1072,91 @@ body.aas-crystal-theme :where(.pwa-shell .side-nav a, .pwa-shell .side-nav butto
     font-size: 16px;
   }
 }
+
+
+/* Infrastructure usage */
+body.aas-crystal-theme :where(
+  .infra-summary-grid article,
+  .infra-plan-strip > div,
+  .infra-meter,
+  .infra-reference-box,
+  .infra-github-facts article,
+  .infra-billing-guide
+) {
+  border-color: #d1e0f1 !important;
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 95%), rgb(245 250 255 / 89%) 72%, rgb(249 246 255 / 87%)) !important;
+  color: #294561 !important;
+  box-shadow: var(--aas-crystal-shadow-soft);
+}
+
+body.aas-crystal-theme :where(
+  .infra-summary-grid strong,
+  .infra-plan-strip strong,
+  .infra-meter-value strong,
+  .infra-meter dd,
+  .infra-github-facts strong,
+  .infra-reference-box > strong
+) {
+  color: #294561 !important;
+}
+
+body.aas-crystal-theme :where(
+  .infra-summary-grid span,
+  .infra-plan-strip span,
+  .infra-github-facts span,
+  .infra-summary-grid small,
+  .infra-github-facts small,
+  .infra-meter > small,
+  .infra-reference-box > p,
+  .infra-reference-box > small,
+  .infra-billing-guide > p
+) {
+  color: #7488a4 !important;
+}
+
+body.aas-crystal-theme .infra-meter progress {
+  accent-color: #7284e7;
+  background: #e8eff9;
+}
+
+body.aas-crystal-theme .infra-meter dl > div {
+  border-color: #d9e5f2;
+  background: rgb(247 251 255 / 88%);
+}
+
+body.aas-crystal-theme .infra-reference-box {
+  border-style: dashed !important;
+}
+
+body.aas-crystal-theme .infra-reference-box > div > span {
+  background: linear-gradient(145deg, #edf6ff, #f2edff);
+  color: #6470b8;
+}
+
+body.aas-crystal-theme .infra-reference-box b {
+  color: #7468ce;
+}
+
+body.aas-crystal-theme .infra-github-actions select {
+  border-color: #cbdcf0;
+  background: rgb(255 255 255 / 94%);
+  color: #294560;
+}
+
+body.aas-crystal-theme .infra-warning-list p {
+  border-color: #ead8ac;
+  background: #fffaf0;
+  color: #9b742e;
+}
+
+body.aas-crystal-theme .infra-official-links a {
+  border-color: #c6d9ef;
+  background: linear-gradient(145deg, #fafdff, #f1f6ff);
+  color: #596dad;
+}
+
+body.aas-crystal-theme .infra-official-links a:hover {
+  border-color: #a9c5e9;
+  background: #fff;
+}
