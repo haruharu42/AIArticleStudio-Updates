@@ -60,6 +60,17 @@ function formatDate(value: string | null): string {
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ja-JP");
 }
 
+const KNOWLEDGE_STANDARD_DEPTH = 3;
+const KNOWLEDGE_DEEP_DEPTH = 5;
+const KNOWLEDGE_SOURCE_STALE_DAYS = 90;
+
+function isSourceStale(value: string | null): boolean {
+  if (!value) return true;
+  const checkedAt = new Date(value).getTime();
+  if (!Number.isFinite(checkedAt)) return true;
+  return Date.now() - checkedAt > KNOWLEDGE_SOURCE_STALE_DAYS * 24 * 60 * 60 * 1000;
+}
+
 export function AdminKnowledgePage() {
   const { state, client } = useSharedAccessState();
   const [candidates, setCandidates] = useState<KnowledgeCandidate[]>([]);
@@ -134,15 +145,27 @@ export function AdminKnowledgePage() {
       .filter((value): value is string => Boolean(value))
       .sort()
       .at(-1) ?? null;
+    const count = matching.length;
+    const depth = count >= KNOWLEDGE_DEEP_DEPTH
+      ? "deep"
+      : count >= KNOWLEDGE_STANDARD_DEPTH
+        ? "standard"
+        : count > 0
+          ? "basic"
+          : "missing";
     return {
       task,
       label: KNOWLEDGE_TASK_LABELS[task],
-      count: matching.length,
+      count,
       latestCheckedAt,
-      covered: matching.length > 0,
+      depth,
+      stale: isSourceStale(latestCheckedAt),
     };
-  }), [catalog, sidejobTasks]);
-  const coveredSidejobCount = sidejobCoverage.filter((item) => item.covered).length;
+  }).sort((a, b) => a.count - b.count || a.label.localeCompare(b.label, "ja")), [catalog, sidejobTasks]);
+  const basicSidejobCount = sidejobCoverage.filter((item) => item.count > 0).length;
+  const standardSidejobCount = sidejobCoverage.filter((item) => item.count >= KNOWLEDGE_STANDARD_DEPTH).length;
+  const deepSidejobCount = sidejobCoverage.filter((item) => item.count >= KNOWLEDGE_DEEP_DEPTH).length;
+  const staleSidejobCount = sidejobCoverage.filter((item) => item.stale).length;
 
   const open = (candidate: KnowledgeCandidate) => {
     setSelected(candidate);
@@ -221,20 +244,29 @@ export function AdminKnowledgePage() {
       <section className="knowledge-admin-panel knowledge-coverage-panel">
         <div className="knowledge-panel-head">
           <div>
-            <p className="eyebrow">SIDE-HUSTLE COVERAGE</p>
-            <h2>副業Knowledgeカバレッジ</h2>
-            <p>12副業タスクのうち、出典付きCloud Knowledgeが最低1件あるかを確認します。</p>
+            <p className="eyebrow">SIDE-HUSTLE DEPTH</p>
+            <h2>副業Knowledge深度</h2>
+            <p>基礎=1件以上 / 標準=3件以上 / 深掘り=5件以上。根拠確認から{KNOWLEDGE_SOURCE_STALE_DAYS}日を超える分野は再確認対象です。</p>
           </div>
-          <strong className={coveredSidejobCount === sidejobCoverage.length ? "complete" : "incomplete"}>
-            {coveredSidejobCount}/{sidejobCoverage.length}
+          <strong className={standardSidejobCount === sidejobCoverage.length ? "complete" : "incomplete"}>
+            標準 {standardSidejobCount}/{sidejobCoverage.length}
           </strong>
+        </div>
+        <div className="knowledge-coverage-summary">
+          <span>基礎 {basicSidejobCount}/{sidejobCoverage.length}</span>
+          <span>標準 {standardSidejobCount}/{sidejobCoverage.length}</span>
+          <span>深掘り {deepSidejobCount}/{sidejobCoverage.length}</span>
+          <span className={staleSidejobCount > 0 ? "warning" : ""}>再確認 {staleSidejobCount}</span>
         </div>
         <div className="knowledge-coverage-grid">
           {sidejobCoverage.map((item) => (
-            <article key={item.task} className={item.covered ? "covered" : "missing"}>
-              <span>{item.covered ? "✓ 基準達成" : "! Knowledge不足"}</span>
+            <article key={item.task} className={`${item.depth}${item.stale ? " stale" : ""}`}>
+              <span>
+                {item.depth === "deep" ? "◆ 深掘り" : item.depth === "standard" ? "✓ 標準達成" : item.depth === "basic" ? "△ 基礎のみ" : "! Knowledge不足"}
+              </span>
               <strong>{item.label}</strong>
               <small>{item.count}件 · 最終根拠確認 {formatDate(item.latestCheckedAt)}</small>
+              {item.stale && <small className="stale-note">根拠の再確認が必要です</small>}
             </article>
           ))}
         </div>
