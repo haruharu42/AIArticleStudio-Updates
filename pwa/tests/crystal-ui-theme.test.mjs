@@ -46,4 +46,5 @@ test("crystal UI keeps desktop and mobile treatments separate", async () => {
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.action-studio-hero/);
   assert.match(css, /\.action-studio-primary-grid[\s\S]*?repeat\(4,/);
   assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.action-studio-primary-grid[\s\S]*?repeat\(2,/);
+  assert.match(css, /@media \(min-width: 901px\)[\s\S]*?\.auth-character-visual[\s\S]*?aspect-ratio: 4 \/ 3[\s\S]*?contain no-repeat/);
 });
