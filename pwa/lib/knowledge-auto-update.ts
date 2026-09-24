@@ -97,6 +97,23 @@ export type KnowledgeQualityReport = {
   stats: KnowledgeQualityStats;
 };
 
+export type StablePromotionTaskReport = {
+  task: string;
+  selectedCount: number;
+  corePass: boolean;
+  supportPass: boolean;
+  topTaskSpecific: boolean;
+  missingSourceCount: number;
+  staleSourceCount: number;
+};
+
+export type StablePromotionReport = {
+  valid: boolean;
+  blocking: KnowledgeQualityIssue[];
+  tasks: StablePromotionTaskReport[];
+  staleDays: number;
+};
+
 function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
   return { added: 0, updated: 0, unchanged: 0, items: [] };
 }
@@ -148,6 +165,38 @@ export function parseKnowledgeQualityReport(raw: unknown): KnowledgeQualityRepor
       sourceUrlCount: Math.max(0, asNumber(stats.source_url_count)),
       taskReferenceCount: Math.max(0, asNumber(stats.task_reference_count)),
     },
+  };
+}
+
+export function parseStablePromotionReport(raw: unknown): StablePromotionReport {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("Stable昇格ゲートの応答形式が不正です。");
+  }
+  const value = raw as Record<string, unknown>;
+  const blocking = Array.isArray(value.blocking)
+    ? value.blocking.map(parseQualityIssue).filter((item): item is KnowledgeQualityIssue => Boolean(item))
+    : [];
+  const tasks = Array.isArray(value.tasks)
+    ? value.tasks.flatMap((rawTask): StablePromotionTaskReport[] => {
+      if (!rawTask || typeof rawTask !== "object" || Array.isArray(rawTask)) return [];
+      const task = rawTask as Record<string, unknown>;
+      if (typeof task.task !== "string" || !task.task) return [];
+      return [{
+        task: task.task,
+        selectedCount: Math.max(0, asNumber(task.selected_count)),
+        corePass: task.core_pass === true,
+        supportPass: task.support_pass === true,
+        topTaskSpecific: task.top_task_specific === true,
+        missingSourceCount: Math.max(0, asNumber(task.missing_source_count)),
+        staleSourceCount: Math.max(0, asNumber(task.stale_source_count)),
+      }];
+    })
+    : [];
+  return {
+    valid: value.valid === true && blocking.length === 0,
+    blocking,
+    tasks,
+    staleDays: Math.max(1, asNumber(value.stale_days, 90)),
   };
 }
 
@@ -349,6 +398,15 @@ export async function adminValidateKnowledgeRefreshBundle(
   return parseKnowledgeQualityReport(data);
 }
 
+export async function adminValidateStablePromotionBundle(
+  client: SupabaseClient,
+  bundle: KnowledgeRefreshBundle,
+): Promise<StablePromotionReport> {
+  const { data, error } = await client.rpc("admin_validate_stable_promotion_bundle", { p_bundle: bundle });
+  if (error) throw new Error(error.message || "Stable昇格ゲートを実行できませんでした。");
+  return parseStablePromotionReport(data);
+}
+
 export async function adminPublishKnowledgeRefreshBundle(
   client: SupabaseClient,
   requestId: number,
@@ -358,10 +416,13 @@ export async function adminPublishKnowledgeRefreshBundle(
     p_request_id: requestId,
     p_bundle: bundle,
   };
-  const current = await client.rpc("admin_publish_knowledge_refresh_bundle_v3", args);
-  const response = current.error && isMissingRpcError(current.error)
-    ? await client.rpc("admin_publish_knowledge_refresh_bundle_v2", args)
+  const current = await client.rpc("admin_publish_knowledge_refresh_bundle_v4", args);
+  const v3 = current.error && isMissingRpcError(current.error)
+    ? await client.rpc("admin_publish_knowledge_refresh_bundle_v3", args)
     : current;
+  const response = v3.error && isMissingRpcError(v3.error)
+    ? await client.rpc("admin_publish_knowledge_refresh_bundle_v2", args)
+    : v3;
   const { data, error } = response;
   if (error) throw new Error(error.message || "ナレッジ更新Bundleを公開できませんでした。");
   const row = Array.isArray(data) ? data[0] : data;

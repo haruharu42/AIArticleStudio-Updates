@@ -14,6 +14,7 @@ import {
   adminRunKnowledgeScheduler,
   adminStartKnowledgeRefresh,
   adminValidateKnowledgeRefreshBundle,
+  adminValidateStablePromotionBundle,
   buildKnowledgeRefreshResearchPrompt,
   parseKnowledgeRefreshBundle,
   type KnowledgeQualityReport,
@@ -21,6 +22,7 @@ import {
   type KnowledgeRefreshChannelState,
   type KnowledgeRefreshDiff,
   type KnowledgeRefreshRequest,
+  type StablePromotionReport,
 } from "@/lib/knowledge-auto-update";
 import { getSupabaseClient } from "@/lib/supabase";
 
@@ -134,6 +136,7 @@ export function KnowledgeRefreshPanel() {
   const [bundleText, setBundleText] = useState("");
   const [diffPreview, setDiffPreview] = useState<KnowledgeRefreshDiff | null>(null);
   const [qualityReport, setQualityReport] = useState<KnowledgeQualityReport | null>(null);
+  const [stablePromotionReport, setStablePromotionReport] = useState<StablePromotionReport | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -203,6 +206,7 @@ export function KnowledgeRefreshPanel() {
     setMessage("");
     setDiffPreview(null);
     setQualityReport(null);
+    setStablePromotionReport(null);
     try {
       const id = await adminRequestKnowledgeRefresh(getSupabaseClient(), channel);
       setSelectedId(id);
@@ -222,6 +226,7 @@ export function KnowledgeRefreshPanel() {
     setMessage("");
     setDiffPreview(null);
     setQualityReport(null);
+    setStablePromotionReport(null);
     try {
       await adminStartKnowledgeRefresh(getSupabaseClient(), request.id);
       setSelectedId(request.id);
@@ -243,6 +248,7 @@ export function KnowledgeRefreshPanel() {
       setBundleText("");
       setDiffPreview(null);
       setQualityReport(null);
+    setStablePromotionReport(null);
       if (selectedId === request.id) setSelectedId(null);
       await reload();
       setMessage(`更新 #${request.id} を中止しました。必要なら履歴から再試行できます。`);
@@ -258,6 +264,7 @@ export function KnowledgeRefreshPanel() {
     setMessage("");
     setDiffPreview(null);
     setQualityReport(null);
+    setStablePromotionReport(null);
     try {
       const nextId = await adminRetryKnowledgeRefresh(getSupabaseClient(), request.id);
       setSelectedId(nextId);
@@ -301,18 +308,30 @@ export function KnowledgeRefreshPanel() {
     setMessage("");
     try {
       const bundle = parseKnowledgeRefreshBundle(bundleText);
-      const [diff, quality] = await Promise.all([
-        adminPreviewKnowledgeRefreshBundleDiff(getSupabaseClient(), bundle),
-        adminValidateKnowledgeRefreshBundle(getSupabaseClient(), bundle),
+      const client = getSupabaseClient();
+      const [diff, quality, stableGate] = await Promise.all([
+        adminPreviewKnowledgeRefreshBundleDiff(client, bundle),
+        adminValidateKnowledgeRefreshBundle(client, bundle),
+        selected?.channel === "stable"
+          ? adminValidateStablePromotionBundle(client, bundle)
+          : Promise.resolve(null),
       ]);
       setDiffPreview(diff);
       setQualityReport(quality);
-      setMessage(quality.valid
-        ? "差分と品質ゲートを確認しました。ブロック項目はありません。"
-        : `品質ゲートで ${quality.blocking.length}件の修正必須項目が見つかりました。公開前に修正してください。`);
+      setStablePromotionReport(stableGate);
+      if (!quality.valid) {
+        setMessage(`品質ゲートで ${quality.blocking.length}件の修正必須項目が見つかりました。公開前に修正してください。`);
+      } else if (stableGate && !stableGate.valid) {
+        setMessage(`Stable昇格ゲートで ${stableGate.blocking.length}件の回帰を検出しました。Stable公開前に修正してください。`);
+      } else {
+        setMessage(selected?.channel === "stable"
+          ? "差分・品質ゲート・Stable昇格ゲートを確認しました。ブロック項目はありません。"
+          : "差分と品質ゲートを確認しました。ブロック項目はありません。");
+      }
     } catch (error) {
       setDiffPreview(null);
       setQualityReport(null);
+    setStablePromotionReport(null);
       setMessage(error instanceof Error ? error.message : "変更点を比較できませんでした。");
     } finally {
       setBusy(false);
@@ -320,7 +339,13 @@ export function KnowledgeRefreshPanel() {
   };
 
   const publish = async () => {
-    if (!selected || !diffPreview || !qualityReport?.valid || (selected.status !== "pending" && selected.status !== "processing")) return;
+    if (
+      !selected
+      || !diffPreview
+      || !qualityReport?.valid
+      || (selected.channel === "stable" && !stablePromotionReport?.valid)
+      || (selected.status !== "pending" && selected.status !== "processing")
+    ) return;
 
     const changedCount =
       diffPreview.knowledge.added + diffPreview.knowledge.updated +
@@ -328,7 +353,7 @@ export function KnowledgeRefreshPanel() {
     const channelLabel = selected.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）";
 
     if (!window.confirm(
-      `${channelLabel}へ公開しますか？\n追加・変更される項目は合計 ${changedCount}件です。\n品質ゲート: ブロック0件 / 警告 ${qualityReport.warnings.length}件\n差分と根拠を確認済みの場合のみ続行してください。`,
+      `${channelLabel}へ公開しますか？\n追加・変更される項目は合計 ${changedCount}件です。\n品質ゲート: ブロック0件 / 警告 ${qualityReport.warnings.length}件${selected.channel === "stable" ? "\nStable昇格ゲート: 12副業のTop 5回帰なし" : ""}\n差分と根拠を確認済みの場合のみ続行してください。`,
     )) return;
 
     setBusy(true);
@@ -339,6 +364,7 @@ export function KnowledgeRefreshPanel() {
       setBundleText("");
       setDiffPreview(null);
       setQualityReport(null);
+    setStablePromotionReport(null);
       await reload();
       setMessage(
         `${result.channel === "fresh" ? "Fresh（先行確認版）" : "Stable（標準版）"} v${result.publishedVersion} を公開しました。Knowledge ${result.knowledgeCount}件 / Prompt ${result.promptCount}件です。`,
@@ -423,6 +449,7 @@ export function KnowledgeRefreshPanel() {
                 setSelectedId(request.id);
                 setDiffPreview(null);
       setQualityReport(null);
+    setStablePromotionReport(null);
                 setBundleText("");
               }}>
                 <span className={"channel-label " + request.channel}>
@@ -457,6 +484,7 @@ export function KnowledgeRefreshPanel() {
               setBundleText(event.target.value);
               setDiffPreview(null);
               setQualityReport(null);
+    setStablePromotionReport(null);
             }}
             placeholder='{"summary":"...","knowledge_rules":[],"prompt_optimizations":[]}'
             spellCheck={false}
@@ -465,8 +493,13 @@ export function KnowledgeRefreshPanel() {
             <button type="button" disabled={busy || !bundleText.trim()} onClick={() => void previewDiff()}>
               変更点を確認
             </button>
-            <button type="button" className="approve" disabled={busy || !diffPreview || !qualityReport?.valid} onClick={() => void publish()}>
-              差分確認後に公開
+            <button
+              type="button"
+              className="approve"
+              disabled={busy || !diffPreview || !qualityReport?.valid || (selected.channel === "stable" && !stablePromotionReport?.valid)}
+              onClick={() => void publish()}
+            >
+              {selected.channel === "stable" ? "Stableゲート通過後に公開" : "差分確認後に公開"}
             </button>
           </div>
 
@@ -511,6 +544,52 @@ export function KnowledgeRefreshPanel() {
                         ))}
                       </div>
                     </details>
+                  )}
+                </section>
+              )}
+              {selected.channel === "stable" && stablePromotionReport && (
+                <section className={`knowledge-stable-gate ${stablePromotionReport.valid ? "pass" : "blocked"}`}>
+                  <header>
+                    <div>
+                      <strong>{stablePromotionReport.valid ? "✓ Stable昇格ゲート通過" : "Stable公開を停止中"}</strong>
+                      <p>公開後のStableカタログで12副業のTop 5を再計算しています。根拠鮮度は{stablePromotionReport.staleDays}日以内が基準です。</p>
+                    </div>
+                    <span>{stablePromotionReport.tasks.filter((task) => (
+                      task.selectedCount >= 5
+                      && task.corePass
+                      && task.supportPass
+                      && task.topTaskSpecific
+                      && task.missingSourceCount === 0
+                      && task.staleSourceCount === 0
+                    )).length}/{stablePromotionReport.tasks.length} PASS</span>
+                  </header>
+                  <div className="knowledge-stable-gate-grid">
+                    {stablePromotionReport.tasks.map((task) => {
+                      const passed = task.selectedCount >= 5
+                        && task.corePass
+                        && task.supportPass
+                        && task.topTaskSpecific
+                        && task.missingSourceCount === 0
+                        && task.staleSourceCount === 0;
+                      return (
+                        <article key={task.task} className={passed ? "pass" : "fail"}>
+                          <strong>{task.task.replace("sidejob_", "")}</strong>
+                          <small>Top5 {task.selectedCount}/5 · Core {task.corePass ? "✓" : "!"} · Support {task.supportPass ? "✓" : "!"}</small>
+                          <small>根拠欠落 {task.missingSourceCount} · 古い根拠 {task.staleSourceCount}</small>
+                        </article>
+                      );
+                    })}
+                  </div>
+                  {stablePromotionReport.blocking.length > 0 && (
+                    <div className="knowledge-quality-issues blocking">
+                      {stablePromotionReport.blocking.map((issue, index) => (
+                        <article key={`stable:${issue.code}:${issue.key}:${index}`}>
+                          <strong>Stable公開ブロック</strong>
+                          <p>{issue.message}</p>
+                          {issue.key && <small>{issue.key}</small>}
+                        </article>
+                      ))}
+                    </div>
                   )}
                 </section>
               )}
