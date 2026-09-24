@@ -155,7 +155,7 @@ export function compileSideHustleCombinationKnowledge(
 
   return {
     promptBlock: sections.filter(Boolean).join("\n").replace(/\n{3,}/g, "\n\n"),
-    applied: active.map((rule) => `複合:${definition.slug}:${rule.key}`),
+    applied: active.map((rule) => `複合: ${rule.label}`),
   };
 }
 
