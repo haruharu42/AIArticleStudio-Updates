@@ -23,6 +23,7 @@ type InstallPrompt = Event & {
 };
 
 const callbackUrl = () => `${window.location.origin}/auth/callback`;
+const AAS_BUILD_SHA = (process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev").slice(0, 7);
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
@@ -217,24 +218,35 @@ function AuthScreen({
   }[mode];
 
   return (
-    <main className="auth-page">
-      <section className="auth-intro">
+    <main className="auth-page auth-crystal-page">
+      <section className="auth-intro auth-crystal-intro">
         <Brand />
-        <p className="eyebrow">PWA ACCESS</p>
-        <h1>AIで副業を、<br />もっと簡単に。</h1>
-        <p className="lead">
-          AI Action Studio PWAへ安全にログインし、
-          PC・スマホ・タブレットから記事・SNS・副業プロンプトなどの作業を続けられます。
-        </p>
-        <div className="trust-row">
-          <span>Supabase Auth</span>
-          <span>RLS</span>
-          <span>PKCE</span>
+        <div className="auth-character-stage">
+          <div className="auth-character-copy">
+            <p className="eyebrow">AAS CREATIVE PARTNER</p>
+            <h1>AIで副業を、<br />もっと簡単に。</h1>
+            <p className="lead">
+              アクシアとルーモが、記事・SNS・画像・副業ワークを
+              ひとつのスタジオで進めるお手伝いをします。
+            </p>
+            <div className="trust-row">
+              <span>記事生成</span>
+              <span>副業機能</span>
+              <span>プロンプト</span>
+              <span>画像・SNS</span>
+            </div>
+          </div>
+          <div className="auth-character-visual" aria-hidden="true" />
+          <div className="auth-character-label">
+            <strong>アクシア × ルーモ</strong>
+            <small>AI Action Studio official guides</small>
+          </div>
         </div>
       </section>
 
-      <section className="auth-panel">
-        <div className="auth-card">
+      <section className="auth-panel auth-crystal-panel">
+        <div className="auth-card auth-crystal-card">
+          <span className="auth-build-stamp">build {AAS_BUILD_SHA}</span>
           <div className="mobile-brand"><Brand compact /></div>
           <p className="eyebrow">AI ACTION STUDIO</p>
           <h2>{title}</h2>
