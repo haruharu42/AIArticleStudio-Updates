@@ -28,7 +28,7 @@ test("PWA structure guide records the enforced runtime boundaries", async () => 
   assert.match(guide, /components\/pwa-admin-users-page\.tsx/);
   assert.match(guide, /components\/admin-infrastructure-usage-page\.tsx/);
   assert.match(guide, /lib\/infrastructure-usage\.ts/);
-  assert.match(guide, /phase53-crystal-character-ui\.css/);
+  assert.match(guide, /phase53-crystal-ui\.css/);
   assert.match(guide, /public\/aas-axia-rumo-hero\.svg/);
   assert.match(guide, /lib\/admin-users-view\.ts/);
   assert.match(guide, /Browser-stored data is untrusted/);
