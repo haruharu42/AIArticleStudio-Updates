@@ -22,8 +22,8 @@ test("Phase 65 adds an admin-only source freshness queue", async () => {
   assert.match(migration, /'stale'/);
   assert.match(migration, /'due'/);
   assert.match(migration, /'fresh'/);
-  assert.match(migration, /grant execute on function[\\s\\S]*to authenticated;/i);
-  assert.doesNotMatch(migration, /grant execute on function[\\s\\S]*to anon;/i);
+  assert.match(migration, /grant execute on function[\s\S]*to authenticated;/i);
+  assert.doesNotMatch(migration, /grant execute on function[\s\S]*to anon;/i);
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_|api[_-]?key/i);
 });
 
