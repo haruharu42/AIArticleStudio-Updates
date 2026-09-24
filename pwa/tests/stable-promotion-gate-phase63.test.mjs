@@ -89,6 +89,8 @@ test("Phase 63 separates mutable Fresh rows from durable Stable snapshots", asyn
   assert.match(migration, /from public\.prompt_optimization_stable_catalog as item/);
   assert.match(migration, /Stableへ昇格するKnowledgeは、先に同じkeyをFreshで公開/);
   assert.match(migration, /stable_wait_window_active/);
+  assert.match(migration, /stable_bundle_differs_from_fresh/);
+  assert.match(migration, /変更は先にFreshへ公開してください/);
   assert.match(migration, /if member_access then/);
   assert.doesNotMatch(migration, /or catalog\.stable_available_at <= now\(\)/);
 });
