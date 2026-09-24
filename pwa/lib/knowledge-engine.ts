@@ -155,13 +155,6 @@ export function buildKnowledgeScenarioTags(input: KnowledgeCompileInput): string
     input.scenarioText,
   ].filter(Boolean).join(" "));
 
-  if (hasScenarioText(text, [/初心者/, /未経験/, /始めたばかり/, /基礎は少し/, /これから開始/, /新規/, /\bbeginner\b/, /\bzero\b/])) {
-    addScenarioTag(tags, "experience", "beginner");
-  }
-  if (hasScenarioText(text, [/経験者/, /中級/, /上級/, /実務/, /業務経験/, /有償案件経験/, /継続運用中/, /\bprofessional\b/, /\bintermediate\b/])) {
-    addScenarioTag(tags, "experience", "experienced");
-  }
-
   const mediumPatterns: Array<[string, RegExp[]]> = [
     ["note", [/\bnote\b/]],
     ["tips", [/\btips\b/]],
