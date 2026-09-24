@@ -1,5 +1,6 @@
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
 import { compilePromptOptimizationContext } from "@/lib/prompt-optimization";
+import { compileSideHustleScenarioKnowledge } from "@/features/side-hustles/scenario-knowledge";
 import type { AiPlan, AiProvider } from "@/lib/user-personalization";
 import {
   SIDE_HUSTLE_CUSTOM_VALUE,
@@ -78,6 +79,8 @@ export function buildSideHustlePrompt(
     purpose: resolved.objective ?? resolved.goal ?? resolved.decision ?? resolved.outcome ?? resolved.video_goal ?? "",
   });
 
+  const scenarioKnowledge = compileSideHustleScenarioKnowledge(definition, resolved);
+
   const provider = draft.selectedAi as AiProvider;
   const plan = draft.selectedPlan as AiPlan;
   const optimization = compilePromptOptimizationContext(provider, plan, definition.knowledgeTask);
@@ -85,6 +88,7 @@ export function buildSideHustlePrompt(
   const sections = [
     interpolate(definition.promptTemplate, definition, draft),
     knowledge.promptBlock,
+    scenarioKnowledge.promptBlock,
     optimization,
     "【最終出力ルール】",
     "- ユーザーが入力していない実体験・実績・資格・レビュー・売上・使用経験を事実として作らない。",
@@ -95,7 +99,7 @@ export function buildSideHustlePrompt(
 
   return {
     prompt: sections.join("\n\n"),
-    appliedKnowledge: knowledge.applied,
+    appliedKnowledge: [...knowledge.applied, ...scenarioKnowledge.applied],
     warnings: knowledge.warnings,
   };
 }
