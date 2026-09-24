@@ -86,7 +86,6 @@ async function loadSalesSettingsWithPublicRpc(
       method: "POST",
       headers: {
         apikey: publishableKey,
-        authorization: `Bearer ${publishableKey}`,
         "content-type": "application/json",
         accept: "application/json",
       },
