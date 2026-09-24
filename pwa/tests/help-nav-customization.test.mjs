@@ -49,7 +49,7 @@ test("mobile navigation uses one shared customizable source across home and othe
     read("app/faq/page.tsx"),
   ]);
 
-  assert.match(prefs, /DEFAULT_MOBILE_NAV_ITEMS[^\n]*\["create", "library", "ranking", "profile"\]/);
+  assert.match(prefs, /DEFAULT_MOBILE_NAV_ITEMS[^\n]*\["tools", "create", "library", "settings"\]/);
   assert.match(prefs, /MAX_CUSTOM_MOBILE_NAV_ITEMS = 4/);
   assert.match(prefs, /MOBILE_NAV_ITEMS_KEY/);
   assert.match(prefs, /mobileNavItemsStorageKey/);
