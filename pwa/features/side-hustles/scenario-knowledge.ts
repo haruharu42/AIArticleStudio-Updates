@@ -163,7 +163,7 @@ export function compileSideHustleScenarioKnowledge(
 
   return {
     promptBlock: sections.filter(Boolean).join("\n").replace(/\n{3,}/g, "\n\n"),
-    applied: active.map((rule) => `状況別:${definition.slug}:${rule.key}`),
+    applied: active.map((rule) => `状況別: ${rule.label}`),
   };
 }
 
