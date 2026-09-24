@@ -1611,3 +1611,131 @@
     font-size: 11px;
   }
 }
+
+
+/* Phase 63: server-enforced Stable promotion gate. */
+.knowledge-stable-gate {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #bad4ee;
+  border-radius: 14px;
+  background: #f7fbff;
+  padding: 14px;
+}
+
+.knowledge-stable-gate.pass {
+  border-color: #9fd2ba;
+  background: #f3fbf7;
+}
+
+.knowledge-stable-gate.blocked {
+  border-color: #e4afa8;
+  background: #fff8f6;
+}
+
+.knowledge-stable-gate > header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.knowledge-stable-gate > header > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.knowledge-stable-gate > header strong {
+  color: #244e72;
+  font-size: 11px;
+}
+
+.knowledge-stable-gate.pass > header strong {
+  color: #287056;
+}
+
+.knowledge-stable-gate.blocked > header strong {
+  color: #9a4e43;
+}
+
+.knowledge-stable-gate > header p {
+  margin: 0;
+  color: #6d8298;
+  font-size: 8px;
+  line-height: 1.6;
+}
+
+.knowledge-stable-gate > header > span {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #eaf3fb;
+  color: #35658f;
+  padding: 5px 8px;
+  font-size: 8px;
+  font-weight: 950;
+}
+
+.knowledge-stable-gate.pass > header > span {
+  background: #e0f3e9;
+  color: #287056;
+}
+
+.knowledge-stable-gate.blocked > header > span {
+  background: #ffe5df;
+  color: #9a4e43;
+}
+
+.knowledge-stable-gate-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.knowledge-stable-gate-grid > article {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  border: 1px solid #d8e5ef;
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px;
+}
+
+.knowledge-stable-gate-grid > article.pass {
+  border-color: #c4dfd2;
+  background: #fbfffd;
+}
+
+.knowledge-stable-gate-grid > article.fail {
+  border-color: #ebc6c0;
+  background: #fffafa;
+}
+
+.knowledge-stable-gate-grid strong {
+  overflow-wrap: anywhere;
+  color: #345775;
+  font-size: 8px;
+}
+
+.knowledge-stable-gate-grid small {
+  color: #7b8fa4;
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .knowledge-stable-gate-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .knowledge-stable-gate > header {
+    flex-direction: column;
+  }
+
+  .knowledge-stable-gate-grid {
+    grid-template-columns: 1fr;
+  }
+}
