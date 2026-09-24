@@ -89,6 +89,35 @@ test("new mobile defaults match the preview information architecture while prese
   assert.match(nav, /mobileNavItemsStorageKey/);
 });
 
+test("signed-out auth and access surfaces use the Axia and Rumo crystal design", async () => {
+  const [app, css, layout, config, sw] = await Promise.all([
+    read("components/phase6-app.tsx"),
+    read("app/phase53-crystal-ui.css"),
+    read("app/layout.tsx"),
+    read("next.config.ts"),
+    read("public/sw.js"),
+  ]);
+
+  assert.match(app, /auth-crystal-page/);
+  assert.match(app, /auth-character-stage/);
+  assert.match(app, /アクシア × ルーモ/);
+  assert.match(app, /auth-build-stamp/);
+  assert.match(css, /auth-character-visual/);
+  assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
+  assert.match(css, /status-card::after/);
+  assert.match(css, /@media \(max-width: 900px\)[\s\S]*auth-character-stage/);
+  assert.match(layout, /"aas-build-sha"/);
+  assert.match(config, /NEXT_PUBLIC_AAS_BUILD_SHA/);
+  assert.match(sw, /runtime-v5-crystal-release/);
+});
+
+test("shared header exposes build identity for live deployment verification", async () => {
+  const shell = await read("components/aas-reference-shell.tsx");
+  assert.match(shell, /AAS_BUILD_SHA/);
+  assert.match(shell, /aas-reference-build/);
+  assert.match(shell, /build \{AAS_BUILD_SHA\}/);
+});
+
 test("current implemented feature links stay wired into the redesigned home", async () => {
   const hub = await read("components/action-studio-home-hub.tsx");
   const home = await read("components/phase18-beginner-home.tsx");
