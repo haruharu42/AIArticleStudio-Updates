@@ -13,14 +13,17 @@ The automation layer may:
 5. Treat official changelog / release hubs as discovery signals.
 6. Create review candidates: `new`, `update`, `recheck`, or `retire`.
 7. Generate a candidate-specific verification prompt.
+8. When AI enrichment is enabled, analyze the fetched official-source excerpt against the current catalog item.
+9. Generate a validated draft `proposed_payload` for reusable `new` / `update` candidates.
+10. Record `no_change`, `recheck`, and `retire` decisions without creating publishable JSON.
 
-The automation layer must **not** publish Knowledge or Prompt rules.
+The automation layer must **not** publish Knowledge or Prompt rules. AI output is treated as an untrusted draft and is revalidated against AAS task/kind/provider/key/source-url constraints before it can be shown as a proposal.
 
 ## Publication boundary
 
 A candidate approval only means that an administrator wants to continue verification. Final publication remains a separate flow:
 
-`official-source candidate -> source verification -> JSON bundle -> Quality Gate -> current-data diff -> admin confirmation -> Fresh / Stable publish`
+`official-source candidate -> automatic source verification -> optional AI draft proposal -> Fresh review handoff -> Quality Gate -> current-data diff -> admin confirmation -> Fresh / Stable publish`
 
 The Edge Function has no call to the Knowledge publication RPC.
 
@@ -30,6 +33,8 @@ The Edge Function has no call to the Knowledge publication RPC.
 - Each tracked source normally has a 24-hour recheck interval.
 - The worker processes a bounded number of due sources per run.
 - Existing Fresh / Stable scheduling remains independent.
+- AI enrichment processes only a bounded number of pending candidates per worker run.
+- If AI enrichment is disabled, unconfigured, or temporarily fails, official-source monitoring continues normally.
 
 ## Security
 
@@ -39,6 +44,10 @@ The Edge Function has no call to the Knowledge publication RPC.
 - Existing Knowledge / Prompt tables keep their direct Data API restrictions.
 - The worker reads a minimal catalog snapshot through a service-role-only SECURITY DEFINER RPC.
 - Admin-facing RPCs still verify `private.is_active_admin()`.
+- The OpenAI API key is stored in Supabase Vault under `aas_knowledge_openai_api_key`; it is never returned to the browser.
+- Only the service-role-only worker config RPC can read the decrypted AI key.
+- The browser only receives a boolean indicating whether a key is configured.
+- The worker calls the OpenAI Responses API with `store: false` and JSON-only output, then validates every proposed task, key, kind/provider/plan, and source URL locally.
 
 ## Discovery policy
 
@@ -50,3 +59,23 @@ Official changelog / release sources are tracked separately. When a changelog's 
 ## Provider update hubs
 
 The monitored source set includes provider update hubs for OpenAI API changes, Gemini API release notes, and Anthropic model lifecycle / prompting guidance. These hubs establish a baseline hash on first observation; only later changes create review candidates.
+
+
+## AI enrichment boundary
+
+AI enrichment is optional and defaults to disabled. An active administrator can configure:
+
+- provider: OpenAI
+- model ID
+- maximum candidates analyzed per worker run
+- API key (write-only from the admin screen; stored in Vault)
+
+For each eligible candidate, the worker can produce one of:
+
+- `no_change`: source changed but there is no reusable Knowledge/Prompt change.
+- `new`: draft a new `auto:` Knowledge or Prompt item.
+- `update`: draft changes while preserving the existing key.
+- `recheck`: evidence is insufficient; keep it out of the publish flow.
+- `retire`: source/item should be reviewed for retirement.
+
+A completed `new` / `update` proposal can be sent from the admin UI to a Fresh update request. This action only pre-fills the existing review JSON. It does **not** run the publication RPC. The administrator must still run current-data diff review and confirm publication explicitly.
