@@ -206,6 +206,16 @@ export function AdminInfrastructureUsagePage() {
           <small>今月のWorkflow Run数</small>
         </article>
         <article>
+          <span>Supabase料金状態</span>
+          <strong>{supabase?.planLabel?.toLowerCase() === "free" ? "$0" : "Billing確認"}</strong>
+          <small>{supabase?.planLabel?.toLowerCase() === "free" ? "Free設定 / 超過時は制限対象" : "固定料金・Compute等は公式請求を優先"}</small>
+        </article>
+        <article>
+          <span>GitHub Actions料金</span>
+          <strong>{github?.actions.publicStandardRunnerFree ? "$0" : "Billing確認"}</strong>
+          <small>{github?.actions.publicStandardRunnerFree ? "Public / 標準GitHub-hosted runner" : "Private / プラン枠・超過料金対象"}</small>
+        </article>
+        <article>
           <span>料金基準更新</span>
           <strong>{INFRASTRUCTURE_PRICING_REFERENCE_DATE}</strong>
           <small>公式ドキュメント確認日</small>
