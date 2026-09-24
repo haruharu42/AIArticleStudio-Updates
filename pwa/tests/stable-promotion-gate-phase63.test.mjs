@@ -105,3 +105,19 @@ test("v4 publication snapshots only gate-approved Stable bundle keys", async () 
   assert.match(migration, /on conflict \(key\) do update/);
   assert.match(migration, /promoted_at=now\(\)/);
 });
+
+
+test("Phase 63.1 bootstraps the legacy production state into Stable exactly once", async () => {
+  const migration = await readRepo("supabase/migrations/20260924204000_stable_baseline_bootstrap_v1.sql");
+
+  assert.match(migration, /stable_knowledge_count = 0/);
+  assert.match(migration, /stable_prompt_count = 0/);
+  assert.match(migration, /insert into public\.knowledge_stable_catalog/);
+  assert.match(migration, /from public\.knowledge_catalog/);
+  assert.match(migration, /insert into public\.prompt_optimization_stable_catalog/);
+  assert.match(migration, /from public\.prompt_optimization_catalog/);
+  assert.match(migration, /where status='active'/);
+  assert.match(migration, /where channel='stable'/);
+  assert.doesNotMatch(migration, /truncate|delete from public\.knowledge_stable_catalog|delete from public\.prompt_optimization_stable_catalog/i);
+  assert.doesNotMatch(migration, /service[_-]?role|sb_secret_|api[_-]?key/i);
+});
