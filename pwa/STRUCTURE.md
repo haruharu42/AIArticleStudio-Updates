@@ -22,11 +22,9 @@ AI Action Studio PWA keeps responsibilities separated so UI changes, business lo
 - `features/prompts/`: public prompt-domain boundary used by new UI; re-exports catalog, preferences, routing, and service contracts while legacy `lib/` paths remain compatible.
 - `features/tools/`: feature-directory catalog boundary. Owns genre grouping and links for the user-facing 機能一覧 so the home hub does not duplicate side-hustle definitions.
 - `features/side-hustles/`: dedicated side-hustle domain. Each side-hustle owns its own dropdown schema, custom-input fallbacks, knowledge task, prompt template, progress state, and AI-result round trip. Shared code is limited to wizard mechanics and prompt/knowledge composition.
-- `app/phase53-crystal-character-ui.css`: visual-only AAS brand theme. Owns the Axia/Rumo crystal background, responsive home hero, glass cards, control styling and navigation presentation; it must not own routes, auth, data loading or feature logic.
-- `public/aas-axia-rumo-hero.svg`: local lightweight hero asset used by the AAS home shell. It is presentation-only and contains no remote dependency or executable content.
 - `components/side-hustles/`: presentation-only controls for the dedicated side-hustle wizard. Dropdown/custom-input fields, step rail, final prompt review, and AI-result capture are split into focused components; the parent page owns only state, navigation, persistence, clipboard orchestration, and external-AI handoff.
-- `public/aas-axia-rumo-hero.svg`: lightweight embedded WebP key visual for the finalized AAS character pair, Axia and the small dragon mascot Rumo.
-- `app/phase53-crystal-ui.css`: final visual-system override layer. Owns the Axia/Rumo crystal background language, shared form-control styling, home hero treatment, glass cards, and responsive desktop/mobile navigation without changing feature behavior.
+- `app/phase53-crystal-ui.css`: final visual-only AAS brand theme. Owns the Axia/Rumo crystal background language, shared form controls, glass cards, home hero treatment, article/library/admin/auth presentation, and responsive PC/mobile navigation; it must not own routes, auth, data loading, persistence, or feature logic.
+- `public/aas-axia-rumo-hero.svg`: local lightweight embedded-WebP key visual for the finalized AAS character pair, Axia and the small dragon mascot Rumo; presentation-only with no remote asset dependency or executable content.
 - `lib/access-control.ts`: authenticated profile validation and authoritative PWA entitlement checks.
 - `lib/admin-users-view.ts`: pure admin-user filtering, labels, date formatting, and summary calculations.
 - `lib/article-create-draft.ts`: pure article-draft defaults, URL parsing, tag parsing, step validation, and restored-draft validation.
