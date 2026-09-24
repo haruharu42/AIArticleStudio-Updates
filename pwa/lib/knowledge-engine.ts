@@ -202,6 +202,19 @@ export function buildKnowledgeScenarioTags(input: KnowledgeCompileInput): string
     if (hasScenarioText(text, patterns)) addScenarioTag(tags, "mode", value);
   }
 
+  if (hasScenarioText(text, [/顧客へ影響/, /金銭へ影響/, /公開情報へ影響/, /重大/, /高リスク/])) {
+    addScenarioTag(tags, "risk", "high");
+  }
+  if (hasScenarioText(text, [/低い・やり直せる/, /低リスク/])) {
+    addScenarioTag(tags, "risk", "low");
+  }
+  if (hasScenarioText(text, [/小さく試して判断/, /まず小さく/, /30日で確認/, /検証指標/])) {
+    addScenarioTag(tags, "strategy", "test");
+  }
+  if (hasScenarioText(text, [/継続/, /繰り返し/, /再利用/, /型を作/, /仕組みが完成/])) {
+    addScenarioTag(tags, "strategy", "repeat");
+  }
+
   return [...tags].sort();
 }
 
