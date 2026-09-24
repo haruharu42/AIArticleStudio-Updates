@@ -207,6 +207,39 @@ export type SourceRecheckReceiptResult = {
   followupRequestId: number | null;
 };
 
+export type SourceRiskDomain = {
+  domain: string;
+  itemCount: number;
+  urlCount: number;
+};
+
+export type SourceRiskItem = {
+  itemType: "knowledge" | "prompt";
+  key: string;
+  label: string;
+  catalogVersion: number;
+  releaseChannel: "both" | "fresh_first";
+  sourceCheckedAt: string | null;
+  sourceCount: number;
+  domainCount: number;
+  sourceUrls: string[];
+};
+
+export type SourceRiskReport = {
+  itemCount: number;
+  knowledgeCount: number;
+  promptCount: number;
+  zeroSourceCount: number;
+  singleSourceCount: number;
+  singleDomainCount: number;
+  multiDomainCount: number;
+  uniqueDomainCount: number;
+  topDomainItemCount: number;
+  topDomainSharePercent: number;
+  domains: SourceRiskDomain[];
+  reviewItems: SourceRiskItem[];
+};
+
 function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
   return { added: 0, updated: 0, unchanged: 0, items: [] };
 }
@@ -390,6 +423,61 @@ function parseSourceFreshnessPreparation(raw: unknown): SourceFreshnessPreparati
     warningDays: Math.max(1, asNumber(value.warning_days, 30)),
     items: Array.isArray(value.items)
       ? value.items.map(parseSourceFreshnessItem).filter((item): item is SourceFreshnessQueueItem => Boolean(item))
+      : [],
+  };
+}
+
+function parseSourceRiskDomain(raw: unknown): SourceRiskDomain | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.domain !== "string" || !value.domain) return null;
+  return {
+    domain: value.domain,
+    itemCount: Math.max(0, asNumber(value.item_count)),
+    urlCount: Math.max(0, asNumber(value.url_count)),
+  };
+}
+
+function parseSourceRiskItem(raw: unknown): SourceRiskItem | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.key !== "string" || !value.key) return null;
+  return {
+    itemType: value.item_type === "prompt" ? "prompt" : "knowledge",
+    key: value.key,
+    label: typeof value.label === "string" ? value.label : value.key,
+    catalogVersion: Math.max(1, asNumber(value.catalog_version, 1)),
+    releaseChannel: value.release_channel === "both" ? "both" : "fresh_first",
+    sourceCheckedAt: typeof value.source_checked_at === "string" ? value.source_checked_at : null,
+    sourceCount: Math.max(0, asNumber(value.source_count)),
+    domainCount: Math.max(0, asNumber(value.domain_count)),
+    sourceUrls: Array.isArray(value.source_urls)
+      ? value.source_urls.filter((url): url is string => typeof url === "string" && /^https:\/\//i.test(url))
+      : [],
+  };
+}
+
+export function parseSourceRiskReport(raw: unknown): SourceRiskReport {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("根拠分散レポートの応答形式が不正です。");
+  }
+  const value = raw as Record<string, unknown>;
+  return {
+    itemCount: Math.max(0, asNumber(value.item_count)),
+    knowledgeCount: Math.max(0, asNumber(value.knowledge_count)),
+    promptCount: Math.max(0, asNumber(value.prompt_count)),
+    zeroSourceCount: Math.max(0, asNumber(value.zero_source_count)),
+    singleSourceCount: Math.max(0, asNumber(value.single_source_count)),
+    singleDomainCount: Math.max(0, asNumber(value.single_domain_count)),
+    multiDomainCount: Math.max(0, asNumber(value.multi_domain_count)),
+    uniqueDomainCount: Math.max(0, asNumber(value.unique_domain_count)),
+    topDomainItemCount: Math.max(0, asNumber(value.top_domain_item_count)),
+    topDomainSharePercent: Math.max(0, asNumber(value.top_domain_share_percent)),
+    domains: Array.isArray(value.domains)
+      ? value.domains.map(parseSourceRiskDomain).filter((item): item is SourceRiskDomain => Boolean(item))
+      : [],
+    reviewItems: Array.isArray(value.review_items)
+      ? value.review_items.map(parseSourceRiskItem).filter((item): item is SourceRiskItem => Boolean(item))
       : [],
   };
 }
@@ -718,6 +806,14 @@ export async function adminListSourceRecheckReceipts(
       completedCycle: raw.completed_cycle === true,
     }];
   });
+}
+
+export async function adminGetSourceRiskReport(
+  client: SupabaseClient,
+): Promise<SourceRiskReport> {
+  const { data, error } = await client.rpc("admin_get_knowledge_source_risk_report");
+  if (error) throw new Error(error.message || "Knowledge根拠の分散状況を取得できませんでした。");
+  return parseSourceRiskReport(data);
 }
 
 export async function adminPublishKnowledgeRefreshBundle(
