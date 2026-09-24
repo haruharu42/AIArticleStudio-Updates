@@ -320,10 +320,6 @@ export function Phase18BeginnerHome() {
           <p>AIで副業を、もっと簡単に。</p>
         </div>
 
-        <ReleasePreviewHomeStatus />
-
-        <ActionStudioHomeHero />
-
         <section className="reference-creator-card" aria-label="Creatorステータス">
           <span className="reference-avatar" aria-hidden="true">
             {dashboard?.avatarUrl ? <img src={dashboard.avatarUrl} alt="" /> : avatarLetter(displayName)}
@@ -417,6 +413,10 @@ export function Phase18BeginnerHome() {
             </div>
           )}
         </section>
+
+        <ReleasePreviewHomeStatus />
+
+        <ActionStudioHomeHero />
 
         <section className="reference-home-section">
           <div className="reference-section-heading">
