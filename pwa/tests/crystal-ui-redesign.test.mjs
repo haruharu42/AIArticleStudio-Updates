@@ -14,12 +14,14 @@ test("home prioritizes creator through article library before the AAS hero and k
   const creator = home.indexOf('className="reference-creator-card"');
   const library = home.indexOf("記事ライブラリ / noteマガジン");
   const hero = home.indexOf("<ActionStudioHomeHero />");
+  const ranking = home.indexOf("週間ランキング");
   const quick = home.indexOf("<ActionStudioQuickActions");
 
   assert.ok(creator >= 0);
   assert.ok(library > creator);
   assert.ok(hero > library);
-  assert.ok(quick > hero);
+  assert.ok(ranking > hero);
+  assert.ok(quick > ranking);
 });
 
 test("Axia and Rumo hero is bundled locally and used by the home hero", async () => {
