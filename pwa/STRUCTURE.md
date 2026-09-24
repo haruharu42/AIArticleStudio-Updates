@@ -25,6 +25,7 @@ AI Action Studio PWA keeps responsibilities separated so UI changes, business lo
 - `components/side-hustles/`: presentation-only controls for the dedicated side-hustle wizard. Dropdown/custom-input fields, step rail, final prompt review, and AI-result capture are split into focused components; the parent page owns only state, navigation, persistence, clipboard orchestration, and external-AI handoff.
 - `app/phase53-crystal-ui.css`: final visual-only AAS brand theme. Owns the Axia/Rumo crystal background language, shared form controls, glass cards, home hero treatment, article/library/admin/auth presentation, and responsive PC/mobile navigation; it must not own routes, auth, data loading, persistence, or feature logic.
 - `public/aas-axia-rumo-hero.svg`: local lightweight embedded-WebP key visual for the finalized AAS character pair, Axia and the small dragon mascot Rumo; presentation-only with no remote asset dependency or executable content.
+- Phase 53 home ordering is intentional: Creator/user status and the article-library area stay above the Axia/Rumo hero, while `よく使う機能` stays in the lower home section. Desktop home may use the preview-style side dock; mobile keeps the five-item bottom navigation.
 - `lib/access-control.ts`: authenticated profile validation and authoritative PWA entitlement checks.
 - `lib/admin-users-view.ts`: pure admin-user filtering, labels, date formatting, and summary calculations.
 - `lib/article-create-draft.ts`: pure article-draft defaults, URL parsing, tag parsing, step validation, and restored-draft validation.
