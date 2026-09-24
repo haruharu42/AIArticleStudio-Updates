@@ -24,7 +24,8 @@ test("AI Action Studio branding is used on the active PWA shell", async () => {
   assert.match(legacyShell, /AIで副業を、/);
   assert.doesNotMatch(legacyShell, /AI ARTICLE/);
   assert.match(manifest, /AI Action Studio/);
-  assert.match(home, /ActionStudioHomeHub/);
+  assert.match(home, /ActionStudioHomeHero/);
+  assert.match(home, /ActionStudioQuickActions/);
 });
 
 test("home keeps quick actions while side-hustle discovery lives in the genre-grouped feature list", async () => {
@@ -38,12 +39,14 @@ test("home keeps quick actions while side-hustle discovery lives in the genre-gr
   ]);
 
   for (const label of [
+    "今日はAIで何を進めますか？",
     "よく使う機能",
-    "記事を作る",
-    "SNS投稿を作る",
-    "画像を作る",
+    "記事生成",
+    "SNS投稿",
+    "画像生成",
     "プロンプトライブラリ",
-    "ジャンル別に機能を見る",
+    "副業機能",
+    "記事ライブラリ",
   ]) {
     assert.match(hub, new RegExp(label));
   }
@@ -86,7 +89,10 @@ test("home keeps quick actions while side-hustle discovery lives in the genre-gr
   assert.match(tools, /MEMBER_TOOL_GROUPS/);
   assert.match(tools, /FEATURE GENRE/);
   assert.match(tools, /副業ジャンルと用途ごとに機能をまとめています/);
-  assert.match(home, /<ActionStudioHomeHub \/>/);
+  assert.match(home, /<ActionStudioHomeHero \/>/);
+  assert.match(home, /<ActionStudioQuickActions showAdmin=\{activeAdmin\} \/>/);
+  assert.ok(home.indexOf("<ActionStudioHomeHero />") < home.indexOf('className="reference-creator-card"'));
+  assert.ok(home.indexOf("記事ライブラリ / noteマガジン") < home.indexOf("<ActionStudioQuickActions"));
   assert.match(layout, /phase48-action-studio\.css/);
   assert.match(css, /\.action-studio-card-grid/);
 });
