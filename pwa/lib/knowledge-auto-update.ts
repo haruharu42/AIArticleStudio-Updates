@@ -63,6 +63,49 @@ export type KnowledgeRefreshBundle = {
   prompt_optimizations: unknown[];
 };
 
+export type KnowledgeAutomationCandidateAction = "new" | "update" | "recheck" | "retire";
+export type KnowledgeAutomationCandidateStatus = "pending" | "approved" | "rejected" | "converted";
+
+export type KnowledgeAutomationStatus = {
+  enabled: boolean;
+  checkIntervalHours: number;
+  maxSourcesPerRun: number;
+  trackedSources: number;
+  dueSources: number;
+  pendingCandidates: number;
+  approvedCandidates: number;
+  lastWorkerInvokedAt: string | null;
+  lastSuccessAt: string | null;
+  lastError: string;
+  latestRunId: number | null;
+  latestRunStatus: string;
+  latestRunStartedAt: string | null;
+  latestRunCompletedAt: string | null;
+  latestRunSourcesChecked: number;
+  latestRunCandidatesCreated: number;
+};
+
+export type KnowledgeAutomationCandidate = {
+  id: number;
+  candidateAction: KnowledgeAutomationCandidateAction;
+  existingItemType: "knowledge" | "prompt" | null;
+  existingItemKey: string;
+  matchedTasks: string[];
+  sourceUrl: string;
+  sourceTitle: string;
+  sourceExcerpt: string;
+  sourceHttpStatus: number | null;
+  currentPayload: Record<string, unknown> | null;
+  proposedPayload: Record<string, unknown> | null;
+  researchPrompt: string;
+  confidence: number;
+  reason: string;
+  status: KnowledgeAutomationCandidateStatus;
+  reviewNotes: string;
+  detectedAt: string;
+  reviewedAt: string | null;
+};
+
 function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
   return { added: 0, updated: 0, unchanged: 0, items: [] };
 }
@@ -205,16 +248,26 @@ export async function adminPreviewKnowledgeRefreshBundleDiff(
   return parseKnowledgeRefreshDiff(data);
 }
 
+function isMissingRpc(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "PGRST202" || /could not find the function|schema cache/i.test(error.message ?? "");
+}
+
 export async function adminPublishKnowledgeRefreshBundle(
   client: SupabaseClient,
   requestId: number,
   bundle: KnowledgeRefreshBundle,
 ): Promise<KnowledgeRefreshPublishResult> {
-  const { data, error } = await client.rpc("admin_publish_knowledge_refresh_bundle_v2", {
-    p_request_id: requestId,
-    p_bundle: bundle,
-  });
-  if (error) throw new Error(error.message || "ナレッジ更新Bundleを公開できませんでした。");
+  const args = { p_request_id: requestId, p_bundle: bundle };
+  let response = await client.rpc("admin_publish_knowledge_refresh_bundle_v4", args);
+  if (response.error && isMissingRpc(response.error)) {
+    response = await client.rpc("admin_publish_knowledge_refresh_bundle_v3", args);
+  }
+  if (response.error && isMissingRpc(response.error)) {
+    response = await client.rpc("admin_publish_knowledge_refresh_bundle_v2", args);
+  }
+  if (response.error) throw new Error(response.error.message || "ナレッジ更新Bundleを公開できませんでした。");
+  const data = response.data;
   const row = Array.isArray(data) ? data[0] : data;
   if (!row || typeof row !== "object" || Array.isArray(row)) {
     throw new Error("ナレッジ更新結果を確認できませんでした。");
@@ -227,6 +280,111 @@ export async function adminPublishKnowledgeRefreshBundle(
     promptCount: asNumber(value.prompt_count),
     changeDetails: parseKnowledgeRefreshDiff(value.change_details),
   };
+}
+
+
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string").map((item) => item.trim()).filter(Boolean)
+    : [];
+}
+
+function asObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+export async function adminGetKnowledgeAutomationStatus(
+  client: SupabaseClient,
+): Promise<KnowledgeAutomationStatus | null> {
+  const { data, error } = await client.rpc("admin_get_knowledge_automation_status");
+  if (error) throw new Error(error.message || "公式ソース自動監視の状態を取得できませんでした。");
+  const raw = Array.isArray(data) ? data[0] : data;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  return {
+    enabled: row.enabled !== false,
+    checkIntervalHours: Math.max(1, asNumber(row.check_interval_hours, 24)),
+    maxSourcesPerRun: Math.max(1, asNumber(row.max_sources_per_run, 12)),
+    trackedSources: Math.max(0, asNumber(row.tracked_sources)),
+    dueSources: Math.max(0, asNumber(row.due_sources)),
+    pendingCandidates: Math.max(0, asNumber(row.pending_candidates)),
+    approvedCandidates: Math.max(0, asNumber(row.approved_candidates)),
+    lastWorkerInvokedAt: typeof row.last_worker_invoked_at === "string" ? row.last_worker_invoked_at : null,
+    lastSuccessAt: typeof row.last_success_at === "string" ? row.last_success_at : null,
+    lastError: typeof row.last_error === "string" ? row.last_error : "",
+    latestRunId: row.latest_run_id === null || row.latest_run_id === undefined ? null : asNumber(row.latest_run_id),
+    latestRunStatus: typeof row.latest_run_status === "string" ? row.latest_run_status : "",
+    latestRunStartedAt: typeof row.latest_run_started_at === "string" ? row.latest_run_started_at : null,
+    latestRunCompletedAt: typeof row.latest_run_completed_at === "string" ? row.latest_run_completed_at : null,
+    latestRunSourcesChecked: Math.max(0, asNumber(row.latest_run_sources_checked)),
+    latestRunCandidatesCreated: Math.max(0, asNumber(row.latest_run_candidates_created)),
+  };
+}
+
+export async function adminListKnowledgeAutomationCandidates(
+  client: SupabaseClient,
+  status: KnowledgeAutomationCandidateStatus | null = "pending",
+  limit = 50,
+): Promise<KnowledgeAutomationCandidate[]> {
+  const { data, error } = await client.rpc("admin_list_knowledge_automation_candidates", {
+    p_status: status,
+    p_limit: Math.max(1, Math.min(200, Math.trunc(limit))),
+  });
+  if (error) throw new Error(error.message || "自動調査候補を取得できませんでした。");
+  return (data ?? []).map((raw: Record<string, unknown>) => ({
+    id: asNumber(raw.id),
+    candidateAction:
+      raw.candidate_action === "update" || raw.candidate_action === "recheck" || raw.candidate_action === "retire"
+        ? raw.candidate_action
+        : "new",
+    existingItemType: raw.existing_item_type === "knowledge" || raw.existing_item_type === "prompt"
+      ? raw.existing_item_type
+      : null,
+    existingItemKey: typeof raw.existing_item_key === "string" ? raw.existing_item_key : "",
+    matchedTasks: asStringArray(raw.matched_tasks),
+    sourceUrl: typeof raw.source_url === "string" ? raw.source_url : "",
+    sourceTitle: typeof raw.source_title === "string" ? raw.source_title : "",
+    sourceExcerpt: typeof raw.source_excerpt === "string" ? raw.source_excerpt : "",
+    sourceHttpStatus: raw.source_http_status === null || raw.source_http_status === undefined
+      ? null
+      : asNumber(raw.source_http_status),
+    currentPayload: asObject(raw.current_payload),
+    proposedPayload: asObject(raw.proposed_payload),
+    researchPrompt: typeof raw.research_prompt === "string" ? raw.research_prompt : "",
+    confidence: Math.max(0, Math.min(100, asNumber(raw.confidence, 50))),
+    reason: typeof raw.reason === "string" ? raw.reason : "",
+    status:
+      raw.status === "approved" || raw.status === "rejected" || raw.status === "converted"
+        ? raw.status
+        : "pending",
+    reviewNotes: typeof raw.review_notes === "string" ? raw.review_notes : "",
+    detectedAt: typeof raw.detected_at === "string" ? raw.detected_at : "",
+    reviewedAt: typeof raw.reviewed_at === "string" ? raw.reviewed_at : null,
+  }));
+}
+
+export async function adminReviewKnowledgeAutomationCandidate(
+  client: SupabaseClient,
+  candidateId: number,
+  decision: "approved" | "rejected" | "converted",
+  notes = "",
+): Promise<void> {
+  const { error } = await client.rpc("admin_review_knowledge_automation_candidate", {
+    p_candidate_id: candidateId,
+    p_decision: decision,
+    p_notes: notes.slice(0, 2000),
+  });
+  if (error) throw new Error(error.message || "自動調査候補を更新できませんでした。");
+}
+
+export async function adminRequestKnowledgeAutomationRun(client: SupabaseClient): Promise<number> {
+  const { data, error } = await client.rpc("admin_request_knowledge_automation_run");
+  if (error) throw new Error(error.message || "公式ソース自動調査を開始できませんでした。");
+  const id = asNumber(data);
+  if (id < 1) throw new Error("自動調査IDを確認できませんでした。");
+  return id;
 }
 
 export function parseKnowledgeRefreshBundle(text: string): KnowledgeRefreshBundle {
