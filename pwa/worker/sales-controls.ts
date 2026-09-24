@@ -1,5 +1,6 @@
 export interface SalesControlEnv {
   AAS_SUPABASE_URL?: string;
+  AAS_SUPABASE_PUBLISHABLE_KEY?: string;
   AAS_SUPABASE_SERVICE_ROLE_KEY?: string;
 }
 
@@ -32,25 +33,7 @@ function jsonResponse(payload: unknown, status = 200): Response {
   });
 }
 
-async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | null> {
-  const baseUrl = clean(env.AAS_SUPABASE_URL).replace(/\/$/, "");
-  const serviceKey = clean(env.AAS_SUPABASE_SERVICE_ROLE_KEY);
-  if (!baseUrl || !serviceKey) return null;
-
-  const response = await fetch(
-    `${baseUrl}/rest/v1/commerce_sales_settings?id=eq.1&select=external_sales_enabled,access_code_enabled,external_sales_url,stripe_checkout_enabled,pwa_7day_enabled,pwa_monthly_enabled&limit=1`,
-    {
-      method: "GET",
-      headers: {
-        apikey: serviceKey,
-        ...(!serviceKey.startsWith("sb_secret_") ? { authorization: `Bearer ${serviceKey}` } : {}),
-        accept: "application/json",
-      },
-    },
-  );
-  if (!response.ok) return null;
-
-  const payload = await response.json().catch(() => null);
+function parseSalesSettingsPayload(payload: unknown): SalesSettings | null {
   if (!Array.isArray(payload) || !payload[0] || typeof payload[0] !== "object") return null;
   const row = payload[0] as Record<string, unknown>;
   return {
@@ -61,6 +44,45 @@ async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | 
     pwa7DayEnabled: row.pwa_7day_enabled === true,
     pwaMonthlyEnabled: row.pwa_monthly_enabled === true,
   };
+}
+
+async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | null> {
+  const baseUrl = clean(env.AAS_SUPABASE_URL).replace(/\/$/, "");
+  const publishableKey = clean(env.AAS_SUPABASE_PUBLISHABLE_KEY);
+  const serviceKey = clean(env.AAS_SUPABASE_SERVICE_ROLE_KEY);
+  if (!baseUrl) return null;
+
+  if (publishableKey) {
+    const publicResponse = await fetch(`${baseUrl}/rest/v1/rpc/get_public_commerce_sales_settings`, {
+      method: "POST",
+      headers: {
+        apikey: publishableKey,
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: "{}",
+    });
+    if (publicResponse.ok) {
+      const parsed = parseSalesSettingsPayload(await publicResponse.json().catch(() => null));
+      if (parsed) return parsed;
+    }
+  }
+
+  if (!serviceKey) return null;
+
+  const privilegedResponse = await fetch(
+    `${baseUrl}/rest/v1/commerce_sales_settings?id=eq.1&select=external_sales_enabled,access_code_enabled,external_sales_url,stripe_checkout_enabled,pwa_7day_enabled,pwa_monthly_enabled&limit=1`,
+    {
+      method: "GET",
+      headers: {
+        apikey: serviceKey,
+        ...(!serviceKey.startsWith("sb_secret_") ? { authorization: `Bearer ${serviceKey}` } : {}),
+        accept: "application/json",
+      },
+    },
+  );
+  if (!privilegedResponse.ok) return null;
+  return parseSalesSettingsPayload(await privilegedResponse.json().catch(() => null));
 }
 
 export async function handleSalesControlRequest(
