@@ -44,8 +44,9 @@ test("Stable gate mirrors Top-5 rank and all semantic contract dimensions", asyn
   assert.match(migration, /stable_selected_source_missing/);
   assert.match(migration, /stable_selected_source_stale/);
   assert.match(migration, /stale_days integer := 90/);
-  assert.match(migration, /release_channel = 'both'/);
-  assert.match(migration, /stable_available_at <= now\(\)/);
+  assert.match(migration, /from public\.knowledge_stable_catalog as catalog/);
+  assert.match(migration, /existing_release <> 'fresh_first'/);
+  assert.match(migration, /existing_stable_at > now\(\)/);
 });
 
 test("Stable gate evaluates prospective catalog with bundle overrides", async () => {
