@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { HomeWidgetCustomizer } from "@/components/home-widget-customizer";
 import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
 import { WorkspacePresetSettings } from "@/features/presets/workspace-preset-settings";
 import { signOutCurrentBrowser } from "@/lib/auth-session";
@@ -27,7 +28,7 @@ import {
   type WritingTone,
 } from "@/lib/user-personalization";
 
-type SettingsSection = "preset" | "navigation" | "personalization" | "account";
+type SettingsSection = "preset" | "navigation" | "homeLayout" | "personalization" | "account";
 
 function SettingsAccordion({
   id,
@@ -65,7 +66,7 @@ function SettingsAccordion({
 }
 
 export function PwaSettingsPage() {
-  const { state } = useSharedAccessState();
+  const { state, client } = useSharedAccessState();
   const [openSection, setOpenSection] = useState<SettingsSection | null>(null);
   const [alwaysShowNav, setAlwaysShowNav] = useState(true);
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
@@ -214,6 +215,19 @@ export function PwaSettingsPage() {
               {profile
                 ? <MobileNavCustomizer userId={profile.id} isAdmin={profile.role === "admin" && profile.status === "active"} />
                 : <div className="persistent-settings-status">ナビ設定を読み込んでいます…</div>}
+            </SettingsAccordion>
+
+            <SettingsAccordion
+              id="homeLayout"
+              icon="▦"
+              title="ホーム・ウィジェット"
+              description="ホームの機能カードを並べ替え・表示切替"
+              open={openSection === "homeLayout"}
+              onOpen={toggleSection}
+            >
+              {profile && client
+                ? <HomeWidgetCustomizer client={client} userId={profile.id} />
+                : <div className="persistent-settings-status">ホーム配置設定を読み込んでいます…</div>}
             </SettingsAccordion>
 
             <SettingsAccordion
