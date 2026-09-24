@@ -31,7 +31,9 @@ const BASE_SIDE_HUSTLE_DEFINITIONS: readonly SideHustleDefinition[] = [
 export const SIDE_HUSTLE_DEFINITIONS: readonly SideHustleDefinition[] = BASE_SIDE_HUSTLE_DEFINITIONS.map(
   (definition) => ({
     ...definition,
-    fields: [SIDE_HUSTLE_EXPERIENCE_FIELD, ...definition.fields],
+    fields: definition.fields.some((field) => field.key === "experience")
+      ? definition.fields
+      : [SIDE_HUSTLE_EXPERIENCE_FIELD, ...definition.fields],
   }),
 );
 
