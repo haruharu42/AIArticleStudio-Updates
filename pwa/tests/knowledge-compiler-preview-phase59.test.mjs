@@ -16,7 +16,7 @@ test("compiler runtime and admin preview share one explainable selection functio
   assert.match(engine, /eligibleCount: items\.length/);
   assert.match(engine, /selected: items\.filter\(\(item\) => item\.selected\)/);
   assert.match(engine, /skipped: items\.filter\(\(item\) => !item\.selected\)/);
-  assert.match(engine, /score: cloudRuleRank\(rule\)/);
+  assert.match(engine, /score: cloudRuleRank\\(rule, input\\)/);
   assert.match(engine, /position: index < safeLimit \? index \+ 1 : null/);
   assert.match(engine, /const cloudRules = previewCloudKnowledgeSelection\(runtimeCloudRules, input\)/);
 });
@@ -31,7 +31,7 @@ test("compiler preview explains task and combination rule selection", async () =
   assert.match(engine, /掲載先一致/);
   assert.match(engine, /対象条件一致/);
   assert.match(engine, /MAX_CLOUD_RULES_PER_COMPILE/);
-  assert.match(engine, /cloudRuleRank\(b\) - cloudRuleRank\(a\)/);
+  assert.match(engine, /cloudRuleRank\\(b, input\\) - cloudRuleRank\\(a, input\\)/);
 });
 
 test("catalog parser is reused so admin preview sees runtime-shaped Knowledge rules", async () => {
