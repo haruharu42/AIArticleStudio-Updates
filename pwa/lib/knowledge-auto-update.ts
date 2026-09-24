@@ -114,6 +114,34 @@ export type StablePromotionReport = {
   staleDays: number;
 };
 
+export type StableReleaseQueueItem = {
+  itemType: "knowledge" | "prompt";
+  key: string;
+  label: string;
+  changeType: "new" | "updated";
+  state: "ready" | "waiting" | "blocked";
+  stateReason: string;
+  stableAvailableAt: string | null;
+  sourceCheckedAt: string | null;
+};
+
+export type StableReleaseQueue = {
+  readyCount: number;
+  waitingCount: number;
+  blockedCount: number;
+  knowledgeReadyCount: number;
+  promptReadyCount: number;
+  nextReadyAt: string | null;
+  items: StableReleaseQueueItem[];
+};
+
+export type StableReleasePreparation = {
+  requestId: number;
+  knowledgeCount: number;
+  promptCount: number;
+  bundle: KnowledgeRefreshBundle;
+};
+
 function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
   return { added: 0, updated: 0, unchanged: 0, items: [] };
 }
@@ -197,6 +225,41 @@ export function parseStablePromotionReport(raw: unknown): StablePromotionReport 
     blocking,
     tasks,
     staleDays: Math.max(1, asNumber(value.stale_days, 90)),
+  };
+}
+
+function parseStableReleaseQueueItem(raw: unknown): StableReleaseQueueItem | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.key !== "string" || !value.key) return null;
+  const state = value.state === "waiting" || value.state === "blocked" ? value.state : "ready";
+  return {
+    itemType: value.item_type === "prompt" ? "prompt" : "knowledge",
+    key: value.key,
+    label: typeof value.label === "string" ? value.label : value.key,
+    changeType: value.change_type === "new" ? "new" : "updated",
+    state,
+    stateReason: typeof value.state_reason === "string" ? value.state_reason : "",
+    stableAvailableAt: typeof value.stable_available_at === "string" ? value.stable_available_at : null,
+    sourceCheckedAt: typeof value.source_checked_at === "string" ? value.source_checked_at : null,
+  };
+}
+
+export function parseStableReleaseQueue(raw: unknown): StableReleaseQueue {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("Stable昇格候補の応答形式が不正です。");
+  }
+  const value = raw as Record<string, unknown>;
+  return {
+    readyCount: Math.max(0, asNumber(value.ready_count)),
+    waitingCount: Math.max(0, asNumber(value.waiting_count)),
+    blockedCount: Math.max(0, asNumber(value.blocked_count)),
+    knowledgeReadyCount: Math.max(0, asNumber(value.knowledge_ready_count)),
+    promptReadyCount: Math.max(0, asNumber(value.prompt_ready_count)),
+    nextReadyAt: typeof value.next_ready_at === "string" ? value.next_ready_at : null,
+    items: Array.isArray(value.items)
+      ? value.items.map(parseStableReleaseQueueItem).filter((item): item is StableReleaseQueueItem => Boolean(item))
+      : [],
   };
 }
 
@@ -405,6 +468,35 @@ export async function adminValidateStablePromotionBundle(
   const { data, error } = await client.rpc("admin_validate_stable_promotion_bundle", { p_bundle: bundle });
   if (error) throw new Error(error.message || "Stable昇格ゲートを実行できませんでした。");
   return parseStablePromotionReport(data);
+}
+
+export async function adminGetStableReleaseQueue(
+  client: SupabaseClient,
+): Promise<StableReleaseQueue> {
+  const { data, error } = await client.rpc("admin_get_stable_release_queue");
+  if (error) throw new Error(error.message || "Stable昇格候補を取得できませんでした。");
+  return parseStableReleaseQueue(data);
+}
+
+export async function adminPrepareStableRelease(
+  client: SupabaseClient,
+): Promise<StableReleasePreparation> {
+  const { data, error } = await client.rpc("admin_prepare_stable_release");
+  if (error) throw new Error(error.message || "Stableレビュー候補を準備できませんでした。");
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error("Stableレビュー候補の応答形式が不正です。");
+  }
+  const value = data as Record<string, unknown>;
+  const bundle = value.bundle;
+  if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) {
+    throw new Error("StableレビューBundleを確認できませんでした。");
+  }
+  return {
+    requestId: Math.max(1, asNumber(value.request_id, 1)),
+    knowledgeCount: Math.max(0, asNumber(value.knowledge_count)),
+    promptCount: Math.max(0, asNumber(value.prompt_count)),
+    bundle: bundle as KnowledgeRefreshBundle,
+  };
 }
 
 export async function adminPublishKnowledgeRefreshBundle(

@@ -6,8 +6,10 @@ import { launchAiApp } from "@/lib/ai-app-links";
 import {
   adminCancelKnowledgeRefresh,
   adminGetKnowledgeRefreshChannels,
+  adminGetStableReleaseQueue,
   adminListKnowledgeRefreshRequests,
   adminPreviewKnowledgeRefreshBundleDiff,
+  adminPrepareStableRelease,
   adminPublishKnowledgeRefreshBundle,
   adminRequestKnowledgeRefresh,
   adminRetryKnowledgeRefresh,
@@ -23,6 +25,7 @@ import {
   type KnowledgeRefreshDiff,
   type KnowledgeRefreshRequest,
   type StablePromotionReport,
+  type StableReleaseQueue,
 } from "@/lib/knowledge-auto-update";
 import { getSupabaseClient } from "@/lib/supabase";
 
@@ -137,6 +140,7 @@ export function KnowledgeRefreshPanel() {
   const [diffPreview, setDiffPreview] = useState<KnowledgeRefreshDiff | null>(null);
   const [qualityReport, setQualityReport] = useState<KnowledgeQualityReport | null>(null);
   const [stablePromotionReport, setStablePromotionReport] = useState<StablePromotionReport | null>(null);
+  const [stableQueue, setStableQueue] = useState<StableReleaseQueue | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -167,12 +171,14 @@ export function KnowledgeRefreshPanel() {
 
   const reload = async () => {
     const client = getSupabaseClient();
-    const [nextRequests, nextChannels] = await Promise.all([
+    const [nextRequests, nextChannels, nextStableQueue] = await Promise.all([
       adminListKnowledgeRefreshRequests(client, null, 30),
       adminGetKnowledgeRefreshChannels(client),
+      adminGetStableReleaseQueue(client),
     ]);
     setRequests(nextRequests);
     setChannels(nextChannels);
+    setStableQueue(nextStableQueue);
     if (selectedId === null) {
       const active = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
       if (active) setSelectedId(active.id);
@@ -184,13 +190,15 @@ export function KnowledgeRefreshPanel() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const [nextRequests, nextChannels] = await Promise.all([
+        const [nextRequests, nextChannels, nextStableQueue] = await Promise.all([
           adminListKnowledgeRefreshRequests(client, null, 30),
           adminGetKnowledgeRefreshChannels(client),
+          adminGetStableReleaseQueue(client),
         ]);
         if (!active) return;
         setRequests(nextRequests);
         setChannels(nextChannels);
+        setStableQueue(nextStableQueue);
         const firstActive = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
         if (firstActive) setSelectedId(firstActive.id);
       } catch (error) {
@@ -287,6 +295,29 @@ export function KnowledgeRefreshPanel() {
       setMessage("更新期限を再確認し、必要なFresh / Stable要求を同期しました。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "更新スケジューラを同期できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const prepareStableRelease = async () => {
+    if (!stableQueue || stableQueue.readyCount < 1) return;
+    setBusy(true);
+    setMessage("");
+    setDiffPreview(null);
+    setQualityReport(null);
+    setStablePromotionReport(null);
+    try {
+      const prepared = await adminPrepareStableRelease(getSupabaseClient());
+      setSelectedId(prepared.requestId);
+      setBundleText(JSON.stringify(prepared.bundle, null, 2));
+      await reload();
+      setSelectedId(prepared.requestId);
+      setMessage(
+        `Stableレビュー候補を自動準備しました。Knowledge ${prepared.knowledgeCount}件 / Prompt ${prepared.promptCount}件です。「変更点を確認」からレビューしてください。`,
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Stableレビュー候補を準備できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -436,6 +467,57 @@ export function KnowledgeRefreshPanel() {
         <strong>自動収集＝自動公開ではありません</strong>
         <span>外部Webの内容はそのまま採用しません。公式情報・根拠URL・現在データとの差分を管理者が確認し、「変更点を確認」後にだけ公開できます。</span>
       </div>
+
+      <section className="knowledge-stable-release-queue">
+        <header>
+          <div>
+            <p className="eyebrow">STABLE RELEASE QUEUE</p>
+            <strong>Fresh → Stable 昇格候補</strong>
+            <p>Freshで検証済みかつ待機期間を完了し、現在のStableスナップショットと差分がある項目だけを候補化します。ここでは公開されません。</p>
+          </div>
+          <div className="knowledge-stable-release-counts">
+            <span className="ready">READY {stableQueue?.readyCount ?? 0}</span>
+            <span>WAIT {stableQueue?.waitingCount ?? 0}</span>
+            <span className={(stableQueue?.blockedCount ?? 0) > 0 ? "blocked" : ""}>BLOCK {stableQueue?.blockedCount ?? 0}</span>
+          </div>
+        </header>
+        <div className="knowledge-stable-release-meta">
+          <span>Knowledge READY: {stableQueue?.knowledgeReadyCount ?? 0}</span>
+          <span>Prompt READY: {stableQueue?.promptReadyCount ?? 0}</span>
+          <span>次の昇格可能: {formatDate(stableQueue?.nextReadyAt ?? null)}</span>
+        </div>
+        {(stableQueue?.items.length ?? 0) > 0 ? (
+          <div className="knowledge-stable-release-items">
+            {stableQueue?.items.slice(0, 12).map((item) => (
+              <article key={item.itemType + ":" + item.key} className={item.state}>
+                <div>
+                  <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"} · {item.changeType === "new" ? "新規" : "更新"}</span>
+                  <strong>{item.label}</strong>
+                  <small>{item.key}</small>
+                </div>
+                <div>
+                  <b>{item.state === "ready" ? "昇格可能" : item.state === "waiting" ? "待機中" : "要修正"}</b>
+                  <small>{item.stateReason || `根拠確認 ${formatDate(item.sourceCheckedAt)}`}</small>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="knowledge-empty">現在、Stableとの差分はありません。</p>
+        )}
+        {(stableQueue?.items.length ?? 0) > 12 && (
+          <small className="knowledge-stable-release-more">ほか {(stableQueue?.items.length ?? 0) - 12}件</small>
+        )}
+        <button
+          type="button"
+          className="knowledge-stable-prepare"
+          disabled={busy || (stableQueue?.readyCount ?? 0) < 1}
+          onClick={() => void prepareStableRelease()}
+        >
+          Stableレビューを自動準備
+        </button>
+        <p className="knowledge-review-note">このボタンはレビュー用JSONを作るだけです。公開には「変更点を確認」→品質ゲート→Stable昇格ゲート→管理者確認が必要です。</p>
+      </section>
 
       {message && <div className="route-notice knowledge-message">{message}</div>}
 
