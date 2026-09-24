@@ -9,9 +9,11 @@ import {
   adminGetSourceFreshnessQueue,
   adminGetStableReleaseQueue,
   adminListKnowledgeRefreshRequests,
+  adminListSourceRecheckReceipts,
   adminPreviewKnowledgeRefreshBundleDiff,
   adminPrepareSourceFreshnessRecheck,
   adminPrepareStableRelease,
+  adminRecordSourceRecheckReceipt,
   adminPublishKnowledgeRefreshBundle,
   adminRequestKnowledgeRefresh,
   adminRetryKnowledgeRefresh,
@@ -28,6 +30,9 @@ import {
   type KnowledgeRefreshDiff,
   type KnowledgeRefreshRequest,
   type SourceFreshnessQueue,
+  type SourceFreshnessQueueItem,
+  type SourceRecheckOutcome,
+  type SourceRecheckReceipt,
   type StablePromotionReport,
   type StableReleaseQueue,
 } from "@/lib/knowledge-auto-update";
@@ -146,6 +151,7 @@ export function KnowledgeRefreshPanel() {
   const [stablePromotionReport, setStablePromotionReport] = useState<StablePromotionReport | null>(null);
   const [stableQueue, setStableQueue] = useState<StableReleaseQueue | null>(null);
   const [sourceQueue, setSourceQueue] = useState<SourceFreshnessQueue | null>(null);
+  const [sourceReceipts, setSourceReceipts] = useState<SourceRecheckReceipt[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -176,16 +182,18 @@ export function KnowledgeRefreshPanel() {
 
   const reload = async () => {
     const client = getSupabaseClient();
-    const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue] = await Promise.all([
+    const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue, nextSourceReceipts] = await Promise.all([
       adminListKnowledgeRefreshRequests(client, null, 30),
       adminGetKnowledgeRefreshChannels(client),
       adminGetStableReleaseQueue(client),
       adminGetSourceFreshnessQueue(client),
+      adminListSourceRecheckReceipts(client, 30),
     ]);
     setRequests(nextRequests);
     setChannels(nextChannels);
     setStableQueue(nextStableQueue);
     setSourceQueue(nextSourceQueue);
+    setSourceReceipts(nextSourceReceipts);
     if (selectedId === null) {
       const active = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
       if (active) setSelectedId(active.id);
@@ -197,17 +205,19 @@ export function KnowledgeRefreshPanel() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue] = await Promise.all([
+        const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue, nextSourceReceipts] = await Promise.all([
           adminListKnowledgeRefreshRequests(client, null, 30),
           adminGetKnowledgeRefreshChannels(client),
           adminGetStableReleaseQueue(client),
           adminGetSourceFreshnessQueue(client),
+          adminListSourceRecheckReceipts(client, 30),
         ]);
         if (!active) return;
         setRequests(nextRequests);
         setChannels(nextChannels);
         setStableQueue(nextStableQueue);
         setSourceQueue(nextSourceQueue);
+        setSourceReceipts(nextSourceReceipts);
         const firstActive = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
         if (firstActive) setSelectedId(firstActive.id);
       } catch (error) {
@@ -355,6 +365,54 @@ export function KnowledgeRefreshPanel() {
       setBusy(false);
     }
   };
+
+  const recordSourceReceipt = async (
+    item: SourceFreshnessQueueItem,
+    sourceUrl: string,
+    outcome: SourceRecheckOutcome,
+  ) => {
+    const outcomeLabel = outcome === "unchanged"
+      ? "変更なし"
+      : outcome === "changed"
+        ? "変更あり"
+        : outcome === "removed"
+          ? "URL失効"
+          : "取得不可";
+    if (!window.confirm(`公式ページを実際に確認し、「${outcomeLabel}」として記録しますか？`)) return;
+
+    const notes = outcome === "unchanged"
+      ? ""
+      : window.prompt("確認メモ（任意）", "") ?? "";
+
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await adminRecordSourceRecheckReceipt(getSupabaseClient(), {
+        itemType: item.itemType,
+        itemKey: item.key,
+        sourceUrl,
+        outcome,
+        notes,
+        requestId: selected?.channel === "fresh" && (selected.status === "pending" || selected.status === "processing")
+          ? selected.id
+          : null,
+      });
+      await reload();
+      if (result.completedCycle) {
+        setMessage(`${item.label} の全根拠URLを「変更なし」で確認しました。確認日を更新しました。`);
+      } else if (result.followupRequestId) {
+        setSelectedId(result.followupRequestId);
+        setMessage(`${item.label} の根拠に「${outcomeLabel}」を記録しました。Fresh更新 #${result.followupRequestId} で内容更新を確認してください。`);
+      } else {
+        setMessage(`${item.label}: ${result.checkedSourceCount}/${result.totalSourceCount} URLを確認済みです。残り ${result.remainingSourceCount} 件です。`);
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "根拠再確認の記録を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
 
   const copyResearchPrompt = async (request: KnowledgeRefreshRequest) => {
     const prompt = buildKnowledgeRefreshResearchPrompt(request.channel);
