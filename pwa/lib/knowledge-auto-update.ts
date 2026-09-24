@@ -57,6 +57,19 @@ export type KnowledgeRefreshPublishResult = {
   changeDetails: KnowledgeRefreshDiff;
 };
 
+export type KnowledgeProductionHealth = {
+  activeKnowledge: number;
+  activePromptOptimizations: number;
+  pendingRequests: number;
+  processingRequests: number;
+  failedRequests: number;
+  cancelledRequests: number;
+  freshVersion: number;
+  stableVersion: number;
+  lastKnowledgeCheckedAt: string | null;
+  lastPromptCheckedAt: string | null;
+};
+
 export type KnowledgeRefreshBundle = {
   summary: string;
   knowledge_rules: unknown[];
@@ -194,6 +207,60 @@ export async function adminFailKnowledgeRefresh(
     p_error_message: message.slice(0, 1000),
   });
   if (error) throw new Error("ナレッジ更新の失敗状態を保存できませんでした。");
+}
+
+export async function adminCancelKnowledgeRefresh(
+  client: SupabaseClient,
+  requestId: number,
+  reason = "管理者が更新を中止しました。",
+): Promise<void> {
+  const { error } = await client.rpc("admin_cancel_knowledge_refresh", {
+    p_request_id: requestId,
+    p_reason: reason.slice(0, 1000),
+  });
+  if (error) throw new Error(error.message || "ナレッジ更新を中止できませんでした。");
+}
+
+export async function adminRetryKnowledgeRefresh(
+  client: SupabaseClient,
+  requestId: number,
+): Promise<number> {
+  const { data, error } = await client.rpc("admin_retry_knowledge_refresh", {
+    p_request_id: requestId,
+  });
+  if (error) throw new Error(error.message || "ナレッジ更新を再試行できませんでした。");
+  const value = typeof data === "number" ? data : Number(data);
+  if (!Number.isFinite(value) || value < 1) throw new Error("再試行した更新IDを確認できませんでした。");
+  return value;
+}
+
+export async function adminRunKnowledgeScheduler(client: SupabaseClient): Promise<void> {
+  const { error } = await client.rpc("admin_run_knowledge_scheduler");
+  if (error) throw new Error(error.message || "Knowledge更新スケジューラを実行できませんでした。");
+}
+
+export async function adminGetKnowledgeProductionHealth(
+  client: SupabaseClient,
+): Promise<KnowledgeProductionHealth> {
+  const { data, error } = await client.rpc("admin_get_knowledge_production_health");
+  if (error) throw new Error("Knowledge / Prompt運用状態を取得できませんでした。");
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row !== "object" || Array.isArray(row)) {
+    throw new Error("Knowledge / Prompt運用状態の応答形式が不正です。");
+  }
+  const value = row as Record<string, unknown>;
+  return {
+    activeKnowledge: Math.max(0, asNumber(value.active_knowledge)),
+    activePromptOptimizations: Math.max(0, asNumber(value.active_prompt_optimizations)),
+    pendingRequests: Math.max(0, asNumber(value.pending_requests)),
+    processingRequests: Math.max(0, asNumber(value.processing_requests)),
+    failedRequests: Math.max(0, asNumber(value.failed_requests)),
+    cancelledRequests: Math.max(0, asNumber(value.cancelled_requests)),
+    freshVersion: Math.max(1, asNumber(value.fresh_version, 1)),
+    stableVersion: Math.max(1, asNumber(value.stable_version, 1)),
+    lastKnowledgeCheckedAt: typeof value.last_knowledge_checked_at === "string" ? value.last_knowledge_checked_at : null,
+    lastPromptCheckedAt: typeof value.last_prompt_checked_at === "string" ? value.last_prompt_checked_at : null,
+  };
 }
 
 export async function adminPreviewKnowledgeRefreshBundleDiff(
