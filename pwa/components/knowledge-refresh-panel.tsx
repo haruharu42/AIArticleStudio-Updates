@@ -12,6 +12,7 @@ import {
   adminListKnowledgeRefreshRequests,
   adminListSourceRecheckReceipts,
   adminPreviewKnowledgeRefreshBundleDiff,
+  adminPrepareSourceDiversityResearch,
   adminPrepareSourceFreshnessRecheck,
   adminPrepareStableRelease,
   adminRecordSourceRecheckReceipt,
@@ -23,6 +24,7 @@ import {
   adminValidateKnowledgeRefreshBundle,
   adminValidateStablePromotionBundle,
   buildKnowledgeRefreshResearchPrompt,
+  buildSourceDiversityResearchPrompt,
   buildSourceFreshnessResearchPrompt,
   parseKnowledgeRefreshBundle,
   type KnowledgeQualityReport,
@@ -428,6 +430,30 @@ export function KnowledgeRefreshPanel() {
   };
 
 
+  const prepareSourceDiversityResearch = async () => {
+    if (!sourceRisk || sourceRisk.reviewItems.length < 1) return;
+    setBusy(true);
+    setMessage("");
+    setDiffPreview(null);
+    setQualityReport(null);
+    setStablePromotionReport(null);
+    setBundleText("");
+    try {
+      const prepared = await adminPrepareSourceDiversityResearch(getSupabaseClient(), 12);
+      const prompt = buildSourceDiversityResearchPrompt(prepared);
+      await navigator.clipboard.writeText(prompt);
+      await reload();
+      setSelectedId(prepared.requestId);
+      setMessage(
+        `追加根拠リサーチ対象 ${prepared.itemCount}件をFresh更新 #${prepared.requestId} に準備し、専用調査プロンプトをコピーしました。独立した公式/一次情報が見つかった項目だけ更新してください。`,
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "追加根拠リサーチを準備できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const copyResearchPrompt = async (request: KnowledgeRefreshRequest) => {
     const prompt = buildKnowledgeRefreshResearchPrompt(request.channel);
     try {
@@ -713,7 +739,15 @@ export function KnowledgeRefreshPanel() {
         ) : (
           <p className="knowledge-empty">単一ソース依存の確認候補はありません。</p>
         )}
-        <p className="knowledge-review-note">1つの公式一次情報だけで十分な場合もあります。この表示は自動判定ではなく、重要なルールほど追加根拠が必要か管理者が判断するための補助です。</p>
+        <button
+          type="button"
+          className="knowledge-source-diversity-research"
+          disabled={busy || !sourceRisk || sourceRisk.reviewItems.length < 1}
+          onClick={() => void prepareSourceDiversityResearch()}
+        >
+          追加根拠リサーチを準備・コピー
+        </button>
+        <p className="knowledge-review-note">1つの公式一次情報だけで十分な場合もあります。件数合わせの低品質ソースは追加せず、独立した公式/一次情報が本当にある場合だけFreshレビューへ追加します。</p>
       </section>
 
       <section className="knowledge-stable-release-queue">
