@@ -4,14 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 
 import { launchAiApp } from "@/lib/ai-app-links";
 import {
+  adminGetKnowledgeAutomationStatus,
   adminGetKnowledgeRefreshChannels,
+  adminListKnowledgeAutomationCandidates,
   adminListKnowledgeRefreshRequests,
   adminPreviewKnowledgeRefreshBundleDiff,
   adminPublishKnowledgeRefreshBundle,
+  adminRequestKnowledgeAutomationRun,
   adminRequestKnowledgeRefresh,
+  adminReviewKnowledgeAutomationCandidate,
   adminStartKnowledgeRefresh,
   buildKnowledgeRefreshResearchPrompt,
   parseKnowledgeRefreshBundle,
+  type KnowledgeAutomationCandidate,
+  type KnowledgeAutomationStatus,
   type KnowledgeRefreshChangeItem,
   type KnowledgeRefreshChannelState,
   type KnowledgeRefreshDiff,
@@ -38,6 +44,15 @@ function statusLabel(status: KnowledgeRefreshRequest["status"]): string {
     case "completed": return "公開済み";
     case "failed": return "失敗";
     case "cancelled": return "キャンセル";
+  }
+}
+
+function automationActionLabel(action: KnowledgeAutomationCandidate["candidateAction"]): string {
+  switch (action) {
+    case "new": return "新規候補";
+    case "update": return "更新候補";
+    case "recheck": return "再確認";
+    case "retire": return "廃止候補";
   }
 }
 
@@ -125,6 +140,8 @@ function DiffSummary({ diff }: { diff: KnowledgeRefreshDiff }) {
 export function KnowledgeRefreshPanel() {
   const [requests, setRequests] = useState<KnowledgeRefreshRequest[]>([]);
   const [channels, setChannels] = useState<KnowledgeRefreshChannelState[]>([]);
+  const [automationStatus, setAutomationStatus] = useState<KnowledgeAutomationStatus | null>(null);
+  const [automationCandidates, setAutomationCandidates] = useState<KnowledgeAutomationCandidate[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [bundleText, setBundleText] = useState("");
   const [diffPreview, setDiffPreview] = useState<KnowledgeRefreshDiff | null>(null);
@@ -140,12 +157,16 @@ export function KnowledgeRefreshPanel() {
 
   const reload = async () => {
     const client = getSupabaseClient();
-    const [nextRequests, nextChannels] = await Promise.all([
+    const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationCandidates] = await Promise.all([
       adminListKnowledgeRefreshRequests(client, null, 30),
       adminGetKnowledgeRefreshChannels(client),
+      adminGetKnowledgeAutomationStatus(client),
+      adminListKnowledgeAutomationCandidates(client, "pending", 50),
     ]);
     setRequests(nextRequests);
     setChannels(nextChannels);
+    setAutomationStatus(nextAutomationStatus);
+    setAutomationCandidates(nextAutomationCandidates);
     if (selectedId === null) {
       const active = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
       if (active) setSelectedId(active.id);
@@ -157,13 +178,17 @@ export function KnowledgeRefreshPanel() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const [nextRequests, nextChannels] = await Promise.all([
+        const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationCandidates] = await Promise.all([
           adminListKnowledgeRefreshRequests(client, null, 30),
           adminGetKnowledgeRefreshChannels(client),
+          adminGetKnowledgeAutomationStatus(client),
+          adminListKnowledgeAutomationCandidates(client, "pending", 50),
         ]);
         if (!active) return;
         setRequests(nextRequests);
         setChannels(nextChannels);
+        setAutomationStatus(nextAutomationStatus);
+        setAutomationCandidates(nextAutomationCandidates);
         const firstActive = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
         if (firstActive) setSelectedId(firstActive.id);
       } catch (error) {
@@ -173,6 +198,55 @@ export function KnowledgeRefreshPanel() {
     void boot();
     return () => { active = false; };
   }, []);
+
+  const runAutomation = async () => {
+    setBusy(true);
+    setMessage("");
+    try {
+      const runId = await adminRequestKnowledgeAutomationRun(getSupabaseClient());
+      await reload();
+      setMessage(`公式ソース自動調査 #${runId} を開始しました。候補は自動公開されません。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "公式ソース自動調査を開始できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copyAutomationPrompt = async (candidate: KnowledgeAutomationCandidate) => {
+    try {
+      await navigator.clipboard.writeText(candidate.researchPrompt);
+      setMessage("候補専用の検証プロンプトをコピーしました。Web検索できるAIで公式ソースを再確認してください。");
+    } catch {
+      setMessage("クリップボードへコピーできませんでした。");
+    }
+  };
+
+  const reviewAutomationCandidate = async (
+    candidate: KnowledgeAutomationCandidate,
+    decision: "approved" | "rejected",
+  ) => {
+    setBusy(true);
+    setMessage("");
+    try {
+      await adminReviewKnowledgeAutomationCandidate(
+        getSupabaseClient(),
+        candidate.id,
+        decision,
+        decision === "approved"
+          ? "管理者が調査継続候補として承認。正式公開は別途Quality Gateと差分確認が必要。"
+          : "管理者が自動調査候補を却下。",
+      );
+      await reload();
+      setMessage(decision === "approved"
+        ? "候補を承認しました。まだ正式Knowledgeには公開されていません。"
+        : "候補を却下しました。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "候補のレビュー結果を保存できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const enqueue = async (channel: "fresh" | "stable") => {
     setBusy(true);
@@ -322,6 +396,106 @@ export function KnowledgeRefreshPanel() {
         <strong>自動収集＝自動公開ではありません</strong>
         <span>外部Webの内容はそのまま採用しません。公式情報・根拠URL・現在データとの差分を管理者が確認し、「変更点を確認」後にだけ公開できます。</span>
       </div>
+
+      <section className="knowledge-automation-panel" aria-label="公式ソース自動監視">
+        <div className="knowledge-automation-head">
+          <div>
+            <p className="eyebrow">OFFICIAL SOURCE MONITOR</p>
+            <h3>公式ソース自動監視</h3>
+            <p>登録済みの公式・一次情報を自動巡回し、本文ハッシュ・HTTP状態・Changelog更新から「新規 / 更新 / 再確認 / 廃止」の候補だけを作ります。</p>
+          </div>
+          <button type="button" disabled={busy || automationStatus?.enabled === false} onClick={() => void runAutomation()}>
+            今すぐ公式ソースを調査
+          </button>
+        </div>
+
+        <div className="knowledge-automation-guard">
+          <strong>自動調査 ≠ 自動公開</strong>
+          <span>候補承認は「詳しく確認する価値がある」という状態変更だけです。正式反映には従来のQuality Gate・差分確認・Fresh / Stable公開操作が必要です。</span>
+        </div>
+
+        <dl className="knowledge-automation-metrics">
+          <div><dt>監視中</dt><dd>{automationStatus?.trackedSources ?? "-"} URL</dd></div>
+          <div><dt>次回対象</dt><dd>{automationStatus?.dueSources ?? "-"} URL</dd></div>
+          <div><dt>未確認候補</dt><dd>{automationStatus?.pendingCandidates ?? "-"} 件</dd></div>
+          <div><dt>承認済み候補</dt><dd>{automationStatus?.approvedCandidates ?? "-"} 件</dd></div>
+          <div><dt>最終成功</dt><dd>{formatDate(automationStatus?.lastSuccessAt ?? null)}</dd></div>
+          <div>
+            <dt>直近実行</dt>
+            <dd>
+              {automationStatus?.latestRunId
+                ? `#${automationStatus.latestRunId} / ${automationStatus.latestRunSourcesChecked} URL / 候補 ${automationStatus.latestRunCandidatesCreated}`
+                : "-"}
+            </dd>
+          </div>
+        </dl>
+
+        {automationStatus?.lastError && (
+          <p className="knowledge-automation-error">直近エラー: {automationStatus.lastError}</p>
+        )}
+
+        {automationCandidates.length === 0 ? (
+          <p className="knowledge-empty">現在、管理者確認が必要な自動調査候補はありません。</p>
+        ) : (
+          <div className="knowledge-automation-candidates">
+            {automationCandidates.map((candidate) => (
+              <article key={candidate.id}>
+                <header>
+                  <span className={"automation-action " + candidate.candidateAction}>
+                    {automationActionLabel(candidate.candidateAction)}
+                  </span>
+                  <strong>{candidate.sourceTitle || candidate.existingItemKey || candidate.sourceUrl}</strong>
+                  <small>信頼度 {candidate.confidence}% / 検出 {formatDate(candidate.detectedAt)}</small>
+                </header>
+
+                <p>{candidate.reason}</p>
+                {candidate.matchedTasks.length > 0 && (
+                  <div className="knowledge-automation-tasks">
+                    {candidate.matchedTasks.map((task) => <span key={task}>{task}</span>)}
+                  </div>
+                )}
+                {candidate.existingItemKey && (
+                  <small className="knowledge-automation-existing">
+                    現行: {candidate.existingItemType ?? "item"} / {candidate.existingItemKey}
+                  </small>
+                )}
+                {candidate.sourceExcerpt && (
+                  <details>
+                    <summary>自動取得した抜粋を見る</summary>
+                    <p>{candidate.sourceExcerpt}</p>
+                  </details>
+                )}
+
+                <div className="knowledge-automation-actions">
+                  <a href={candidate.sourceUrl} target="_blank" rel="noreferrer">公式ソースを開く</a>
+                  <button type="button" disabled={busy} onClick={() => void copyAutomationPrompt(candidate)}>
+                    検証プロンプトをコピー
+                  </button>
+                  <button type="button" disabled={busy} onClick={() => launchAiApp("chatgpt")}>
+                    ChatGPTを開く
+                  </button>
+                  <button
+                    type="button"
+                    className="approve"
+                    disabled={busy}
+                    onClick={() => void reviewAutomationCandidate(candidate, "approved")}
+                  >
+                    候補承認（公開しない）
+                  </button>
+                  <button
+                    type="button"
+                    className="reject"
+                    disabled={busy}
+                    onClick={() => void reviewAutomationCandidate(candidate, "rejected")}
+                  >
+                    却下
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       {message && <div className="route-notice knowledge-message">{message}</div>}
 
