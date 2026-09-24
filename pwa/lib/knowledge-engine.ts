@@ -211,7 +211,7 @@ export function buildKnowledgeScenarioTags(input: KnowledgeCompileInput): string
   if (hasScenarioText(text, [/小さく試して判断/, /まず小さく/, /30日で確認/, /検証指標/])) {
     addScenarioTag(tags, "strategy", "test");
   }
-  if (hasScenarioText(text, [/継続/, /繰り返し/, /再利用/, /型を作/, /仕組みが完成/])) {
+  if (hasScenarioText(text, [/継続/, /繰り返し/, /再利用/, /型を作/, /仕組みが完成/, /毎日/, /毎週/, /毎月/, /案件ごと/])) {
     addScenarioTag(tags, "strategy", "repeat");
   }
 
