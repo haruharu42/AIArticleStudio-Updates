@@ -240,6 +240,27 @@ export type SourceRiskReport = {
   reviewItems: SourceRiskItem[];
 };
 
+export type SourceDiversityResearchItem = {
+  itemType: "knowledge" | "prompt";
+  key: string;
+  label: string;
+  catalogVersion: number;
+  sourceCheckedAt: string | null;
+  sourceUrls: string[];
+  sourceCount: number;
+  domainCount: number;
+  domains: string[];
+  payload: Record<string, unknown>;
+};
+
+export type SourceDiversityResearchPreparation = {
+  requestId: number;
+  itemCount: number;
+  singleSourceCount: number;
+  singleDomainCount: number;
+  items: SourceDiversityResearchItem[];
+};
+
 function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
   return { added: 0, updated: 0, unchanged: 0, items: [] };
 }
@@ -478,6 +499,48 @@ export function parseSourceRiskReport(raw: unknown): SourceRiskReport {
       : [],
     reviewItems: Array.isArray(value.review_items)
       ? value.review_items.map(parseSourceRiskItem).filter((item): item is SourceRiskItem => Boolean(item))
+      : [],
+  };
+}
+
+
+function parseSourceDiversityResearchItem(raw: unknown): SourceDiversityResearchItem | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const value = raw as Record<string, unknown>;
+  if (typeof value.key !== "string" || !value.key) return null;
+  const payload = value.payload && typeof value.payload === "object" && !Array.isArray(value.payload)
+    ? value.payload as Record<string, unknown>
+    : {};
+  return {
+    itemType: value.item_type === "prompt" ? "prompt" : "knowledge",
+    key: value.key,
+    label: typeof value.label === "string" ? value.label : value.key,
+    catalogVersion: Math.max(1, asNumber(value.catalog_version, 1)),
+    sourceCheckedAt: typeof value.source_checked_at === "string" ? value.source_checked_at : null,
+    sourceUrls: Array.isArray(value.source_urls)
+      ? value.source_urls.filter((url): url is string => typeof url === "string" && /^https:\/\//i.test(url))
+      : [],
+    sourceCount: Math.max(0, asNumber(value.source_count)),
+    domainCount: Math.max(0, asNumber(value.domain_count)),
+    domains: Array.isArray(value.domains)
+      ? value.domains.filter((domain): domain is string => typeof domain === "string" && Boolean(domain))
+      : [],
+    payload,
+  };
+}
+
+export function parseSourceDiversityResearchPreparation(raw: unknown): SourceDiversityResearchPreparation {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("追加根拠リサーチ準備の応答形式が不正です。");
+  }
+  const value = raw as Record<string, unknown>;
+  return {
+    requestId: Math.max(1, asNumber(value.request_id, 1)),
+    itemCount: Math.max(0, asNumber(value.item_count)),
+    singleSourceCount: Math.max(0, asNumber(value.single_source_count)),
+    singleDomainCount: Math.max(0, asNumber(value.single_domain_count)),
+    items: Array.isArray(value.items)
+      ? value.items.map(parseSourceDiversityResearchItem).filter((item): item is SourceDiversityResearchItem => Boolean(item))
       : [],
   };
 }
@@ -816,6 +879,17 @@ export async function adminGetSourceRiskReport(
   return parseSourceRiskReport(data);
 }
 
+export async function adminPrepareSourceDiversityResearch(
+  client: SupabaseClient,
+  limit = 12,
+): Promise<SourceDiversityResearchPreparation> {
+  const { data, error } = await client.rpc("admin_prepare_source_diversity_research", {
+    p_limit: Math.max(1, Math.min(30, Math.trunc(limit))),
+  });
+  if (error) throw new Error(error.message || "追加根拠リサーチを準備できませんでした。");
+  return parseSourceDiversityResearchPreparation(data);
+}
+
 export async function adminPublishKnowledgeRefreshBundle(
   client: SupabaseClient,
   requestId: number,
@@ -970,6 +1044,99 @@ ${rollout}
 - 既存仕様を確認できない場合は候補にせずsummaryへ「要確認」と書く。`;
 }
 
+
+
+export function buildSourceDiversityResearchPrompt(
+  preparation: SourceDiversityResearchPreparation,
+): string {
+  const targetJson = JSON.stringify(
+    preparation.items.map((item) => ({
+      item_type: item.itemType,
+      key: item.key,
+      source_count: item.sourceCount,
+      domain_count: item.domainCount,
+      current_domains: item.domains,
+      current_source_urls: item.sourceUrls,
+      source_checked_at: item.sourceCheckedAt,
+      current: item.payload,
+    })),
+    null,
+    2,
+  );
+
+  return `あなたはAI Action Studio（AAS）のKnowledge Evidence Researcherです。
+目的は、下記の既存Knowledge / Prompt Optimizationについて、根拠の数を形式的に増やすのではなく、内容を独立して裏付ける追加の公式・一次情報が存在するかを調査し、見つかった場合だけFreshレビュー用JSONへ反映することです。
+
+【最重要ルール】
+- source_urlsの件数を増やすこと自体を目標にしないでください。
+- 同じ内容を転載しただけのページ、まとめ記事、検索結果スニペット、SNS上の噂を追加根拠にしないでください。
+- 既存の公式一次情報1件だけが最も適切な根拠なら、低品質な2件目を無理に追加しないでください。
+- 独立した根拠とは、可能なら別運営主体・別ドメインの公式一次情報、公的機関、規制当局、標準仕様などです。
+- サービス自身の仕様は、そのサービス運営者の公式情報が唯一の適切な根拠である場合があります。その場合は「追加根拠なし」とsummaryへ記載し、JSON項目へ含めなくて構いません。
+- 法令・広告表示・労務などは、サービス公式だけでなく公的機関の一次情報があれば優先して確認してください。
+- 既存keyは絶対に変更しないでください。
+- 既存内容と新しい公式根拠が食い違う場合は、単なるソース追加ではなく内容修正として最小限更新してください。
+- 料金、仕様、規約、制度など時点依存情報は現在情報を実際に開いて確認してください。
+- ユーザー体験・実績・レビューを創作しないでください。
+- 成果保証・未確認の数値・推測を追加しないでください。
+
+【対象】
+件数: ${preparation.itemCount}
+単一URL候補: ${preparation.singleSourceCount}
+単一ドメイン候補: ${preparation.singleDomainCount}
+
+${targetJson}
+
+【出力方針】
+- 追加の独立した公式/一次根拠が見つかった項目、または根拠確認により内容修正が必要な項目だけJSONへ含めてください。
+- 適切な追加根拠が見つからない項目は無理に変更せず、summaryへ「追加根拠なし: key」と記載してください。
+- source_urlsには、今回実際に開いて内容を確認したURLだけを入れてください。
+- 既存の有効なsource_urlsは削除せず、失効・誤りが確認された場合だけ差し替えてください。
+
+【出力】
+Markdownコードフェンスや説明を付けず、次のJSONオブジェクトだけを返してください。
+
+{
+  "summary": "keyごとに、追加根拠あり / 追加根拠なし / 内容修正 / 要確認を簡潔に記載",
+  "knowledge_rules": [
+    {
+      "key": "既存keyをそのまま",
+      "kind": "既存値",
+      "label": "既存または根拠に基づく最小修正版",
+      "parent_label": "",
+      "aliases": [],
+      "guidance": ["現在の公式根拠で支持されるルール"],
+      "deliverables": [],
+      "cautions": [],
+      "tasks": ["既存の該当タスク"],
+      "priority": 70,
+      "source_urls": ["既存の有効な公式URL", "今回確認した独立した公式/一次URL"],
+      "source_summary": "各URLが何を裏付けるかと、今回の変更内容"
+    }
+  ],
+  "prompt_optimizations": [
+    {
+      "key": "既存keyをそのまま",
+      "provider": "all|chatgpt|claude|gemini",
+      "plan": "all|free|paid",
+      "task": "既存の該当タスク",
+      "rules": ["現在の公式根拠で支持されるルール"],
+      "priority": 70,
+      "source_urls": ["既存の有効な公式URL", "今回確認した独立した公式/一次URL"],
+      "source_summary": "各URLが何を裏付けるかと、今回の変更内容"
+    }
+  ]
+}
+
+【最終監査】
+- 件数合わせのための低品質ソースを追加しない。
+- 追加URLを実際に開いて確認する。
+- 同じ運営主体の重複ページだけで「独立した根拠」と扱わない。
+- keyを変えない。
+- 無関係な項目を追加しない。
+- 確認できない内容を推測で補わない。
+- JSON以外を返さない。`;
+}
 
 
 export function buildSourceFreshnessResearchPrompt(

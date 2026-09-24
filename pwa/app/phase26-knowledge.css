@@ -2522,3 +2522,29 @@
     text-align: left;
   }
 }
+
+
+/* Phase 68: actionable source diversity research. */
+.knowledge-source-diversity-research {
+  width: fit-content;
+  min-height: 40px;
+  border: 1px solid #b8d0e8;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #eef7ff, #f5f1ff);
+  color: #365f8d;
+  padding: 9px 13px;
+  font-size: 8px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.knowledge-source-diversity-research:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+@media (max-width: 560px) {
+  .knowledge-source-diversity-research {
+    width: 100%;
+  }
+}
