@@ -8,21 +8,21 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 test("AAS crystal theme is loaded last and uses the finalized Axia and Rumo asset", async () => {
-  const [layout, css, asset] = await Promise.all([
+  const [layout, css, assetStats] = await Promise.all([
     read("app/layout.tsx"),
     read("app/phase53-crystal-ui.css"),
-    read("public/aas-axia-rumo-hero.svg"),
+    stat(path.join(root, "public/aas-axia-rumo-hero-hq.webp")),
   ]);
 
   assert.match(layout, /phase52-infrastructure-usage\.css";\s*import "\.\/phase53-crystal-ui\.css"/);
   assert.match(layout, /<body className="aas-crystal-theme">/);
-  assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
+  assert.match(css, /url\("\/aas-axia-rumo-hero-hq\.webp"\)/);
   assert.match(css, /\.action-studio-hero::after/);
   assert.match(css, /\.aas-reference-desktop-nav/);
   assert.match(css, /\.aas-reference-bottom-nav/);
   assert.match(css, /main select/);
   assert.match(css, /main textarea/);
-  assert.match(asset, /data:image\/webp;base64,/);
+  assert.ok(assetStats.size >= 40000);
 });
 
 test("home puts creator and article library before the Axia and Rumo hero and keeps quick actions lower", async () => {
