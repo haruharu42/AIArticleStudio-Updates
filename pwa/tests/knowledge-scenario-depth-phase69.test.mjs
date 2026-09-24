@@ -31,16 +31,23 @@ function scenarioRows(sql) {
 }
 
 test("Phase 69 derives scenario tags from existing side-hustle inputs", async () => {
-  const [engine, builder] = await Promise.all([
+  const [engine, builder, catalog] = await Promise.all([
     readPwa("lib/knowledge-engine.ts"),
     readPwa("features/side-hustles/prompt-builder.ts"),
+    readPwa("features/side-hustles/catalog.ts"),
   ]);
 
   assert.match(engine, /buildKnowledgeScenarioTags/);
   assert.match(engine, /scenarioTagFromRuleKey/);
   assert.match(engine, /scenarioRuleMatches/);
-  assert.match(engine, /experience", "beginner"/);
-  assert.match(engine, /experience", "experienced"/);
+  assert.match(builder, /experienceScenarioTags/);
+  assert.match(builder, /"experience:beginner"/);
+  assert.match(builder, /"experience:experienced"/);
+  assert.match(builder, /scenarioTags: experienceScenarioTags\(resolved\.experience_level\)/);
+  assert.match(catalog, /"experience_level"/);
+  assert.match(catalog, /"指定しない"/);
+  assert.match(catalog, /"未経験・これから始める"/);
+  assert.match(catalog, /"経験者・継続中"/);
   assert.match(engine, /mode", "sales"/);
   assert.match(engine, /mode", "acquisition"/);
   assert.match(engine, /mode", "production"/);
@@ -50,6 +57,7 @@ test("Phase 69 derives scenario tags from existing side-hustle inputs", async ()
   assert.match(engine, /strategy", "test"/);
   assert.match(engine, /strategy", "repeat"/);
   assert.match(builder, /scenarioText: Object\.values\(resolved\)\.join\(" "\)/);
+  assert.match(builder, /【今回の取り組み経験】/);
 });
 
 test("scenario rules remain inactive when the current selections do not match", async () => {
