@@ -23,7 +23,7 @@ AI Action Studio PWA keeps responsibilities separated so UI changes, business lo
 - `features/tools/`: feature-directory catalog boundary. Owns genre grouping and links for the user-facing 機能一覧 so the home hub does not duplicate side-hustle definitions.
 - `features/side-hustles/`: dedicated side-hustle domain. Each side-hustle owns its own dropdown schema, custom-input fallbacks, knowledge task, prompt template, progress state, and AI-result round trip. Shared code is limited to wizard mechanics and prompt/knowledge composition.
 - `components/side-hustles/`: presentation-only controls for the dedicated side-hustle wizard. Dropdown/custom-input fields, step rail, final prompt review, and AI-result capture are split into focused components; the parent page owns only state, navigation, persistence, clipboard orchestration, and external-AI handoff.
-- `app/phase53-crystal-ui.css`: final visual-only AAS brand theme. Owns the Axia/Rumo crystal background language, shared form controls, glass cards, home hero treatment, article/library/admin/auth presentation, and responsive PC/mobile navigation; it must not own routes, auth, data loading, persistence, or feature logic.
+- `app/phase53-crystal-ui.css`: final AAS crystal visual layer for signed-in and signed-out surfaces. Owns Axia/Rumo hero treatment, auth/status presentation, responsive PC/mobile navigation styling, form-control appearance, and admin/tool surface theming without owning auth, route, RLS, or business logic.
 - `public/aas-axia-rumo-hero.svg`: local lightweight embedded-WebP key visual for the finalized AAS character pair, Axia and the small dragon mascot Rumo; presentation-only with no remote asset dependency or executable content.
 - Phase 53 home ordering is intentional: Creator/user status and the article-library area stay above the Axia/Rumo hero, while `よく使う機能` stays in the lower home section. Desktop home may use the preview-style side dock; mobile keeps the five-item bottom navigation.
 - `lib/access-control.ts`: authenticated profile validation and authoritative PWA entitlement checks.
@@ -97,3 +97,5 @@ This is intentional. It lets AAS move away from historical `phaseXX-*.ts` names 
 4. Old paths may remain as compatibility shims until the following release.
 5. Security/auth/database boundaries stay independent of cosmetic folder moves.
 6. Large feature moves require the same Typecheck, Lint, regression, Preview and RLS verification as behavior changes.
+
+- Preview and Member Beta are separate Cloudflare Workers. Preview validation alone does not update the installed/member-beta AAS Worker. Every deployable build exposes `NEXT_PUBLIC_AAS_BUILD_SHA` in page metadata and visible UI so the running commit can be verified before release.
