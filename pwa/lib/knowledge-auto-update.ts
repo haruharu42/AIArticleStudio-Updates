@@ -180,6 +180,33 @@ export type SourceFreshnessPreparation = {
   items: SourceFreshnessQueueItem[];
 };
 
+export type SourceRecheckOutcome = "unchanged" | "changed" | "unreachable" | "removed";
+
+export type SourceRecheckReceipt = {
+  id: number;
+  itemType: "knowledge" | "prompt";
+  itemKey: string;
+  catalogVersion: number;
+  sourceUrl: string;
+  outcome: SourceRecheckOutcome;
+  notes: string;
+  requestId: number | null;
+  checkedAt: string;
+  completedCycle: boolean;
+};
+
+export type SourceRecheckReceiptResult = {
+  receiptId: number;
+  itemType: "knowledge" | "prompt";
+  itemKey: string;
+  outcome: SourceRecheckOutcome;
+  checkedSourceCount: number;
+  totalSourceCount: number;
+  remainingSourceCount: number;
+  completedCycle: boolean;
+  followupRequestId: number | null;
+};
+
 function emptyChangeGroup(): KnowledgeRefreshChangeGroup {
   return { added: 0, updated: 0, unchanged: 0, items: [] };
 }
@@ -625,6 +652,72 @@ export async function adminPrepareSourceFreshnessRecheck(
   });
   if (error) throw new Error(error.message || "根拠再確認対象を準備できませんでした。");
   return parseSourceFreshnessPreparation(data);
+}
+
+function asSourceOutcome(value: unknown): SourceRecheckOutcome {
+  return value === "changed" || value === "unreachable" || value === "removed" ? value : "unchanged";
+}
+
+export async function adminRecordSourceRecheckReceipt(
+  client: SupabaseClient,
+  input: {
+    itemType: "knowledge" | "prompt";
+    itemKey: string;
+    sourceUrl: string;
+    outcome: SourceRecheckOutcome;
+    notes?: string;
+    requestId?: number | null;
+  },
+): Promise<SourceRecheckReceiptResult> {
+  const { data, error } = await client.rpc("admin_record_knowledge_source_recheck_receipt", {
+    p_item_type: input.itemType,
+    p_item_key: input.itemKey,
+    p_source_url: input.sourceUrl,
+    p_outcome: input.outcome,
+    p_notes: input.notes ?? "",
+    p_request_id: input.requestId ?? null,
+  });
+  if (error) throw new Error(error.message || "根拠再確認の記録を保存できませんでした。");
+  if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("根拠再確認の応答形式が不正です。");
+  const value = data as Record<string, unknown>;
+  return {
+    receiptId: Math.max(1, asNumber(value.receipt_id, 1)),
+    itemType: value.item_type === "prompt" ? "prompt" : "knowledge",
+    itemKey: typeof value.item_key === "string" ? value.item_key : input.itemKey,
+    outcome: asSourceOutcome(value.outcome),
+    checkedSourceCount: Math.max(0, asNumber(value.checked_source_count)),
+    totalSourceCount: Math.max(0, asNumber(value.total_source_count)),
+    remainingSourceCount: Math.max(0, asNumber(value.remaining_source_count)),
+    completedCycle: value.completed_cycle === true,
+    followupRequestId: value.followup_request_id === null || value.followup_request_id === undefined
+      ? null
+      : Math.max(1, asNumber(value.followup_request_id, 1)),
+  };
+}
+
+export async function adminListSourceRecheckReceipts(
+  client: SupabaseClient,
+  limit = 30,
+): Promise<SourceRecheckReceipt[]> {
+  const { data, error } = await client.rpc("admin_list_knowledge_source_recheck_receipts", {
+    p_limit: Math.max(1, Math.min(100, Math.trunc(limit))),
+  });
+  if (error) throw new Error(error.message || "根拠再確認履歴を取得できませんでした。");
+  return (data ?? []).flatMap((raw: Record<string, unknown>): SourceRecheckReceipt[] => {
+    if (typeof raw.item_key !== "string" || typeof raw.source_url !== "string") return [];
+    return [{
+      id: Math.max(1, asNumber(raw.id, 1)),
+      itemType: raw.item_type === "prompt" ? "prompt" : "knowledge",
+      itemKey: raw.item_key,
+      catalogVersion: Math.max(1, asNumber(raw.catalog_version, 1)),
+      sourceUrl: raw.source_url,
+      outcome: asSourceOutcome(raw.outcome),
+      notes: typeof raw.notes === "string" ? raw.notes : "",
+      requestId: raw.request_id === null || raw.request_id === undefined ? null : Math.max(1, asNumber(raw.request_id, 1)),
+      checkedAt: typeof raw.checked_at === "string" ? raw.checked_at : "",
+      completedCycle: raw.completed_cycle === true,
+    }];
+  });
 }
 
 export async function adminPublishKnowledgeRefreshBundle(
