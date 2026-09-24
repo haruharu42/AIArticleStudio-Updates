@@ -7,6 +7,7 @@ import {
   adminCancelKnowledgeRefresh,
   adminGetKnowledgeRefreshChannels,
   adminGetSourceFreshnessQueue,
+  adminGetSourceRiskReport,
   adminGetStableReleaseQueue,
   adminListKnowledgeRefreshRequests,
   adminPreviewKnowledgeRefreshBundleDiff,
@@ -28,6 +29,7 @@ import {
   type KnowledgeRefreshDiff,
   type KnowledgeRefreshRequest,
   type SourceFreshnessQueue,
+  type SourceRiskReport,
   type StablePromotionReport,
   type StableReleaseQueue,
 } from "@/lib/knowledge-auto-update";
@@ -146,6 +148,7 @@ export function KnowledgeRefreshPanel() {
   const [stablePromotionReport, setStablePromotionReport] = useState<StablePromotionReport | null>(null);
   const [stableQueue, setStableQueue] = useState<StableReleaseQueue | null>(null);
   const [sourceQueue, setSourceQueue] = useState<SourceFreshnessQueue | null>(null);
+  const [sourceRisk, setSourceRisk] = useState<SourceRiskReport | null>(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -176,16 +179,18 @@ export function KnowledgeRefreshPanel() {
 
   const reload = async () => {
     const client = getSupabaseClient();
-    const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue] = await Promise.all([
+    const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue, nextSourceRisk] = await Promise.all([
       adminListKnowledgeRefreshRequests(client, null, 30),
       adminGetKnowledgeRefreshChannels(client),
       adminGetStableReleaseQueue(client),
       adminGetSourceFreshnessQueue(client),
+      adminGetSourceRiskReport(client),
     ]);
     setRequests(nextRequests);
     setChannels(nextChannels);
     setStableQueue(nextStableQueue);
     setSourceQueue(nextSourceQueue);
+    setSourceRisk(nextSourceRisk);
     if (selectedId === null) {
       const active = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
       if (active) setSelectedId(active.id);
@@ -197,17 +202,19 @@ export function KnowledgeRefreshPanel() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue] = await Promise.all([
+        const [nextRequests, nextChannels, nextStableQueue, nextSourceQueue, nextSourceRisk] = await Promise.all([
           adminListKnowledgeRefreshRequests(client, null, 30),
           adminGetKnowledgeRefreshChannels(client),
           adminGetStableReleaseQueue(client),
           adminGetSourceFreshnessQueue(client),
+          adminGetSourceRiskReport(client),
         ]);
         if (!active) return;
         setRequests(nextRequests);
         setChannels(nextChannels);
         setStableQueue(nextStableQueue);
         setSourceQueue(nextSourceQueue);
+        setSourceRisk(nextSourceRisk);
         const firstActive = nextRequests.find((request) => request.status === "processing" || request.status === "pending");
         if (firstActive) setSelectedId(firstActive.id);
       } catch (error) {
@@ -547,6 +554,58 @@ export function KnowledgeRefreshPanel() {
           再確認プロンプトを準備・コピー
         </button>
         <p className="knowledge-review-note">最大20件をFresh更新へ準備します。公式ページを実際に確認したJSONを貼り付け、既存の差分・品質ゲートを通してから公開してください。</p>
+      </section>
+
+      <section className="knowledge-source-risk-report">
+        <header>
+          <div>
+            <p className="eyebrow">SOURCE DIVERSITY</p>
+            <strong>根拠ドメインの分散状況</strong>
+            <p>鮮度とは別に、Knowledge / Promptが1つのURLや1ドメインへ依存しすぎていないかを確認します。単一ソースは自動で不合格にはしません。</p>
+          </div>
+          <div className="knowledge-source-risk-summary">
+            <span>DOMAIN {sourceRisk?.uniqueDomainCount ?? 0}</span>
+            <span>MULTI {sourceRisk?.multiDomainCount ?? 0}</span>
+            <span className={(sourceRisk?.singleSourceCount ?? 0) > 0 ? "attention" : ""}>1 URL {sourceRisk?.singleSourceCount ?? 0}</span>
+          </div>
+        </header>
+        <div className="knowledge-source-risk-metrics">
+          <article><span>対象</span><strong>{sourceRisk?.itemCount ?? 0}</strong><small>Knowledge + Prompt</small></article>
+          <article><span>複数ドメイン</span><strong>{sourceRisk?.multiDomainCount ?? 0}</strong><small>2ドメイン以上</small></article>
+          <article><span>単一ドメイン</span><strong>{sourceRisk?.singleDomainCount ?? 0}</strong><small>追加確認候補</small></article>
+          <article><span>最大ドメイン比率</span><strong>{sourceRisk?.topDomainSharePercent ?? 0}%</strong><small>{sourceRisk?.topDomainItemCount ?? 0}項目で利用</small></article>
+        </div>
+        {(sourceRisk?.domains.length ?? 0) > 0 && (
+          <div className="knowledge-source-domain-list">
+            <strong>使用ドメイン上位</strong>
+            <div>
+              {sourceRisk?.domains.slice(0, 8).map((domain) => (
+                <span key={domain.domain}><b>{domain.domain}</b><small>{domain.itemCount}項目 / {domain.urlCount}URL</small></span>
+              ))}
+            </div>
+          </div>
+        )}
+        {(sourceRisk?.reviewItems.length ?? 0) > 0 ? (
+          <div className="knowledge-source-risk-items">
+            <strong>単一ソース / 単一ドメインの確認候補</strong>
+            {sourceRisk?.reviewItems.slice(0, 10).map((item) => (
+              <article key={item.itemType + ":" + item.key}>
+                <div>
+                  <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"} · v{item.catalogVersion}</span>
+                  <strong>{item.label}</strong>
+                  <small>{item.key}</small>
+                </div>
+                <div>
+                  <b>{item.sourceCount} URL / {item.domainCount} domain</b>
+                  <small>根拠確認 {formatDate(item.sourceCheckedAt)}</small>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="knowledge-empty">単一ソース依存の確認候補はありません。</p>
+        )}
+        <p className="knowledge-review-note">1つの公式一次情報だけで十分な場合もあります。この表示は自動判定ではなく、重要なルールほど追加根拠が必要か管理者が判断するための補助です。</p>
       </section>
 
       <section className="knowledge-stable-release-queue">
