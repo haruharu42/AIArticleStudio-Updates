@@ -19,6 +19,8 @@ import {
 
 export type ReferenceNavKey = "home" | MobileNavItemKey | "";
 
+const AAS_BUILD_SHA = (process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev").slice(0, 7);
+
 export function AasReferenceHeader({
   hasUnreadNotifications = false,
   notificationHref = "/missions",
@@ -37,6 +39,9 @@ export function AasReferenceHeader({
           <small>AIで副業を、もっと簡単に。</small>
         </span>
       </Link>
+      <span className="aas-reference-build" aria-label={`AAS build ${AAS_BUILD_SHA}`}>
+        build {AAS_BUILD_SHA}
+      </span>
       <nav className="aas-reference-header-actions" aria-label="クイックメニュー">
         <Link href={notificationHref} aria-label={notificationLabel}><span aria-hidden="true">♧</span>{hasUnreadNotifications ? <i aria-hidden="true" /> : null}</Link>
         <Link href="/settings" aria-label="メニュー"><span aria-hidden="true">☰</span></Link>
