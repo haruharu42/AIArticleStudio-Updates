@@ -136,3 +136,29 @@ test("commercial transaction copy follows the active sales mode and exposes a su
     assert.match(legalPage, /\/support/);
   }
 });
+
+
+test("public sales settings can fall back to an anon-safe Supabase RPC", async () => {
+  const [worker, migration] = await Promise.all([
+    readPwa("worker/sales-controls.ts"),
+    readRepo("supabase/migrations/20260924165000_public_sales_settings_rpc.sql"),
+  ]);
+
+  assert.match(worker, /AAS_SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(worker, /NEXT_PUBLIC_AAS_SUPABASE_URL/);
+  assert.match(worker, /NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(worker, /get_public_commerce_sales_settings/);
+  assert.match(worker, /loadSalesSettingsWithPublicRpc/);
+  assert.match(worker, /loadSalesSettingsWithServiceRole/);
+  assert.match(worker, /apikey: publishableKey/);
+  assert.doesNotMatch(worker, /authorization: `Bearer \${publishableKey}`/);
+
+  assert.match(migration, /create or replace function public\.get_public_commerce_sales_settings\(\)/i);
+  assert.match(migration, /security definer/i);
+  assert.match(migration, /grant execute .* to anon, authenticated/i);
+  assert.match(migration, /external_sales_enabled/);
+  assert.match(migration, /stripe_checkout_enabled/);
+  assert.match(migration, /pwa_7day_enabled/);
+  assert.match(migration, /pwa_monthly_enabled/);
+  assert.doesNotMatch(migration, /service[_-]?role|secret/i);
+});
