@@ -1,7 +1,13 @@
 export interface SalesControlEnv {
   AAS_SUPABASE_URL?: string;
+  AAS_SUPABASE_PUBLISHABLE_KEY?: string;
   AAS_SUPABASE_SERVICE_ROLE_KEY?: string;
 }
+
+const BUILD_SUPABASE_URL = (process.env.NEXT_PUBLIC_AAS_SUPABASE_URL ?? "").trim();
+const BUILD_SUPABASE_PUBLISHABLE_KEY = (
+  process.env.NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY ?? ""
+).trim();
 
 type SalesSettings = {
   externalSalesEnabled: boolean;
@@ -32,11 +38,28 @@ function jsonResponse(payload: unknown, status = 200): Response {
   });
 }
 
-async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | null> {
-  const baseUrl = clean(env.AAS_SUPABASE_URL).replace(/\/$/, "");
-  const serviceKey = clean(env.AAS_SUPABASE_SERVICE_ROLE_KEY);
-  if (!baseUrl || !serviceKey) return null;
+function parseSalesSettingsPayload(payload: unknown): SalesSettings | null {
+  const row = Array.isArray(payload) && payload[0] && typeof payload[0] === "object"
+    ? payload[0] as Record<string, unknown>
+    : payload && typeof payload === "object" && !Array.isArray(payload)
+      ? payload as Record<string, unknown>
+      : null;
+  if (!row) return null;
+  return {
+    externalSalesEnabled: row.external_sales_enabled === true,
+    accessCodeEnabled: row.access_code_enabled === true,
+    externalSalesUrl: clean(row.external_sales_url),
+    stripeCheckoutEnabled: row.stripe_checkout_enabled === true,
+    pwa7DayEnabled: row.pwa_7day_enabled === true,
+    pwaMonthlyEnabled: row.pwa_monthly_enabled === true,
+  };
+}
 
+async function loadSalesSettingsWithServiceRole(
+  baseUrl: string,
+  serviceKey: string,
+): Promise<SalesSettings | null> {
+  if (!baseUrl || !serviceKey) return null;
   const response = await fetch(
     `${baseUrl}/rest/v1/commerce_sales_settings?id=eq.1&select=external_sales_enabled,access_code_enabled,external_sales_url,stripe_checkout_enabled,pwa_7day_enabled,pwa_monthly_enabled&limit=1`,
     {
@@ -47,20 +70,42 @@ async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | 
         accept: "application/json",
       },
     },
-  );
-  if (!response.ok) return null;
+  ).catch(() => null);
+  if (!response?.ok) return null;
+  return parseSalesSettingsPayload(await response.json().catch(() => null));
+}
 
-  const payload = await response.json().catch(() => null);
-  if (!Array.isArray(payload) || !payload[0] || typeof payload[0] !== "object") return null;
-  const row = payload[0] as Record<string, unknown>;
-  return {
-    externalSalesEnabled: row.external_sales_enabled === true,
-    accessCodeEnabled: row.access_code_enabled === true,
-    externalSalesUrl: clean(row.external_sales_url),
-    stripeCheckoutEnabled: row.stripe_checkout_enabled === true,
-    pwa7DayEnabled: row.pwa_7day_enabled === true,
-    pwaMonthlyEnabled: row.pwa_monthly_enabled === true,
-  };
+async function loadSalesSettingsWithPublicRpc(
+  baseUrl: string,
+  publishableKey: string,
+): Promise<SalesSettings | null> {
+  if (!baseUrl || !publishableKey) return null;
+  const response = await fetch(
+    `${baseUrl}/rest/v1/rpc/get_public_commerce_sales_settings`,
+    {
+      method: "POST",
+      headers: {
+        apikey: publishableKey,
+        authorization: `Bearer ${publishableKey}`,
+        "content-type": "application/json",
+        accept: "application/json",
+      },
+      body: "{}",
+    },
+  ).catch(() => null);
+  if (!response?.ok) return null;
+  return parseSalesSettingsPayload(await response.json().catch(() => null));
+}
+
+async function loadSalesSettings(env: SalesControlEnv): Promise<SalesSettings | null> {
+  const baseUrl = (clean(env.AAS_SUPABASE_URL) || BUILD_SUPABASE_URL).replace(/\/$/, "");
+  const serviceKey = clean(env.AAS_SUPABASE_SERVICE_ROLE_KEY);
+  const publishableKey = clean(env.AAS_SUPABASE_PUBLISHABLE_KEY) || BUILD_SUPABASE_PUBLISHABLE_KEY;
+
+  const privileged = await loadSalesSettingsWithServiceRole(baseUrl, serviceKey);
+  if (privileged) return privileged;
+
+  return loadSalesSettingsWithPublicRpc(baseUrl, publishableKey);
 }
 
 export async function handleSalesControlRequest(
