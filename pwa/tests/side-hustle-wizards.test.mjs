@@ -265,3 +265,54 @@ test("every side-hustle has 5-10+ situation-specific knowledge rules and prompt 
   assert.match(autoUpdate, /媒体・用途・初心者\/経験者・販売\/集客\/制作・リスク/);
   assert.match(autoUpdate, /状況別候補/);
 });
+
+
+test("combination knowledge adds 5 high-value patterns per side-hustle without cartesian explosion", async () => {
+  const [combination, builder, autoUpdate] = await Promise.all([
+    read("features/side-hustles/combination-knowledge.ts"),
+    read("features/side-hustles/prompt-builder.ts"),
+    read("lib/knowledge-auto-update.ts"),
+  ]);
+
+  const slugs = [
+    "content-sales",
+    "sns-management",
+    "youtube-video",
+    "affiliate",
+    "resale",
+    "skill-sales",
+    "digital-product",
+    "crowdsourcing",
+    "outreach",
+    "sidejob-planner",
+    "research",
+    "workflow-efficiency",
+  ];
+
+  assert.equal((combination.match(/\bC\("/g) ?? []).length, 60);
+  for (const slug of slugs) {
+    const start = combination.indexOf('"' + slug + '": [');
+    assert.notEqual(start, -1, "missing combination knowledge for " + slug);
+    const rest = combination.slice(start);
+    const end = rest.indexOf("\n  ],");
+    const block = end >= 0 ? rest.slice(0, end) : rest;
+    assert.equal((block.match(/\bC\("/g) ?? []).length, 5, slug + " should have exactly 5 curated combination rules in this phase");
+  }
+
+  assert.match(combination, /note × 初心者 × 有料記事/);
+  assert.match(combination, /Instagram × 初期アカウント × 信頼形成/);
+  assert.match(combination, /家電 × 中古\/不具合あり × 精密配送/);
+  assert.match(combination, /事実確認 × 現在情報 × 公式\/公的情報/);
+  assert.match(combination, /公開作業 × 既存自動化 × 公開リスク/);
+  assert.match(combination, /Object\.entries\(rule\.when\)\.every/);
+  assert.match(combination, /【複合条件KNOWLEDGE】/);
+  assert.match(combination, /複合:\$\{definition\.slug\}:\$\{rule\.key\}/);
+
+  assert.match(builder, /compileSideHustleCombinationKnowledge/);
+  assert.match(builder, /combinationKnowledge\.promptBlock/);
+  assert.match(builder, /\.\.\.combinationKnowledge\.applied/);
+
+  assert.match(autoUpdate, /2〜4条件の組み合わせ/);
+  assert.match(autoUpdate, /網羅的な直積を作らず/);
+  assert.match(autoUpdate, /note × 完全初心者 × 有料記事/);
+});
