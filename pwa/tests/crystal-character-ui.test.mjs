@@ -15,7 +15,8 @@ test("Axia and Rumo are local presentation assets and the crystal theme loads la
     read("components/action-studio-home-hub.tsx"),
   ]);
 
-  assert.match(layout, /phase52-infrastructure-usage\.css";\nimport "\.\/phase53-crystal-character-ui\.css"/);
+  assert.match(layout, /phase52-infrastructure-usage\.css";[\s\S]*?phase53-crystal-ui\.css";[\s\S]*?phase53-crystal-character-ui\.css"/);
+  assert.ok(layout.indexOf("phase53-crystal-ui.css") < layout.indexOf("phase53-crystal-character-ui.css"));
   assert.match(asset, /data:image\/webp;base64,/);
   assert.doesNotMatch(asset, /<image[^>]+href="https?:\/\//);
   assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
@@ -32,10 +33,10 @@ test("home puts user and article library before lower quick actions", async () =
   const quick = home.indexOf("<ActionStudioQuickActions");
   const ranking = home.indexOf("週間ランキング");
 
-  assert.ok(hero >= 0);
-  assert.ok(creator > hero);
+  assert.ok(creator >= 0);
   assert.ok(library > creator);
-  assert.ok(quick > library);
+  assert.ok(hero > library);
+  assert.ok(quick > hero);
   assert.ok(ranking > quick);
 });
 
