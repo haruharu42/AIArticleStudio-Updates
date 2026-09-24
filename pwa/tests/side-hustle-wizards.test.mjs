@@ -261,7 +261,7 @@ test("every side-hustle has 5-10+ situation-specific knowledge rules and prompt 
   assert.match(builder, /compileSideHustleScenarioKnowledge/);
   assert.match(builder, /scenarioKnowledge\.promptBlock/);
   assert.match(builder, /\.\.\.scenarioKnowledge\.applied/);
-  assert.match(scenario, /状況別副業KNOWLEDGE/);
+  assert.match(scenario, /状況別副業KNOWLEDGE/);\n  assert.match(scenario, /状況別: \\$\\{rule\\.label\\}/);
   assert.match(autoUpdate, /媒体・用途・初心者\/経験者・販売\/集客\/制作・リスク/);
   assert.match(autoUpdate, /状況別候補/);
 });
@@ -306,7 +306,7 @@ test("combination knowledge adds 5 high-value patterns per side-hustle without c
   assert.match(combination, /公開作業 × 既存自動化 × 公開リスク/);
   assert.match(combination, /Object\.entries\(rule\.when\)\.every/);
   assert.match(combination, /【複合条件KNOWLEDGE】/);
-  assert.match(combination, /複合:\$\{definition\.slug\}:\$\{rule\.key\}/);
+  assert.match(combination, /複合: \$\{rule\.label\}/);
 
   assert.match(builder, /compileSideHustleCombinationKnowledge/);
   assert.match(builder, /combinationKnowledge\.promptBlock/);
