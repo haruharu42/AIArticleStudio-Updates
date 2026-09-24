@@ -319,9 +319,11 @@ test("AI proposal handoff only pre-fills a Fresh review request and does not byp
   ]);
 
   assert.match(panel, /adminRequestKnowledgeRefresh\(client, "fresh"\)/);
-  assert.match(panel, /preparedAutomationCandidateId/);\n  assert.match(panel, /"converted"/);
+  assert.match(panel, /preparedAutomationCandidateId/);
+  assert.match(panel, /"converted"/);
   assert.match(panel, /setBundleText\(JSON\.stringify\(bundle, null, 2\)\)/);
-  assert.match(panel, /setDiffPreview\(null\)/);\n  assert.match(panel, /adminPublishKnowledgeRefreshBundle[\s\S]*preparedAutomationCandidateId[\s\S]*"converted"/);
+  assert.match(panel, /setDiffPreview\(null\)/);
+  assert.match(panel, /adminPublishKnowledgeRefreshBundle[\s\S]*preparedAutomationCandidateId[\s\S]*"converted"/);
   assert.match(panel, /公開に成功した場合だけ処理済みにします/);
   assert.match(panel, /disabled=\{busy \|\| !diffPreview\}/);
   assert.match(client, /proposalItemType === "knowledge"/);
