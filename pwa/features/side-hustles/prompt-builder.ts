@@ -76,6 +76,7 @@ export function buildSideHustlePrompt(
     subgenre: definition.title,
     audience: resolved.buyer_stage ?? resolved.reader_stage ?? resolved.target ?? resolved.buyer_level ?? "",
     purpose: resolved.objective ?? resolved.goal ?? resolved.decision ?? resolved.outcome ?? resolved.video_goal ?? "",
+    scenarioText: Object.values(resolved).join(" "),
   });
 
   const provider = draft.selectedAi as AiProvider;
