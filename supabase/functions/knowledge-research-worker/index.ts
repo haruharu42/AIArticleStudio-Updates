@@ -68,6 +68,296 @@ const taskTerms: Record<string,string[]> = {
   sidejob_planning:["side job","work","tax","hours","employment","副業","税","労働","就業"]
 };
 
+const allowedTasks = new Set([
+  "title","article","image","social","promotion",
+  "sidejob_content","sidejob_sns","sidejob_video","sidejob_affiliate","sidejob_resale",
+  "sidejob_crowdsourcing","sidejob_skill_sales","sidejob_digital_product","sidejob_outreach",
+  "sidejob_research","sidejob_efficiency","sidejob_planning"
+]);
+const allowedPromptTasks = new Set(["all", ...allowedTasks]);
+const allowedKnowledgeKinds = new Set(["age","genre","subgenre","publication","task","combination"]);
+const allowedProviders = new Set(["all","chatgpt","claude","gemini"]);
+const allowedPlans = new Set(["all","free","paid"]);
+const allowedDecisions = new Set(["no_change","new","update","recheck","retire"]);
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function cleanText(value: unknown, max = 1000): string {
+  return typeof value === "string" ? value.trim().slice(0,max) : "";
+}
+
+function cleanStringArray(value: unknown, maxItems = 20, maxLength = 500): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim().slice(0,maxLength))
+    .filter(Boolean))].slice(0,maxItems);
+}
+
+function extractResponseText(data: any): string {
+  if (typeof data?.output_text === "string" && data.output_text.trim()) return data.output_text.trim();
+  const parts: string[] = [];
+  for (const item of Array.isArray(data?.output) ? data.output : []) {
+    if (item?.type !== "message") continue;
+    for (const content of Array.isArray(item?.content) ? item.content : []) {
+      if (content?.type === "output_text" && typeof content?.text === "string") parts.push(content.text);
+    }
+  }
+  return parts.join("\n").trim();
+}
+
+function aiSystemPrompt(): string {
+  return [
+    "You are the AI Action Studio Knowledge candidate editor.",
+    "Use only the supplied official-source excerpt/current payload. Do not invent facts or URLs.",
+    "Return one JSON object only.",
+    "Schema: {decision, item_type, reason, verified_source_urls, proposed_payload}.",
+    "decision is one of no_change,new,update,recheck,retire.",
+    "item_type is knowledge, prompt, or null.",
+    "For no_change/recheck/retire proposed_payload must be null.",
+    "For a new Knowledge/Prompt key, key must begin with auto:.",
+    "For an update, preserve the existing key exactly.",
+    "Knowledge payload fields: key,kind,label,parent_label,aliases,guidance,deliverables,cautions,tasks,priority,source_urls,source_summary.",
+    "Prompt payload fields: key,provider,plan,task,rules,priority,source_urls,source_summary.",
+    "Do not make outcome guarantees, fabricate user experience, or freeze volatile prices/rankings as universal rules.",
+    "Prefer no_change when the excerpt does not prove a reusable material change."
+  ].join("\n");
+}
+
+function aiUserPrompt(candidate: any): string {
+  return [
+    "detected_action: " + candidate.candidate_action,
+    "matched_tasks: " + JSON.stringify(candidate.matched_tasks ?? []),
+    "official_source_url: " + candidate.source_url,
+    "source_title: " + (candidate.source_title ?? ""),
+    "source_http_status: " + String(candidate.source_http_status ?? ""),
+    "detection_reason: " + (candidate.reason ?? ""),
+    "official_source_excerpt:\n" + (candidate.source_excerpt ?? ""),
+    "current_payload:\n" + JSON.stringify(candidate.current_payload ?? null),
+    "",
+    "Decide whether the official source proves a reusable Knowledge/Prompt change. Return JSON only."
+  ].join("\n");
+}
+
+async function callOpenAiJson(apiKey: string, model: string, candidate: any): Promise<Record<string, unknown>> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(),45000);
+  try {
+    const res = await fetch("https://api.openai.com/v1/responses",{
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        "authorization":"Bearer " + apiKey
+      },
+      body:JSON.stringify({
+        model,
+        input:[
+          { role:"system", content:aiSystemPrompt() },
+          { role:"user", content:aiUserPrompt(candidate) }
+        ],
+        text:{ format:{ type:"json_object" } },
+        store:false,
+        max_output_tokens:2500
+      }),
+      signal:controller.signal
+    });
+    if (!res.ok) {
+      const body = (await res.text()).slice(0,800);
+      throw new Error("OpenAI Responses API " + res.status + ": " + body);
+    }
+    const data = await res.json();
+    const text = extractResponseText(data);
+    if (!text) throw new Error("OpenAI response did not contain output_text.");
+    const parsed = JSON.parse(text);
+    const record = asRecord(parsed);
+    if (!record) throw new Error("OpenAI response JSON must be an object.");
+    return record;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function allowedSourceUrls(candidate: any): Set<string> {
+  const urls = new Set<string>();
+  if (typeof candidate.source_url === "string" && candidate.source_url.startsWith("https://")) urls.add(candidate.source_url);
+  const payload = asRecord(candidate.current_payload);
+  for (const url of cleanStringArray(payload?.source_urls,20,2048)) {
+    if (url.startsWith("https://")) urls.add(url);
+  }
+  return urls;
+}
+
+function sanitizeAiProposal(candidate: any, raw: Record<string, unknown>) {
+  const decisionRaw = cleanText(raw.decision,32);
+  const decision = allowedDecisions.has(decisionRaw) ? decisionRaw : "recheck";
+  const reason = cleanText(raw.reason,1800) || "AI analysis did not provide a usable reason.";
+  const allowedUrls = allowedSourceUrls(candidate);
+  const verified = cleanStringArray(raw.verified_source_urls,20,2048).filter((url) => allowedUrls.has(url));
+  if (allowedUrls.has(candidate.source_url) && !verified.includes(candidate.source_url)) verified.unshift(candidate.source_url);
+
+  if (decision === "no_change" || decision === "recheck" || decision === "retire") {
+    return { decision, itemType:null, reason, verifiedSourceUrls:verified, proposedPayload:null };
+  }
+
+  const proposed = asRecord(raw.proposed_payload);
+  if (!proposed) throw new Error("AI proposed_payload is required for new/update.");
+  const requestedType = cleanText(raw.item_type,20);
+  const itemType = candidate.existing_item_type === "knowledge" || candidate.existing_item_type === "prompt"
+    ? candidate.existing_item_type
+    : requestedType;
+  if (itemType !== "knowledge" && itemType !== "prompt") throw new Error("AI item_type must be knowledge or prompt.");
+
+  const existingKey = cleanText(candidate.existing_item_key,180);
+  const rawKey = cleanText(proposed.key,180);
+  const key = decision === "update" && existingKey ? existingKey : rawKey;
+  if (!key || !key.startsWith("auto:")) throw new Error("AI proposal key must start with auto:.");
+  if (decision === "update" && existingKey && key !== existingKey) throw new Error("AI update changed the existing key.");
+
+  if (itemType === "knowledge") {
+    const kind = cleanText(proposed.kind,32);
+    if (!allowedKnowledgeKinds.has(kind)) throw new Error("AI Knowledge kind is invalid.");
+    let tasks = cleanStringArray(proposed.tasks,20,64).filter((task) => allowedTasks.has(task));
+    const matched = cleanStringArray(candidate.matched_tasks,20,64).filter((task) => allowedTasks.has(task));
+    if (matched.length) tasks = tasks.filter((task) => matched.includes(task));
+    if (!tasks.length && matched.length) tasks = matched;
+    if (!tasks.length) throw new Error("AI Knowledge proposal has no valid task.");
+    const guidance = cleanStringArray(proposed.guidance,20,1000);
+    if (!guidance.length) throw new Error("AI Knowledge proposal has no guidance.");
+    return {
+      decision,itemType,reason,verifiedSourceUrls:verified,
+      proposedPayload:{
+        key,
+        kind,
+        label:cleanText(proposed.label,120) || candidate.source_title || key,
+        parent_label:cleanText(proposed.parent_label,120),
+        aliases:cleanStringArray(proposed.aliases,20,120),
+        guidance,
+        deliverables:cleanStringArray(proposed.deliverables,20,600),
+        cautions:cleanStringArray(proposed.cautions,20,600),
+        tasks,
+        priority:Math.max(0,Math.min(100,Number(proposed.priority ?? 70) || 70)),
+        source_urls:[...allowedUrls].slice(0,20),
+        source_summary:cleanText(proposed.source_summary,1000) || reason
+      }
+    };
+  }
+
+  const provider = cleanText(proposed.provider,32);
+  const plan = cleanText(proposed.plan,32);
+  const task = cleanText(proposed.task,64);
+  if (!allowedProviders.has(provider)) throw new Error("AI Prompt provider is invalid.");
+  if (!allowedPlans.has(plan)) throw new Error("AI Prompt plan is invalid.");
+  if (!allowedPromptTasks.has(task)) throw new Error("AI Prompt task is invalid.");
+  const rules = cleanStringArray(proposed.rules,20,1000);
+  if (!rules.length) throw new Error("AI Prompt proposal has no rules.");
+  return {
+    decision,itemType,reason,verifiedSourceUrls:verified,
+    proposedPayload:{
+      key,provider,plan,task,rules,
+      priority:Math.max(0,Math.min(100,Number(proposed.priority ?? 70) || 70)),
+      source_urls:[...allowedUrls].slice(0,20),
+      source_summary:cleanText(proposed.source_summary,1000) || reason
+    }
+  };
+}
+
+async function enrichCandidate(candidate: any, config: any): Promise<{ analyzed:number; failed:number }> {
+  const now = new Date().toISOString();
+  try {
+    if (candidate.candidate_action === "retire" || candidate.candidate_action === "recheck") {
+      await db.from("knowledge_automation_candidates").update({
+        analysis_status:"completed",
+        analysis_decision:candidate.candidate_action,
+        proposal_item_type:null,
+        proposed_payload:null,
+        analysis_provider:"deterministic",
+        analysis_model:"",
+        analysis_reason:candidate.reason ?? "",
+        analysis_error:"",
+        verified_source_urls:candidate.source_url ? [candidate.source_url] : [],
+        analyzed_at:now
+      }).eq("id",candidate.id);
+      return { analyzed:1,failed:0 };
+    }
+
+    if (!candidate.source_excerpt || String(candidate.source_excerpt).trim().length < 80) {
+      await db.from("knowledge_automation_candidates").update({
+        analysis_status:"completed",
+        analysis_decision:"recheck",
+        proposal_item_type:null,
+        proposed_payload:null,
+        analysis_provider:"deterministic",
+        analysis_model:"",
+        analysis_reason:"公式ソース本文が十分に取得できていないため、AI提案は作成せず再確認に回しました。",
+        analysis_error:"",
+        verified_source_urls:candidate.source_url ? [candidate.source_url] : [],
+        analyzed_at:now
+      }).eq("id",candidate.id);
+      return { analyzed:1,failed:0 };
+    }
+
+    const raw = await callOpenAiJson(config.api_key,config.model,candidate);
+    const clean = sanitizeAiProposal(candidate,raw);
+    const { error } = await db.from("knowledge_automation_candidates").update({
+      analysis_status:"completed",
+      analysis_decision:clean.decision,
+      proposal_item_type:clean.itemType,
+      proposed_payload:clean.proposedPayload,
+      analysis_provider:"openai",
+      analysis_model:config.model,
+      analysis_reason:clean.reason,
+      analysis_error:"",
+      verified_source_urls:clean.verifiedSourceUrls,
+      analyzed_at:now
+    }).eq("id",candidate.id);
+    if (error) throw error;
+    return { analyzed:1,failed:0 };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await db.from("knowledge_automation_candidates").update({
+      analysis_status:"failed",
+      analysis_provider:"openai",
+      analysis_model:config.model ?? "",
+      analysis_error:message.slice(0,1800),
+      analyzed_at:now
+    }).eq("id",candidate.id);
+    return { analyzed:0,failed:1 };
+  }
+}
+
+async function enrichPendingCandidates() {
+  const configResult = await db.rpc("get_knowledge_automation_worker_ai_config");
+  if (configResult.error) throw new Error("AI enrichment config failed: " + configResult.error.message);
+  const config = asRecord(configResult.data) ?? {};
+  if (config.enabled !== true || typeof config.api_key !== "string" || !config.api_key) {
+    return { enabled:false,analyzed:0,failed:0 };
+  }
+  if (config.provider !== "openai") throw new Error("Unsupported AI enrichment provider.");
+  const model = cleanText(config.model,120);
+  if (!model) throw new Error("AI enrichment model is not configured.");
+  const limit = Math.max(1,Math.min(20,Number(config.max_candidates_per_run ?? 6) || 6));
+  const pending = await db.from("knowledge_automation_candidates")
+    .select("id,candidate_action,existing_item_type,existing_item_key,matched_tasks,source_url,source_title,source_excerpt,source_http_status,current_payload,reason,analysis_status,status")
+    .eq("status","pending")
+    .eq("analysis_status","pending")
+    .order("detected_at",{ascending:true})
+    .limit(limit);
+  if (pending.error) throw pending.error;
+
+  let analyzed = 0;
+  let failed = 0;
+  const safeConfig = { provider:"openai",model,api_key:config.api_key };
+  for (const item of pending.data ?? []) {
+    const result = await enrichCandidate(item,safeConfig);
+    analyzed += result.analyzed;
+    failed += result.failed;
+  }
+  return { enabled:true,analyzed,failed };
+}
+
+
 function discoverLinks(raw: string, baseUrl: string, tasks: string[], limit: number) {
   if (limit <= 0) return [] as Array<{url:string;label:string}>;
   let base: URL;
@@ -308,13 +598,26 @@ Deno.serve(async (req) => {
       metrics.push(...await Promise.all(sources.slice(i,i+4).map((source) => inspectSource(source,settings,runId!,items,known))));
     }
     const totals = metrics.reduce((a,v) => ({ checked:a.checked+v.checked,candidates:a.candidates+v.candidates,changed:a.changed+v.changed,discovered:a.discovered+v.discovered }),{checked:0,candidates:0,changed:0,discovered:0});
+    let ai = { enabled:false,analyzed:0,failed:0 };
+    try {
+      ai = await enrichPendingCandidates();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      ai = { enabled:true,analyzed:0,failed:1 };
+      await db.from("knowledge_automation_settings").update({ last_error:("AI enrichment: " + message).slice(0,2000),updated_at:new Date().toISOString() }).eq("id",1);
+    }
     await db.from("knowledge_automation_runs").update({
       status:"completed",completed_at:new Date().toISOString(),sources_checked:totals.checked,candidates_created:totals.candidates,
       changed_sources:totals.changed,discovered_links:totals.discovered,
-      summary:{ tracked_catalog_items:items.length,sources_selected:sources.length,...totals }
+      candidates_analyzed:ai.analyzed,analysis_failures:ai.failed,
+      summary:{ tracked_catalog_items:items.length,sources_selected:sources.length,...totals,ai_enrichment:ai }
     }).eq("id",runId);
-    await db.from("knowledge_automation_settings").update({ last_success_at:new Date().toISOString(),last_error:"",updated_at:new Date().toISOString() }).eq("id",1);
-    return response({ ok:true,run_id:runId,...totals });
+    await db.from("knowledge_automation_settings").update({
+      last_success_at:new Date().toISOString(),
+      ...(ai.failed === 0 ? { last_error:"" } : {}),
+      updated_at:new Date().toISOString()
+    }).eq("id",1);
+    return response({ ok:true,run_id:runId,...totals,ai_enrichment:ai });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (runId) await db.from("knowledge_automation_runs").update({ status:"failed",completed_at:new Date().toISOString(),error_message:message.slice(0,2000) }).eq("id",runId);
