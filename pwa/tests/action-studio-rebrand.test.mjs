@@ -93,7 +93,8 @@ test("home keeps quick actions while side-hustle discovery lives in the genre-gr
   assert.match(home, /<ActionStudioQuickActions showAdmin=\{activeAdmin\} \/>/);
   assert.ok(home.indexOf('className="reference-creator-card"') < home.indexOf("記事ライブラリ / noteマガジン"));
   assert.ok(home.indexOf("記事ライブラリ / noteマガジン") < home.indexOf("<ActionStudioHomeHero />"));
-  assert.ok(home.indexOf("<ActionStudioHomeHero />") < home.indexOf("<ActionStudioQuickActions"));
+  assert.ok(home.indexOf("<ActionStudioHomeHero />") < home.indexOf("週間ランキング"));
+  assert.ok(home.indexOf("週間ランキング") < home.indexOf("<ActionStudioQuickActions"));
   assert.match(layout, /phase48-action-studio\.css/);
   assert.match(layout, /phase53-crystal-ui\.css/);
   assert.match(layout, /className="aas-crystal-theme"/);
