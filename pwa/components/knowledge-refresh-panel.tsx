@@ -152,6 +152,7 @@ export function KnowledgeRefreshPanel() {
   const [aiModel, setAiModel] = useState("gpt-5.6");
   const [aiMaxCandidates, setAiMaxCandidates] = useState(6);
   const [aiApiKey, setAiApiKey] = useState("");
+  const [preparedAutomationCandidateId, setPreparedAutomationCandidateId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [bundleText, setBundleText] = useState("");
   const [diffPreview, setDiffPreview] = useState<KnowledgeRefreshDiff | null>(null);
@@ -267,18 +268,14 @@ export function KnowledgeRefreshPanel() {
     try {
       const client = getSupabaseClient();
       const requestId = await adminRequestKnowledgeRefresh(client, "fresh");
-      await adminReviewKnowledgeAutomationCandidate(
-        client,
-        candidate.id,
-        "converted",
-        "AI自動提案をFresh差分レビューへ変換。正式公開は差分確認と管理者確認後のみ。",
-      );
       setSelectedId(requestId);
+      setPreparedAutomationCandidateId(candidate.id);
       setBundleText(JSON.stringify(bundle, null, 2));
       setDiffPreview(null);
       await reload();
       setSelectedId(requestId);
-      setMessage("AI提案をFresh差分レビューへ取り込みました。まだ公開されていません。「変更点を確認」から内容を確認してください。");
+      setPreparedAutomationCandidateId(candidate.id);
+      setMessage("AI提案をFresh差分レビューへ取り込みました。候補状態もまだ確定していません。「変更点を確認」後、公開に成功した場合だけ処理済みにします。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "AI提案をFresh差分レビューへ取り込めませんでした。");
     } finally {
@@ -342,6 +339,7 @@ export function KnowledgeRefreshPanel() {
     try {
       const id = await adminRequestKnowledgeRefresh(getSupabaseClient(), channel);
       setSelectedId(id);
+      setPreparedAutomationCandidateId(null);
       await reload();
       setMessage(channel === "fresh"
         ? "Fresh（先行確認版）の更新をキューへ追加しました。"
@@ -412,7 +410,17 @@ export function KnowledgeRefreshPanel() {
     setMessage("");
     try {
       const bundle = parseKnowledgeRefreshBundle(bundleText);
-      const result = await adminPublishKnowledgeRefreshBundle(getSupabaseClient(), selected.id, bundle);
+      const client = getSupabaseClient();
+      const result = await adminPublishKnowledgeRefreshBundle(client, selected.id, bundle);
+      if (preparedAutomationCandidateId !== null) {
+        await adminReviewKnowledgeAutomationCandidate(
+          client,
+          preparedAutomationCandidateId,
+          "converted",
+          "Fresh差分確認と管理者公開が完了したため、AI自動提案候補を処理済みに変更。",
+        );
+      }
+      setPreparedAutomationCandidateId(null);
       setBundleText("");
       setDiffPreview(null);
       await reload();
@@ -684,6 +692,7 @@ export function KnowledgeRefreshPanel() {
             <article key={request.id} className={selectedId === request.id ? "active" : ""}>
               <button type="button" className="knowledge-refresh-select" onClick={() => {
                 setSelectedId(request.id);
+                setPreparedAutomationCandidateId(null);
                 setDiffPreview(null);
                 setBundleText("");
               }}>
