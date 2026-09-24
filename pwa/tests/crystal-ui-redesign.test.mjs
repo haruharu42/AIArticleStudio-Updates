@@ -37,7 +37,7 @@ test("Axia and Rumo hero is bundled locally and used by the home hero", async ()
   assert.match(css, /url\("\/aas-axia-rumo-hero\.svg"\)/);
   assert.match(hub, /アクシア × ルーモ/);
   assert.match(hub, /今日はAIで何を進めますか？/);
-  assert.match(layout, /phase53-crystal-character-ui\.css/);
+  assert.match(layout, /phase53-crystal-ui\.css/);
   assert.match(layout, /className="aas-crystal-theme"/);
 });
 
@@ -61,19 +61,16 @@ test("crystal UI restyles dropdowns text inputs textareas cards and navigation",
   const css = await read("app/phase53-crystal-ui.css");
 
   for (const token of [
-    ".reference-home select",
-    ".reference-home input",
-    ".reference-home textarea",
-    ".reference-create-shell select",
-    ".side-hustle-wizard-card select",
-    ".admin-page select",
-    ".library-dashboard select",
-    ".action-prompt-library-page select",
+    "main select",
+    "main input",
+    "main textarea",
     ".primary-action",
     ".tool-card",
+    ".side-hustle-wizard-card",
     ".admin-panel",
     ".aas-reference-header",
     ".aas-reference-bottom-nav",
+    ".reference-home > .aas-reference-desktop-nav",
   ]) {
     assert.match(css, new RegExp(escapeRegExp(token)));
   }
