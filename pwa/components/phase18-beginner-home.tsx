@@ -23,6 +23,16 @@ import {
 import { listCloudArticles, type ArticleStatus, type ArticleSummary } from "@/lib/phase7-articles";
 import { getSupportNotificationSummary } from "@/lib/support-center";
 import {
+  HOME_WIDGET_PREFERENCE_EVENT,
+  defaultHomeWidgetPreferences,
+  loadHomeWidgetPreferences,
+  readLocalHomeWidgetLayout,
+  writeLocalHomeWidgetLayout,
+  type HomeWidgetDevice,
+  type HomeWidgetKey,
+  type HomeWidgetLayoutItem,
+} from "@/lib/home-widget-preferences";
+import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
   GENRE_OPTIONS,
@@ -116,6 +126,26 @@ function BeginnerAccessFallback({ unavailable = false }: { unavailable?: boolean
           </section>
         ) : null}
       </main>
+    </div>
+  );
+}
+
+function HomeWidgetSlot({
+  item,
+  index,
+  device,
+  children,
+}: {
+  item: HomeWidgetLayoutItem;
+  index: number;
+  device: HomeWidgetDevice;
+  children: ReactNode;
+}) {
+  if (!item.visible) return null;
+  const size = device === "desktop" && item.size === "half" ? "half" : "wide";
+  return (
+    <div className={`home-widget-slot widget-${size}`} style={{ order: index }}>
+      {children}
     </div>
   );
 }
