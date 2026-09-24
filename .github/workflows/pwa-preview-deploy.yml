@@ -199,6 +199,29 @@ jobs:
           echo "config=$config" >> "$GITHUB_OUTPUT"
           echo 'Generated Wrangler config found.'
 
+      - name: Inject safe public Supabase Worker vars
+        shell: bash
+        env:
+          CONFIG_PATH: ${{ steps.wrangler-config.outputs.config }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const configPath = process.env.CONFIG_PATH;
+          const url = process.env.NEXT_PUBLIC_AAS_SUPABASE_URL ?? '';
+          const key = process.env.NEXT_PUBLIC_AAS_SUPABASE_PUBLISHABLE_KEY ?? '';
+          if (!/^https:\/\/[^\s]+$/.test(url)) throw new Error('Supabase public URL is invalid');
+          if (!key || /sb_secret_|service[_-]?role/i.test(key)) throw new Error('Supabase public key is invalid');
+          const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+          config.vars = {
+            ...(config.vars ?? {}),
+            AAS_SUPABASE_URL: url,
+            AAS_SUPABASE_PUBLISHABLE_KEY: key,
+          };
+          fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
+          console.log('Safe public Supabase Worker vars injected.');
+          NODE
+
       - name: Verify preview-only Cloudflare contract
         shell: bash
         env:
