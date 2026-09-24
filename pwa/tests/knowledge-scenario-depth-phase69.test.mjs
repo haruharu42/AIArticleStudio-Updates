@@ -43,11 +43,12 @@ test("Phase 69 derives scenario tags from existing side-hustle inputs", async ()
   assert.match(builder, /experienceScenarioTags/);
   assert.match(builder, /"experience:beginner"/);
   assert.match(builder, /"experience:experienced"/);
-  assert.match(builder, /scenarioTags: experienceScenarioTags\(resolved\.experience_level\)/);
+  assert.match(builder, /scenarioTags: experienceScenarioTags\(resolved\.experience_level \?\? resolved\.experience\)/);
   assert.match(catalog, /"experience_level"/);
   assert.match(catalog, /"指定しない"/);
   assert.match(catalog, /"未経験・これから始める"/);
   assert.match(catalog, /"経験者・継続中"/);
+  assert.match(catalog, /field\.key === "experience"/);
   assert.match(engine, /mode", "sales"/);
   assert.match(engine, /mode", "acquisition"/);
   assert.match(engine, /mode", "production"/);
