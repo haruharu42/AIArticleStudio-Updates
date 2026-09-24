@@ -33,7 +33,8 @@ test("Knowledge compiler bounds cloud rules and prompt sections before catalog g
   assert.match(engine, /MAX_CAUTION_LINES = 18/);
   assert.match(engine, /cloudRuleSpecificity/);
   assert.match(engine, /matchesCloudRule/);
-  assert.match(engine, /\.slice\(0, MAX_CLOUD_RULES_PER_COMPILE\)/);
+  assert.match(engine, /Math\.min\(MAX_CLOUD_RULES_PER_COMPILE/);
+  assert.match(engine, /selected: index < safeLimit/);
   assert.match(engine, /\.slice\(0, MAX_GUIDANCE_LINES\)/);
   assert.match(engine, /\.slice\(0, MAX_DELIVERABLE_LINES\)/);
   assert.match(engine, /\.slice\(0, MAX_CAUTION_LINES\)/);

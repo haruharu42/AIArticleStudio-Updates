@@ -996,3 +996,226 @@
   color: #a75446;
   font-weight: 900;
 }
+
+
+/* Phase 59: explainable Knowledge compiler preview. */
+.knowledge-compiler-preview {
+  display: grid;
+  gap: 14px;
+}
+
+.knowledge-compiler-preview .knowledge-panel-head > strong {
+  display: grid;
+  place-items: center;
+  min-width: 74px;
+  min-height: 44px;
+  border: 1px solid #a9ccee;
+  border-radius: 14px;
+  background: #eef7ff;
+  color: #24689f;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.knowledge-compiler-preview .knowledge-panel-head p:last-child {
+  margin: 5px 0 0;
+  color: #71859d;
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+.knowledge-compiler-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, .8fr);
+  gap: 12px;
+}
+
+.knowledge-compiler-controls > label,
+.knowledge-compiler-controls > div {
+  display: grid;
+  gap: 6px;
+}
+
+.knowledge-compiler-controls span {
+  color: #607b98;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.knowledge-compiler-controls select {
+  min-height: 42px;
+  width: 100%;
+  border: 1px solid #cadbea;
+  border-radius: 11px;
+  background: #fbfdff;
+  color: #264b70;
+  padding: 9px 11px;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.knowledge-channel-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.knowledge-channel-switch button {
+  min-height: 42px;
+  border: 1px solid #cadbea;
+  border-radius: 11px;
+  background: #fff;
+  color: #55718f;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.knowledge-channel-switch button.active {
+  border-color: #82b6e5;
+  background: #edf6ff;
+  color: #2168a3;
+}
+
+.knowledge-compiler-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  align-items: center;
+  border: 1px solid #d8e5f0;
+  border-radius: 11px;
+  background: #f8fbff;
+  padding: 10px 12px;
+}
+
+.knowledge-compiler-note strong {
+  color: #274d72;
+  font-size: 10px;
+}
+
+.knowledge-compiler-note span {
+  border-radius: 999px;
+  background: #fff;
+  color: #637d98;
+  padding: 5px 8px;
+  font-size: 8px;
+  font-weight: 850;
+}
+
+.knowledge-compiler-note span.waiting {
+  background: #fff3dc;
+  color: #9a681e;
+}
+
+.knowledge-compiler-selected {
+  display: grid;
+  gap: 8px;
+}
+
+.knowledge-compiler-selected > article {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid #cfe0ee;
+  border-radius: 13px;
+  background: #fbfdff;
+  padding: 11px;
+}
+
+.knowledge-compiler-rank {
+  display: grid;
+  place-items: center;
+  min-height: 38px;
+  border-radius: 10px;
+  background: #e7f3ff;
+  color: #2169a6;
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.knowledge-compiler-rule {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.knowledge-compiler-rule > span {
+  color: #4d7298;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.knowledge-compiler-rule > strong {
+  overflow-wrap: anywhere;
+  color: #23486b;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.knowledge-compiler-rule > small {
+  color: #8294a7;
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.knowledge-compiler-skipped {
+  border-top: 1px solid #dce6ef;
+  padding-top: 10px;
+}
+
+.knowledge-compiler-skipped summary {
+  color: #5a7591;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.knowledge-compiler-skipped > div {
+  display: grid;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.knowledge-compiler-skipped article {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  justify-content: space-between;
+  border-radius: 9px;
+  background: #f6f8fb;
+  padding: 8px 10px;
+}
+
+.knowledge-compiler-skipped strong {
+  color: #4a6480;
+  font-size: 8px;
+}
+
+.knowledge-compiler-skipped small {
+  color: #8798aa;
+  font-size: 8px;
+}
+
+@media (max-width: 720px) {
+  .knowledge-compiler-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .knowledge-compiler-selected > article {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .knowledge-compiler-rank {
+    min-height: 34px;
+    font-size: 9px;
+  }
+
+  .knowledge-compiler-skipped article {
+    display: grid;
+  }
+}

@@ -10,6 +10,7 @@ import { KnowledgeRefreshPanel } from "@/components/knowledge-refresh-panel";
 import {
   adminListKnowledgeCandidates,
   adminReviewKnowledgeCandidate,
+  parseKnowledgeCatalogRow,
   type KnowledgeCandidate,
 } from "@/lib/knowledge-catalog";
 import {
@@ -19,6 +20,7 @@ import {
 import {
   KNOWLEDGE_TASKS,
   KNOWLEDGE_TASK_LABELS,
+  previewCloudKnowledgeSelection,
   type KnowledgeTask,
 } from "@/lib/knowledge-engine";
 
@@ -32,6 +34,10 @@ type CatalogRow = {
   priority: number;
   release_channel: string;
   catalog_version: number;
+  aliases: string[];
+  guidance: string[];
+  deliverables: string[];
+  cautions: string[];
   source_urls: string[];
   source_summary: string | null;
   source_checked_at: string | null;
@@ -81,13 +87,16 @@ export function AdminKnowledgePage() {
   const [editor, setEditor] = useState<Editor>({ canonicalLabel: "", guidance: "", deliverables: "", cautions: "", tasks: [...KNOWLEDGE_TASKS], priority: 70, notes: "" });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [compilerTask, setCompilerTask] = useState<KnowledgeTask>("sidejob_content");
+  const [compilerChannel, setCompilerChannel] = useState<"fresh" | "stable">("fresh");
+  const [compilerReferenceTime, setCompilerReferenceTime] = useState(0);
 
   const reload = async () => {
     if (!client) throw new Error("AASへ接続できませんでした。");
     const [nextCandidates, catalogResult, nextHealth] = await Promise.all([
       adminListKnowledgeCandidates(client, null),
       client.from("knowledge_catalog")
-        .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,source_urls,source_summary,source_checked_at,stable_available_at,tasks,updated_at")
+        .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,aliases,guidance,deliverables,cautions,source_urls,source_summary,source_checked_at,stable_available_at,tasks,updated_at")
         .order("updated_at", { ascending: false })
         .limit(300),
       adminGetKnowledgeProductionHealth(client),
@@ -96,6 +105,7 @@ export function AdminKnowledgePage() {
     setCandidates(nextCandidates);
     setCatalog((catalogResult.data ?? []) as CatalogRow[]);
     setHealth(nextHealth);
+    setCompilerReferenceTime(Date.now());
   };
 
   const isAdmin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
@@ -108,7 +118,7 @@ export function AdminKnowledgePage() {
         const [nextCandidates, catalogResult, nextHealth] = await Promise.all([
           adminListKnowledgeCandidates(client, null),
           client.from("knowledge_catalog")
-            .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,source_urls,source_summary,source_checked_at,stable_available_at,tasks,updated_at")
+            .select("key,kind,label,parent_label,status,priority,release_channel,catalog_version,aliases,guidance,deliverables,cautions,source_urls,source_summary,source_checked_at,stable_available_at,tasks,updated_at")
             .order("updated_at", { ascending: false })
             .limit(300),
           adminGetKnowledgeProductionHealth(client),
@@ -118,6 +128,7 @@ export function AdminKnowledgePage() {
         setCandidates(nextCandidates);
         setCatalog((catalogResult.data ?? []) as CatalogRow[]);
         setHealth(nextHealth);
+        setCompilerReferenceTime(Date.now());
       } catch (error) {
         if (active) setMessage(error instanceof Error ? error.message : "ナレッジ管理を初期化できませんでした。");
       }
@@ -166,6 +177,28 @@ export function AdminKnowledgePage() {
   const standardSidejobCount = sidejobCoverage.filter((item) => item.count >= KNOWLEDGE_STANDARD_DEPTH).length;
   const deepSidejobCount = sidejobCoverage.filter((item) => item.count >= KNOWLEDGE_DEEP_DEPTH).length;
   const staleSidejobCount = sidejobCoverage.filter((item) => item.stale).length;
+
+  const compilerPreview = useMemo(() => {
+    const rules = catalog
+      .filter((item) => item.status === "active")
+      .filter((item) => compilerChannel === "fresh"
+        || item.release_channel === "both"
+        || new Date(item.stable_available_at).getTime() <= compilerReferenceTime)
+      .map((item) => parseKnowledgeCatalogRow(item as unknown as Record<string, unknown>))
+      .filter((rule): rule is NonNullable<typeof rule> => Boolean(rule));
+
+    return previewCloudKnowledgeSelection(rules, { task: compilerTask });
+  }, [catalog, compilerChannel, compilerReferenceTime, compilerTask]);
+
+  const compilerStableWaiting = useMemo(() => {
+    if (compilerChannel !== "stable") return 0;
+    return catalog.filter((item) =>
+      item.status === "active"
+      && item.tasks.includes(compilerTask)
+      && item.release_channel === "fresh_first"
+      && new Date(item.stable_available_at).getTime() > compilerReferenceTime
+    ).length;
+  }, [catalog, compilerChannel, compilerReferenceTime, compilerTask]);
 
   const open = (candidate: KnowledgeCandidate) => {
     setSelected(candidate);
@@ -270,6 +303,75 @@ export function AdminKnowledgePage() {
             </article>
           ))}
         </div>
+      </section>
+
+      <section className="knowledge-admin-panel knowledge-compiler-preview">
+        <div className="knowledge-panel-head">
+          <div>
+            <p className="eyebrow">COMPILER PREVIEW</p>
+            <h2>実際に採用されるKnowledge</h2>
+            <p>本番Compilerと同じ選択関数で、最大5件のCloud Knowledgeがどの順番で採用されるか確認します。</p>
+          </div>
+          <strong>{compilerPreview.selected.length}/{compilerPreview.eligibleCount}</strong>
+        </div>
+
+        <div className="knowledge-compiler-controls">
+          <label>
+            <span>副業タスク</span>
+            <select value={compilerTask} onChange={(event) => setCompilerTask(event.target.value as KnowledgeTask)}>
+              {sidejobTasks.map((task) => <option key={task} value={task}>{KNOWLEDGE_TASK_LABELS[task]}</option>)}
+            </select>
+          </label>
+          <div>
+            <span>公開チャンネル</span>
+            <div className="knowledge-channel-switch">
+              <button type="button" className={compilerChannel === "fresh" ? "active" : ""} onClick={() => setCompilerChannel("fresh")}>Fresh</button>
+              <button type="button" className={compilerChannel === "stable" ? "active" : ""} onClick={() => setCompilerChannel("stable")}>Stable</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="knowledge-compiler-note">
+          <strong>{KNOWLEDGE_TASK_LABELS[compilerTask]}</strong>
+          <span>候補 {compilerPreview.eligibleCount}件 → 採用 {compilerPreview.selected.length}件 / 上限 {compilerPreview.limit}件</span>
+          {compilerStableWaiting > 0 && <span className="waiting">Stable待ち {compilerStableWaiting}件</span>}
+        </div>
+
+        {compilerPreview.selected.length === 0 ? (
+          <p className="knowledge-empty">この条件で採用可能なCloud Knowledgeはありません。</p>
+        ) : (
+          <div className="knowledge-compiler-selected">
+            {compilerPreview.selected.map((item) => (
+              <article key={item.rule.key}>
+                <div className="knowledge-compiler-rank">#{item.position}</div>
+                <div className="knowledge-compiler-rule">
+                  <span>{item.reason} · score {item.score} · priority {item.rule.priority}</span>
+                  <strong>{item.rule.label}</strong>
+                  <small>{item.rule.kind} · v{item.rule.catalogVersion ?? "-"} · 根拠確認 {formatDate(item.rule.sourceCheckedAt ?? null)}</small>
+                  {(item.rule.sourceUrls ?? []).length > 0 && (
+                    <div className="knowledge-source-links">
+                      {(item.rule.sourceUrls ?? []).map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">根拠を開く</a>)}
+                    </div>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {compilerPreview.skipped.length > 0 && (
+          <details className="knowledge-compiler-skipped">
+            <summary>採用枠から外れた候補 {compilerPreview.skipped.length}件</summary>
+            <div>
+              {compilerPreview.skipped.map((item) => (
+                <article key={item.rule.key}>
+                  <strong>{item.rule.label}</strong>
+                  <small>{item.reason} · score {item.score} · priority {item.rule.priority}</small>
+                </article>
+              ))}
+            </div>
+          </details>
+        )}
       </section>
 
       <KnowledgeRefreshPanel />
