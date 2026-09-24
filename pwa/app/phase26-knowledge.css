@@ -886,7 +886,7 @@
   padding: 12px;
 }
 
-.knowledge-coverage-grid article.covered {
+.knowledge-coverage-grid article.standard {
   border-color: #b7dcc9;
   background: linear-gradient(145deg, #fbfffd, #f1faf6);
 }
@@ -904,7 +904,7 @@
   font-weight: 950;
 }
 
-.knowledge-coverage-grid article.covered > span {
+.knowledge-coverage-grid article.standard > span {
   background: #e4f6ec;
   color: #28755a;
 }
@@ -942,4 +942,57 @@
     min-height: 38px;
     font-size: 12px;
   }
+}
+
+
+/* Phase 57: Knowledge depth and source freshness. */
+.knowledge-coverage-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.knowledge-coverage-summary span {
+  border: 1px solid #d5e3ef;
+  border-radius: 999px;
+  background: #f7fbff;
+  color: #55718f;
+  padding: 5px 9px;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.knowledge-coverage-summary span.warning {
+  border-color: #e7c38e;
+  background: #fff7e8;
+  color: #98651e;
+}
+
+.knowledge-coverage-grid article.deep {
+  border-color: #9bc7eb;
+  background: linear-gradient(145deg, #fbfdff, #eef7ff);
+}
+
+.knowledge-coverage-grid article.deep > span {
+  background: #e4f2ff;
+  color: #24689f;
+}
+
+.knowledge-coverage-grid article.basic {
+  border-color: #ead2a9;
+  background: linear-gradient(145deg, #fffefb, #fff9ef);
+}
+
+.knowledge-coverage-grid article.basic > span {
+  background: #fff0d5;
+  color: #98671f;
+}
+
+.knowledge-coverage-grid article.stale {
+  box-shadow: inset 0 0 0 1px #e8b5a9;
+}
+
+.knowledge-coverage-grid .stale-note {
+  color: #a75446;
+  font-weight: 900;
 }
