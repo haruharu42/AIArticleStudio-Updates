@@ -96,7 +96,7 @@ test("admin refresh UI requires sourced JSON review before publication", async (
   assert.match(client, /sidejob_resale/);
   assert.match(client, /sidejob_crowdsourcing/);
   assert.match(client, /admin_publish_knowledge_refresh_bundle/);
-  assert.doesNotMatch(`${panel}\n${client}`, /service[_-]?role|sb_secret_|api[_-]?key/i);
+  assert.doesNotMatch(`${panel}\n${client}`, /SUPABASE_SERVICE_ROLE_KEY|sb_secret_|service[_-]?role/i);
 });
 
 
@@ -243,4 +243,87 @@ test("automation approval is candidate review only and remains separate from pub
   assert.match(panel, /まだ正式Knowledgeには公開されていません/);
   assert.match(panel, /正式反映には従来のQuality Gate・差分確認・Fresh \/ Stable公開操作が必要/);
   assert.match(client, /decision: "approved" \| "rejected" \| "converted"/);
+});
+
+
+test("AI enrichment drafts Knowledge candidates but keeps final publication admin-gated", async () => {
+  const [migration, worker, panel, client, docs] = await Promise.all([
+    readRepo("supabase/migrations/20260924201026_knowledge_ai_enrichment_v1.sql"),
+    readRepo("supabase/functions/knowledge-research-worker/index.ts"),
+    readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("lib/knowledge-auto-update.ts"),
+    readRepo("docs/knowledge-web-automation.md"),
+  ]);
+
+  assert.match(migration, /ai_enrichment_enabled boolean not null default false/);
+  assert.match(migration, /aas_knowledge_openai_api_key/);
+  assert.match(migration, /vault\.create_secret/);
+  assert.match(migration, /vault\.update_secret/);
+  assert.match(migration, /get_knowledge_automation_worker_ai_config/);
+  assert.match(migration, /grant execute on function public\.get_knowledge_automation_worker_ai_config\(\) to service_role/);
+  assert.match(migration, /revoke all on function public\.get_knowledge_automation_worker_ai_config\(\) from public, anon, authenticated/);
+  assert.match(migration, /analysis_status/);
+  assert.match(migration, /proposed_payload/);
+  assert.match(migration, /admin_list_knowledge_automation_candidates_v2/);
+  assert.match(migration, /admin_retry_knowledge_automation_candidate_ai/);
+
+  assert.match(worker, /https:\/\/api\.openai\.com\/v1\/responses/);
+  assert.match(worker, /store:false/);
+  assert.match(worker, /text:\{ format:\{ type:"json_object" \} \}/);
+  assert.match(worker, /sanitizeAiProposal/);
+  assert.match(worker, /allowedTasks/);
+  assert.match(worker, /allowedKnowledgeKinds/);
+  assert.match(worker, /allowedSourceUrls/);
+  assert.match(worker, /analysis_status:"completed"/);
+  assert.match(worker, /analysis_status:"failed"/);
+  assert.match(worker, /get_knowledge_automation_worker_ai_config/);
+  assert.match(worker, /enrichPendingCandidates/);
+  assert.doesNotMatch(worker, /admin_publish_knowledge_refresh_bundle/);
+  assert.doesNotMatch(worker, /knowledge_catalog"\)\.insert|knowledge_catalog"\)\.update/);
+
+  assert.match(client, /admin_get_knowledge_automation_ai_config/);
+  assert.match(client, /admin_set_knowledge_automation_ai_config/);
+  assert.match(client, /admin_list_knowledge_automation_candidates_v2/);
+  assert.match(client, /buildKnowledgeAutomationCandidateBundle/);
+  assert.match(client, /analysisStatus !== "completed"/);
+
+  assert.match(panel, /AI候補JSON自動生成/);
+  assert.match(panel, /APIキー.*Vault設定済み/);
+  assert.match(panel, /type="password"/);
+  assert.match(panel, /Fresh差分へ取り込む/);
+  assert.match(panel, /まだ公開されていません/);
+  assert.match(panel, /変更点を確認/);
+  assert.match(panel, /adminSetKnowledgeAutomationAiConfig/);
+  assert.match(panel, /buildKnowledgeAutomationCandidateBundle/);
+
+  assert.match(docs, /AI output is treated as an untrusted draft/);
+  assert.match(docs, /does \*\*not\*\* run the publication RPC/);
+});
+
+test("AI enrichment can fail or be disabled without stopping official-source monitoring", async () => {
+  const worker = await readRepo("supabase/functions/knowledge-research-worker/index.ts");
+
+  assert.match(worker, /if \(config\.enabled !== true \|\| typeof config\.api_key !== "string" \|\| !config\.api_key\)/);
+  assert.match(worker, /return \{ enabled:false,analyzed:0,failed:0 \}/);
+  assert.match(worker, /try \{\s*ai = await enrichPendingCandidates\(\);/s);
+  assert.match(worker, /AI enrichment:/);
+  assert.match(worker, /status:"completed"/);
+  assert.match(worker, /candidates_analyzed:ai\.analyzed/);
+  assert.match(worker, /analysis_failures:ai\.failed/);
+});
+
+test("AI proposal handoff only pre-fills a Fresh review request and does not bypass diff confirmation", async () => {
+  const [panel, client] = await Promise.all([
+    readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("lib/knowledge-auto-update.ts"),
+  ]);
+
+  assert.match(panel, /adminRequestKnowledgeRefresh\(client, "fresh"\)/);
+  assert.match(panel, /"converted"/);
+  assert.match(panel, /setBundleText\(JSON\.stringify\(bundle, null, 2\)\)/);
+  assert.match(panel, /setDiffPreview\(null\)/);
+  assert.match(panel, /差分確認と管理者確認後のみ/);
+  assert.match(panel, /disabled=\{busy \|\| !diffPreview\}/);
+  assert.match(client, /proposalItemType === "knowledge"/);
+  assert.match(client, /proposalItemType === "prompt"/);
 });
