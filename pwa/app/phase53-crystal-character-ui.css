@@ -898,3 +898,69 @@ a.action-studio-card:hover {
     -webkit-line-clamp: 2;
   }
 }
+
+
+/* Full-route background and management surfaces */
+.creator-page,
+.admin-page,
+.side-hustle-wizard-page,
+.action-prompt-page {
+  min-height: 100dvh;
+  color: var(--aas-crystal-navy);
+  background:
+    radial-gradient(circle at 8% 8%, rgb(103 218 255 / 14%), transparent 24rem),
+    radial-gradient(circle at 93% 7%, rgb(165 126 255 / 15%), transparent 28rem),
+    linear-gradient(180deg, #f9fcff 0%, #eef6ff 54%, #f8f4ff 100%);
+}
+
+.creator-head h1,
+.admin-head h1 {
+  color: #263d76;
+}
+
+.creator-head > div > p:last-child,
+.admin-head > div > p:last-child {
+  color: #7487a7;
+}
+
+.route-back {
+  border: 1px solid rgb(130 155 222 / 28%);
+  border-radius: 11px;
+  background: rgb(255 255 255 / 72%);
+  color: #596db0;
+  box-shadow: 0 5px 16px rgb(72 91 166 / 6%);
+}
+
+.admin-only-tool-card,
+.admin-quick-guide article,
+.admin-section-group,
+.action-prompt-shell,
+.action-prompt-toolbar,
+.action-prompt-editor,
+.action-prompt-template-list {
+  border-color: var(--aas-crystal-line) !important;
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 95%), rgb(247 251 255 / 88%) 63%, rgb(249 244 255 / 84%)) !important;
+  color: #2a416f !important;
+  box-shadow: var(--aas-crystal-shadow);
+}
+
+.admin-only-tool-card h3,
+.admin-section-group h2,
+.admin-quick-guide strong {
+  color: #294171 !important;
+}
+
+.admin-only-tool-card p,
+.admin-section-group p,
+.admin-quick-guide p {
+  color: #7587a5 !important;
+}
+
+.admin-only-tool-card > span {
+  color: #796ed0 !important;
+}
+
+.admin-only-tool-card > strong {
+  color: #5d6ed0 !important;
+}
