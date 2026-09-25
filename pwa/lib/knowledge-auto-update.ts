@@ -484,7 +484,7 @@ export async function adminGetKnowledgeSourceRiskReport(
       itemCount: Math.max(0, asNumber(raw.item_count)),
       urlCount: Math.max(0, asNumber(raw.url_count)),
     })).filter((item) => item.domain),
-    reviewItems: reviewItems.map((raw) => asObject(raw)).filter((raw): raw is Record<string, unknown> => Boolean(raw)).map((raw) => ({
+    reviewItems: reviewItems.map((raw) => asObject(raw)).filter((raw): raw is Record<string, unknown> => Boolean(raw)).map((raw): KnowledgeSourceRiskItem => ({
       itemType: raw.item_type === "prompt" ? "prompt" : "knowledge",
       key: typeof raw.key === "string" ? raw.key : "",
       label: typeof raw.label === "string" ? raw.label : "",
