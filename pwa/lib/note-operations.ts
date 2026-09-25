@@ -338,19 +338,21 @@ export function defaultNoteOperationProfile(userId: string): NoteOperationProfil
 
 
 export const AAS_ADMIN_NOTE_PROFILE_PRESET = {
-  label: "AI Article Studio（AAS）運営",
-  genre: "AI Article Studio（AAS）・AI記事制作・コンテンツ運営",
-  style: "AASの使い方・開発進捗・実運用テスト・記事制作ノウハウを分かりやすく整理する",
+  label: "AI Action Studio（AAS）運営",
+  genre: "AI Action Studio（AAS）・AI副業・コンテンツ制作・運営支援",
+  style: "AASの使い方・副業専用プロンプト・Knowledge・開発進捗・実運用テストを分かりやすく整理する",
   audience: "note・Tips・BrainなどでAIを使って記事制作・コンテンツ運営を始めたい初心者〜個人クリエイター",
   tone: "落ち着いた・信頼感重視",
   monetization: "販売前は無料発信で使い方・開発進捗・実運用テストを共有し、公開後は製品案内や必要に応じた有料コンテンツへ自然につなぐ",
   goal: "読者を増やしたい",
-  displayName: "AI Article Studio（AAS）",
-  bioDraft: "AI Article Studio（AAS）の使い方・開発進捗・アップデート情報を中心に、AIを活用した記事制作・note運営・コンテンツ運営を分かりやすく発信します。",
-  targetReader: "AIで記事を作りたい人、note・Tips・Brainを運営したい人、コンテンツ制作を効率化したい初心者〜個人クリエイター",
+  displayName: "AI Action Studio（AAS）",
+  bioDraft: "AI Action Studio（AAS）の使い方・開発進捗・アップデート情報を中心に、AI副業の専用プロンプト、Knowledge、記事・SNS・画像・コンテンツ運営の活用法を分かりやすく発信します。",
+  targetReader: "AIを副業に活用したい人、note・Tips・BrainやSNSを運営したい人、コンテンツ制作や販売・集客を効率化したい初心者〜個人クリエイター",
   mainTopics: [
-    "AI Article Studio",
+    "AI Action Studio",
     "AASアップデート",
+    "AI副業",
+    "副業プロンプト",
     "AI記事作成",
     "note運営",
     "Tips・Brain運営",
@@ -360,6 +362,8 @@ export const AAS_ADMIN_NOTE_PROFILE_PRESET = {
     "公開前チェック",
     "SNS再利用",
     "実運用テスト",
+    "Knowledge活用",
+    "販売・プロモーション",
     "コンテンツ運営",
   ] as const,
 } as const;

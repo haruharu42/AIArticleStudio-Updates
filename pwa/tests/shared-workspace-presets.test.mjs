@@ -31,9 +31,12 @@ test("shared presets include an admin-only AAS official operating profile", asyn
   for (const key of ["balanced", "note_growth", "longform", "sns_growth", "aas_official"]) {
     assert.match(presets, new RegExp(key + ": \\{"));
   }
-  assert.match(presets, /label: "AI Article Studio（AAS）公式運営"/);
+  assert.match(presets, /label: "AI Action Studio（AAS）公式運営"/);
   assert.match(presets, /adminOnly: true/);
-  assert.match(presets, /AI Article Studio（AAS）自体の公式発信/);
+  assert.match(presets, /AI Action Studio（AAS）自体の公式発信/);
+  assert.match(presets, /副業専用プロンプト/);
+  assert.match(presets, /Knowledge/);
+  assert.doesNotMatch(presets, /AI Article Studio（AAS）/);
   assert.match(presets, /実際に確認していないPV・売上・ユーザー反応・レビュー・改善効果を作らない/);
   assert.match(presets, /styleContext: "AAS公式発信では、白・明るいブルー・濃いネイビー/);
   assert.match(presets, /availableWorkspacePresets/);

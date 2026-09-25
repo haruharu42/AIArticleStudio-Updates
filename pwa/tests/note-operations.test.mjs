@@ -394,7 +394,10 @@ test("AAS note operation preset is available only inside the active-admin UI pat
   ]);
 
   assert.match(lib, /AAS_ADMIN_NOTE_PROFILE_PRESET/);
-  assert.match(lib, /AI Article Studio（AAS）・AI記事制作・コンテンツ運営/);
+  assert.match(lib, /AI Action Studio（AAS）・AI副業・コンテンツ制作・運営支援/);
+  assert.match(lib, /副業専用プロンプト/);
+  assert.match(lib, /Knowledge活用/);
+  assert.doesNotMatch(lib, /AI Article Studio（AAS）/);
   assert.match(lib, /applyAasAdminNoteProfilePreset/);
   assert.match(lib, /accountGenre: "other"/);
   assert.match(lib, /accountStyle: "other"/);
