@@ -57,11 +57,13 @@ test("Stripe Checkout is gated server-side and billing portal remains available"
 });
 
 test("admin UI exposes sales controls while PWA runtime omits legacy plan switches", async () => {
-  const [adminSections, settingsPage, settingsLib, layout] = await Promise.all([
+  const [adminSections, settingsPage, settingsLib, layout, presets, selectControl] = await Promise.all([
     readPwa("lib/admin-sections.ts"),
     readPwa("components/sales-settings-admin-page.tsx"),
     readPwa("lib/sales-settings.ts"),
     readPwa("app/layout.tsx"),
+    readPwa("lib/sales-presets.ts"),
+    readPwa("components/admin-sales/sales-select-setting.tsx"),
   ]);
 
   assert.match(adminSections, /href: "\/admin\/sales"/);
@@ -74,8 +76,11 @@ test("admin UI exposes sales controls while PWA runtime omits legacy plan switch
   ]) assert.ok(settingsPage.includes(label), `missing admin setting: ${label}`);
   assert.match(settingsPage, /既存の契約・利用期間・利用権は停止・取消しされません/);
   assert.match(settingsPage, /販売モードプリセット/);
-  assert.match(settingsPage, /外部販売中心（推奨）/);
-  assert.match(settingsPage, /受付する \/ ON/);
+  assert.match(presets, /外部販売中心（推奨）/);
+  assert.match(presets, /applySalesPresetToSettings/);
+  assert.match(presets, /inferSalesPreset/);
+  assert.match(selectControl, /受付する \/ ON/);
+  assert.match(selectControl, /停止する \/ OFF/);
   assert.match(settingsPage, /停止する \/ OFF/);
   assert.match(settingsPage, /保存するまで本番設定は変わりません/);
   assert.match(settingsPage, /AI Action Studio（AAS）/);
@@ -141,4 +146,15 @@ test("commercial transaction copy follows the active sales mode and exposes a su
     assert.doesNotMatch(legalPage, /公開準備ドラフト/);
     assert.match(legalPage, /\/support/);
   }
+});
+
+
+test("legacy public sales settings RPC is no longer callable by browser roles", async () => {
+  const migration = await readRepo("supabase/migrations/20260925101747_lock_down_legacy_public_sales_settings_rpc.sql");
+  const salesLib = await readPwa("lib/sales-settings.ts");
+
+  assert.match(migration, /revoke execute on function public\.get_public_commerce_sales_settings\(\) from public, anon, authenticated/i);
+  assert.match(migration, /grant execute on function public\.get_public_commerce_sales_settings\(\) to service_role/i);
+  assert.match(salesLib, /fetch\("\/api\/sales\/settings"/);
+  assert.doesNotMatch(salesLib, /get_public_commerce_sales_settings/);
 });

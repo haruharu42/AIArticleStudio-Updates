@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { SalesSelectSetting } from "@/components/admin-sales/sales-select-setting";
 
 import {
   loadAdminSalesSettings,
@@ -11,6 +12,12 @@ import {
   type SalesSettings,
 } from "@/lib/sales-settings";
 import { getSupabaseClient } from "@/lib/supabase";
+import {
+  SALES_PRESETS,
+  applySalesPresetToSettings,
+  inferSalesPreset,
+  type SalesPresetKey,
+} from "@/lib/sales-presets";
 
 type Gate =
   | { kind: "loading" }
@@ -27,50 +34,6 @@ const EMPTY: SalesSettings = {
   pwa7DayEnabled: false,
   pwaMonthlyEnabled: false,
 };
-
-type SalesPresetKey = "custom" | "external" | "paused" | "stripe-7day" | "stripe-monthly" | "stripe-both" | "hybrid";
-
-const SALES_PRESETS: Array<{ key: SalesPresetKey; label: string; note: string }> = [
-  { key: "custom", label: "現在の設定を個別に調整", note: "各項目を下のプルダウンで変更します。" },
-  { key: "external", label: "外部販売中心（推奨）", note: "外部販売と利用コードだけ受付。Stripe新規決済は停止。" },
-  { key: "paused", label: "新規販売をすべて停止", note: "既存契約・既存利用権はそのままで、新規受付だけ停止。" },
-  { key: "stripe-7day", label: "Stripe 7日券のみ", note: "PWA 7日利用パスだけをStripeで新規受付。" },
-  { key: "stripe-monthly", label: "Stripe月額のみ", note: "PWA月額プランだけをStripeで新規受付。" },
-  { key: "stripe-both", label: "Stripe 7日券＋月額", note: "PWAの2プランをStripeで受付。" },
-  { key: "hybrid", label: "外部販売＋Stripe併用", note: "外部販売・利用コード・PWA Stripe販売を併用。" },
-];
-
-function inferSalesPreset(settings: SalesSettings): SalesPresetKey {
-  if (settings.externalSalesEnabled && settings.accessCodeEnabled && !settings.stripeCheckoutEnabled && !settings.pwa7DayEnabled && !settings.pwaMonthlyEnabled) return "external";
-  if (!settings.externalSalesEnabled && !settings.accessCodeEnabled && !settings.stripeCheckoutEnabled && !settings.pwa7DayEnabled && !settings.pwaMonthlyEnabled) return "paused";
-  if (!settings.externalSalesEnabled && !settings.accessCodeEnabled && settings.stripeCheckoutEnabled && settings.pwa7DayEnabled && !settings.pwaMonthlyEnabled) return "stripe-7day";
-  if (!settings.externalSalesEnabled && !settings.accessCodeEnabled && settings.stripeCheckoutEnabled && !settings.pwa7DayEnabled && settings.pwaMonthlyEnabled) return "stripe-monthly";
-  if (!settings.externalSalesEnabled && !settings.accessCodeEnabled && settings.stripeCheckoutEnabled && settings.pwa7DayEnabled && settings.pwaMonthlyEnabled) return "stripe-both";
-  if (settings.externalSalesEnabled && settings.accessCodeEnabled && settings.stripeCheckoutEnabled && settings.pwa7DayEnabled && settings.pwaMonthlyEnabled) return "hybrid";
-  return "custom";
-}
-
-function SelectSetting({
-  checked,
-  onChange,
-  title,
-  description,
-}: {
-  checked: boolean;
-  onChange(value: boolean): void;
-  title: string;
-  description: string;
-}) {
-  return (
-    <label className="sales-setting-row sales-setting-select">
-      <span><strong>{title}</strong><small>{description}</small></span>
-      <select value={checked ? "on" : "off"} onChange={(event) => onChange(event.target.value === "on")}>
-        <option value="on">受付する / ON</option>
-        <option value="off">停止する / OFF</option>
-      </select>
-    </label>
-  );
-}
 
 export function SalesSettingsAdminPage() {
   const { state: accessState, client } = useSharedAccessState();
@@ -129,14 +92,7 @@ export function SalesSettingsAdminPage() {
   const applySalesPreset = (preset: SalesPresetKey) => {
     setSalesPreset(preset);
     if (preset === "custom") return;
-    const next: SalesSettings = {
-      ...settings,
-      externalSalesEnabled: preset === "external" || preset === "hybrid",
-      accessCodeEnabled: preset === "external" || preset === "hybrid",
-      stripeCheckoutEnabled: ["stripe-7day", "stripe-monthly", "stripe-both", "hybrid"].includes(preset),
-      pwa7DayEnabled: ["stripe-7day", "stripe-both", "hybrid"].includes(preset),
-      pwaMonthlyEnabled: ["stripe-monthly", "stripe-both", "hybrid"].includes(preset),
-    };
+    const next = applySalesPresetToSettings(settings, preset);
     setSettings(next);
     setMessage("販売モードプリセットを反映しました。保存するまで本番設定は変わりません。");
   };
@@ -189,8 +145,8 @@ export function SalesSettingsAdminPage() {
 
       <section className="admin-panel sales-settings-section">
         <div className="admin-panel-heading"><div><p className="eyebrow">EXTERNAL SALES</p><h2>外部販売・利用コード</h2></div></div>
-        <SelectSetting checked={settings.externalSalesEnabled} onChange={(value) => set("externalSalesEnabled", value)} title="note / Brain / Tips等の外部販売" description="外部サービスで販売する運用を受付中として表示します。" />
-        <SelectSetting checked={settings.accessCodeEnabled} onChange={(value) => set("accessCodeEnabled", value)} title="利用コード受付" description="購入者へ渡した利用コード（既存の招待コード基盤）の新規登録を許可します。" />
+        <SalesSelectSetting checked={settings.externalSalesEnabled} onChange={(value) => set("externalSalesEnabled", value)} title="note / Brain / Tips等の外部販売" description="外部サービスで販売する運用を受付中として表示します。" />
+        <SalesSelectSetting checked={settings.accessCodeEnabled} onChange={(value) => set("accessCodeEnabled", value)} title="利用コード受付" description="購入者へ渡した利用コード（既存の招待コード基盤）の新規登録を許可します。" />
         <label className="sales-url-field">
           <span><strong>購入ページURL（note等）</strong><small>無料利用回数を使い切ったユーザーへ表示する購入先です。空欄なら購入ボタンは表示しません。HTTPSのみ設定できます。</small></span>
           <input
@@ -209,10 +165,10 @@ export function SalesSettingsAdminPage() {
 
       <section className="admin-panel sales-settings-section">
         <div className="admin-panel-heading"><div><p className="eyebrow">STRIPE</p><h2>PWA Stripe新規決済</h2></div></div>
-        <SelectSetting checked={settings.stripeCheckoutEnabled} onChange={(value) => set("stripeCheckoutEnabled", value)} title="Stripe新規購入受付" description="PWA向けStripeプラン共通のマスタースイッチです。OFFならCheckoutをサーバー側でも拒否します。" />
+        <SalesSelectSetting checked={settings.stripeCheckoutEnabled} onChange={(value) => set("stripeCheckoutEnabled", value)} title="Stripe新規購入受付" description="PWA向けStripeプラン共通のマスタースイッチです。OFFならCheckoutをサーバー側でも拒否します。" />
         <div className="sales-plan-grid">
-          <SelectSetting checked={settings.pwa7DayEnabled} onChange={(value) => set("pwa7DayEnabled", value)} title="PWA 7日利用パス" description="自動更新なしの7日券を表示・受付します。" />
-          <SelectSetting checked={settings.pwaMonthlyEnabled} onChange={(value) => set("pwaMonthlyEnabled", value)} title="PWA 月額プラン" description="PWA版の月額新規契約を表示・受付します。" />
+          <SalesSelectSetting checked={settings.pwa7DayEnabled} onChange={(value) => set("pwa7DayEnabled", value)} title="PWA 7日利用パス" description="自動更新なしの7日券を表示・受付します。" />
+          <SalesSelectSetting checked={settings.pwaMonthlyEnabled} onChange={(value) => set("pwaMonthlyEnabled", value)} title="PWA 月額プラン" description="PWA版の月額新規契約を表示・受付します。" />
         </div>
         {!settings.stripeCheckoutEnabled && <p className="sales-master-off">StripeマスタースイッチがOFFのため、個別プランをONにしても現在は購入できません。後日の販売準備として設定を保存できます。</p>}
       </section>
