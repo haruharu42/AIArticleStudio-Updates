@@ -90,17 +90,24 @@ self.addEventListener("fetch", (event) => {
 });
 
 
+function notificationPath(value) {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")
+    || /[\\\u0000-\u0020\u007f]/.test(value)) return "/notifications";
+  return value;
+}
+
 self.addEventListener("push", (event) => {
   let payload = {};
   try {
     payload = event.data ? event.data.json() : {};
+    if (!payload || typeof payload !== "object") payload = {};
   } catch {
     payload = { title: "AI Action Studio", body: event.data ? event.data.text() : "" };
   }
 
   const title = typeof payload.title === "string" && payload.title ? payload.title : "AI Action Studio";
   const body = typeof payload.body === "string" ? payload.body : "";
-  const href = typeof payload.href === "string" && payload.href.startsWith("/") ? payload.href : "/notifications";
+  const href = notificationPath(payload.href);
   const notificationId = Number(payload.notificationId || 0);
 
   event.waitUntil(
@@ -117,7 +124,7 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const href = event.notification?.data?.href || "/notifications";
+  const href = notificationPath(event.notification?.data?.href);
   const targetUrl = new URL(href, self.location.origin).href;
 
   event.waitUntil(

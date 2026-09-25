@@ -1,10 +1,10 @@
+import { replaceNoteScheduleAtomically } from "@/lib/note-schedule-persistence";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildPlatformAccountPromptContext } from "@/features/account-design";
 import { buildWorkspacePresetPromptContext, getRuntimeWorkspacePresetDefinition, getRuntimeWorkspacePresetPreference } from "@/features/presets/workspace-presets";
 import type { AiProvider } from "@/lib/user-personalization";
 import {
   addNoteScheduleDays,
-  currentJstMonth,
   nextJstMonth,
   normalizeNoteScheduleTime,
   noteMonthBounds,
@@ -15,25 +15,16 @@ import type {
   NoteAiResearchSource,
   NoteAiSchedulePlan,
   NoteArticleOutputSnapshot,
-  NoteScheduleImport,
   NoteScheduleItem,
   NoteScheduleItemType,
   NoteSchedulePerformanceSnapshot,
-  NoteScheduleSource,
   NoteScheduleStatus,
 } from "@/lib/note-schedule-types";
 import {
   formatSchedulePerformanceForPrompt,
-  summarizeNoteSchedulePerformance,
 } from "@/lib/note-schedule-performance";
 import {
-  AAS_ADMIN_NOTE_PROFILE_PRESET,
-  NOTE_ACCOUNT_GENRES,
-  NOTE_ACCOUNT_STYLES,
-  NOTE_AUDIENCE_PRESETS,
-  NOTE_MONETIZATION_STYLES,
   NOTE_OPERATION_GOALS,
-  NOTE_TONE_PRESETS,
   applyAasAdminNoteProfilePreset,
   defaultNoteOperationProfile,
   noteProfileSelectionLabels,
@@ -41,7 +32,6 @@ import {
   type NoteAccountStyle,
   type NoteAudiencePreset,
   type NoteMonetizationStyle,
-  type NoteOperationGoal,
   type NoteOperationProfile,
   type NoteTonePreset,
 } from "@/lib/note-operation-profile";
@@ -306,50 +296,13 @@ export async function listNoteSchedule(
   return (data ?? []).map((row) => parseScheduleRow(row as Record<string, unknown>));
 }
 
-function dbScheduleRow(userId: string, item: NoteScheduleItem) {
-  return {
-    id: item.id,
-    user_id: userId,
-    scheduled_date: item.scheduledDate,
-    scheduled_time: normalizeNoteScheduleTime(item.scheduledTime, "20:00"),
-    item_type: item.itemType,
-    title: item.title.trim().slice(0, 240),
-    theme: item.theme.trim().slice(0, 500),
-    status: item.status,
-    source: item.source,
-    notes: item.notes.trim().slice(0, 1200),
-  };
-}
-
 export async function replaceNoteSchedule(
   client: SupabaseClient,
   userId: string,
   items: NoteScheduleItem[],
 ): Promise<NoteScheduleItem[]> {
-  const clean = items
-    .filter((item) => /^\d{4}-\d{2}-\d{2}$/.test(item.scheduledDate) && item.title.trim())
-    .slice(0, 500)
-    .map((item) => ({ ...item, id: undefined }));
-
-  const previous = await listNoteSchedule(client, userId);
-  const { error: deleteError } = await client
-    .from("note_operation_schedule_items")
-    .delete()
-    .eq("user_id", userId);
-  if (deleteError) throw new Error("既存スケジュールを更新できませんでした。");
-
-  if (clean.length) {
-    const { error: insertError } = await client
-      .from("note_operation_schedule_items")
-      .insert(clean.map((item) => dbScheduleRow(userId, item)));
-    if (insertError) {
-      if (previous.length) {
-        await client.from("note_operation_schedule_items").insert(previous.map((item) => dbScheduleRow(userId, item)));
-      }
-      throw new Error("新しいスケジュールを保存できませんでした。");
-    }
-  }
-  return listNoteSchedule(client, userId);
+  const rows = await replaceNoteScheduleAtomically(client, userId, items);
+  return rows.map(parseScheduleRow);
 }
 
 export async function setNoteScheduleStatus(
@@ -639,7 +592,7 @@ ${formatArticleOutputForPrompt(articleOutput, articleOutputMonth)}
 `;
 
   return `あなたは日本のnote運営に詳しい編集者・コンテンツ戦略担当です。
-目的は、ユーザーに投稿回数を手入力させるのではなく、${targetMonth}の1か月について、最新情報を調査したうえで「無理なく継続でき、無料noteと有料noteの役割が分かれた運用スケジュール」を設計し、AASが読み込めるJSONで返すことです。
+目的は、ユーザーに投稿回数を手入力させるのではなく、${targetMonth}の1か月について、最新情報を調査したうえで「無理なく継続でき、無料noteと有料noteの役割が分かれた運用スケジュール」を設計し、AASが読み込めるMarkdown表で返すことです。
 
 【対象期間】
 - 基準日: ${currentDate}（日本時間）
@@ -741,50 +694,9 @@ export async function replaceNoteScheduleMonth(
   userId: string,
   targetMonth: string,
   items: NoteScheduleItem[],
-  currentDate = todayJstDateKey(),
 ): Promise<NoteScheduleItem[]> {
-  const { start, end } = noteMonthBounds(targetMonth);
-  const replacementStart = targetMonth === currentDate.slice(0, 7) ? currentDate : start;
-  const previous = await listNoteSchedule(client, userId, start, end);
-  const preserved = previous.filter(
-    (item) => item.scheduledDate < replacementStart || item.status !== "planned" || !isNoteArticleScheduleItem(item),
-  );
-  const preservedKeys = new Set(
-    preserved.map((item) => `${item.scheduledDate}|${item.scheduledTime}|${item.itemType}`),
-  );
-  const clean = items
-    .filter((item) => isNoteArticleScheduleItem(item))
-    .filter((item) => item.scheduledDate >= replacementStart && item.scheduledDate <= end && item.title.trim())
-    .filter((item) => !preservedKeys.has(`${item.scheduledDate}|${item.scheduledTime}|${item.itemType}`))
-    .slice(0, 200)
-    .map((item) => ({ ...item, id: undefined, source: "imported" as NoteScheduleSource }));
-  const previousReplaceable = previous.filter(
-    (item) => item.scheduledDate >= replacementStart && item.status === "planned" && isNoteArticleScheduleItem(item),
-  );
-
-  const deleteQuery = client
-    .from("note_operation_schedule_items")
-    .delete()
-    .eq("user_id", userId)
-    .gte("scheduled_date", replacementStart)
-    .lte("scheduled_date", end)
-    .eq("status", "planned")
-    .in("item_type", ["free_note", "paid_note"]);
-  const { error: deleteError } = await deleteQuery;
-  if (deleteError) throw new Error("対象月の既存スケジュールを更新できませんでした。");
-
-  if (clean.length) {
-    const { error: insertError } = await client
-      .from("note_operation_schedule_items")
-      .insert(clean.map((item) => dbScheduleRow(userId, item)));
-    if (insertError) {
-      if (previousReplaceable.length) {
-        await client.from("note_operation_schedule_items").insert(previousReplaceable.map((item) => dbScheduleRow(userId, item)));
-      }
-      throw new Error("AIの月間スケジュールを保存できませんでした。");
-    }
-  }
-  return listNoteSchedule(client, userId);
+  const rows = await replaceNoteScheduleAtomically(client, userId, items, targetMonth);
+  return rows.map(parseScheduleRow);
 }
 
 export async function saveNoteAiSchedulePlan(

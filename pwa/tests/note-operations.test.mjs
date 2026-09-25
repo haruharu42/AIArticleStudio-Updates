@@ -163,7 +163,7 @@ test("note beginner profile builder uses dropdown presets and current-web resear
 
 
 test("AI monthly note schedule uses month-based research, validation, and owner-scoped plan storage", async () => {
-  const [migration, lib, parser, normalizer, planner, page, helpers, css] = await Promise.all([
+  const [migration, lib, parser, normalizer, planner, page, helpers, css, performance, persistenceMigration] = await Promise.all([
     readRepo("supabase/migrations/20260919131121_note_ai_monthly_schedule_plans.sql"),
     readPwa("lib/note-operations.ts"),
     readPwa("lib/note-ai-schedule-json.ts"),
@@ -172,6 +172,8 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
+    readPwa("lib/note-schedule-performance.ts"),
+    readRepo("supabase/migrations/20260925130712_audit_atomic_note_schedule_replace.sql"),
   ]);
 
   assert.match(migration, /create table if not exists public\.note_operation_schedule_plans/);
@@ -222,7 +224,7 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(normalizer, /無料note作成/);
   assert.match(normalizer, /有料note作成/);
   assert.match(lib, /scheduleに入れてよいtypeは free_note と paid_note の2種類だけ/);
-  assert.match(lib, /\.in\("item_type", \["free_note", "paid_note"\]\)/);
+  assert.match(persistenceMigration, /item_type in \('free_note','paid_note'\)/);
   assert.match(page, /articleSchedule/);
   assert.match(page, /無料note \/ 有料noteの作成日・時間/);
   assert.match(page, /AIにはAASへ貼る予定表だけを返すよう指示します/);
@@ -236,21 +238,21 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(planner, /調査元URLがありません/);
   assert.match(planner, /note公式（note\.com\/info）/);
   assert.match(planner, /直近180日以内の出典/);
-  assert.match(lib, /replacementStart/);
+  assert.match(persistenceMigration, /then v_today else p_target_month/);
   assert.match(lib, /status === "done"/);
   assert.match(lib, /AAS運用スケジュール実績/);
   assert.match(lib, /AASで実際に作成したnote記事数/);
-  assert.match(lib, /投稿予定に対する完了率/);
+  assert.match(performance, /投稿予定に対する完了率/);
   assert.match(lib, /無料30本・有料20本/);
   assert.match(lib, /未完了分やスキップ分を「借金」/);
   assert.match(lib, /今日から月末までに新しく行う分/);
-  assert.match(lib, /曜日別/);
-  assert.match(lib, /時刻別/);
+  assert.match(performance, /曜日別/);
+  assert.match(performance, /時刻別/);
   assert.match(lib, /AASから渡していない本文、PV、売上、購入率/);
   assert.match(lib, /item\.itemType === "free_note" \|\| item\.itemType === "paid_note"/);
-  assert.match(lib, /eq\("status", "planned"\)/);
-  assert.match(lib, /gte\("scheduled_date", replacementStart\)/);
-  assert.match(lib, /lte\("scheduled_date", end\)/);
+  assert.match(persistenceMigration, /status = 'planned'/);
+  assert.match(persistenceMigration, /scheduled_date between v_start and v_end/);
+  assert.match(persistenceMigration, /security invoker/);
 
   assert.match(page, /type="month"/);
   assert.match(page, /min=\{currentJstMonth\(\)\}/);
@@ -355,8 +357,7 @@ test("AI note calendar is article-only and tolerates common free paid aliases", 
 
 
 test("note schedule can be recovered from a plain markdown table without JSON", async () => {
-  const [lib, normalizer, page, manual] = await Promise.all([
-    readPwa("lib/note-operations.ts"),
+  const [normalizer, page, manual] = await Promise.all([
     readPwa("lib/note-ai-schedule-normalize.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("app/manual/page.tsx"),
@@ -580,7 +581,7 @@ test("note operation file transfer helpers are isolated from scheduling and pers
   assert.match(transfer, /export function exportNoteScheduleCsv/);
   assert.match(transfer, /export function exportNoteOperationsJson/);
   assert.match(transfer, /export function parseNoteOperationsImport/);
-  assert.match(transfer, /function parseCsvLine/);
+  assert.match(transfer, /parseCsvRecords/);
   assert.match(transfer, /aas-note-operations-v1/);
   assert.doesNotMatch(transfer, /SupabaseClient|client\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
 });

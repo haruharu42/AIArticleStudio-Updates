@@ -1,4 +1,5 @@
-import { normalizeNoteScheduleTime } from "@/lib/note-schedule-core";
+import { parseCsvRecords } from "@/lib/csv-records";
+import { isNoteScheduleDate, normalizeNoteScheduleTime } from "@/lib/note-schedule-core";
 import type {
   NoteAiSchedulePlan,
   NoteScheduleImport,
@@ -113,30 +114,6 @@ export function exportNoteOperationsJson(profile: NoteOperationProfile, items: N
   }, null, 2);
 }
 
-function parseCsvLine(line: string): string[] {
-  const values: string[] = [];
-  let value = "";
-  let quoted = false;
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    if (char === '"') {
-      if (quoted && line[index + 1] === '"') {
-        value += '"';
-        index += 1;
-      } else {
-        quoted = !quoted;
-      }
-    } else if (char === "," && !quoted) {
-      values.push(value);
-      value = "";
-    } else {
-      value += char;
-    }
-  }
-  values.push(value);
-  return values;
-}
-
 function importedType(value: unknown): NoteScheduleItemType {
   return value === "paid_note" || value === "review" || value === "profile_setup" || value === "sns_share" ? value : "free_note";
 }
@@ -148,7 +125,7 @@ function importedStatus(value: unknown): NoteScheduleStatus {
 function importedScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | null {
   const date = typeof raw.date === "string" ? raw.date : "";
   const title = typeof raw.title === "string" ? raw.title.trim() : "";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !title) return null;
+  if (!isNoteScheduleDate(date) || !title) throw new Error("予定の日付または記事タイトルが不正です。ファイルを確認してください。");
   return {
     scheduledDate: date,
     scheduledTime: normalizeNoteScheduleTime(typeof raw.time === "string" ? raw.time : "20:00", "20:00"),
@@ -163,7 +140,7 @@ function importedScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | 
 
 export function parseNoteOperationsImport(text: string, filename: string): NoteScheduleImport {
   if (filename.toLowerCase().endsWith(".json") || text.trim().startsWith("{")) {
-    const raw: unknown = JSON.parse(text);
+    const raw: unknown = JSON.parse(text.replace(/^\uFEFF/, ""));
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("JSON形式を確認できませんでした。");
     const value = raw as Record<string, unknown>;
     if (value.schema !== "aas-note-operations-v1") throw new Error("AAS note運営データの形式ではありません。");
@@ -203,11 +180,11 @@ export function parseNoteOperationsImport(text: string, filename: string): NoteS
     return { profile, schedule };
   }
 
-  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(Boolean);
+  const lines = parseCsvRecords(text);
   if (lines.length < 2) throw new Error("CSVに予定がありません。");
-  const headers = parseCsvLine(lines[0]).map((value) => value.trim().toLowerCase());
-  const schedule = lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
+  const headers = lines[0].map((value) => value.trim().toLowerCase());
+  if (!headers.includes("date") || !headers.includes("title")) throw new Error("CSVにはdateとtitle列が必要です。");
+  const schedule = lines.slice(1).map((values) => {
     const row = Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
     return importedScheduleItem(row);
   }).filter((item): item is NoteScheduleItem => Boolean(item)).slice(0, 500);

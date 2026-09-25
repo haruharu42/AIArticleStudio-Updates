@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { normalizeNotificationPath } from "@/lib/notification-path";
 
 export type NotificationCategory = "update" | "maintenance" | "knowledge" | "admin" | "system";
 export type NotificationAudience = "all" | "tester" | "admin";
@@ -64,7 +65,7 @@ function normalizeNotification(value: unknown): AppNotification | null {
     category: normalizeCategory(row.category),
     title: row.title,
     body: typeof row.body === "string" ? row.body : "",
-    href: typeof row.href === "string" && row.href.startsWith("/") ? row.href : "/",
+    href: normalizeNotificationPath(row.href),
     audience: normalizeAudience(row.audience),
     createdAt: typeof row.created_at === "string" ? row.created_at : "",
     read: row.read === true,
@@ -225,7 +226,7 @@ export async function adminCreateNotification(
     p_category: input.category,
     p_title: input.title,
     p_body: input.body,
-    p_href: input.href,
+    p_href: normalizeNotificationPath(input.href),
     p_audience: input.audience,
   });
   if (error) throw error;
@@ -244,7 +245,7 @@ export async function adminListNotifications(client: SupabaseClient, limit = 50)
       category: normalizeCategory(row.category),
       title: row.title,
       body: typeof row.body === "string" ? row.body : "",
-      href: typeof row.href === "string" ? row.href : "/",
+      href: normalizeNotificationPath(row.href),
       audience: normalizeAudience(row.audience),
       createdAt: typeof row.created_at === "string" ? row.created_at : "",
       createdByAasId: typeof row.created_by_aas_id === "string" ? row.created_by_aas_id : null,

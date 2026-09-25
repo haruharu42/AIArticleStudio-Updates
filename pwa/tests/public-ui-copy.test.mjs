@@ -46,7 +46,7 @@ test("active PWA access shell avoids frozen Windows and hands successful login b
   assert.doesNotMatch(home, /handleAccessReady|onAccessReady/);
   assert.match(home, /useSharedAccessState\(\)/);
   assert.match(provider, /const loadAccessStateOnce = useCallback/);
-  assert.match(provider, /inFlightRef/);
+  assert.match(provider, /requestLoaderRef/);
   assert.match(provider, /const refresh = useCallback[\s\S]*?loadAccessStateOnce\(activeClient\)/);
   assert.match(provider, /onAuthStateChange/);
 });

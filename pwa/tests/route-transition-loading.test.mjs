@@ -17,7 +17,7 @@ test("root layout keeps verified access state alive across client-side route cha
   assert.match(layout, /<AccessStateProvider>[\s\S]*?\{children\}[\s\S]*?<PersistentMobileNav \/>[\s\S]*?<\/AccessStateProvider>/);
   assert.match(provider, /loadAccessState/);
   assert.match(provider, /loadAccessStateOnce/);
-  assert.match(provider, /inFlightRef/);
+  assert.match(provider, /requestLoaderRef/);
   assert.match(provider, /onAuthStateChange/);
   assert.match(provider, /if \(!session\) \{[\s\S]*?setState\(\{ kind: "signed_out" \}\)/);
   assert.match(provider, /useSharedAccessState/);

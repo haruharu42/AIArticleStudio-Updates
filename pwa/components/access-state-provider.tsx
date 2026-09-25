@@ -14,6 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { loadAccessState, type AccessState } from "@/lib/phase6-access";
 import { getSupabaseClient } from "@/lib/supabase";
+import { createSessionRequestLoader } from "@/lib/session-request-loader";
 
 export type SharedAccessState =
   | AccessState
@@ -32,25 +33,22 @@ const BACKGROUND_RECHECK_MIN_INTERVAL_MS = 30_000;
 export function AccessStateProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SharedAccessState>({ kind: "loading" });
   const [client, setClient] = useState<SupabaseClient | null>(null);
-  const inFlightRef = useRef<Promise<AccessState> | null>(null);
+  const requestLoaderRef = useRef(createSessionRequestLoader(loadAccessState));
 
   const loadAccessStateOnce = useCallback((activeClient: SupabaseClient) => {
-    if (inFlightRef.current) return inFlightRef.current;
-    const request = loadAccessState(activeClient).finally(() => {
-      if (inFlightRef.current === request) inFlightRef.current = null;
-    });
-    inFlightRef.current = request;
-    return request;
+    return requestLoaderRef.current.load(activeClient);
   }, []);
 
   const refresh = useCallback(async () => {
+    const generation = requestLoaderRef.current.generation();
     let activeClient: SupabaseClient;
     try {
       activeClient = getSupabaseClient();
       setClient(activeClient);
-      setState(await loadAccessStateOnce(activeClient));
+      const next = await loadAccessStateOnce(activeClient);
+      if (next && generation === requestLoaderRef.current.generation()) setState(next);
     } catch {
-      setState({ kind: "unavailable" });
+      if (generation === requestLoaderRef.current.generation()) setState({ kind: "unavailable" });
     }
   }, [loadAccessStateOnce]);
 
@@ -68,8 +66,10 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
     }
 
     const applyAccessState = async (mode: "strict" | "background") => {
+      const generation = requestLoaderRef.current.generation();
       try {
         const next = await loadAccessStateOnce(activeClient);
+        if (!next || generation !== requestLoaderRef.current.generation()) return;
         if (active) {
           if (mode === "strict") {
             lastBackgroundCheckAt = Date.now();
@@ -90,7 +90,7 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
           });
         }
       } catch {
-        if (!active) return;
+        if (!active || generation !== requestLoaderRef.current.generation()) return;
         if (mode === "background") {
           setState((current) => current.kind === "ready" ? current : { kind: "unavailable" });
           return;
@@ -114,13 +114,19 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
     });
 
     const { data } = activeClient.auth.onAuthStateChange((event, session) => {
+      if (!session || (event !== "INITIAL_SESSION" && event !== "TOKEN_REFRESHED")) {
+        requestLoaderRef.current.invalidate();
+      }
+      const generation = requestLoaderRef.current.generation();
       window.setTimeout(() => {
-        if (!active) return;
+        if (!active || generation !== requestLoaderRef.current.generation()) return;
         if (!session) {
           setState({ kind: "signed_out" });
           return;
         }
         if (event === "INITIAL_SESSION") return;
+        setState((current) => current.kind === "ready" && current.profile.id !== session.user.id
+          ? { kind: "loading" } : current);
         void applyAccessState(event === "TOKEN_REFRESHED" ? "background" : "strict");
       }, 0);
     });
@@ -133,6 +139,7 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
+      requestLoaderRef.current.invalidate();
       data.subscription.unsubscribe();
       window.removeEventListener("focus", recheckInBackground);
       document.removeEventListener("visibilitychange", onVisibilityChange);
