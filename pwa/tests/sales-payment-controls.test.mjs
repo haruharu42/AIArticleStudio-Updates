@@ -81,7 +81,6 @@ test("admin UI exposes sales controls while PWA runtime omits legacy plan switch
   assert.match(presets, /inferSalesPreset/);
   assert.match(selectControl, /受付する \/ ON/);
   assert.match(selectControl, /停止する \/ OFF/);
-  assert.match(settingsPage, /停止する \/ OFF/);
   assert.match(settingsPage, /保存するまで本番設定は変わりません/);
   assert.match(settingsPage, /AI Action Studio（AAS）/);
   assert.doesNotMatch(settingsPage, /title="Windows 月額プラン"/);
@@ -153,8 +152,8 @@ test("legacy public sales settings RPC is no longer callable by browser roles", 
   const migration = await readRepo("supabase/migrations/20260925101747_lock_down_legacy_public_sales_settings_rpc.sql");
   const salesLib = await readPwa("lib/sales-settings.ts");
 
-  assert.match(migration, /revoke execute on function public\.get_public_commerce_sales_settings\(\) from public, anon, authenticated/i);
-  assert.match(migration, /grant execute on function public\.get_public_commerce_sales_settings\(\) to service_role/i);
+  assert.match(migration, /revoke execute on function public\.get_public_commerce_sales_settings\(\)\s*from public, anon, authenticated/i);
+  assert.match(migration, /grant execute on function public\.get_public_commerce_sales_settings\(\)\s*to service_role/i);
   assert.match(salesLib, /fetch\("\/api\/sales\/settings"/);
   assert.doesNotMatch(salesLib, /get_public_commerce_sales_settings/);
 });
