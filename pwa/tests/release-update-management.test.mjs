@@ -146,6 +146,13 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(gate, /preview_allowed/);
   assert.match(gate, /is_release_tester/);
   assert.match(gate, /ALWAYS_PUBLIC_PREVIEW_PATHS/);
+  const publicPreviewPaths = gate.match(/const ALWAYS_PUBLIC_PREVIEW_PATHS = \\[([^\\]]+)\\]/)?.[1] ?? "";
+  for (const route of ["/support", "/commercial-transactions"]) {
+    assert.ok(publicPreviewPaths.includes(`"${route}"`), `missing signed-out preview route: ${route}`);
+  }
+  for (const route of ["/plans", "/billing", "/admin"]) {
+    assert.equal(publicPreviewPaths.includes(`"${route}"`), false, `unexpected signed-out preview route: ${route}`);
+  }
   assert.match(gate, /\/auth\/callback/);
   assert.match(gate, /pathname === "\/"/);
   assert.match(gate, /if \(gate\.kind === "loading"\) return null/);
