@@ -99,8 +99,9 @@ test("promotion UI is dropdown-first and remains responsive on phones", async ()
 
 
 test("sales promotion center supports a safe three-step auto setup", async () => {
-  const [page, css] = await Promise.all([
+  const [page, options, css] = await Promise.all([
     read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-options.ts"),
     read("app/phase24-admin-promotion.css"),
   ]);
 
@@ -117,9 +118,9 @@ test("sales promotion center supports a safe three-step auto setup", async () =>
   assert.match(page, /sellingConfirmed/);
   assert.match(page, /販売中の確認がないため販売前表現で設定/);
   assert.match(page, /販売設定そのものは変更しません/);
-  assert.match(page, /AAS内Stripe（設定時のみ）/);
-  assert.match(page, /PWA 7日利用パス（設定時のみ）/);
-  assert.match(page, /PWA 月額プラン（設定時のみ）/);
+  assert.match(options, /AAS内Stripe（設定時のみ）/);
+  assert.match(options, /PWA 7日利用パス（設定時のみ）/);
+  assert.match(options, /PWA 月額プラン（設定時のみ）/);
   assert.match(page, /Stripe・7日券・月額を選んでも販売受付は有効化されません/);
   assert.match(css, /\.admin-promo-three-step/);
   assert.match(css, /\.admin-promo-three-step-grid/);
@@ -128,9 +129,10 @@ test("sales promotion center supports a safe three-step auto setup", async () =>
 
 
 test("promotion center builds a live Preview screenshot request for ChatGPT", async () => {
-  const [lib, page, fields, css] = await Promise.all([
+  const [lib, page, screenshotTool, fields, css] = await Promise.all([
     read("lib/admin-promotion.ts"),
     read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-screenshot-tool.tsx"),
     read("components/admin-promotion/admin-promotion-fields.tsx"),
     read("app/phase24-admin-promotion.css"),
   ]);
@@ -143,13 +145,14 @@ test("promotion center builds a live Preview screenshot request for ChatGPT", as
   assert.match(lib, /認証回避/);
   assert.match(lib, /AAS ID、メールアドレス、請求情報/);
   assert.match(lib, /推奨挿入位置/);
-  assert.match(page, /記事用スクリーンショット準備/);
-  assert.match(page, /① 紹介する機能/);
-  assert.match(page, /② 使用先/);
-  assert.match(page, /③ 端末/);
-  assert.match(page, /④ スクショ枚数/);
-  assert.match(page, /古い画像を使い回さない/);
-  assert.match(page, /note="この依頼文をChatGPTへ渡すと/);
+  assert.match(screenshotTool, /記事用スクリーンショット準備/);
+  assert.match(screenshotTool, /① 紹介する機能/);
+  assert.match(screenshotTool, /② 使用先/);
+  assert.match(screenshotTool, /③ 端末/);
+  assert.match(screenshotTool, /④ スクショ枚数/);
+  assert.match(screenshotTool, /古い画像を使い回さない/);
+  assert.match(screenshotTool, /note="この依頼文をChatGPTへ渡すと/);
+  assert.match(page, /AdminPromotionScreenshotTool/);
   assert.match(fields, /note\?: string/);
   assert.match(css, /\.admin-promo-screenshot-tool/);
   assert.match(css, /\.admin-promo-screenshot-grid/);
@@ -172,4 +175,20 @@ test("promotion page keeps static choices in a dedicated options module", async 
   assert.match(options, /export const SALES_PRODUCT_OPTIONS/);
   assert.match(options, /export const SCREENSHOT_PUBLICATION_OPTIONS/);
   assert.match(options, /export const DEFAULT_SOCIAL_PRESET_IDS/);
+});
+
+
+test("live screenshot feature owns its own state outside the promotion page", async () => {
+  const [page, screenshotTool] = await Promise.all([
+    read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-screenshot-tool.tsx"),
+  ]);
+
+  assert.doesNotMatch(page, /screenshotTarget/);
+  assert.doesNotMatch(page, /screenshotPublication/);
+  assert.doesNotMatch(page, /screenshotDevice/);
+  assert.doesNotMatch(page, /screenshotCount/);
+  assert.match(screenshotTool, /useState<AdminScreenshotTarget>/);
+  assert.match(screenshotTool, /buildAdminScreenshotCapturePrompt/);
+  assert.match(screenshotTool, /PromptOutput/);
 });

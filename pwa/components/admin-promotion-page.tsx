@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { AdminPromotionScreenshotTool } from "@/components/admin-promotion/admin-promotion-screenshot-tool";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { WORKSPACE_PRESETS } from "@/features/presets/workspace-presets";
@@ -32,9 +33,6 @@ import {
   RELEASE_STAGE_OPTIONS,
   SALES_CHANNEL_OPTIONS,
   SALES_PRODUCT_OPTIONS,
-  SCREENSHOT_COUNT_OPTIONS,
-  SCREENSHOT_DEVICE_OPTIONS,
-  SCREENSHOT_PUBLICATION_OPTIONS,
   SUPPORT_OPTIONS,
   TESTED_PLATFORM_OPTIONS,
   TESTING_STATUS_OPTIONS,
@@ -48,20 +46,14 @@ import {
   ADMIN_PRODUCT_FACTS_STORAGE_KEY,
   DEFAULT_ADMIN_PRODUCT_FACTS,
   DEFAULT_SOCIAL_LENGTH_PLAN,
-  ADMIN_SCREENSHOT_TARGETS,
   buildAdminArticlePromotionPrompt,
   buildAdminCampaignPrompt,
   buildAdminPreviewPromotionPrompt,
-  buildAdminScreenshotCapturePrompt,
   buildAdminSocialPromotionPrompt,
   sanitizeSocialTargetChars,
   socialLengthPresetsFor,
   type AdminArticlePromotionInput,
   type AdminProductFacts,
-  type AdminScreenshotCount,
-  type AdminScreenshotDevice,
-  type AdminScreenshotPublication,
-  type AdminScreenshotTarget,
   type AdminSocialLengthPlan,
   type AdminSocialPlatform,
 } from "@/lib/admin-promotion";
@@ -73,10 +65,6 @@ export function AdminPromotionPage() {
   const [salesProduct, setSalesProduct] = useState<SalesProductKey>("aas-pwa");
   const [salesChannel, setSalesChannel] = useState<SalesChannelKey>("note");
   const [promotionMethod, setPromotionMethod] = useState<PromotionMethodKey>("article");
-  const [screenshotTarget, setScreenshotTarget] = useState<AdminScreenshotTarget>("create");
-  const [screenshotPublication, setScreenshotPublication] = useState<AdminScreenshotPublication>("note");
-  const [screenshotDevice, setScreenshotDevice] = useState<AdminScreenshotDevice>("both");
-  const [screenshotCount, setScreenshotCount] = useState<AdminScreenshotCount>("auto");
   const [message, setMessage] = useState("");
   const [facts, setFacts] = useState<AdminProductFacts>(DEFAULT_ADMIN_PRODUCT_FACTS);
   const [socialLengths, setSocialLengths] = useState<AdminSocialLengthPlan>({ ...DEFAULT_SOCIAL_LENGTH_PLAN });
@@ -180,16 +168,6 @@ export function AdminPromotionPage() {
     () => buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths }),
     [facts, preview, socialLengths, workspacePreference],
   );
-  const screenshotPrompt = useMemo(
-    () => buildAdminScreenshotCapturePrompt({
-      target: screenshotTarget,
-      publication: screenshotPublication,
-      device: screenshotDevice,
-      count: screenshotCount,
-    }),
-    [screenshotTarget, screenshotPublication, screenshotDevice, screenshotCount],
-  );
-
   const applyThreeStepPromotion = () => {
     setQuickPreset("");
 
@@ -451,53 +429,8 @@ export function AdminPromotionPage() {
         </div>
       </section>
 
-      <section className="admin-promo-screenshot-tool" aria-label="記事用スクリーンショット準備">
-        <div className="admin-promo-screenshot-head">
-          <div>
-            <p className="eyebrow">LIVE SCREENSHOT ASSIST</p>
-            <h2>記事用スクリーンショット準備</h2>
-            <p>最新GitHub HEADとPreviewを毎回確認し、記事の内容に合う実画面を撮影・配置するためのChatGPT依頼文を作ります。</p>
-          </div>
-          <strong>古い画像を使い回さない</strong>
-        </div>
-        <div className="admin-promo-screenshot-grid">
-          <label className="admin-promo-field">
-            <span>① 紹介する機能</span>
-            <select value={screenshotTarget} onChange={(event) => setScreenshotTarget(event.target.value as AdminScreenshotTarget)}>
-              {(Object.entries(ADMIN_SCREENSHOT_TARGETS) as Array<[AdminScreenshotTarget, (typeof ADMIN_SCREENSHOT_TARGETS)[AdminScreenshotTarget]]>).map(([key, item]) => (
-                <option key={key} value={key}>{item.label} — {item.note}</option>
-              ))}
-            </select>
-          </label>
-          <label className="admin-promo-field">
-            <span>② 使用先</span>
-            <select value={screenshotPublication} onChange={(event) => setScreenshotPublication(event.target.value as AdminScreenshotPublication)}>
-              {SCREENSHOT_PUBLICATION_OPTIONS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-            </select>
-          </label>
-          <label className="admin-promo-field">
-            <span>③ 端末</span>
-            <select value={screenshotDevice} onChange={(event) => setScreenshotDevice(event.target.value as AdminScreenshotDevice)}>
-              {SCREENSHOT_DEVICE_OPTIONS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-            </select>
-          </label>
-          <label className="admin-promo-field">
-            <span>④ スクショ枚数</span>
-            <select value={screenshotCount} onChange={(event) => setScreenshotCount(event.target.value as AdminScreenshotCount)}>
-              {SCREENSHOT_COUNT_OPTIONS.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-            </select>
-          </label>
-        </div>
-        <div className="admin-promo-screenshot-note">
-          <strong>安全設計</strong>
-          <span>ChatGPTには最新Preview取得・実装照合・記事中の挿入位置選定まで依頼します。認証回避や秘密情報の取得はさせず、AAS ID・メール・請求情報など公開不要の情報を写さないよう指定しています。</span>
-        </div>
-        <PromptOutput
-          prompt={screenshotPrompt}
-          onCopy={() => void copyPrompt(screenshotPrompt)}
-          note="この依頼文をChatGPTへ渡すと、最新Previewを確認して必要な画面・撮影位置・記事への挿入位置・キャプションまで整理できます。"
-        />
-      </section>
+      <AdminPromotionScreenshotTool onCopy={(prompt) => void copyPrompt(prompt)} />
+
       <section className="admin-promo-quick-start" aria-label="かんたん作成">
         <div className="admin-promo-quick-head">
           <div><p className="eyebrow">QUICK START</p><h2>かんたん作成</h2><p>まず2つ選ぶだけ。細かい設定は必要な場合だけ下で変更できます。</p></div>
