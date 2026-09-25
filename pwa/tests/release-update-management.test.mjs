@@ -169,11 +169,16 @@ test("staged release rollout isolates admin preview, selected user testers, and 
     assert.ok(manager.includes(`"${route}"`), `missing release-manager public route: ${route}`);
   }
   assert.ok(
-    manager.indexOf("if (hiddenRoute(pathname))") < manager.indexOf("loadMyAppReleaseState(client)"),
-    "public legal/support routes must skip release RPC before refresh is defined",
+    manager.indexOf("if (hiddenRoute(pathname) || !accessUserId || !client)") < manager.indexOf("loadMyAppReleaseState(client)"),
+    "signed-out and public legal/support routes must skip release RPC before refresh is defined",
   );
-  assert.match(manager, /\}, \[pathname\]\);/);
+  assert.match(manager, /useSharedAccessState\(\)/);
+  assert.match(manager, /\}, \[accessUserId, client, pathname\]\);/);
+  assert.doesNotMatch(manager, /client\.auth\.onAuthStateChange/);
   assert.match(manager, /return null/);
+  assert.match(previewStatus, /useSharedAccessState\(\)/);
+  assert.match(previewStatus, /if \(!accessUserId \|\| !client\)/);
+  assert.doesNotMatch(previewStatus, /client\.auth\.onAuthStateChange/);
   assert.match(previewStatus, /is_admin_preview/);
   assert.match(previewStatus, /is_tester_preview/);
   assert.match(previewStatus, /管理者確認/);
