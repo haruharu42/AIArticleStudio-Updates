@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
+import { NotificationSettingsPanel } from "@/components/notification-settings-panel";
 import { WorkspacePresetSettings } from "@/features/presets/workspace-preset-settings";
 import { signOutCurrentBrowser } from "@/lib/auth-session";
 import { readMobileNavAlways, writeMobileNavAlways } from "@/lib/mobile-nav-preference";
@@ -27,7 +28,7 @@ import {
   type WritingTone,
 } from "@/lib/user-personalization";
 
-type SettingsSection = "preset" | "navigation" | "personalization" | "account";
+type SettingsSection = "preset" | "navigation" | "notifications" | "personalization" | "account";
 
 function SettingsAccordion({
   id,
@@ -214,6 +215,17 @@ export function PwaSettingsPage() {
               {profile
                 ? <MobileNavCustomizer userId={profile.id} isAdmin={profile.role === "admin" && profile.status === "active"} />
                 : <div className="persistent-settings-status">ナビ設定を読み込んでいます…</div>}
+            </SettingsAccordion>
+
+            <SettingsAccordion
+              id="notifications"
+              icon="🔔"
+              title="通知"
+              description="AAS内通知・スマホ/PCの端末通知・通知種類"
+              open={openSection === "notifications"}
+              onOpen={toggleSection}
+            >
+              <NotificationSettingsPanel />
             </SettingsAccordion>
 
             <SettingsAccordion
