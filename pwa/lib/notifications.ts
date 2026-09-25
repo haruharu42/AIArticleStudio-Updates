@@ -101,7 +101,7 @@ export async function getMyNotifications(
   limit = 30,
   unreadOnly = false,
 ): Promise<NotificationInbox> {
-  const { data, error } = await client.rpc("get_my_app_notifications", {
+  const { data, error } = await client.rpc("get_my_app_notifications_v2", {
     p_limit: limit,
     p_unread_only: unreadOnly,
   });
@@ -110,20 +110,20 @@ export async function getMyNotifications(
 }
 
 export async function markNotificationRead(client: SupabaseClient, notificationId: number): Promise<void> {
-  const { error } = await client.rpc("mark_my_app_notification_read", { p_notification_id: notificationId });
+  const { error } = await client.rpc("mark_my_app_notification_read_v2", { p_notification_id: notificationId });
   if (error) throw error;
   if (typeof window !== "undefined") window.dispatchEvent(new Event(NOTIFICATION_REFRESH_EVENT));
 }
 
 export async function markAllNotificationsRead(client: SupabaseClient): Promise<number> {
-  const { data, error } = await client.rpc("mark_all_my_app_notifications_read");
+  const { data, error } = await client.rpc("mark_all_my_app_notifications_read_v2");
   if (error) throw error;
   if (typeof window !== "undefined") window.dispatchEvent(new Event(NOTIFICATION_REFRESH_EVENT));
   return Number(data ?? 0) || 0;
 }
 
 export async function getNotificationPreferences(client: SupabaseClient): Promise<NotificationPreferences> {
-  const { data, error } = await client.rpc("get_my_notification_preferences");
+  const { data, error } = await client.rpc("get_my_notification_preferences_v2");
   if (error) throw error;
   return normalizeNotificationPreferences(data);
 }
@@ -132,7 +132,7 @@ export async function updateNotificationPreferences(
   client: SupabaseClient,
   preferences: NotificationPreferences,
 ): Promise<NotificationPreferences> {
-  const { data, error } = await client.rpc("update_my_notification_preferences", {
+  const { data, error } = await client.rpc("update_my_notification_preferences_v2", {
     p_in_app_enabled: preferences.inAppEnabled,
     p_push_enabled: preferences.pushEnabled,
     p_updates_enabled: preferences.updatesEnabled,
@@ -173,7 +173,7 @@ export async function enableBrowserPush(client: SupabaseClient): Promise<"enable
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return "denied";
 
-  const { data: config, error: configError } = await client.rpc("get_notification_push_public_config");
+  const { data: config, error: configError } = await client.rpc("get_notification_push_public_config_v2");
   if (configError) throw configError;
   const row = asRecord(config);
   if (row.enabled !== true || typeof row.vapid_public_key !== "string" || !row.vapid_public_key) {
@@ -190,7 +190,7 @@ export async function enableBrowserPush(client: SupabaseClient): Promise<"enable
     });
   }
 
-  const { error } = await client.rpc("register_my_push_subscription", {
+  const { error } = await client.rpc("register_my_push_subscription_v2", {
     p_endpoint: subscription.endpoint,
     p_p256dh: keyToBase64Url(subscription.getKey("p256dh")),
     p_auth_key: keyToBase64Url(subscription.getKey("auth")),
@@ -205,7 +205,7 @@ export async function disableBrowserPush(client: SupabaseClient): Promise<void> 
   const registration = await navigator.serviceWorker.getRegistration();
   const subscription = registration ? await registration.pushManager.getSubscription() : null;
   if (subscription) {
-    const { error } = await client.rpc("unregister_my_push_subscription", { p_endpoint: subscription.endpoint });
+    const { error } = await client.rpc("unregister_my_push_subscription_v2", { p_endpoint: subscription.endpoint });
     if (error) throw error;
     await subscription.unsubscribe();
   }
