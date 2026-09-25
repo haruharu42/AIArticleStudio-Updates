@@ -1,9 +1,11 @@
+import { AdminAccessCodeRedemptionHistory } from "@/components/admin-users/admin-access-code-redemption-history";
 import { PresetNumberSelectWithCustom, SelectWithCustom } from "@/components/select-with-custom";
-import type { PwaAdminInvite } from "@/lib/pwa-admin-users";
+import type { PwaAdminInvite, PwaInviteRedemption } from "@/lib/pwa-admin-users";
 import { formatAdminDate } from "@/lib/admin-users-view";
 
 export function AdminAccessCodePanel({
   codes,
+  redemptions,
   activeCount,
   usedCount,
   busy,
@@ -24,6 +26,7 @@ export function AdminAccessCodePanel({
   onRevoke,
 }: {
   codes: PwaAdminInvite[];
+  redemptions: PwaInviteRedemption[];
   activeCount: number;
   usedCount: number;
   busy: boolean;
@@ -108,6 +111,8 @@ export function AdminAccessCodePanel({
               </article>
             )) : <p className="admin-empty-copy">発行済みのPWA利用コードはありません。</p>}
           </div>
+
+          <AdminAccessCodeRedemptionHistory redemptions={redemptions} />
         </div>
       </details>
     </section>
