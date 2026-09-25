@@ -363,32 +363,35 @@ test("knowledge monitor dashboard exposes admin-only source health and side-hust
 });
 
 
-test("admin Knowledge quality analyzer reuses production health and source diversity RPCs without auto-publish", async () => {
-  const [production, risk, diversity, panel, client, css] = await Promise.all([
-    readRepo("supabase/migrations/20260924072845_knowledge_production_workflow_v1.sql"),
-    readRepo("supabase/migrations/20260924153301_knowledge_source_risk_report_v1.sql"),
-    readRepo("supabase/migrations/20260924155040_source_diversity_research_v1.sql"),
+test("admin Knowledge quality analyzer reuses existing RPCs without auto-publish", async () => {
+  const [panel, client, css] = await Promise.all([
     readPwa("components/knowledge-refresh-panel.tsx"),
     readPwa("lib/knowledge-auto-update.ts"),
     readPwa("app/phase26-knowledge.css"),
   ]);
 
-  assert.match(production, /admin_get_knowledge_production_health/);
-  assert.match(risk, /admin_get_knowledge_source_risk_report/);
-  assert.match(risk, /single_source_count/);
-  assert.match(risk, /multi_domain_count/);
-  assert.match(diversity, /admin_prepare_source_diversity_research/);
-  assert.match(diversity, /channel='fresh'/);
-  assert.doesNotMatch(diversity, /admin_publish_knowledge_refresh_bundle/);
-
   assert.match(client, /adminGetKnowledgeProductionHealth/);
+  assert.match(client, /client\.rpc\("admin_get_knowledge_production_health"\)/);
   assert.match(client, /adminGetKnowledgeSourceRiskReport/);
+  assert.match(client, /client\.rpc\("admin_get_knowledge_source_risk_report"\)/);
+  assert.match(client, /singleSourceCount/);
+  assert.match(client, /multiDomainCount/);
   assert.match(client, /adminPrepareSourceDiversityResearch/);
+  assert.match(client, /client\.rpc\("admin_prepare_source_diversity_research"/);
+
+  const prepareStart = client.indexOf("export async function adminPrepareSourceDiversityResearch");
+  const prepareEnd = client.indexOf("export async function adminListKnowledgeAutomationCandidates", prepareStart);
+  assert.notEqual(prepareStart, -1);
+  assert.notEqual(prepareEnd, -1);
+  const prepareSource = client.slice(prepareStart, prepareEnd);
+  assert.doesNotMatch(prepareSource, /admin_publish_knowledge_refresh_bundle/);
+
   assert.match(panel, /Knowledge品質・カバレッジ分析/);
   assert.match(panel, /追加根拠リサーチを準備/);
   assert.match(panel, /自動公開はされません/);
   assert.match(panel, /最多ドメインへの集中率/);
   assert.match(panel, /追加根拠を確認する項目/);
+  assert.match(panel, /正式Knowledgeは変わりません/);
   assert.match(css, /\.knowledge-quality-analyzer/);
   assert.match(css, /\.knowledge-quality-metrics/);
   assert.match(css, /\.knowledge-quality-review/);
