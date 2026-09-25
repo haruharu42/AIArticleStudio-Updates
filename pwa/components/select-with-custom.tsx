@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 export type SelectWithCustomOption = {
   value: string;
@@ -46,12 +46,8 @@ export function SelectWithCustom({
   const inputId = useId();
   const normalized = useMemo(() => normalizeOptions(options), [options]);
   const preset = normalized.find((option) => option.value === value);
-  const [forceCustom, setForceCustom] = useState(false);
-  const custom = forceCustom || (Boolean(value) && !preset);
-
-  useEffect(() => {
-    if (preset) setForceCustom(false);
-  }, [preset]);
+  const [customModeValue, setCustomModeValue] = useState<string | null>(null);
+  const custom = customModeValue === value || (Boolean(value) && !preset);
 
   return (
     <label className={`smart-select-field ${className}`.trim()}>
@@ -64,11 +60,10 @@ export function SelectWithCustom({
         onChange={(event) => {
           const next = event.target.value;
           if (next === "__custom__") {
-            setForceCustom(true);
-            if (preset) onChange("");
+            setCustomModeValue(value);
             return;
           }
-          setForceCustom(false);
+          setCustomModeValue(null);
           onChange(next);
         }}
       >
@@ -88,7 +83,10 @@ export function SelectWithCustom({
           min={min}
           max={max}
           inputMode={inputType === "number" ? "numeric" : undefined}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            setCustomModeValue(null);
+            onChange(event.target.value);
+          }}
           placeholder={customPlaceholder}
         />
       )}
@@ -122,12 +120,8 @@ export function PresetNumberSelectWithCustom({
 }) {
   const inputId = useId();
   const preset = presets.includes(value);
-  const [forceCustom, setForceCustom] = useState(!preset);
-  const custom = forceCustom || !preset;
-
-  useEffect(() => {
-    if (preset) setForceCustom(false);
-  }, [preset]);
+  const [customModeValue, setCustomModeValue] = useState<number | null>(preset ? null : value);
+  const custom = !preset || customModeValue === value;
 
   return (
     <label className={`smart-select-field ${className}`.trim()}>
@@ -139,10 +133,10 @@ export function PresetNumberSelectWithCustom({
         aria-controls={custom ? inputId : undefined}
         onChange={(event) => {
           if (event.target.value === "__custom__") {
-            setForceCustom(true);
+            setCustomModeValue(value);
             return;
           }
-          setForceCustom(false);
+          setCustomModeValue(null);
           onChange(Number(event.target.value));
         }}
       >
@@ -163,6 +157,7 @@ export function PresetNumberSelectWithCustom({
           onChange={(event) => {
             const next = Number(event.target.value);
             if (!Number.isFinite(next)) return;
+            setCustomModeValue(null);
             onChange(Math.max(min, Math.min(max, next)));
           }}
         />
