@@ -158,8 +158,11 @@ test("workspace preset provider persists across routes and recomputes dependent 
   assert.match(provider, /deleteAccountPreset/);
   assert.match(workflow, /\[preflightDetail, preflightReport, workspacePreference\]/);
   assert.match(workflow, /\[reuseDetail, enabledReuseChannels, workspacePreference\]/);
-  assert.match(promotion, /\[facts, article, workspacePreference\]/);
-  assert.match(promotion, /\[facts, preview, socialLengths, workspacePreference\]/);
+  assert.match(promotion, /\[facts, article\]/);
+  assert.match(promotion, /\[facts, preview, socialLengths\]/);
+  assert.doesNotMatch(promotion, /\[facts, article, workspacePreference\]/);
+  assert.doesNotMatch(promotion, /\[facts, preview, socialLengths, workspacePreference\]/);
+  assert.match(promotion, /WORKSPACE_PRESETS\[workspacePreference\.presetKey\]/);
 });
 
 
