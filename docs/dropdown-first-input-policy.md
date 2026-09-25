@@ -24,3 +24,5 @@ AAS uses dropdown-first controls for values that can be represented by reusable 
 - Existing side-hustle wizards and free-plan controls retain their prior dropdown/custom behavior.
 
 Unique or secret values are deliberately not converted to dropdowns.
+
+Validation rerun after access-code import fix.
