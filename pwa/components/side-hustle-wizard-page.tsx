@@ -50,7 +50,7 @@ function SideHustleWizardContent({ slug }: { slug: string }) {
   const [message, setMessage] = useState("");
   const [storageError, setStorageError] = useState(false);
   const [hydrated, setHydrated] = useState(false);
-  const [knowledgeRevision, setKnowledgeRevision] = useState(0);
+  const [, setKnowledgeRevision] = useState(0);
 
   useEffect(() => {
     if (!definition || !userId) return;
