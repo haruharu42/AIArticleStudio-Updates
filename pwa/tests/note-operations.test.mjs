@@ -219,8 +219,8 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /AIにはAASへ貼る予定表だけを返すよう指示します/);
   assert.match(parser, /balancedJsonObjects/);
   assert.match(parser, /scheduleRootFromValue/);
-  assert.match(lib, /ChatGPTの回答全文を削らず/);
-  assert.match(lib, /AAS用の運用スケジュールが回答内に見つかりませんでした/);
+  assert.match(parser, /ChatGPTの回答全文を削らず/);
+  assert.match(parser, /AAS用の運用スケジュールが回答内に見つかりませんでした/);
   assert.match(lib, /対象月の外にある予定/);
   assert.match(lib, /同じ日時に記事投稿が重複/);
   assert.match(lib, /1日に最大/);
@@ -294,17 +294,19 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
 
 
 test("note schedule import accepts full AI response prose and keeps file import as fallback", async () => {
-  const [lib, page, css, layout] = await Promise.all([
+  const [lib, parser, page, css, layout] = await Promise.all([
     readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-ai-schedule-json.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("app/phase39-readability.css"),
     readPwa("app/layout.tsx"),
   ]);
 
-  assert.match(lib, /export function extractNoteAiScheduleJson/);
-  assert.match(lib, /matchAll\(fencePattern\)/);
-  assert.match(lib, /balancedJsonObjects\(rawText\)/);
-  assert.match(lib, /object\.schema === "aas-note-schedule-v2"/);
+  assert.match(lib, /export \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
+  assert.match(parser, /export function extractNoteAiScheduleJson/);
+  assert.match(parser, /matchAll\(fencePattern\)/);
+  assert.match(parser, /balancedJsonObjects\(rawText\)/);
+  assert.match(parser, /object\.schema === "aas-note-schedule-v2"/);
   assert.match(page, /AIの回答をそのままAASへ反映/);
   assert.match(page, /JSONは不要です/);
   assert.match(page, /コピーしたAI回答を読み込んで反映/);
@@ -315,8 +317,9 @@ test("note schedule import accepts full AI response prose and keeps file import 
 
 
 test("AI note calendar is article-only and tolerates common free paid aliases", async () => {
-  const [lib, page, today] = await Promise.all([
+  const [lib, parser, page, today] = await Promise.all([
     readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-ai-schedule-json.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-today-panel.tsx"),
   ]);
@@ -326,9 +329,9 @@ test("AI note calendar is article-only and tolerates common free paid aliases", 
   assert.match(lib, /raw\.type \?\? raw\.item_type \?\? raw\.article_type/);
   assert.match(lib, /raw\.scheduled_date/);
   assert.match(lib, /raw\.scheduled_time/);
-  assert.match(lib, /object\.targetMonth/);
-  assert.match(lib, /Array\.isArray\(object\.calendar\)/);
-  assert.match(lib, /Array\.isArray\(object\.items\)/);
+  assert.match(parser, /object\.targetMonth/);
+  assert.match(parser, /Array\.isArray\(object\.calendar\)/);
+  assert.match(parser, /Array\.isArray\(object\.items\)/);
   assert.match(lib, /root\.targetMonth/);
   assert.match(lib, /raw\.day/);
   assert.match(lib, /raw\.name/);
