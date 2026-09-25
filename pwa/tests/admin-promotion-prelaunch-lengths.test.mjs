@@ -121,6 +121,8 @@ test("sales promotion center supports a safe three-step auto setup", async () =>
   assert.match(page, /type AdminArticlePromotionInput/);
   assert.match(page, /useState<AdminArticlePromotionInput>/);
   assert.match(planner, /sellingConfirmed/);
+  assert.match(planner, /saleUnconfirmed = !sellingConfirmed/);
+  assert.match(planner, /plan\.saleUnconfirmed && selection\.salesProduct !== "prelaunch"/);
   assert.match(planner, /販売中の確認がないため販売前表現で設定/);
   assert.match(options, /AAS内Stripe（設定時のみ）/);
   assert.match(options, /PWA 7日利用パス（設定時のみ）/);

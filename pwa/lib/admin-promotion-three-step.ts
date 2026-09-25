@@ -18,6 +18,7 @@ export type PromotionThreeStepSelection = {
 export type PromotionThreeStepPlan = {
   mode: Mode;
   prelaunch: boolean;
+  saleUnconfirmed: boolean;
   productLabel: string;
   channelLabel: string;
   methodLabel: string;
@@ -77,7 +78,8 @@ export function buildPromotionThreeStepPlan(
         ? "X, Instagram, Threads, TikTok, YouTube Shorts"
         : "note, X, Instagram, Threads";
   const sellingConfirmed = releaseStage === "先行販売" || releaseStage === "正式販売";
-  const prelaunch = salesProduct === "prelaunch" || promotionMethod === "preview" || !sellingConfirmed;
+  const saleUnconfirmed = !sellingConfirmed;
+  const prelaunch = salesProduct === "prelaunch" || promotionMethod === "preview" || saleUnconfirmed;
   const factsPatch = {
     productName: "AI Action Studio",
     editions: "PWA版のみ",
@@ -88,6 +90,7 @@ export function buildPromotionThreeStepPlan(
     return {
       mode: "article",
       prelaunch,
+      saleUnconfirmed,
       productLabel,
       channelLabel,
       methodLabel,
@@ -106,6 +109,7 @@ export function buildPromotionThreeStepPlan(
     return {
       mode: "social",
       prelaunch,
+      saleUnconfirmed,
       productLabel,
       channelLabel,
       methodLabel,
@@ -125,6 +129,7 @@ export function buildPromotionThreeStepPlan(
     return {
       mode: "campaign",
       prelaunch,
+      saleUnconfirmed,
       productLabel,
       channelLabel,
       methodLabel,
@@ -143,6 +148,7 @@ export function buildPromotionThreeStepPlan(
   return {
     mode: "preview",
     prelaunch: true,
+    saleUnconfirmed,
     productLabel,
     channelLabel,
     methodLabel,
@@ -167,7 +173,7 @@ export function threeStepPromotionMessage(
 ): string {
   return "3ステップ設定を反映しました: "
     + plan.productLabel + " / " + plan.channelLabel + " / " + plan.methodLabel
-    + (plan.prelaunch && selection.salesProduct !== "prelaunch"
+    + (plan.saleUnconfirmed && selection.salesProduct !== "prelaunch"
       ? "（販売中の確認がないため販売前表現で設定）"
       : "");
 }
