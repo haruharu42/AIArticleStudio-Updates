@@ -19,10 +19,20 @@ const PROMPT_ICON_OPTIONS = ["⌘", "✍️", "📱", "🎬", "🖼️", "🛒",
 const SORT_ORDER_PRESETS = [10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 500] as const;
 const VERSION_PRESETS = [1, 2, 3, 4, 5, 10] as const;
 
+const FIELD_AUDIENCE_OPTIONS = [
+  "完全初心者", "初心者", "経験者", "会社員・働く人", "副業を始めたい人",
+  "クリエイター・発信者", "個人事業主・経営者", "既存フォロワー", "購入を検討している人", "幅広い読者",
+] as const;
+const FIELD_GOAL_OPTIONS = [
+  "認知を広げる", "保存・ブックマークにつなげる", "プロフィール閲覧・フォローにつなげる",
+  "購入判断を助ける", "商品・サービス購入につなげる", "問い合わせ・相談につなげる",
+  "応募・案件獲得につなげる", "理解・学習を助ける", "継続して読んでもらう", "作業を効率化する",
+] as const;
+
 const NEW_FIELDS: ActionPromptField[] = [
   { key: "topic", label: "テーマ・対象", placeholder: "例：AI副業、商品、動画テーマ" },
-  { key: "audience", label: "想定する相手", placeholder: "例：初心者、30代会社員" },
-  { key: "goal", label: "目的", placeholder: "例：保存、購入判断、応募" },
+  { key: "audience", label: "想定する相手", placeholder: "一覧にない相手は自由入力", options: FIELD_AUDIENCE_OPTIONS },
+  { key: "goal", label: "目的", placeholder: "一覧にない目的は自由入力", options: FIELD_GOAL_OPTIONS },
   { key: "notes", label: "追加条件・素材", placeholder: "事実として使える情報、避けたい表現など", multiline: true },
 ];
 
@@ -355,8 +365,20 @@ export function AdminActionPromptsPage() {
               <div className="prompt-admin-field-row" key={`${field.key}-${index}`}>
                 <input aria-label="key" value={field.key} onChange={(event) => patchField(index, { key: event.target.value.slice(0, 40) })} placeholder="key" />
                 <input aria-label="ラベル" value={field.label} onChange={(event) => patchField(index, { label: event.target.value.slice(0, 100) })} placeholder="表示ラベル" />
-                <input aria-label="プレースホルダー" value={field.placeholder} onChange={(event) => patchField(index, { placeholder: event.target.value.slice(0, 200) })} placeholder="入力例" />
-                <label className="check"><input type="checkbox" checked={field.multiline === true} onChange={(event) => patchField(index, { multiline: event.target.checked })} />複数行</label>
+                <input aria-label="プレースホルダー" value={field.placeholder} onChange={(event) => patchField(index, { placeholder: event.target.value.slice(0, 200) })} placeholder="自由入力時の入力例" />
+                <input
+                  aria-label="選択肢"
+                  value={field.options?.join("、") ?? ""}
+                  onChange={(event) => patchField(index, {
+                    options: event.target.value
+                      .split(/[,、\n]/)
+                      .map((value) => value.trim())
+                      .filter(Boolean)
+                      .slice(0, 30),
+                  })}
+                  placeholder="選択肢を「、」区切りで入力（空欄なら自由入力のみ）"
+                />
+                <label className="check"><input type="checkbox" checked={field.multiline === true} onChange={(event) => patchField(index, { multiline: event.target.checked, options: event.target.checked ? [] : field.options })} />複数行</label>
                 <button type="button" onClick={() => setDraft((current) => current ? { ...current, fields: current.fields.filter((_item, fieldIndex) => fieldIndex !== index) } : current)}>削除</button>
               </div>
             ))}
