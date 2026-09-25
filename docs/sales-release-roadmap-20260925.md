@@ -32,7 +32,8 @@ Completed:
 Remaining:
 
 - [ ] Review Supabase Auth leaked-password protection.
-- [ ] Classify the remaining intentional SECURITY DEFINER warnings by feature family rather than changing them only to silence the advisor.
+- [x] Classify the remaining authenticated SECURITY DEFINER warnings by guard type and delegated call path.
+- [x] Convert the zero-argument release-state wrapper to SECURITY INVOKER after compatibility testing.
 - [ ] Review `pg_net` public-schema extension impact before attempting any schema move.
 - [ ] Re-run advisors after each database security change.
 

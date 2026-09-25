@@ -78,6 +78,12 @@ Historical Windows/Bundle billing identifiers may still be recognized for old-re
 - Verified authenticated SECURITY DEFINER functions use empty `search_path`.
 - Optimized `user_home_widget_preferences` RLS policies to evaluate `auth.uid()` through a scalar subquery.
 - Added the remaining foreign-key indexes reported by the performance advisor.
+- Reviewed authenticated SECURITY DEFINER functions by guard path:
+  - 89 include the active-admin guard
+  - 8 include the notification feature-access guard
+  - 123 include direct `auth.uid()` checks (overlaps with the guarded groups)
+  - only one remaining function is delegated/indirect without a direct guard in its own body: `create_article_with_workspace`, which delegates article validation/ownership/quota to `create_article`
+- Converted the zero-argument `get_my_app_release_state()` wrapper to SECURITY INVOKER because it only delegates to the guarded audience-aware overload.
 
 ## Intentionally not enabled
 
