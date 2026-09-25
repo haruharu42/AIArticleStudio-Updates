@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { PresetNumberSelectWithCustom, SelectWithCustom } from "@/components/select-with-custom";
+import { SIDE_HUSTLE_DEFINITIONS } from "@/features/side-hustles/catalog";
 import {
   loadActionPromptCatalog,
   saveActionPromptCategory,
@@ -12,6 +14,10 @@ import {
   type ActionPromptTemplateRecord,
 } from "@/lib/action-prompt-service";
 import type { ActionPromptField } from "@/lib/action-prompt-catalog";
+
+const PROMPT_ICON_OPTIONS = ["⌘", "✍️", "📱", "🎬", "🖼️", "🛒", "💼", "📣", "🔍", "⚙️", "🤖", "✨"] as const;
+const SORT_ORDER_PRESETS = [10, 20, 30, 40, 50, 75, 100, 150, 200, 300, 500] as const;
+const VERSION_PRESETS = [1, 2, 3, 4, 5, 10] as const;
 
 const NEW_FIELDS: ActionPromptField[] = [
   { key: "topic", label: "テーマ・対象", placeholder: "例：AI副業、商品、動画テーマ" },
@@ -84,6 +90,13 @@ export function AdminActionPromptsPage() {
       [item.title, item.id, item.category, item.sideHustle, item.description].some((value) => value.toLowerCase().includes(needle))
     );
   }, [query, templates]);
+
+  const sideHustleOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const definition of SIDE_HUSTLE_DEFINITIONS) values.add(definition.title);
+    for (const template of templates) if (template.sideHustle.trim()) values.add(template.sideHustle.trim());
+    return [...values].sort((a, b) => a.localeCompare(b, "ja"));
+  }, [templates]);
 
   const openTemplate = (template: ActionPromptTemplateRecord) => {
     setDraft({
@@ -224,16 +237,30 @@ export function AdminActionPromptsPage() {
           {categories.map((category) => (
             <article key={category.id}>
               <div className="prompt-category-row">
-                <input aria-label="アイコン" value={category.icon} onChange={(event) => patchCategory(category.id, { icon: event.target.value.slice(0, 16) })} />
-                <input aria-label="表示名" value={category.displayName} onChange={(event) => patchCategory(category.id, { displayName: event.target.value.slice(0, 80) })} />
+                <SelectWithCustom
+                  label="アイコン"
+                  value={category.icon}
+                  onChange={(icon) => patchCategory(category.id, { icon: icon.slice(0, 16) })}
+                  options={PROMPT_ICON_OPTIONS}
+                  customPlaceholder="絵文字・記号を入力"
+                  maxLength={16}
+                />
+                <label><span>表示名</span><input aria-label="表示名" value={category.displayName} onChange={(event) => patchCategory(category.id, { displayName: event.target.value.slice(0, 80) })} /></label>
               </div>
               <small>{category.categoryKey}</small>
               <textarea rows={2} aria-label="説明" value={category.description} onChange={(event) => patchCategory(category.id, { description: event.target.value.slice(0, 500) })} />
               <div className="prompt-category-row">
-                <input type="number" min={0} max={100000} aria-label="並び順" value={category.sortOrder} onChange={(event) => patchCategory(category.id, { sortOrder: Number(event.target.value) || 0 })} />
-                <select aria-label="状態" value={category.status} onChange={(event) => patchCategory(category.id, { status: event.target.value === "inactive" ? "inactive" : "active" })}>
+                <PresetNumberSelectWithCustom
+                  label="並び順"
+                  value={category.sortOrder}
+                  onChange={(sortOrder) => patchCategory(category.id, { sortOrder })}
+                  presets={SORT_ORDER_PRESETS}
+                  min={0}
+                  max={100000}
+                />
+                <label><span>状態</span><select aria-label="状態" value={category.status} onChange={(event) => patchCategory(category.id, { status: event.target.value === "inactive" ? "inactive" : "active" })}>
                   <option value="active">公開</option><option value="inactive">停止</option>
-                </select>
+                </select></label>
                 <button type="button" disabled={busy} onClick={() => void saveCategory(category)}>保存</button>
               </div>
             </article>
@@ -244,6 +271,22 @@ export function AdminActionPromptsPage() {
           <input placeholder="category-key" value={newCategory.categoryKey} onChange={(event) => setNewCategory((current) => ({ ...current, categoryKey: event.target.value }))} />
           <input placeholder="表示名" value={newCategory.displayName} onChange={(event) => setNewCategory((current) => ({ ...current, displayName: event.target.value }))} />
           <input placeholder="説明" value={newCategory.description} onChange={(event) => setNewCategory((current) => ({ ...current, description: event.target.value }))} />
+          <SelectWithCustom
+            label="アイコン"
+            value={newCategory.icon}
+            onChange={(icon) => setNewCategory((current) => ({ ...current, icon: icon.slice(0, 16) }))}
+            options={PROMPT_ICON_OPTIONS}
+            customPlaceholder="絵文字・記号を入力"
+            maxLength={16}
+          />
+          <PresetNumberSelectWithCustom
+            label="並び順"
+            value={newCategory.sortOrder}
+            onChange={(sortOrder) => setNewCategory((current) => ({ ...current, sortOrder }))}
+            presets={SORT_ORDER_PRESETS}
+            min={0}
+            max={100000}
+          />
           <button type="button" disabled={busy} onClick={() => void addCategory()}>カテゴリ追加</button>
         </div>
       </section>
@@ -276,11 +319,33 @@ export function AdminActionPromptsPage() {
             <label><span>プロンプトID</span><input value={draft.id} onChange={(event) => setDraft((current) => current ? { ...current, id: normalizeKey(event.target.value) } : current)} placeholder="x-post-series" /></label>
             <label><span>タイトル</span><input value={draft.title} onChange={(event) => setDraft((current) => current ? { ...current, title: event.target.value.slice(0, 120) } : current)} /></label>
             <label><span>カテゴリ</span><select value={draft.categoryKey} onChange={(event) => setDraft((current) => current ? { ...current, categoryKey: event.target.value } : current)}>{categories.map((category) => <option key={category.id} value={category.categoryKey}>{category.displayName}{category.status === "inactive" ? "（停止）" : ""}</option>)}</select></label>
-            <label><span>副業・用途</span><input value={draft.sideHustle} onChange={(event) => setDraft((current) => current ? { ...current, sideHustle: event.target.value.slice(0, 120) } : current)} placeholder="SNS運用" /></label>
+            <SelectWithCustom
+              label="副業・用途"
+              value={draft.sideHustle}
+              onChange={(sideHustle) => setDraft((current) => current ? { ...current, sideHustle: sideHustle.slice(0, 120) } : current)}
+              options={sideHustleOptions}
+              placeholder="共通・指定なし"
+              customPlaceholder="一覧にない副業・用途を入力"
+              maxLength={120}
+            />
             <label><span>推奨AI</span><select value={draft.recommendedAi} onChange={(event) => setDraft((current) => current ? { ...current, recommendedAi: event.target.value as TemplateDraft["recommendedAi"] } : current)}><option>ChatGPT</option><option>Claude</option><option>Gemini</option></select></label>
             <label><span>公開状態</span><select value={draft.status} onChange={(event) => setDraft((current) => current ? { ...current, status: event.target.value as TemplateDraft["status"] } : current)}><option value="draft">下書き</option><option value="active">公開</option><option value="inactive">停止</option></select></label>
-            <label><span>並び順</span><input type="number" min={0} max={100000} value={draft.sortOrder} onChange={(event) => setDraft((current) => current ? { ...current, sortOrder: Number(event.target.value) || 0 } : current)} /></label>
-            <label><span>バージョン</span><input type="number" min={1} value={draft.version} onChange={(event) => setDraft((current) => current ? { ...current, version: Math.max(1, Number(event.target.value) || 1) } : current)} /></label>
+            <PresetNumberSelectWithCustom
+              label="並び順"
+              value={draft.sortOrder}
+              onChange={(sortOrder) => setDraft((current) => current ? { ...current, sortOrder } : current)}
+              presets={SORT_ORDER_PRESETS}
+              min={0}
+              max={100000}
+            />
+            <PresetNumberSelectWithCustom
+              label="バージョン"
+              value={draft.version}
+              onChange={(version) => setDraft((current) => current ? { ...current, version } : current)}
+              presets={VERSION_PRESETS}
+              min={1}
+              max={9999}
+            />
             <label className="full"><span>説明</span><textarea rows={3} value={draft.description} onChange={(event) => setDraft((current) => current ? { ...current, description: event.target.value.slice(0, 500) } : current)} /></label>
           </div>
 
