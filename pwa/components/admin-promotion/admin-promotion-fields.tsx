@@ -168,7 +168,15 @@ export function SocialLengthSettings({
   );
 }
 
-export function PromptOutput({ prompt, onCopy }: { prompt: string; onCopy: () => void }) {
+export function PromptOutput({
+  prompt,
+  onCopy,
+  note = "プロンプトをコピーしてAIへ渡すと、確認済み情報だけを基準にテスト報告・公開予告・紹介記事・SNS素材を作成できます。",
+}: {
+  prompt: string;
+  onCopy: () => void;
+  note?: string;
+}) {
   return (
     <section className="admin-promo-output" aria-label="生成用プロンプト">
       <div className="admin-promo-output-head">
@@ -181,7 +189,7 @@ export function PromptOutput({ prompt, onCopy }: { prompt: string; onCopy: () =>
           <button key={key} type="button" onClick={() => launchAiApp(key)}>{AI_APP_LINKS[key].name}を開く</button>
         ))}
       </div>
-      <p>プロンプトをコピーしてAIへ渡すと、確認済み情報だけを基準にテスト報告・公開予告・紹介記事・SNS素材を作成できます。</p>
+      <p>{note}</p>
     </section>
   );
 }

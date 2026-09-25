@@ -124,3 +124,33 @@ test("sales promotion center supports a safe three-step auto setup", async () =>
   assert.match(css, /\.admin-promo-three-step-grid/);
   assert.match(css, /@media \(max-width: 880px\)[\s\S]*?\.admin-promo-three-step-grid/);
 });
+
+
+test("promotion center builds a live Preview screenshot request for ChatGPT", async () => {
+  const [lib, page, fields, css] = await Promise.all([
+    read("lib/admin-promotion.ts"),
+    read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-fields.tsx"),
+    read("app/phase24-admin-promotion.css"),
+  ]);
+
+  assert.match(lib, /buildAdminScreenshotCapturePrompt/);
+  assert.match(lib, /ADMIN_SCREENSHOT_TARGETS/);
+  assert.match(lib, /PR #139/);
+  assert.match(lib, /固定SHAを信用せず/);
+  assert.match(lib, /最新Preview URL/);
+  assert.match(lib, /認証回避/);
+  assert.match(lib, /AAS ID、メールアドレス、請求情報/);
+  assert.match(lib, /推奨挿入位置/);
+  assert.match(page, /記事用スクリーンショット準備/);
+  assert.match(page, /① 紹介する機能/);
+  assert.match(page, /② 使用先/);
+  assert.match(page, /③ 端末/);
+  assert.match(page, /④ スクショ枚数/);
+  assert.match(page, /古い画像を使い回さない/);
+  assert.match(page, /note="この依頼文をChatGPTへ渡すと/);
+  assert.match(fields, /note\?: string/);
+  assert.match(css, /\.admin-promo-screenshot-tool/);
+  assert.match(css, /\.admin-promo-screenshot-grid/);
+  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.admin-promo-screenshot-grid/);
+});

@@ -3,6 +3,37 @@ import { buildUserPromptContext, getRuntimeWritingProfile } from "@/lib/user-per
 
 export type AdminSocialPlatform = "x" | "instagram" | "threads" | "tiktok" | "youtube";
 
+export type AdminScreenshotTarget =
+  | "home"
+  | "create"
+  | "sidejob"
+  | "prompts"
+  | "sns"
+  | "images"
+  | "notifications"
+  | "promotion"
+  | "sales"
+  | "knowledge"
+  | "features";
+
+export type AdminScreenshotPublication = "note" | "tips" | "brain" | "x" | "manual" | "update";
+export type AdminScreenshotDevice = "pc" | "mobile" | "both";
+export type AdminScreenshotCount = "auto" | "1" | "2" | "3";
+
+export const ADMIN_SCREENSHOT_TARGETS: Record<AdminScreenshotTarget, { label: string; route: string; note: string }> = {
+  home: { label: "ホーム", route: "/", note: "AAS全体像・主要機能の入口" },
+  create: { label: "記事作成", route: "/create", note: "記事作成ウィザード・外部AI連携" },
+  sidejob: { label: "副業機能", route: "/sidejob", note: "副業カテゴリ・専用ウィザード" },
+  prompts: { label: "プロンプト", route: "/prompts", note: "用途別プロンプトライブラリ" },
+  sns: { label: "SNS作成", route: "/sns", note: "SNS投稿作成・販促素材" },
+  images: { label: "画像作成支援", route: "/images", note: "アイキャッチ・挿絵の作成支援" },
+  notifications: { label: "通知センター", route: "/notifications", note: "アップデート・メンテナンス・Knowledge通知" },
+  promotion: { label: "販売・プロモーション", route: "/admin/promotion", note: "管理者向け販促作成。公開記事では機密情報に注意" },
+  sales: { label: "販売設定", route: "/admin/sales", note: "管理者向け販売受付設定。公開記事では機密情報に注意" },
+  knowledge: { label: "Knowledge管理", route: "/admin/knowledge", note: "管理者向けKnowledge運用。内部情報の露出に注意" },
+  features: { label: "全機能管理", route: "/admin/features", note: "管理者向け公開段階・メンテナンス管理" },
+};
+
 export type AdminProductFacts = {
   productName: string;
   editions: string;
@@ -73,6 +104,73 @@ export type SocialLengthPreset = {
 };
 
 export const ADMIN_PRODUCT_FACTS_STORAGE_KEY = "aas:admin:promotion-product:v1";
+
+export function buildAdminScreenshotCapturePrompt(input: {
+  target: AdminScreenshotTarget;
+  publication: AdminScreenshotPublication;
+  device: AdminScreenshotDevice;
+  count: AdminScreenshotCount;
+}): string {
+  const target = ADMIN_SCREENSHOT_TARGETS[input.target];
+  const publicationLabel: Record<AdminScreenshotPublication, string> = {
+    note: "note記事",
+    tips: "Tips記事",
+    brain: "Brain記事",
+    x: "X投稿・告知",
+    manual: "操作マニュアル",
+    update: "アップデート告知",
+  };
+  const deviceLabel: Record<AdminScreenshotDevice, string> = {
+    pc: "PC表示（横長）",
+    mobile: "スマホ表示（縦長）",
+    both: "PC表示とスマホ表示の両方",
+  };
+  const countLabel = input.count === "auto" ? "必要最小限をAIが判断" : `${input.count}枚`;
+
+  return `AI Action Studio（AAS）の最新実装を確認し、${publicationLabel[input.publication]}に使う画面スクリーンショットを準備してください。
+
+【対象】
+- 紹介機能: ${target.label}
+- 画面候補: ${target.route}
+- 画面の役割: ${target.note}
+- 使用先: ${publicationLabel[input.publication]}
+- 端末: ${deviceLabel[input.device]}
+- 画像数: ${countLabel}
+
+【必須の確認手順】
+1. GitHub repository haruharu42/AIArticleStudio-Updates の PR #139 / branch feat/note-easy-import-manual-contrast-20260920 を確認する。
+2. 固定SHAを信用せず、作業時点の最新HEADを取得する。
+3. そのexact HEADのPreview workflowが成功しているか確認し、最新Preview URLを取得する。
+4. GitHubの実装内容とPreviewの実画面が一致していることを確認する。
+5. ${target.route} を優先して確認し、記事説明により適した関連画面があれば追加候補として使う。
+6. Previewの認証が必要な場合は、既に許可されたログインセッションだけを使う。認証回避、秘密情報の探索、資格情報のコード埋め込みはしない。
+7. 一般公開・Tester・Admin限定など公開段階を確認し、実際の状態より先の表現を記事に使わない。
+
+【スクリーンショット方針】
+- 説明したい機能が一目で分かる範囲だけを撮る。
+- 同じ内容の似た画像を増やさない。
+- ${deviceLabel[input.device]}で確認する。
+- AAS ID、メールアドレス、請求情報、アクセストークン、内部エラー詳細、個人通知など公開不要の情報を写さない。必要ならトリミングまたはマスキングする。
+- 管理画面を使う場合は、公開記事へ出して安全な情報だけに限定する。
+- 長いページは機能説明に必要な場所へスクロールして撮る。
+- 画像内へ後付けの宣伝文句は入れず、実画面を正確に示す。
+
+【記事への配置】
+- 記事本文が同じ会話内にある場合、その本文を読んで最適な挿入位置を決める。
+- 本文がまだない場合は「どの見出しの直後に置くべきか」を提案する。
+- 各画像について、画像番号、撮影画面、PC/スマホ、見せるポイント、推奨挿入位置、短いキャプション、altテキストを作る。
+- 画像を実際に取得できる環境なら、各スクリーンショットを別画像として取得する。
+- 取得できない場合は、できない理由を明示し、撮影すべき画面・位置を具体的に示す。
+
+【最終出力】
+1. 最新HEAD / Preview確認結果
+2. スクリーンショット採用一覧
+3. 各画像の推奨挿入位置
+4. キャプションとaltテキスト
+5. 公開前に人が確認すべき点
+
+古い保存画像を使い回さず、必ず作業時点の最新Previewを基準にしてください。`;
+}
 
 export const DEFAULT_ADMIN_PRODUCT_FACTS: AdminProductFacts = {
   productName: "AI Action Studio",
