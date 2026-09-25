@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { AdminPromotionScreenshotTool } from "@/components/admin-promotion/admin-promotion-screenshot-tool";
+import { AdminPromotionThreeStep } from "@/components/admin-promotion/admin-promotion-three-step";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { WORKSPACE_PRESETS } from "@/features/presets/workspace-presets";
@@ -26,21 +27,15 @@ import {
   MODES,
   OFFER_OPTIONS,
   PREVIEW_UPDATE_OPTIONS,
-  PROMOTION_METHOD_OPTIONS,
   PROMOTION_PHASE_OPTIONS,
   PURPOSE_OPTIONS,
   QUICK_PRESETS,
   RELEASE_STAGE_OPTIONS,
-  SALES_CHANNEL_OPTIONS,
-  SALES_PRODUCT_OPTIONS,
   SUPPORT_OPTIONS,
   TESTED_PLATFORM_OPTIONS,
   TESTING_STATUS_OPTIONS,
   type Mode,
-  type PromotionMethodKey,
   type QuickPresetKey,
-  type SalesChannelKey,
-  type SalesProductKey,
 } from "@/components/admin-promotion/admin-promotion-options";
 import {
   ADMIN_PRODUCT_FACTS_STORAGE_KEY,
@@ -57,14 +52,17 @@ import {
   type AdminSocialLengthPlan,
   type AdminSocialPlatform,
 } from "@/lib/admin-promotion";
+import {
+  buildPromotionThreeStepPlan,
+  threeStepPromotionMessage,
+  type PromotionThreeStepSelection,
+} from "@/lib/admin-promotion-three-step";
+
 export function AdminPromotionPage() {
   const { state } = useSharedAccessState();
   const { preference: workspacePreference } = useWorkspacePreset();
   const [mode, setMode] = useState<Mode>("preview");
   const [quickPreset, setQuickPreset] = useState<QuickPresetKey>("");
-  const [salesProduct, setSalesProduct] = useState<SalesProductKey>("aas-pwa");
-  const [salesChannel, setSalesChannel] = useState<SalesChannelKey>("note");
-  const [promotionMethod, setPromotionMethod] = useState<PromotionMethodKey>("article");
   const [message, setMessage] = useState("");
   const [facts, setFacts] = useState<AdminProductFacts>(DEFAULT_ADMIN_PRODUCT_FACTS);
   const [socialLengths, setSocialLengths] = useState<AdminSocialLengthPlan>({ ...DEFAULT_SOCIAL_LENGTH_PLAN });
@@ -168,92 +166,27 @@ export function AdminPromotionPage() {
     () => buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths }),
     [facts, preview, socialLengths],
   );
-  const applyThreeStepPromotion = () => {
+  const applyThreeStepPromotion = (selection: PromotionThreeStepSelection) => {
     setQuickPreset("");
+    const plan = buildPromotionThreeStepPlan(selection, facts.releaseStage);
 
-    const productLabel = SALES_PRODUCT_OPTIONS.find((item) => item.key === salesProduct)?.label ?? "AAS PWA版";
-    const channelLabel = SALES_CHANNEL_OPTIONS.find((item) => item.key === salesChannel)?.label ?? "note";
-    const salesCta = salesChannel === "direct"
-      ? "公式ページへ誘導"
-      : salesChannel === "social"
-        ? "プロフィールへ誘導"
-        : "販売URLへ誘導";
-    const articlePlatform = salesChannel === "brain"
-      ? "brain"
-      : salesChannel === "tips"
-        ? "tips"
-        : "note";
-    const campaignChannels = salesChannel === "brain"
-      ? "Brain, X"
-      : salesChannel === "tips"
-        ? "Tips, X"
-        : salesChannel === "social"
-          ? "X, Instagram, Threads, TikTok, YouTube Shorts"
-          : "note, X, Instagram, Threads";
-    const sellingConfirmed = facts.releaseStage === "先行販売" || facts.releaseStage === "正式販売";
-    const prelaunch = salesProduct === "prelaunch" || promotionMethod === "preview" || !sellingConfirmed;
+    setMode(plan.mode);
+    setFacts((current) => ({ ...current, ...plan.factsPatch }));
 
-    setFacts((current) => ({
-      ...current,
-      productName: "AI Action Studio",
-      editions: "PWA版のみ",
-      releaseStage: prelaunch ? current.releaseStage || "内部テスト" : current.releaseStage,
-    }));
-
-    if (promotionMethod === "article") {
-      setMode("article");
-      setArticle((current) => ({
-        ...current,
-        platform: articlePlatform,
-        phase: prelaunch ? "公開前予告" : "販売開始後",
-        purpose: prelaunch ? "公開前の予告" : "新規紹介・販売",
-        audience: current.audience || "副業初心者",
-        focus: productLabel,
-        cta: prelaunch ? "公開予定を知らせる" : salesCta,
-      }));
-    } else if (promotionMethod === "social") {
-      setMode("social");
-      setSocial((current) => ({
-        ...current,
-        platform: "x",
-        phase: prelaunch ? "公開前予告" : "販売開始後",
-        purpose: prelaunch ? "公開予定の案内" : "販売開始告知",
-        audience: current.audience || "副業初心者",
-        focus: productLabel,
-        cta: prelaunch ? "フォローして続報を待ってもらう" : salesCta,
-        variants: 3,
-      }));
-    } else if (promotionMethod === "campaign") {
-      setMode("campaign");
-      setCampaign((current) => ({
-        ...current,
-        campaignName: productLabel + (prelaunch ? " 公開予告" : " 販促"),
-        phase: prelaunch ? "公開前予告" : "販売開始後",
-        goal: prelaunch ? "公開前の期待形成" : "販売開始・認知拡大",
-        audience: current.audience || "副業初心者",
-        channels: campaignChannels,
-        offer: prelaunch ? "公開予定のみ・販売未開始" : "通常販売",
-        cta: prelaunch ? "公開予定を知らせる" : salesCta,
-      }));
-    } else {
-      setMode("preview");
-      setPreview((current) => ({
-        ...current,
-        updateType: salesProduct === "prelaunch" ? "正式公開予告" : "公開予定の案内",
-        testedPlatform: salesChannel === "note" || salesChannel === "brain" || salesChannel === "tips"
-          ? channelLabel
-          : "PWA版",
-        audience: current.audience || "副業初心者",
-        channels: campaignChannels,
-        cta: "フォローして続報を待ってもらう",
-      }));
+    if (plan.articlePatch) {
+      setArticle((current) => ({ ...current, ...plan.articlePatch }));
+    }
+    if (plan.socialPatch) {
+      setSocial((current) => ({ ...current, ...plan.socialPatch }));
+    }
+    if (plan.campaignPatch) {
+      setCampaign((current) => ({ ...current, ...plan.campaignPatch }));
+    }
+    if (plan.previewPatch) {
+      setPreview((current) => ({ ...current, ...plan.previewPatch }));
     }
 
-    const methodLabel = PROMOTION_METHOD_OPTIONS.find((item) => item.key === promotionMethod)?.label ?? "販促";
-    setMessage(
-      "3ステップ設定を反映しました: " + productLabel + " / " + channelLabel + " / " + methodLabel
-      + (prelaunch && salesProduct !== "prelaunch" ? "（販売中の確認がないため販売前表現で設定）" : ""),
-    );
+    setMessage(threeStepPromotionMessage(selection, plan));
   };
 
   const applyQuickPreset = (presetKey: QuickPresetKey) => {
@@ -394,40 +327,7 @@ export function AdminPromotionPage() {
       <div className="admin-promo-safety"><strong>確認済み情報を基準に作成</strong><span>販売前は「テスト中・準備中・公開予定」として扱い、未入力の価格・実績・レビュー・公開日をAIに作らせません。製品情報は現在この端末だけに保存されます。</span></div>
       {message && <div className="route-notice">{message}</div>}
 
-      <section className="admin-promo-three-step" aria-label="3ステップかんたん販促">
-        <div className="admin-promo-three-step-head">
-          <div>
-            <p className="eyebrow">3 STEP AUTO SETUP</p>
-            <h2>3ステップかんたん販促</h2>
-            <p>商品・販売先・宣伝方法を選ぶだけで、下の詳細設定をまとめて自動入力します。</p>
-          </div>
-          <strong>販売設定そのものは変更しません</strong>
-        </div>
-        <div className="admin-promo-three-step-grid">
-          <label className="admin-promo-field">
-            <span>① 販売する商品・プラン</span>
-            <select value={salesProduct} onChange={(event) => setSalesProduct(event.target.value as SalesProductKey)}>
-              {SALES_PRODUCT_OPTIONS.map((item) => <option key={item.key} value={item.key}>{item.label} — {item.note}</option>)}
-            </select>
-          </label>
-          <label className="admin-promo-field">
-            <span>② 販売先・誘導先</span>
-            <select value={salesChannel} onChange={(event) => setSalesChannel(event.target.value as SalesChannelKey)}>
-              {SALES_CHANNEL_OPTIONS.map((item) => <option key={item.key} value={item.key}>{item.label} — {item.note}</option>)}
-            </select>
-          </label>
-          <label className="admin-promo-field">
-            <span>③ 宣伝方法</span>
-            <select value={promotionMethod} onChange={(event) => setPromotionMethod(event.target.value as PromotionMethodKey)}>
-              {PROMOTION_METHOD_OPTIONS.map((item) => <option key={item.key} value={item.key}>{item.label} — {item.note}</option>)}
-            </select>
-          </label>
-        </div>
-        <div className="admin-promo-three-step-actions">
-          <button type="button" onClick={applyThreeStepPromotion}>この3項目で自動設定</button>
-          <small>Stripe・7日券・月額を選んでも販売受付は有効化されません。実際の受付状態は「販売設定」で別途管理します。</small>
-        </div>
-      </section>
+      <AdminPromotionThreeStep onApply={applyThreeStepPromotion} />
 
       <AdminPromotionScreenshotTool onCopy={(prompt) => void copyPrompt(prompt)} />
 

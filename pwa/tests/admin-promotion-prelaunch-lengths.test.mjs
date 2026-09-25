@@ -99,29 +99,32 @@ test("promotion UI is dropdown-first and remains responsive on phones", async ()
 
 
 test("sales promotion center supports a safe three-step auto setup", async () => {
-  const [page, options, css] = await Promise.all([
+  const [page, component, planner, options, css] = await Promise.all([
     read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-three-step.tsx"),
+    read("lib/admin-promotion-three-step.ts"),
     read("components/admin-promotion/admin-promotion-options.ts"),
     read("app/phase24-admin-promotion.css"),
   ]);
 
-  assert.match(page, /3ステップかんたん販促/);
-  assert.match(page, /① 販売する商品・プラン/);
-  assert.match(page, /② 販売先・誘導先/);
-  assert.match(page, /③ 宣伝方法/);
-  assert.match(page, /SALES_PRODUCT_OPTIONS/);
-  assert.match(page, /SALES_CHANNEL_OPTIONS/);
-  assert.match(page, /PROMOTION_METHOD_OPTIONS/);
-  assert.match(page, /applyThreeStepPromotion/);
+  assert.match(component, /3ステップかんたん販促/);
+  assert.match(component, /① 販売する商品・プラン/);
+  assert.match(component, /② 販売先・誘導先/);
+  assert.match(component, /③ 宣伝方法/);
+  assert.match(component, /SALES_PRODUCT_OPTIONS/);
+  assert.match(component, /SALES_CHANNEL_OPTIONS/);
+  assert.match(component, /PROMOTION_METHOD_OPTIONS/);
+  assert.match(component, /販売設定そのものは変更しません/);
+  assert.match(component, /Stripe・7日券・月額を選んでも販売受付は有効化されません/);
+  assert.match(page, /AdminPromotionThreeStep/);
+  assert.match(page, /buildPromotionThreeStepPlan/);
   assert.match(page, /type AdminArticlePromotionInput/);
   assert.match(page, /useState<AdminArticlePromotionInput>/);
-  assert.match(page, /sellingConfirmed/);
-  assert.match(page, /販売中の確認がないため販売前表現で設定/);
-  assert.match(page, /販売設定そのものは変更しません/);
+  assert.match(planner, /sellingConfirmed/);
+  assert.match(planner, /販売中の確認がないため販売前表現で設定/);
   assert.match(options, /AAS内Stripe（設定時のみ）/);
   assert.match(options, /PWA 7日利用パス（設定時のみ）/);
   assert.match(options, /PWA 月額プラン（設定時のみ）/);
-  assert.match(page, /Stripe・7日券・月額を選んでも販売受付は有効化されません/);
   assert.match(css, /\.admin-promo-three-step/);
   assert.match(css, /\.admin-promo-three-step-grid/);
   assert.match(css, /@media \(max-width: 880px\)[\s\S]*?\.admin-promo-three-step-grid/);
@@ -191,4 +194,23 @@ test("live screenshot feature owns its own state outside the promotion page", as
   assert.match(screenshotTool, /useState<AdminScreenshotTarget>/);
   assert.match(screenshotTool, /buildAdminScreenshotCapturePrompt/);
   assert.match(screenshotTool, /PromptOutput/);
+});
+
+
+test("three-step promotion planning is isolated from page rendering", async () => {
+  const [page, planner, component] = await Promise.all([
+    read("components/admin-promotion-page.tsx"),
+    read("lib/admin-promotion-three-step.ts"),
+    read("components/admin-promotion/admin-promotion-three-step.tsx"),
+  ]);
+
+  assert.doesNotMatch(page, /const \[salesProduct, setSalesProduct\]/);
+  assert.doesNotMatch(page, /const \[salesChannel, setSalesChannel\]/);
+  assert.doesNotMatch(page, /const \[promotionMethod, setPromotionMethod\]/);
+  assert.match(planner, /buildPromotionThreeStepPlan/);
+  assert.match(planner, /promotionMethod === "article"/);
+  assert.match(planner, /promotionMethod === "social"/);
+  assert.match(planner, /promotionMethod === "campaign"/);
+  assert.match(component, /useState<SalesProductKey>/);
+  assert.match(component, /onApply\(\{ salesProduct, salesChannel, promotionMethod \}\)/);
 });
