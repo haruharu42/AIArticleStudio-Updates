@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { launchAiApp } from "@/lib/ai-app-links";
+import { PresetNumberSelectWithCustom, SelectWithCustom } from "@/components/select-with-custom";
 import {
   adminGetKnowledgeAutomationAiConfig,
   adminGetKnowledgeAutomationStatus,
@@ -528,25 +529,29 @@ export function KnowledgeRefreshPanel() {
               />
               <span>AI自動解析を有効にする</span>
             </label>
-            <label>
-              <span>モデル</span>
-              <input
-                value={aiModel}
-                onChange={(event) => setAiModel(event.target.value)}
-                placeholder="gpt-5.6"
-                autoComplete="off"
-              />
-            </label>
-            <label>
-              <span>1回の最大解析候補数</span>
-              <input
-                type="number"
-                min={1}
-                max={20}
-                value={aiMaxCandidates}
-                onChange={(event) => setAiMaxCandidates(Math.max(1, Math.min(20, Number(event.target.value) || 1)))}
-              />
-            </label>
+            <SelectWithCustom
+              label="モデル"
+              value={aiModel}
+              onChange={setAiModel}
+              options={[
+                { value: "gpt-6-luna", label: "GPT-6 Luna（低コスト・大量処理向け）" },
+                { value: "gpt-5.6-luna", label: "GPT-5.6 Luna（低コスト）" },
+                { value: "gpt-5.6-terra", label: "GPT-5.6 Terra（バランス）" },
+                { value: "gpt-5.6", label: "GPT-5.6 Sol（高精度）" },
+              ]}
+              description="候補作成用AIです。新しいモデルIDを使う場合は「その他・自由入力」を選べます。"
+              customPlaceholder="OpenAI APIのモデルIDを入力"
+            />
+            <PresetNumberSelectWithCustom
+              label="1回の最大解析候補数"
+              value={aiMaxCandidates}
+              onChange={setAiMaxCandidates}
+              presets={[1, 3, 6, 10, 15, 20]}
+              min={1}
+              max={20}
+              suffix="件"
+              description="API費用を抑えたい場合は1〜3件から始める設定がおすすめです。"
+            />
             <label>
               <span>OpenAI APIキー（変更時のみ入力）</span>
               <input
