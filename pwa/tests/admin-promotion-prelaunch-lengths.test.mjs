@@ -23,7 +23,7 @@ test("admin promotion supports verified prelaunch test and release updates", asy
   assert.match(lib, /実際に確認していない成果・PV・売上・反応・レビュー・感想を作らない/);
 
   assert.match(options, /key: "preview"/);
-  assert.match(page, /テスト・公開予告/);
+  assert.match(options, /テスト・公開予告/);
   assert.match(page, /今回共有してよい確認済み内容/);
   assert.match(page, /公開・販売予定/);
   assert.match(page, /販売前モード/);
