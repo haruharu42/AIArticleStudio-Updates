@@ -9,6 +9,7 @@ import {
   adminGetKnowledgeAutomationStatus,
   adminGetKnowledgeRefreshChannels,
   adminListKnowledgeAutomationCandidates,
+  adminListKnowledgeAutomationSources,
   adminListKnowledgeRefreshRequests,
   adminPreviewKnowledgeRefreshBundleDiff,
   adminPublishKnowledgeRefreshBundle,
@@ -23,6 +24,7 @@ import {
   parseKnowledgeRefreshBundle,
   type KnowledgeAutomationAiConfig,
   type KnowledgeAutomationCandidate,
+  type KnowledgeAutomationSource,
   type KnowledgeAutomationStatus,
   type KnowledgeRefreshChangeItem,
   type KnowledgeRefreshChannelState,
@@ -59,6 +61,40 @@ function automationActionLabel(action: KnowledgeAutomationCandidate["candidateAc
     case "update": return "更新候補";
     case "recheck": return "再確認";
     case "retire": return "廃止候補";
+  }
+}
+
+const SIDE_HUSTLE_COVERAGE_TASKS = [
+  ["sidejob_content", "記事・コンテンツ"],
+  ["sidejob_sns", "SNS運用"],
+  ["sidejob_video", "YouTube・ショート動画"],
+  ["sidejob_affiliate", "アフィリエイト"],
+  ["sidejob_resale", "物販・フリマ"],
+  ["sidejob_crowdsourcing", "クラウドソーシング"],
+  ["sidejob_skill_sales", "スキル販売"],
+  ["sidejob_digital_product", "デジタル商品"],
+  ["sidejob_outreach", "営業・案件獲得"],
+  ["sidejob_research", "リサーチ"],
+  ["sidejob_efficiency", "業務効率化"],
+  ["sidejob_planning", "AI副業プラン"],
+] as const;
+
+function sourceKindLabel(value: string): string {
+  switch (value) {
+    case "official_changelog": return "公式Changelog";
+    case "official_docs": return "公式Docs";
+    case "official_help": return "公式Help";
+    case "official_policy": return "公式Policy";
+    case "official_feed": return "公式Feed";
+    default: return "公式ページ";
+  }
+}
+
+function sourceHost(value: string): string {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return value;
   }
 }
 
@@ -147,6 +183,7 @@ export function KnowledgeRefreshPanel() {
   const [requests, setRequests] = useState<KnowledgeRefreshRequest[]>([]);
   const [channels, setChannels] = useState<KnowledgeRefreshChannelState[]>([]);
   const [automationStatus, setAutomationStatus] = useState<KnowledgeAutomationStatus | null>(null);
+  const [automationSources, setAutomationSources] = useState<KnowledgeAutomationSource[]>([]);
   const [automationCandidates, setAutomationCandidates] = useState<KnowledgeAutomationCandidate[]>([]);
   const [automationAiConfig, setAutomationAiConfig] = useState<KnowledgeAutomationAiConfig | null>(null);
   const [aiEnabled, setAiEnabled] = useState(false);
@@ -166,19 +203,41 @@ export function KnowledgeRefreshPanel() {
   );
   const freshState = channels.find((channel) => channel.channel === "fresh") ?? null;
   const stableState = channels.find((channel) => channel.channel === "stable") ?? null;
+  const enabledAutomationSources = useMemo(
+    () => automationSources.filter((source) => source.enabled),
+    [automationSources],
+  );
+  const failingAutomationSources = useMemo(
+    () => enabledAutomationSources.filter(
+      (source) => source.consecutiveFailures > 0 || (source.lastHttpStatus !== null && source.lastHttpStatus >= 400),
+    ),
+    [enabledAutomationSources],
+  );
+  const automationCoverage = useMemo(
+    () => SIDE_HUSTLE_COVERAGE_TASKS.map(([task, label]) => ({
+      task,
+      label,
+      count: enabledAutomationSources.filter(
+        (source) => source.tasks.includes("all") || source.tasks.includes(task),
+      ).length,
+    })),
+    [enabledAutomationSources],
+  );
 
   const reload = async () => {
     const client = getSupabaseClient();
-    const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationCandidates, nextAiConfig] = await Promise.all([
+    const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
       adminListKnowledgeRefreshRequests(client, null, 30),
       adminGetKnowledgeRefreshChannels(client),
       adminGetKnowledgeAutomationStatus(client),
+      adminListKnowledgeAutomationSources(client, 200),
       adminListKnowledgeAutomationCandidates(client, "pending", 50),
       adminGetKnowledgeAutomationAiConfig(client),
     ]);
     setRequests(nextRequests);
     setChannels(nextChannels);
     setAutomationStatus(nextAutomationStatus);
+    setAutomationSources(nextAutomationSources);
     setAutomationCandidates(nextAutomationCandidates);
     setAutomationAiConfig(nextAiConfig);
     setAiEnabled(nextAiConfig.enabled);
@@ -195,10 +254,11 @@ export function KnowledgeRefreshPanel() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationCandidates, nextAiConfig] = await Promise.all([
+        const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
           adminListKnowledgeRefreshRequests(client, null, 30),
           adminGetKnowledgeRefreshChannels(client),
           adminGetKnowledgeAutomationStatus(client),
+          adminListKnowledgeAutomationSources(client, 200),
           adminListKnowledgeAutomationCandidates(client, "pending", 50),
           adminGetKnowledgeAutomationAiConfig(client),
         ]);
@@ -206,6 +266,7 @@ export function KnowledgeRefreshPanel() {
         setRequests(nextRequests);
         setChannels(nextChannels);
         setAutomationStatus(nextAutomationStatus);
+        setAutomationSources(nextAutomationSources);
         setAutomationCandidates(nextAutomationCandidates);
         setAutomationAiConfig(nextAiConfig);
         setAiEnabled(nextAiConfig.enabled);
@@ -586,6 +647,71 @@ export function KnowledgeRefreshPanel() {
             </dd>
           </div>
         </dl>
+
+        <section className="knowledge-source-health" aria-label="監視ソース健全性">
+          <div className="knowledge-source-health-head">
+            <div>
+              <strong>監視ソース健全性</strong>
+              <p>どの公式URLを監視しているか、取得状態・失敗回数・次回確認時刻を管理者画面だけで確認できます。</p>
+            </div>
+            <span className={failingAutomationSources.length > 0 ? "warning" : "healthy"}>
+              {failingAutomationSources.length > 0 ? `要確認 ${failingAutomationSources.length} URL` : "正常"}
+            </span>
+          </div>
+
+          <div className="knowledge-source-health-stats">
+            <article><span>有効URL</span><strong>{enabledAutomationSources.length}</strong></article>
+            <article className={failingAutomationSources.length > 0 ? "warning" : ""}><span>取得失敗</span><strong>{failingAutomationSources.length}</strong></article>
+            <article><span>次回対象</span><strong>{automationStatus?.dueSources ?? "-"}</strong></article>
+          </div>
+
+          <div className="knowledge-source-coverage">
+            <div>
+              <strong>副業Knowledgeカバレッジ</strong>
+              <small>「all」指定の公式ソースは各副業にも共通根拠として数えます。</small>
+            </div>
+            <div className="knowledge-source-coverage-grid">
+              {automationCoverage.map((item) => (
+                <article key={item.task} className={item.count === 0 ? "missing" : ""}>
+                  <span>{item.label}</span>
+                  <strong>{item.count} URL</strong>
+                </article>
+              ))}
+            </div>
+          </div>
+
+          <details className="knowledge-source-list" open={failingAutomationSources.length > 0}>
+            <summary>監視URL一覧（{automationSources.length}件）</summary>
+            <div>
+              {automationSources.map((source) => {
+                const isFailing = source.consecutiveFailures > 0
+                  || (source.lastHttpStatus !== null && source.lastHttpStatus >= 400);
+                return (
+                  <article key={source.id} className={isFailing ? "warning" : ""}>
+                    <header>
+                      <span className={isFailing ? "warning" : "healthy"}>{isFailing ? "要確認" : "正常"}</span>
+                      <strong>{sourceHost(source.sourceUrl)}</strong>
+                      <small>{sourceKindLabel(source.sourceKind)}</small>
+                    </header>
+                    <a href={source.sourceUrl} target="_blank" rel="noreferrer">{source.sourceUrl}</a>
+                    <dl>
+                      <div><dt>HTTP</dt><dd>{source.lastHttpStatus ?? "未確認"}</dd></div>
+                      <div><dt>連続失敗</dt><dd>{source.consecutiveFailures}回</dd></div>
+                      <div><dt>最終確認</dt><dd>{formatDate(source.lastCheckedAt)}</dd></div>
+                      <div><dt>次回確認</dt><dd>{formatDate(source.nextCheckAt)}</dd></div>
+                    </dl>
+                    {source.tasks.length > 0 && (
+                      <div className="knowledge-source-tasks">
+                        {source.tasks.map((task) => <span key={task}>{task}</span>)}
+                      </div>
+                    )}
+                    {source.lastError && <p className="knowledge-source-error">{source.lastError}</p>}
+                  </article>
+                );
+              })}
+            </div>
+          </details>
+        </section>
 
         {automationStatus?.lastError && (
           <p className="knowledge-automation-error">直近エラー: {automationStatus.lastError}</p>

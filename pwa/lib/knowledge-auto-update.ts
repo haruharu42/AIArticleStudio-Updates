@@ -85,6 +85,19 @@ export type KnowledgeAutomationStatus = {
   latestRunCandidatesCreated: number;
 };
 
+export type KnowledgeAutomationSource = {
+  id: number;
+  sourceUrl: string;
+  tasks: string[];
+  sourceKind: string;
+  enabled: boolean;
+  lastCheckedAt: string | null;
+  nextCheckAt: string | null;
+  lastHttpStatus: number | null;
+  consecutiveFailures: number;
+  lastError: string;
+};
+
 export type KnowledgeAutomationAiConfig = {
   enabled: boolean;
   provider: "openai";
@@ -346,6 +359,30 @@ export async function adminGetKnowledgeAutomationStatus(
     latestRunSourcesChecked: Math.max(0, asNumber(row.latest_run_sources_checked)),
     latestRunCandidatesCreated: Math.max(0, asNumber(row.latest_run_candidates_created)),
   };
+}
+
+export async function adminListKnowledgeAutomationSources(
+  client: SupabaseClient,
+  limit = 200,
+): Promise<KnowledgeAutomationSource[]> {
+  const { data, error } = await client.rpc("admin_list_knowledge_automation_sources", {
+    p_limit: Math.max(1, Math.min(500, Math.trunc(limit))),
+  });
+  if (error) throw new Error(error.message || "公式ソース監視一覧を取得できませんでした。");
+  return (data ?? []).map((raw: Record<string, unknown>) => ({
+    id: asNumber(raw.id),
+    sourceUrl: typeof raw.source_url === "string" ? raw.source_url : "",
+    tasks: asStringArray(raw.tasks),
+    sourceKind: typeof raw.source_kind === "string" ? raw.source_kind : "official_page",
+    enabled: raw.enabled !== false,
+    lastCheckedAt: typeof raw.last_checked_at === "string" ? raw.last_checked_at : null,
+    nextCheckAt: typeof raw.next_check_at === "string" ? raw.next_check_at : null,
+    lastHttpStatus: raw.last_http_status === null || raw.last_http_status === undefined
+      ? null
+      : asNumber(raw.last_http_status),
+    consecutiveFailures: Math.max(0, asNumber(raw.consecutive_failures)),
+    lastError: typeof raw.last_error === "string" ? raw.last_error : "",
+  }));
 }
 
 export async function adminListKnowledgeAutomationCandidates(

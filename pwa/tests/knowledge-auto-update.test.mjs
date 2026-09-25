@@ -329,3 +329,35 @@ test("AI proposal handoff only pre-fills a Fresh review request and does not byp
   assert.match(client, /proposalItemType === "knowledge"/);
   assert.match(client, /proposalItemType === "prompt"/);
 });
+
+
+test("knowledge monitor dashboard exposes admin-only source health and side-hustle coverage", async () => {
+  const [migration, panel, client, css] = await Promise.all([
+    readRepo("supabase/migrations/20260925070649_knowledge_automation_source_health_dashboard_v1.sql"),
+    readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("lib/knowledge-auto-update.ts"),
+    readPwa("app/phase26-knowledge.css"),
+  ]);
+
+  assert.match(migration, /admin_list_knowledge_automation_sources/);
+  assert.match(migration, /private\.is_active_admin/);
+  assert.match(migration, /consecutive_failures/);
+  assert.match(migration, /last_http_status/);
+  assert.match(migration, /revoke all on function public\.admin_list_knowledge_automation_sources\(integer\) from public, anon, authenticated/);
+  assert.match(migration, /grant execute on function public\.admin_list_knowledge_automation_sources\(integer\) to authenticated/);
+
+  assert.match(client, /export type KnowledgeAutomationSource/);
+  assert.match(client, /admin_list_knowledge_automation_sources/);
+  assert.match(client, /公式ソース監視一覧を取得できませんでした/);
+
+  assert.match(panel, /監視ソース健全性/);
+  assert.match(panel, /副業Knowledgeカバレッジ/);
+  assert.match(panel, /SIDE_HUSTLE_COVERAGE_TASKS/);
+  assert.match(panel, /sidejob_affiliate/);
+  assert.match(panel, /sidejob_resale/);
+  assert.match(panel, /監視URL一覧/);
+  assert.match(panel, /連続失敗/);
+  assert.match(css, /\.knowledge-source-health/);
+  assert.match(css, /\.knowledge-source-coverage-grid/);
+  assert.match(css, /\.knowledge-source-list/);
+});
