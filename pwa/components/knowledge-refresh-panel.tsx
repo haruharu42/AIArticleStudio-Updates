@@ -4,6 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 
 import { launchAiApp } from "@/lib/ai-app-links";
 import { PresetNumberSelectWithCustom, SelectWithCustom } from "@/components/select-with-custom";
+import { KnowledgeDiffSummary } from "@/components/knowledge-refresh/knowledge-diff-summary";
+import {
+  SIDE_HUSTLE_COVERAGE_TASKS,
+  formatKnowledgeCycle,
+  formatKnowledgeDate,
+  knowledgeAutomationActionLabel,
+  knowledgeRefreshErrorLabel,
+  knowledgeRefreshStatusLabel,
+  knowledgeSourceHost,
+  knowledgeSourceKindLabel,
+} from "@/components/knowledge-refresh/knowledge-refresh-display";
 import {
   adminGetKnowledgeAutomationAiConfig,
   adminGetKnowledgeAutomationStatus,
@@ -30,159 +41,12 @@ import {
   type KnowledgeAutomationSource,
   type KnowledgeAutomationStatus,
   type KnowledgeProductionHealth,
-  type KnowledgeRefreshChangeItem,
   type KnowledgeRefreshChannelState,
   type KnowledgeRefreshDiff,
   type KnowledgeRefreshRequest,
   type KnowledgeSourceRiskReport,
 } from "@/lib/knowledge-auto-update";
 import { getSupabaseClient } from "@/lib/supabase";
-
-function formatDate(value: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString("ja-JP");
-}
-
-function formatCycle(hours: number | null | undefined): string {
-  if (!hours) return "-";
-  if (hours % 24 === 0) return `${hours / 24}日ごと`;
-  return `${hours}時間ごと`;
-}
-
-function statusLabel(status: KnowledgeRefreshRequest["status"]): string {
-  switch (status) {
-    case "pending": return "待機中";
-    case "processing": return "調査・確認中";
-    case "completed": return "公開済み";
-    case "failed": return "失敗";
-    case "cancelled": return "キャンセル";
-  }
-}
-
-function automationActionLabel(action: KnowledgeAutomationCandidate["candidateAction"]): string {
-  switch (action) {
-    case "new": return "新規候補";
-    case "update": return "更新候補";
-    case "recheck": return "再確認";
-    case "retire": return "廃止候補";
-  }
-}
-
-const SIDE_HUSTLE_COVERAGE_TASKS = [
-  ["sidejob_content", "記事・コンテンツ"],
-  ["sidejob_sns", "SNS運用"],
-  ["sidejob_video", "YouTube・ショート動画"],
-  ["sidejob_affiliate", "アフィリエイト"],
-  ["sidejob_resale", "物販・フリマ"],
-  ["sidejob_crowdsourcing", "クラウドソーシング"],
-  ["sidejob_skill_sales", "スキル販売"],
-  ["sidejob_digital_product", "デジタル商品"],
-  ["sidejob_outreach", "営業・案件獲得"],
-  ["sidejob_research", "リサーチ"],
-  ["sidejob_efficiency", "業務効率化"],
-  ["sidejob_planning", "AI副業プラン"],
-] as const;
-
-function sourceKindLabel(value: string): string {
-  switch (value) {
-    case "official_changelog": return "公式Changelog";
-    case "official_docs": return "公式Docs";
-    case "official_help": return "公式Help";
-    case "official_policy": return "公式Policy";
-    case "official_feed": return "公式Feed";
-    default: return "公式ページ";
-  }
-}
-
-function sourceHost(value: string): string {
-  try {
-    return new URL(value).hostname;
-  } catch {
-    return value;
-  }
-}
-
-function refreshErrorLabel(value: string): string {
-  if (value.startsWith("AAS auto-recovery: processing exceeded 24 hours")) {
-    return "24時間以上処理中だったため自動解除しました。次回の更新サイクルで再試行できます。";
-  }
-  return value;
-}
-
-const FIELD_LABELS: Record<string, string> = {
-  new: "新規追加",
-  kind: "分類",
-  label: "表示名",
-  parent_label: "親分類",
-  aliases: "別名",
-  guidance: "制作ルール",
-  deliverables: "成果物",
-  cautions: "注意・禁止",
-  tasks: "適用機能",
-  priority: "優先度",
-  sources: "根拠URL",
-  source_summary: "根拠要約",
-  provider: "AIプロバイダー",
-  plan: "利用プラン",
-  task: "用途",
-  rules: "Promptルール",
-};
-
-function actionLabel(action: KnowledgeRefreshChangeItem["action"]): string {
-  if (action === "added") return "追加";
-  if (action === "updated") return "変更";
-  return "変更なし";
-}
-
-function DiffGroup({
-  title,
-  diff,
-}: {
-  title: string;
-  diff: KnowledgeRefreshDiff["knowledge"];
-}) {
-  return (
-    <section className="knowledge-diff-group">
-      <header>
-        <strong>{title}</strong>
-        <div>
-          <span className="added">＋{diff.added} 追加</span>
-          <span className="updated">↻ {diff.updated} 変更</span>
-          <span className="unchanged">＝{diff.unchanged} 変更なし</span>
-        </div>
-      </header>
-      {diff.items.length > 0 && (
-        <div className="knowledge-diff-items">
-          {diff.items.map((item) => (
-            <article key={item.itemType + ":" + item.key}>
-              <div className="knowledge-diff-item-head">
-                <span className={"diff-action " + item.action}>{actionLabel(item.action)}</span>
-                <strong>{item.label || item.key}</strong>
-              </div>
-              <small>{item.key}</small>
-              {item.changedFields.length > 0 && (
-                <p>
-                  変更箇所: {item.changedFields.map((field) => FIELD_LABELS[field] ?? field).join(" / ")}
-                </p>
-              )}
-              {item.sourceSummary && <p className="source-summary">根拠: {item.sourceSummary}</p>}
-            </article>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function DiffSummary({ diff }: { diff: KnowledgeRefreshDiff }) {
-  return (
-    <div className="knowledge-diff-summary">
-      <DiffGroup title="Knowledge" diff={diff.knowledge} />
-      <DiffGroup title="Prompt" diff={diff.prompt} />
-    </div>
-  );
-}
 
 export function KnowledgeRefreshPanel() {
   const [requests, setRequests] = useState<KnowledgeRefreshRequest[]>([]);
@@ -555,9 +419,9 @@ export function KnowledgeRefreshPanel() {
           <h3>新しい重要変更を早めに確認</h3>
           <p>管理者 / Creator Membership向けの先行チャネル。公式根拠を確認した変更を早期に試し、一般側へ広げる前に問題がないか確認します。</p>
           <dl>
-            <div><dt>更新周期</dt><dd>{formatCycle(freshState?.refreshHours)}</dd></div>
+            <div><dt>更新周期</dt><dd>{formatKnowledgeCycle(freshState?.refreshHours)}</dd></div>
             <div><dt>現在</dt><dd>v{freshState?.currentVersion ?? "-"}</dd></div>
-            <div><dt>次回予定</dt><dd>{formatDate(freshState?.nextRefreshDueAt ?? null)}</dd></div>
+            <div><dt>次回予定</dt><dd>{formatKnowledgeDate(freshState?.nextRefreshDueAt ?? null)}</dd></div>
           </dl>
           <button type="button" disabled={busy} onClick={() => void enqueue("fresh")}>Fresh（先行確認）を更新</button>
         </article>
@@ -570,9 +434,9 @@ export function KnowledgeRefreshPanel() {
           <h3>確認済みの内容を通常利用へ</h3>
           <p>一般ユーザー向けの標準チャネル。十分に確認できた仕様やPrompt改善を優先し、変化の速さより安定性を重視します。</p>
           <dl>
-            <div><dt>更新周期</dt><dd>{formatCycle(stableState?.refreshHours)}</dd></div>
+            <div><dt>更新周期</dt><dd>{formatKnowledgeCycle(stableState?.refreshHours)}</dd></div>
             <div><dt>現在</dt><dd>v{stableState?.currentVersion ?? "-"}</dd></div>
-            <div><dt>次回予定</dt><dd>{formatDate(stableState?.nextRefreshDueAt ?? null)}</dd></div>
+            <div><dt>次回予定</dt><dd>{formatKnowledgeDate(stableState?.nextRefreshDueAt ?? null)}</dd></div>
           </dl>
           <button type="button" disabled={busy} onClick={() => void enqueue("stable")}>Stable（標準版）を更新</button>
         </article>
@@ -673,7 +537,7 @@ export function KnowledgeRefreshPanel() {
           <div><dt>次回対象</dt><dd>{automationStatus?.dueSources ?? "-"} URL</dd></div>
           <div><dt>未確認候補</dt><dd>{automationStatus?.pendingCandidates ?? "-"} 件</dd></div>
           <div><dt>承認済み候補</dt><dd>{automationStatus?.approvedCandidates ?? "-"} 件</dd></div>
-          <div><dt>最終成功</dt><dd>{formatDate(automationStatus?.lastSuccessAt ?? null)}</dd></div>
+          <div><dt>最終成功</dt><dd>{formatKnowledgeDate(automationStatus?.lastSuccessAt ?? null)}</dd></div>
           <div>
             <dt>直近実行</dt>
             <dd>
@@ -726,15 +590,15 @@ export function KnowledgeRefreshPanel() {
                   <article key={source.id} className={isFailing ? "warning" : ""}>
                     <header>
                       <span className={isFailing ? "warning" : "healthy"}>{isFailing ? "要確認" : "正常"}</span>
-                      <strong>{sourceHost(source.sourceUrl)}</strong>
-                      <small>{sourceKindLabel(source.sourceKind)}</small>
+                      <strong>{knowledgeSourceHost(source.sourceUrl)}</strong>
+                      <small>{knowledgeSourceKindLabel(source.sourceKind)}</small>
                     </header>
                     <a href={source.sourceUrl} target="_blank" rel="noreferrer">{source.sourceUrl}</a>
                     <dl>
                       <div><dt>HTTP</dt><dd>{source.lastHttpStatus ?? "未確認"}</dd></div>
                       <div><dt>連続失敗</dt><dd>{source.consecutiveFailures}回</dd></div>
-                      <div><dt>最終確認</dt><dd>{formatDate(source.lastCheckedAt)}</dd></div>
-                      <div><dt>次回確認</dt><dd>{formatDate(source.nextCheckAt)}</dd></div>
+                      <div><dt>最終確認</dt><dd>{formatKnowledgeDate(source.lastCheckedAt)}</dd></div>
+                      <div><dt>次回確認</dt><dd>{formatKnowledgeDate(source.nextCheckAt)}</dd></div>
                     </dl>
                     {source.tasks.length > 0 && (
                       <div className="knowledge-source-tasks">
@@ -809,11 +673,11 @@ export function KnowledgeRefreshPanel() {
                       <dl>
                         <div><dt>ソース</dt><dd>{item.sourceCount}</dd></div>
                         <div><dt>ドメイン</dt><dd>{item.domainCount}</dd></div>
-                        <div><dt>最終確認</dt><dd>{formatDate(item.sourceCheckedAt)}</dd></div>
+                        <div><dt>最終確認</dt><dd>{formatKnowledgeDate(item.sourceCheckedAt)}</dd></div>
                       </dl>
                       {item.sourceUrls.length > 0 && (
                         <div className="knowledge-quality-links">
-                          {item.sourceUrls.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">{sourceHost(url)}</a>)}
+                          {item.sourceUrls.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">{knowledgeSourceHost(url)}</a>)}
                         </div>
                       )}
                     </article>
@@ -825,7 +689,7 @@ export function KnowledgeRefreshPanel() {
 
           {productionHealth && (
             <small className="knowledge-quality-foot">
-              最終根拠確認: Knowledge {formatDate(productionHealth.lastKnowledgeCheckedAt)} / Prompt {formatDate(productionHealth.lastPromptCheckedAt)}
+              最終根拠確認: Knowledge {formatKnowledgeDate(productionHealth.lastKnowledgeCheckedAt)} / Prompt {formatKnowledgeDate(productionHealth.lastPromptCheckedAt)}
               {" · "}更新キュー: 待機 {productionHealth.pendingRequests} / 処理中 {productionHealth.processingRequests} / 失敗履歴 {productionHealth.failedRequests}
             </small>
           )}
@@ -843,10 +707,10 @@ export function KnowledgeRefreshPanel() {
               <article key={candidate.id}>
                 <header>
                   <span className={"automation-action " + candidate.candidateAction}>
-                    {automationActionLabel(candidate.candidateAction)}
+                    {knowledgeAutomationActionLabel(candidate.candidateAction)}
                   </span>
                   <strong>{candidate.sourceTitle || candidate.existingItemKey || candidate.sourceUrl}</strong>
-                  <small>信頼度 {candidate.confidence}% / 検出 {formatDate(candidate.detectedAt)}</small>
+                  <small>信頼度 {candidate.confidence}% / 検出 {formatKnowledgeDate(candidate.detectedAt)}</small>
                 </header>
 
                 <p>{candidate.reason}</p>
@@ -946,10 +810,10 @@ export function KnowledgeRefreshPanel() {
                 setBundleText("");
               }}>
                 <span className={"channel-label " + request.channel}>
-                  {request.channel === "fresh" ? "Fresh・先行確認" : "Stable・標準版"} / {statusLabel(request.status)}
+                  {request.channel === "fresh" ? "Fresh・先行確認" : "Stable・標準版"} / {knowledgeRefreshStatusLabel(request.status)}
                 </span>
                 <strong>更新 #{request.id}</strong>
-                <small>要求 {formatDate(request.requestedAt)} / 開始 {formatDate(request.startedAt)}</small>
+                <small>要求 {formatKnowledgeDate(request.requestedAt)} / 開始 {formatKnowledgeDate(request.startedAt)}</small>
               </button>
               <div className="knowledge-refresh-row-actions">
                 {request.status === "pending" && <button type="button" disabled={busy} onClick={() => void start(request)}>調査開始</button>}
@@ -993,7 +857,7 @@ export function KnowledgeRefreshPanel() {
                 <strong>今回どこが変わるか</strong>
                 <p>「追加」「変更」「変更なし」を正式データと比較した結果です。変更箇所と根拠要約を確認してください。</p>
               </div>
-              <DiffSummary diff={diffPreview} />
+              <KnowledgeDiffSummary diff={diffPreview} />
             </div>
           )}
         </div>
@@ -1009,10 +873,10 @@ export function KnowledgeRefreshPanel() {
               <article key={request.id}>
                 <div className="knowledge-history-head">
                   <span className={"channel-label " + request.channel}>
-                    {request.channel === "fresh" ? "Fresh・先行確認" : "Stable・標準版"} / {statusLabel(request.status)}
+                    {request.channel === "fresh" ? "Fresh・先行確認" : "Stable・標準版"} / {knowledgeRefreshStatusLabel(request.status)}
                   </span>
                   <small>
-                    v{request.publishedVersion ?? "-"} / {formatDate(request.completedAt)}
+                    v{request.publishedVersion ?? "-"} / {formatKnowledgeDate(request.completedAt)}
                   </small>
                 </div>
                 <div className="knowledge-history-counts">
@@ -1023,13 +887,13 @@ export function KnowledgeRefreshPanel() {
                 {hasDetails && (
                   <details>
                     <summary>変更した場所を詳しく見る</summary>
-                    <DiffSummary diff={diff} />
+                    <KnowledgeDiffSummary diff={diff} />
                   </details>
                 )}
                 {!hasDetails && request.status === "completed" && (
                   <small>この更新は旧形式の履歴のため詳細差分は記録されていません。</small>
                 )}
-                {request.errorMessage && <p className="error">{refreshErrorLabel(request.errorMessage)}</p>}
+                {request.errorMessage && <p className="error">{knowledgeRefreshErrorLabel(request.errorMessage)}</p>}
               </article>
             );
           })}

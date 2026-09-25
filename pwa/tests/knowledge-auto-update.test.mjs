@@ -12,13 +12,15 @@ const readRepo = (relative) => readFile(path.join(repoRoot, relative), "utf8");
 test("knowledge refresh scheduler releases processing requests that are stuck for more than 24 hours", async () => {
   const migration = await readRepo("supabase/migrations/20260923234555_knowledge_refresh_stale_recovery.sql");
   const panel = await readPwa("components/knowledge-refresh-panel.tsx");
+  const display = await readPwa("components/knowledge-refresh/knowledge-refresh-display.ts");
 
   assert.match(migration, /status = 'failed'/);
   assert.match(migration, /interval '24 hours'/);
   assert.match(migration, /next refresh cycle/);
   assert.match(migration, /enqueue_due_knowledge_refreshes/);
   assert.match(migration, /revoke all on function private\.enqueue_due_knowledge_refreshes/);
-  assert.match(panel, /24時間以上処理中だったため自動解除/);
+  assert.match(display, /24時間以上処理中だったため自動解除/);
+  assert.match(panel, /knowledgeRefreshErrorLabel/);
   assert.doesNotMatch(migration, /service[_-]?role|sb_secret_/i);
 });
 
@@ -332,9 +334,10 @@ test("AI proposal handoff only pre-fills a Fresh review request and does not byp
 
 
 test("knowledge monitor dashboard exposes admin-only source health and side-hustle coverage", async () => {
-  const [migration, panel, client, css] = await Promise.all([
+  const [migration, panel, display, client, css] = await Promise.all([
     readRepo("supabase/migrations/20260925070649_knowledge_automation_source_health_dashboard_v1.sql"),
     readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("components/knowledge-refresh/knowledge-refresh-display.ts"),
     readPwa("lib/knowledge-auto-update.ts"),
     readPwa("app/phase26-knowledge.css"),
   ]);
@@ -353,8 +356,8 @@ test("knowledge monitor dashboard exposes admin-only source health and side-hust
   assert.match(panel, /監視ソース健全性/);
   assert.match(panel, /副業Knowledgeカバレッジ/);
   assert.match(panel, /SIDE_HUSTLE_COVERAGE_TASKS/);
-  assert.match(panel, /sidejob_affiliate/);
-  assert.match(panel, /sidejob_resale/);
+  assert.match(display, /sidejob_affiliate/);
+  assert.match(display, /sidejob_resale/);
   assert.match(panel, /監視URL一覧/);
   assert.match(panel, /連続失敗/);
   assert.match(css, /\.knowledge-source-health/);
@@ -395,4 +398,23 @@ test("admin Knowledge quality analyzer reuses existing RPCs without auto-publish
   assert.match(css, /\.knowledge-quality-analyzer/);
   assert.match(css, /\.knowledge-quality-metrics/);
   assert.match(css, /\.knowledge-quality-review/);
+});
+
+
+test("knowledge refresh UI keeps pure display and diff rendering in feature modules", async () => {
+  const [panel, display, diff] = await Promise.all([
+    readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("components/knowledge-refresh/knowledge-refresh-display.ts"),
+    readPwa("components/knowledge-refresh/knowledge-diff-summary.tsx"),
+  ]);
+
+  assert.match(panel, /KnowledgeDiffSummary/);
+  assert.match(panel, /formatKnowledgeDate/);
+  assert.doesNotMatch(panel, /^function formatDate/m);
+  assert.doesNotMatch(panel, /^function DiffGroup/m);
+  assert.match(display, /knowledgeRefreshStatusLabel/);
+  assert.match(display, /knowledgeAutomationActionLabel/);
+  assert.match(display, /SIDE_HUSTLE_COVERAGE_TASKS/);
+  assert.match(diff, /export function KnowledgeDiffSummary/);
+  assert.match(diff, /FIELD_LABELS/);
 });
