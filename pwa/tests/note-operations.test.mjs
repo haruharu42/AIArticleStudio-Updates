@@ -156,11 +156,12 @@ test("note beginner profile builder uses dropdown presets and current-web resear
 
 
 test("AI monthly note schedule uses month-based research, validation, and owner-scoped plan storage", async () => {
-  const [migration, lib, parser, normalizer, page, helpers, css] = await Promise.all([
+  const [migration, lib, parser, normalizer, planner, page, helpers, css] = await Promise.all([
     readRepo("supabase/migrations/20260919131121_note_ai_monthly_schedule_plans.sql"),
     readPwa("lib/note-operations.ts"),
     readPwa("lib/note-ai-schedule-json.ts"),
     readPwa("lib/note-ai-schedule-normalize.ts"),
+    readPwa("lib/note-ai-schedule-plan.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
@@ -222,12 +223,12 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(parser, /scheduleRootFromValue/);
   assert.match(parser, /ChatGPTの回答全文を削らず/);
   assert.match(parser, /AAS用の運用スケジュールが回答内に見つかりませんでした/);
-  assert.match(lib, /対象月の外にある予定/);
-  assert.match(lib, /同じ日時に記事投稿が重複/);
-  assert.match(lib, /1日に最大/);
-  assert.match(lib, /調査元URLがありません/);
-  assert.match(lib, /note公式（note\.com\/info）/);
-  assert.match(lib, /直近180日以内の出典/);
+  assert.match(planner, /対象月の外にある予定/);
+  assert.match(planner, /同じ日時に記事投稿が重複/);
+  assert.match(planner, /1日に最大/);
+  assert.match(planner, /調査元URLがありません/);
+  assert.match(planner, /note公式（note\.com\/info）/);
+  assert.match(planner, /直近180日以内の出典/);
   assert.match(lib, /replacementStart/);
   assert.match(lib, /status === "done"/);
   assert.match(lib, /AAS運用スケジュール実績/);
@@ -334,7 +335,7 @@ test("AI note calendar is article-only and tolerates common free paid aliases", 
   assert.match(parser, /object\.targetMonth/);
   assert.match(parser, /Array\.isArray\(object\.calendar\)/);
   assert.match(parser, /Array\.isArray\(object\.items\)/);
-  assert.match(lib, /root\.targetMonth/);
+  assert.match(planner, /root\.targetMonth/);
   assert.match(normalizer, /raw\.day/);
   assert.match(normalizer, /raw\.name/);
   assert.match(normalizer, /rawTitle \|\| fallbackTitle/);
@@ -515,12 +516,14 @@ test("note schedule date and time helpers live in a dedicated core module", asyn
 
 
 test("AI note schedule normalization is isolated from persistence and UI concerns", async () => {
-  const [lib, normalizer] = await Promise.all([
+  const [lib, planner, normalizer] = await Promise.all([
     readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-ai-schedule-plan.ts"),
     readPwa("lib/note-ai-schedule-normalize.ts"),
   ]);
 
-  assert.match(lib, /from "@\/lib\/note-ai-schedule-normalize"/);
+  assert.match(planner, /from "@\/lib\/note-ai-schedule-normalize"/);
+  assert.doesNotMatch(lib, /from "@\/lib\/note-ai-schedule-normalize"/);
   assert.doesNotMatch(lib, /^function normalizeAiArticleScheduleType/m);
   assert.doesNotMatch(lib, /^function fallbackDailyPostingTimes/m);
   assert.doesNotMatch(lib, /^function parseSimpleAiArticleSchedule/m);
@@ -532,4 +535,21 @@ test("AI note schedule normalization is isolated from persistence and UI concern
   assert.match(normalizer, /from "@\/lib\/note-schedule-core"/);
   assert.match(normalizer, /from "@\/lib\/note-schedule-types"/);
   assert.doesNotMatch(normalizer, /SupabaseClient|client\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
+});
+
+
+test("AI note schedule plan parsing is isolated behind a compatibility export", async () => {
+  const [lib, planner] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-ai-schedule-plan.ts"),
+  ]);
+
+  assert.match(lib, /export \{ parseNoteAiSchedulePlan \} from "@\/lib\/note-ai-schedule-plan"/);
+  assert.doesNotMatch(lib, /^export function parseNoteAiSchedulePlan/m);
+  assert.match(planner, /export function parseNoteAiSchedulePlan/);
+  assert.match(planner, /extractNoteAiScheduleJson/);
+  assert.match(planner, /parseSimpleAiArticleSchedule/);
+  assert.match(planner, /ensureDistinctDailyPostingTimes/);
+  assert.match(planner, /NoteAiSchedulePlan/);
+  assert.doesNotMatch(planner, /SupabaseClient|client\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
 });
