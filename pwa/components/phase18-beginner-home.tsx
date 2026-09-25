@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
+import { DirectRuntimeImage } from "@/components/direct-runtime-image";
 import { ActionStudioHomeHero, ActionStudioQuickActions } from "@/components/action-studio-home-hub";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { useAppFeatureAccess } from "@/components/feature-access-gate";
@@ -349,7 +350,7 @@ export function Phase18BeginnerHome() {
 
         <section className="reference-creator-card" aria-label="Creatorステータス">
           <span className="reference-avatar" aria-hidden="true">
-            {dashboard?.avatarUrl ? <img src={dashboard.avatarUrl} alt="" /> : avatarLetter(displayName)}
+            {dashboard?.avatarUrl ? <DirectRuntimeImage src={dashboard.avatarUrl} alt="" /> : avatarLetter(displayName)}
           </span>
           <div className="reference-creator-main">
             <div className="reference-name-row">
