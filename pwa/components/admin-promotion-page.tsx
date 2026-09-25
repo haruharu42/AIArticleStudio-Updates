@@ -149,22 +149,34 @@ export function AdminPromotionPage() {
     return Array.from(new Set(["製品全体", ...confirmed]));
   }, [facts.features]);
 
-  const articlePrompt = useMemo(() => buildAdminArticlePromotionPrompt(facts, article), [facts, article]);
+  const articlePrompt = useMemo(() => {
+    void workspacePreference; // Prompt context reads the runtime workspace preset.
+    return buildAdminArticlePromotionPrompt(facts, article);
+  }, [facts, article, workspacePreference]);
   const socialPrompt = useMemo(
-    () => buildAdminSocialPromotionPrompt(facts, {
-      ...social,
-      lengthPresetId: socialPresetIds[social.platform],
-      targetChars: socialLengths[social.platform],
-    }),
-    [facts, social, socialLengths, socialPresetIds],
+    () => {
+      void workspacePreference; // Prompt context reads the runtime workspace preset.
+      return buildAdminSocialPromotionPrompt(facts, {
+        ...social,
+        lengthPresetId: socialPresetIds[social.platform],
+        targetChars: socialLengths[social.platform],
+      });
+    },
+    [facts, social, socialLengths, socialPresetIds, workspacePreference],
   );
   const campaignPrompt = useMemo(
-    () => buildAdminCampaignPrompt(facts, { ...campaign, socialLengths }),
-    [facts, campaign, socialLengths],
+    () => {
+      void workspacePreference; // Prompt context reads the runtime workspace preset.
+      return buildAdminCampaignPrompt(facts, { ...campaign, socialLengths });
+    },
+    [facts, campaign, socialLengths, workspacePreference],
   );
   const previewPrompt = useMemo(
-    () => buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths }),
-    [facts, preview, socialLengths],
+    () => {
+      void workspacePreference; // Prompt context reads the runtime workspace preset.
+      return buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths });
+    },
+    [facts, preview, socialLengths, workspacePreference],
   );
   const applyThreeStepPromotion = (selection: PromotionThreeStepSelection) => {
     setQuickPreset("");
