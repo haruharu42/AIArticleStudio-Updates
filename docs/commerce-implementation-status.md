@@ -29,6 +29,20 @@ Stripe remains implemented as an optional later route, but new Stripe checkout i
   - external sales enabled
   - access-code redemption enabled
   - valid HTTPS purchase URL
+- Pre-sale review panel linking:
+  - access-code issuance/history
+  - commercial-transactions disclosure
+  - Terms
+  - Privacy
+  - AI terms
+  - Support
+- Access-code redemption audit that returns only operational fields needed for E2E:
+  - AAS ID / display name
+  - redeemed time
+  - sales channel / external reference
+  - current PWA entitlement state/expiry
+- User-facing purchase and redemption copy now consistently says "利用コード" while the legacy internal RPC/table names remain unchanged for compatibility.
+- Rollback-only database E2E passed for code issue -> eligible user redemption -> entitlement -> audit history; the transaction was rolled back and left no test data.
 
 ### Promotion
 
@@ -81,7 +95,7 @@ Do not rely on this list as a fixed snapshot; re-query live systems before actin
 
 - Designated tester Web Push E2E requires the tester device to create/enable a push subscription.
 - External-first paid launch requires a real external purchase URL.
-- Access-code purchase-to-entitlement E2E must pass with disposable/test operational data.
+- Real-browser access-code purchase-to-entitlement E2E is still required; database rollback E2E has passed.
 - Seller/legal/refund/support wording must be finalized.
 - Supabase Auth leaked-password protection and remaining intentional advisor warnings must be reviewed.
 - General Public rollout requires explicit approval.

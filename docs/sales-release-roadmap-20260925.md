@@ -46,15 +46,19 @@ Required configuration:
 - [x] Access-code switch enabled.
 - [ ] Real HTTPS external purchase URL configured.
 - [ ] Verify external purchase CTA appears only when URL is valid.
-- [ ] Verify access code issuance operational process.
-- [ ] Verify eligible user redemption grants the correct PWA entitlement.
-- [ ] Verify duplicate/expired/exhausted code failures.
+- [ ] Verify access code issuance operational process with the real external sales workflow.
+- [x] Rollback-only DB E2E: issue code -> eligible user redemption -> PWA entitlement -> admin redemption audit.
+- [x] Confirm rollback left no test code, entitlement or redemption history.
+- [x] Add admin access-code redemption audit (AAS ID / redeemed time / PWA entitlement state; no email or billing data).
+- [ ] Verify the same redemption path through the real browser UI.
+- [ ] Verify duplicate/expired/exhausted code failures through disposable browser E2E.
 - [ ] Verify turning new redemption off does not revoke existing access.
 
 This is the recommended first paid-launch path.
 
 ## Phase 4 — Legal and support finalization
 
+- [x] Add Sales Center pre-sale review links for commercial disclosure, Terms, Privacy, AI terms, Support and access-code operations.
 - [ ] Finalize sales price/offer on the chosen external platform.
 - [ ] Finalize refund/cancellation wording.
 - [ ] Re-check Terms, Privacy and AI terms.
