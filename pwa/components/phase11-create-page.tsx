@@ -240,31 +240,28 @@ export function Phase11CreatePage() {
   const accountPresetPromptKey = activeAccountPreset
     ? `${activeAccountPreset.id}:${activeAccountPreset.updatedAt}`
     : "none";
-  const titlePrompt = useMemo(
-    () => buildTitlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined),
-    [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey, accountPresetPromptKey],
+  const titlePrompt = buildTitlePrompt(
+    articleDraft,
+    draft.magazineEnabled ? magazinePlan : undefined,
   );
-  const articlePrompt = useMemo(
-    () => buildArticlePrompt(articleDraft, draft.magazineEnabled ? magazinePlan : undefined),
-    [articleDraft, draft.magazineEnabled, magazinePlan, accountDesignPromptKey, accountPresetPromptKey],
+  const articlePrompt = buildArticlePrompt(
+    articleDraft,
+    draft.magazineEnabled ? magazinePlan : undefined,
   );
-  const imagePrompts = useMemo(
-    () => buildImagePromptPlan({
-      title: draft.title,
-      theme: draft.theme || draft.title,
-      publicationTarget: draft.publicationTarget,
-      genre: draft.genre,
-      subgenre: draft.subgenre,
-      ageGroup: draft.ageGroup,
-      gender: draft.gender,
-      body: draft.body,
-      coverEnabled: draft.coverEnabled,
-      inlineEnabled: draft.inlineEnabled,
-      inlineCount: draft.inlineCount,
-      imageStyle: draft.imageStyle,
-    }),
-    [draft, accountDesignPromptKey, accountPresetPromptKey],
-  );
+  const imagePrompts = buildImagePromptPlan({
+    title: draft.title,
+    theme: draft.theme || draft.title,
+    publicationTarget: draft.publicationTarget,
+    genre: draft.genre,
+    subgenre: draft.subgenre,
+    ageGroup: draft.ageGroup,
+    gender: draft.gender,
+    body: draft.body,
+    coverEnabled: draft.coverEnabled,
+    inlineEnabled: draft.inlineEnabled,
+    inlineCount: draft.inlineCount,
+    imageStyle: draft.imageStyle,
+  });
   const combinedImagePrompt = useMemo(() => buildCombinedImagePrompt(imagePrompts), [imagePrompts]);
   const articlePromptReady = articlePromptAuthorized === articlePrompt;
 
