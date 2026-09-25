@@ -28,7 +28,10 @@ test("note operations data is owner-scoped and never stores note credentials", a
 });
 
 test("note operations engine generates mixed schedules and supports download upload formats", async () => {
-  const lib = await readPwa("lib/note-operations.ts");
+  const [lib, transfer] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-operations-transfer.ts"),
+  ]);
 
   assert.match(lib, /generateNoteSchedule/);
   assert.match(lib, /paidPostsPerMonth/);
@@ -38,7 +41,7 @@ test("note operations engine generates mixed schedules and supports download upl
   assert.match(lib, /profile_setup/);
   assert.match(lib, /exportNoteScheduleCsv/);
   assert.match(lib, /exportNoteOperationsJson/);
-  assert.match(lib, /aas-note-operations-v1/);
+  assert.match(transfer, /aas-note-operations-v1/);
   assert.match(lib, /parseNoteOperationsImport/);
   assert.match(lib, /replaceNoteSchedule/);
   assert.match(lib, /todayJstDateKey/);
