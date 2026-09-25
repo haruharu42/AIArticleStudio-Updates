@@ -8,9 +8,10 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const read = (relative) => readFile(path.join(root, relative), "utf8");
 
 test("admin promotion supports verified prelaunch test and release updates", async () => {
-  const [lib, page] = await Promise.all([
+  const [lib, page, options] = await Promise.all([
     read("lib/admin-promotion.ts"),
     read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-options.ts"),
   ]);
 
   assert.match(lib, /testingStatus: string/);
@@ -21,7 +22,7 @@ test("admin promotion supports verified prelaunch test and release updates", asy
   assert.match(lib, /販売前・テスト中の段階では/);
   assert.match(lib, /実際に確認していない成果・PV・売上・反応・レビュー・感想を作らない/);
 
-  assert.match(page, /key: "preview"/);
+  assert.match(options, /key: "preview"/);
   assert.match(page, /テスト・公開予告/);
   assert.match(page, /今回共有してよい確認済み内容/);
   assert.match(page, /公開・販売予定/);
@@ -153,4 +154,22 @@ test("promotion center builds a live Preview screenshot request for ChatGPT", as
   assert.match(css, /\.admin-promo-screenshot-tool/);
   assert.match(css, /\.admin-promo-screenshot-grid/);
   assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.admin-promo-screenshot-grid/);
+});
+
+
+test("promotion page keeps static choices in a dedicated options module", async () => {
+  const [page, options] = await Promise.all([
+    read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-options.ts"),
+  ]);
+
+  assert.match(page, /from "@\/components\/admin-promotion\/admin-promotion-options"/);
+  assert.doesNotMatch(page, /^const PURPOSE_OPTIONS =/m);
+  assert.doesNotMatch(page, /^const AUDIENCE_OPTIONS =/m);
+  assert.doesNotMatch(page, /^const SALES_PRODUCT_OPTIONS:/m);
+  assert.match(options, /export const PURPOSE_OPTIONS/);
+  assert.match(options, /export const AUDIENCE_OPTIONS/);
+  assert.match(options, /export const SALES_PRODUCT_OPTIONS/);
+  assert.match(options, /export const SCREENSHOT_PUBLICATION_OPTIONS/);
+  assert.match(options, /export const DEFAULT_SOCIAL_PRESET_IDS/);
 });
