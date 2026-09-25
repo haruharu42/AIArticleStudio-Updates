@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { SideHustlePromptStep } from "@/components/side-hustles/side-hustle-prompt-step";
@@ -106,14 +106,8 @@ function SideHustleWizardContent({ slug }: { slug: string }) {
     };
   }, [definition, draft, hydrated, userId]);
 
-  const built = useMemo(
-    () => definition && draft ? buildSideHustlePrompt(definition, draft) : null,
-    [definition, draft, knowledgeRevision],
-  );
-  const runtimeState = useMemo(
-    () => getRuntimeKnowledgeState(),
-    [knowledgeRevision],
-  );
+  const built = definition && draft ? buildSideHustlePrompt(definition, draft) : null;
+  const runtimeState = getRuntimeKnowledgeState();
 
   if (!definition || !draft || !hydrated) return null;
 
