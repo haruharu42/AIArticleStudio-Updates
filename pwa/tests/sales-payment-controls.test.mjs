@@ -95,16 +95,18 @@ test("admin UI exposes sales controls while PWA runtime omits legacy plan switch
 });
 
 test("plans and access-code UI obey PWA-only public sales settings", async () => {
-  const [plans, settingsLib] = await Promise.all([
+  const [plans, accessCode, settingsLib] = await Promise.all([
     readPwa("components/commerce-plans-page.tsx"),
+    readPwa("components/commerce/commerce-access-code-panel.tsx"),
     readPwa("lib/sales-settings.ts"),
   ]);
 
   assert.match(plans, /fetchPublicSalesSettings/);
   assert.match(plans, /plan\.platformScope === "pwa"/);
   assert.match(plans, /planSalesEnabled\(salesSettings, plan\.planCode\)/);
-  assert.match(plans, /salesSettings\?\.accessCodeEnabled/);
-  assert.match(plans, /利用コードをお持ちの方/);
+  assert.match(plans, /CommerceAccessCodePanel enabled=\{Boolean\(salesSettings\?\.accessCodeEnabled\)\}/);
+  assert.match(accessCode, /利用コードをお持ちの方/);
+  assert.match(accessCode, /redeemPwaInvite/);
   assert.match(plans, /Stripe新規受付停止中/);
   assert.match(settingsLib, /if \(!settings\?\.stripeCheckoutEnabled\) return false/);
   for (const planCode of ["AAS-PWA-7DAY", "AAS-PWA-MONTHLY"]) {
@@ -200,4 +202,18 @@ test("sales center groups legal support and access-code review without auto-appr
   assert.match(preflight, /未保存の販売設定/);
   assert.match(css, /\.sales-release-preflight-grid/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.sales-release-preflight-grid/);
+});
+
+
+test("access-code purchase flow owns its own request state", async () => {
+  const [plans, accessCode] = await Promise.all([
+    readPwa("components/commerce-plans-page.tsx"),
+    readPwa("components/commerce/commerce-access-code-panel.tsx"),
+  ]);
+
+  assert.doesNotMatch(plans, /inviteCode|inviteBusy|inviteMessage|inviteSuccess|inviteInFlight|redeemInvite/);
+  assert.match(accessCode, /const \[code, setCode\] = useState/);
+  assert.match(accessCode, /const \[busy, setBusy\] = useState/);
+  assert.match(accessCode, /const inFlight = useRef/);
+  assert.match(accessCode, /await refresh\(\)/);
 });

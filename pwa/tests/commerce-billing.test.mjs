@@ -167,18 +167,22 @@ test("free trial feature access fails closed when status verification is unavail
   assert.doesNotMatch(gate, /\(\) => \{\s*if \(active\) setReady\(true\);\s*\}/s);
 });
 
-test("unentitled logged-in users are routed to plans and can redeem an existing invite", async () => {
+test("unentitled logged-in users are routed to plans and can redeem an existing access code", async () => {
   const access = await read("lib/phase6-access.ts");
   const plans = await read("components/commerce-plans-page.tsx");
+  const accessCode = await read("components/commerce/commerce-access-code-panel.tsx");
   const invite = await read("lib/phase9-invite.ts");
 
   assert.match(access, /window\.location\.pathname !== "\/"/);
   assert.match(access, /window\.location\.replace\("\/plans\?from=login"\)/);
-  assert.match(plans, /redeemPwaInvite/);
-  assert.match(plans, /利用コードをお持ちの方/);
-  assert.match(plans, /利用コードを登録/);
-  assert.match(plans, /AI Action Studio/);
-  assert.doesNotMatch(plans, /AI記事スタジオ|旧表記：招待コード/);
+  assert.match(plans, /CommerceAccessCodePanel/);
+  assert.doesNotMatch(plans, /redeemPwaInvite|inviteInFlight|inviteCode/);
+  assert.match(accessCode, /redeemPwaInvite/);
+  assert.match(accessCode, /利用コードをお持ちの方/);
+  assert.match(accessCode, /利用コードを登録/);
+  assert.match(accessCode, /AI Action Studio/);
+  assert.match(accessCode, /if \(inFlight\.current\) return/);
+  assert.doesNotMatch(accessCode, /AI記事スタジオ|旧表記：招待コード/);
   assert.match(invite, /redeem_pwa_invite/);
 });
 

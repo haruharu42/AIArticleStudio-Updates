@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { CommerceAccessCodePanel } from "@/components/commerce/commerce-access-code-panel";
 import {
   COMMERCE_PLAN_COPY,
   beginCheckout,
@@ -13,7 +14,6 @@ import {
   type CommercePlanCode,
   type PublicCommerceConfig,
 } from "@/lib/commerce";
-import { redeemPwaInvite } from "@/lib/phase9-invite";
 import {
   fetchPublicSalesSettings,
   planSalesEnabled,
@@ -21,18 +21,13 @@ import {
 } from "@/lib/sales-settings";
 
 export function CommercePlansPage() {
-  const { state, client, refresh: refreshAccess } = useSharedAccessState();
+  const { state } = useSharedAccessState();
   const [config, setConfig] = useState<PublicCommerceConfig | null>(null);
   const [salesSettings, setSalesSettings] = useState<SalesSettings | null>(null);
   const [message, setMessage] = useState("");
   const [busyPlan, setBusyPlan] = useState<CommercePlanCode | null>(null);
   const [accepted, setAccepted] = useState(false);
-  const [inviteCode, setInviteCode] = useState("");
-  const [inviteBusy, setInviteBusy] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState("");
-  const [inviteSuccess, setInviteSuccess] = useState(false);
   const checkoutInFlight = useRef(false);
-  const inviteInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -57,11 +52,6 @@ export function CommercePlansPage() {
 
   const activeProfile = useMemo(() => {
     if (state.kind === "ready" || state.kind === "entitlement_denied") return state.profile;
-    return null;
-  }, [state]);
-
-  const inviteProfile = useMemo(() => {
-    if (state.kind === "entitlement_denied" || state.kind === "pending") return state.profile;
     return null;
   }, [state]);
 
@@ -99,35 +89,6 @@ export function CommercePlansPage() {
     }
   };
 
-  const redeemInvite = async () => {
-    if (inviteInFlight.current) return;
-    if (!salesSettings?.accessCodeEnabled) {
-      setInviteMessage("現在、利用コードの新規受付は停止しています。");
-      return;
-    }
-    inviteInFlight.current = true;
-    setInviteBusy(true);
-    setInviteMessage("");
-    setInviteSuccess(false);
-    try {
-      if (!client) throw new Error("アカウント接続を確認できません。");
-      const result = await redeemPwaInvite(client, inviteCode);
-      await refreshAccess();
-      setInviteCode("");
-      setInviteSuccess(true);
-      setInviteMessage(
-        result.profileStatus === "active"
-          ? "利用コードを適用し、PWA利用権を再確認しました。AI Action Studioを利用できます。"
-          : "利用コードを登録しました。管理者のアカウント承認後に利用できます。",
-      );
-    } catch (error) {
-      setInviteMessage(error instanceof Error ? error.message : "利用コードの登録に失敗しました。");
-    } finally {
-      inviteInFlight.current = false;
-      setInviteBusy(false);
-    }
-  };
-
   return (
     <main className="commerce-page">
       <section className="commerce-hero">
@@ -151,37 +112,7 @@ export function CommercePlansPage() {
         </section>
       )}
 
-      {salesSettings?.accessCodeEnabled && inviteProfile && inviteProfile.role === "user" && (
-        <section className="commerce-invite" aria-labelledby="commerce-invite-title">
-          <div>
-            <p className="eyebrow">ACCESS CODE</p>
-            <h2 id="commerce-invite-title">利用コードをお持ちの方</h2>
-            <p>購入後に案内された利用コードを、このAASアカウントへ登録できます。</p>
-            <small>AAS ID: {inviteProfile.aas_user_id}</small>
-          </div>
-          <div className="commerce-invite-form">
-            <label>
-              <span>利用コード</span>
-              <input
-                value={inviteCode}
-                onChange={(event) => setInviteCode(event.target.value)}
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                autoComplete="off"
-                inputMode="text"
-              />
-            </label>
-            <button type="button" disabled={inviteBusy || !inviteCode.trim()} onClick={() => void redeemInvite()}>
-              {inviteBusy ? "確認中…" : "利用コードを登録"}
-            </button>
-          </div>
-          {inviteMessage && (
-            <p className={inviteSuccess ? "commerce-invite-message success" : "commerce-invite-message error"} role="status">
-              {inviteMessage}
-              {inviteSuccess && state.kind === "ready" && <> <Link href="/">ホームへ進む</Link></>}
-            </p>
-          )}
-        </section>
-      )}
+      <CommerceAccessCodePanel enabled={Boolean(salesSettings?.accessCodeEnabled)} />
 
       {visiblePlans.length > 0 && (
         <section className="commerce-grid" aria-label="料金プラン">
