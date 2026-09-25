@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { useAppFeatureAccess } from "@/components/feature-access-gate";
 import { MobileNavCustomizer } from "@/components/mobile-nav-customizer";
 import { NotificationSettingsPanel } from "@/components/notification-settings-panel";
 import { WorkspacePresetSettings } from "@/features/presets/workspace-preset-settings";
@@ -67,6 +68,7 @@ function SettingsAccordion({
 
 export function PwaSettingsPage() {
   const { state } = useSharedAccessState();
+  const notificationAccess = useAppFeatureAccess("notifications");
   const [openSection, setOpenSection] = useState<SettingsSection | null>(null);
   const [alwaysShowNav, setAlwaysShowNav] = useState(true);
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
@@ -217,16 +219,18 @@ export function PwaSettingsPage() {
                 : <div className="persistent-settings-status">ナビ設定を読み込んでいます…</div>}
             </SettingsAccordion>
 
-            <SettingsAccordion
-              id="notifications"
-              icon="🔔"
-              title="通知"
-              description="AAS内通知・スマホ/PCの端末通知・通知種類"
-              open={openSection === "notifications"}
-              onOpen={toggleSection}
-            >
-              <NotificationSettingsPanel />
-            </SettingsAccordion>
+            {!notificationAccess.loading && notificationAccess.allowed && (
+              <SettingsAccordion
+                id="notifications"
+                icon="🔔"
+                title="通知"
+                description="AAS内通知・スマホ/PCの端末通知・通知種類"
+                open={openSection === "notifications"}
+                onOpen={toggleSection}
+              >
+                <NotificationSettingsPanel />
+              </SettingsAccordion>
+            )}
 
             <SettingsAccordion
               id="personalization"
