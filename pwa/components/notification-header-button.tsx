@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { useAppFeatureAccess } from "@/components/feature-access-gate";
 import { getMyNotifications, NOTIFICATION_REFRESH_EVENT } from "@/lib/notifications";
 
 type NavigatorWithBadge = Navigator & {
@@ -13,6 +14,7 @@ type NavigatorWithBadge = Navigator & {
 
 export function NotificationHeaderButton() {
   const { state, client } = useSharedAccessState();
+  const notificationAccess = useAppFeatureAccess("notifications");
   const [unreadCount, setUnreadCount] = useState(0);
 
   const refresh = useCallback(async () => {
@@ -49,7 +51,7 @@ export function NotificationHeaderButton() {
     };
   }, [refresh]);
 
-  if (state.kind !== "ready") return null;
+  if (state.kind !== "ready" || notificationAccess.loading || !notificationAccess.allowed) return null;
 
   const label = unreadCount > 0 ? `通知 ${unreadCount}件` : "通知";
 
