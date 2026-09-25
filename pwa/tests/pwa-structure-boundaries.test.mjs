@@ -127,3 +127,23 @@ test("article creator keeps UI, access and pure draft responsibilities separated
   assert.match(draftHelpers, /export function parseStoredArticleDraft/);
   assert.match(progress, /parseStoredArticleDraft/);
 });
+
+test("signed and local runtime images stay behind the direct image boundary", async () => {
+  const wrapper = await read("components/direct-runtime-image.tsx");
+  const consumers = await Promise.all([
+    read("app/profile/page.tsx"),
+    read("app/ranking/page.tsx"),
+    read("components/article-library/note-post-assistant.tsx"),
+    read("components/creator-hud.tsx"),
+    read("components/phase18-beginner-home.tsx"),
+  ]);
+
+  assert.match(wrapper, /Blob\/Object URLs and expiring signed URLs/);
+  assert.match(wrapper, /eslint-disable-next-line @next\/next\/no-img-element/);
+  assert.match(wrapper, /return <img \{\.\.\.props\} \/>/);
+
+  for (const source of consumers) {
+    assert.match(source, /DirectRuntimeImage/);
+    assert.doesNotMatch(source, /<img\b/);
+  }
+});
