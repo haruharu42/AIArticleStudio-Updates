@@ -31,11 +31,11 @@ Completed:
 
 Remaining:
 
-- [ ] Review Supabase Auth leaked-password protection.
+- [ ] Enable Supabase Auth leaked-password protection if the Supabase project plan supports it (Pro+); this is an Auth setting, not a SQL migration.
 - [x] Classify the remaining authenticated SECURITY DEFINER warnings by guard type and delegated call path.
 - [x] Convert the zero-argument release-state wrapper to SECURITY INVOKER after compatibility testing.
-- [ ] Review `pg_net` public-schema extension impact before attempting any schema move.
-- [ ] Re-run advisors after each database security change.
+- [x] Review `pg_net` public-schema warning: live extension is v0.20.4, non-relocatable, and actively used by Knowledge/Push worker invocation. Keep it in place rather than drop/recreate a live dependency.
+- [x] Re-run advisors after database security changes.
 
 ## Phase 3 — External-sale + access-code E2E
 

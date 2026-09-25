@@ -103,5 +103,5 @@ Do not rely on this list as a fixed snapshot; re-query live systems before actin
 - External-first paid launch requires a real external purchase URL.
 - Real-browser access-code purchase-to-entitlement E2E is still required; database rollback E2E has passed.
 - Seller/legal/refund/support wording must be finalized.
-- Supabase Auth leaked-password protection and remaining intentional advisor warnings must be reviewed.
+- Supabase Auth leaked-password protection remains disabled and should be enabled through Auth settings if the project plan supports it; pg_net's public-schema warning is documented as intentionally retained because the installed extension is non-relocatable and actively used by Knowledge/Push calls.
 - General Public rollout requires explicit approval.

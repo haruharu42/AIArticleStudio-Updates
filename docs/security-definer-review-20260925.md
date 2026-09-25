@@ -79,7 +79,12 @@ A large set of self-service functions use `auth.uid()` plus profile/ownership/st
 
 ## Remaining security work
 
-1. Review/enable Supabase Auth leaked-password protection before broad public account growth.
-2. Review `pg_net` placement/use before any extension-schema change. It is actively used by Knowledge automation and notification push worker invocation, so moving/dropping it blindly is unsafe.
+1. Enable Supabase Auth leaked-password protection before broad public account growth if the project plan supports it. Current Supabase documentation states this feature is available on Pro and above, and it is configured in Auth settings rather than through a database migration.
+2. Keep `pg_net` in place for now. Live inspection on 2026-09-25 found:
+   - version: `0.20.4`
+   - extension schema metadata: `public`
+   - `extrelocatable=false`
+   - active AAS callers include `private.invoke_knowledge_automation_worker` and `private.invoke_notification_push_worker`
+   Supabase documentation states pg_net creates/uses its own `net` namespace and shows fresh installs using `schema extensions`, while its troubleshooting guidance warns that drop/recreate can fail when dependencies exist. Because AAS has live dependencies, do not drop/recreate only to silence the advisor.
 3. Continue reviewing SECURITY DEFINER functions feature-by-feature when touched; do not change them solely to reduce advisor counts.
 4. Re-run security advisors after each DB privilege/function change.
