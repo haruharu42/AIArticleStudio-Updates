@@ -156,9 +156,10 @@ test("note beginner profile builder uses dropdown presets and current-web resear
 
 
 test("AI monthly note schedule uses month-based research, validation, and owner-scoped plan storage", async () => {
-  const [migration, lib, page, helpers, css] = await Promise.all([
+  const [migration, lib, parser, page, helpers, css] = await Promise.all([
     readRepo("supabase/migrations/20260919131121_note_ai_monthly_schedule_plans.sql"),
     readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-ai-schedule-json.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
@@ -216,8 +217,8 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(page, /articleSchedule/);
   assert.match(page, /無料note \/ 有料noteの作成日・時間/);
   assert.match(page, /AIにはAASへ貼る予定表だけを返すよう指示します/);
-  assert.match(lib, /balancedJsonObjects/);
-  assert.match(lib, /scheduleRootFromValue/);
+  assert.match(parser, /balancedJsonObjects/);
+  assert.match(parser, /scheduleRootFromValue/);
   assert.match(lib, /ChatGPTの回答全文を削らず/);
   assert.match(lib, /AAS用の運用スケジュールが回答内に見つかりませんでした/);
   assert.match(lib, /対象月の外にある予定/);
@@ -464,4 +465,22 @@ test("note schedule contracts live in a dedicated type module while note-operati
   assert.match(types, /schema: "aas-note-schedule-v2"/);
   assert.match(types, /export type NoteSchedulePerformanceSnapshot/);
   assert.match(types, /export type NoteArticleOutputSnapshot/);
+});
+
+
+test("note AI schedule JSON extraction is isolated as a pure parser module", async () => {
+  const [lib, parser] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-ai-schedule-json.ts"),
+  ]);
+
+  assert.match(lib, /import \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
+  assert.match(lib, /export \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
+  assert.doesNotMatch(lib, /^function stripJsonFence/m);
+  assert.doesNotMatch(lib, /^function balancedJsonObjects/m);
+  assert.match(parser, /function stripJsonFence/);
+  assert.match(parser, /function scheduleRootFromValue/);
+  assert.match(parser, /function balancedJsonObjects/);
+  assert.match(parser, /export function extractNoteAiScheduleJson/);
+  assert.doesNotMatch(parser, /SupabaseClient|getSupabaseClient|service[_-]?role|sb_secret_/i);
 });
