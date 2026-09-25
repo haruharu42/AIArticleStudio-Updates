@@ -5,15 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import { launchAiApp } from "@/lib/ai-app-links";
 import { PresetNumberSelectWithCustom, SelectWithCustom } from "@/components/select-with-custom";
 import { KnowledgeDiffSummary } from "@/components/knowledge-refresh/knowledge-diff-summary";
+import { KnowledgeQualityAnalyzer } from "@/components/knowledge-refresh/knowledge-quality-analyzer";
+import { KnowledgeSourceHealthPanel } from "@/components/knowledge-refresh/knowledge-source-health-panel";
 import {
-  SIDE_HUSTLE_COVERAGE_TASKS,
   formatKnowledgeCycle,
   formatKnowledgeDate,
   knowledgeAutomationActionLabel,
   knowledgeRefreshErrorLabel,
   knowledgeRefreshStatusLabel,
-  knowledgeSourceHost,
-  knowledgeSourceKindLabel,
 } from "@/components/knowledge-refresh/knowledge-refresh-display";
 import {
   adminGetKnowledgeAutomationAiConfig,
@@ -74,27 +73,6 @@ export function KnowledgeRefreshPanel() {
   );
   const freshState = channels.find((channel) => channel.channel === "fresh") ?? null;
   const stableState = channels.find((channel) => channel.channel === "stable") ?? null;
-  const enabledAutomationSources = useMemo(
-    () => automationSources.filter((source) => source.enabled),
-    [automationSources],
-  );
-  const failingAutomationSources = useMemo(
-    () => enabledAutomationSources.filter(
-      (source) => source.consecutiveFailures > 0 || (source.lastHttpStatus !== null && source.lastHttpStatus >= 400),
-    ),
-    [enabledAutomationSources],
-  );
-  const automationCoverage = useMemo(
-    () => SIDE_HUSTLE_COVERAGE_TASKS.map(([task, label]) => ({
-      task,
-      label,
-      count: enabledAutomationSources.filter(
-        (source) => source.tasks.includes("all") || source.tasks.includes(task),
-      ).length,
-    })),
-    [enabledAutomationSources],
-  );
-
   const reload = async () => {
     const client = getSupabaseClient();
     const [nextRequests, nextChannels, nextAutomationStatus, nextProductionHealth, nextSourceRiskReport, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
@@ -548,152 +526,17 @@ export function KnowledgeRefreshPanel() {
           </div>
         </dl>
 
-        <section className="knowledge-source-health" aria-label="監視ソース健全性">
-          <div className="knowledge-source-health-head">
-            <div>
-              <strong>監視ソース健全性</strong>
-              <p>どの公式URLを監視しているか、取得状態・失敗回数・次回確認時刻を管理者画面だけで確認できます。</p>
-            </div>
-            <span className={failingAutomationSources.length > 0 ? "warning" : "healthy"}>
-              {failingAutomationSources.length > 0 ? `要確認 ${failingAutomationSources.length} URL` : "正常"}
-            </span>
-          </div>
+        <KnowledgeSourceHealthPanel
+          sources={automationSources}
+          dueSources={automationStatus?.dueSources}
+        />
 
-          <div className="knowledge-source-health-stats">
-            <article><span>有効URL</span><strong>{enabledAutomationSources.length}</strong></article>
-            <article className={failingAutomationSources.length > 0 ? "warning" : ""}><span>取得失敗</span><strong>{failingAutomationSources.length}</strong></article>
-            <article><span>次回対象</span><strong>{automationStatus?.dueSources ?? "-"}</strong></article>
-          </div>
-
-          <div className="knowledge-source-coverage">
-            <div>
-              <strong>副業Knowledgeカバレッジ</strong>
-              <small>「all」指定の公式ソースは各副業にも共通根拠として数えます。</small>
-            </div>
-            <div className="knowledge-source-coverage-grid">
-              {automationCoverage.map((item) => (
-                <article key={item.task} className={item.count === 0 ? "missing" : ""}>
-                  <span>{item.label}</span>
-                  <strong>{item.count} URL</strong>
-                </article>
-              ))}
-            </div>
-          </div>
-
-          <details className="knowledge-source-list" open={failingAutomationSources.length > 0}>
-            <summary>監視URL一覧（{automationSources.length}件）</summary>
-            <div>
-              {automationSources.map((source) => {
-                const isFailing = source.consecutiveFailures > 0
-                  || (source.lastHttpStatus !== null && source.lastHttpStatus >= 400);
-                return (
-                  <article key={source.id} className={isFailing ? "warning" : ""}>
-                    <header>
-                      <span className={isFailing ? "warning" : "healthy"}>{isFailing ? "要確認" : "正常"}</span>
-                      <strong>{knowledgeSourceHost(source.sourceUrl)}</strong>
-                      <small>{knowledgeSourceKindLabel(source.sourceKind)}</small>
-                    </header>
-                    <a href={source.sourceUrl} target="_blank" rel="noreferrer">{source.sourceUrl}</a>
-                    <dl>
-                      <div><dt>HTTP</dt><dd>{source.lastHttpStatus ?? "未確認"}</dd></div>
-                      <div><dt>連続失敗</dt><dd>{source.consecutiveFailures}回</dd></div>
-                      <div><dt>最終確認</dt><dd>{formatKnowledgeDate(source.lastCheckedAt)}</dd></div>
-                      <div><dt>次回確認</dt><dd>{formatKnowledgeDate(source.nextCheckAt)}</dd></div>
-                    </dl>
-                    {source.tasks.length > 0 && (
-                      <div className="knowledge-source-tasks">
-                        {source.tasks.map((task) => <span key={task}>{task}</span>)}
-                      </div>
-                    )}
-                    {source.lastError && <p className="knowledge-source-error">{source.lastError}</p>}
-                  </article>
-                );
-              })}
-            </div>
-          </details>
-        </section>
-
-        <section className="knowledge-quality-analyzer" aria-label="Knowledge品質カバレッジ分析">
-          <div className="knowledge-quality-head">
-            <div>
-              <p className="eyebrow">QUALITY & COVERAGE</p>
-              <strong>Knowledge品質・カバレッジ分析</strong>
-              <p>正式Knowledge / Promptの根拠数と根拠ドメインの偏りを確認します。ここでの分析・リサーチ準備だけでは公開されません。</p>
-            </div>
-            <button
-              type="button"
-              disabled={busy || !sourceRiskReport || sourceRiskReport.reviewItems.length === 0}
-              onClick={() => void prepareSourceDiversity()}
-            >
-              追加根拠リサーチを準備
-            </button>
-          </div>
-
-          <div className="knowledge-quality-metrics">
-            <article><span>正式Knowledge</span><strong>{productionHealth?.activeKnowledge ?? "-"}</strong></article>
-            <article><span>Prompt最適化</span><strong>{productionHealth?.activePromptOptimizations ?? "-"}</strong></article>
-            <article className={(sourceRiskReport?.zeroSourceCount ?? 0) > 0 ? "warning" : "healthy"}>
-              <span>根拠0件</span><strong>{sourceRiskReport?.zeroSourceCount ?? "-"}</strong>
-            </article>
-            <article className={(sourceRiskReport?.singleSourceCount ?? 0) > 0 ? "warning" : ""}>
-              <span>単一ソース</span><strong>{sourceRiskReport?.singleSourceCount ?? "-"}</strong>
-            </article>
-            <article><span>複数ドメイン</span><strong>{sourceRiskReport?.multiDomainCount ?? "-"}</strong></article>
-            <article><span>根拠ドメイン</span><strong>{sourceRiskReport?.uniqueDomainCount ?? "-"}</strong></article>
-            <article><span>Fresh</span><strong>v{productionHealth?.freshVersion ?? "-"}</strong></article>
-            <article><span>Stable</span><strong>v{productionHealth?.stableVersion ?? "-"}</strong></article>
-          </div>
-
-          {sourceRiskReport && (
-            <>
-              <div className="knowledge-quality-concentration">
-                <div>
-                  <span>最多ドメインへの集中率</span>
-                  <strong>{sourceRiskReport.topDomainSharePercent}%</strong>
-                  <small>{sourceRiskReport.topDomainItemCount} / {sourceRiskReport.itemCount} 項目</small>
-                </div>
-                <div className="knowledge-quality-domain-list">
-                  {sourceRiskReport.domains.slice(0, 8).map((domain) => (
-                    <span key={domain.domain}>{domain.domain} · {domain.itemCount}項目</span>
-                  ))}
-                </div>
-              </div>
-
-              <details className="knowledge-quality-review" open={sourceRiskReport.zeroSourceCount > 0}>
-                <summary>追加根拠を確認する項目（{sourceRiskReport.reviewItems.length}件）</summary>
-                <div>
-                  {sourceRiskReport.reviewItems.map((item) => (
-                    <article key={`${item.itemType}:${item.key}`}>
-                      <header>
-                        <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"}</span>
-                        <strong>{item.label || item.key}</strong>
-                        <small>v{item.catalogVersion}</small>
-                      </header>
-                      <p>{item.key}</p>
-                      <dl>
-                        <div><dt>ソース</dt><dd>{item.sourceCount}</dd></div>
-                        <div><dt>ドメイン</dt><dd>{item.domainCount}</dd></div>
-                        <div><dt>最終確認</dt><dd>{formatKnowledgeDate(item.sourceCheckedAt)}</dd></div>
-                      </dl>
-                      {item.sourceUrls.length > 0 && (
-                        <div className="knowledge-quality-links">
-                          {item.sourceUrls.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">{knowledgeSourceHost(url)}</a>)}
-                        </div>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              </details>
-            </>
-          )}
-
-          {productionHealth && (
-            <small className="knowledge-quality-foot">
-              最終根拠確認: Knowledge {formatKnowledgeDate(productionHealth.lastKnowledgeCheckedAt)} / Prompt {formatKnowledgeDate(productionHealth.lastPromptCheckedAt)}
-              {" · "}更新キュー: 待機 {productionHealth.pendingRequests} / 処理中 {productionHealth.processingRequests} / 失敗履歴 {productionHealth.failedRequests}
-            </small>
-          )}
-        </section>
+        <KnowledgeQualityAnalyzer
+          productionHealth={productionHealth}
+          sourceRiskReport={sourceRiskReport}
+          busy={busy}
+          onPrepareSourceDiversity={() => void prepareSourceDiversity()}
+        />
 
         {automationStatus?.lastError && (
           <p className="knowledge-automation-error">直近エラー: {automationStatus.lastError}</p>

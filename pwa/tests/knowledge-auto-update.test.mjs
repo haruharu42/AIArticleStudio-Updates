@@ -334,9 +334,10 @@ test("AI proposal handoff only pre-fills a Fresh review request and does not byp
 
 
 test("knowledge monitor dashboard exposes admin-only source health and side-hustle coverage", async () => {
-  const [migration, panel, display, client, css] = await Promise.all([
+  const [migration, panel, sourceHealth, display, client, css] = await Promise.all([
     readRepo("supabase/migrations/20260925070649_knowledge_automation_source_health_dashboard_v1.sql"),
     readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("components/knowledge-refresh/knowledge-source-health-panel.tsx"),
     readPwa("components/knowledge-refresh/knowledge-refresh-display.ts"),
     readPwa("lib/knowledge-auto-update.ts"),
     readPwa("app/phase26-knowledge.css"),
@@ -353,13 +354,14 @@ test("knowledge monitor dashboard exposes admin-only source health and side-hust
   assert.match(client, /admin_list_knowledge_automation_sources/);
   assert.match(client, /公式ソース監視一覧を取得できませんでした/);
 
-  assert.match(panel, /監視ソース健全性/);
-  assert.match(panel, /副業Knowledgeカバレッジ/);
-  assert.match(panel, /SIDE_HUSTLE_COVERAGE_TASKS/);
+  assert.match(sourceHealth, /監視ソース健全性/);
+  assert.match(sourceHealth, /副業Knowledgeカバレッジ/);
+  assert.match(sourceHealth, /SIDE_HUSTLE_COVERAGE_TASKS/);
+  assert.match(panel, /KnowledgeSourceHealthPanel/);
   assert.match(display, /sidejob_affiliate/);
   assert.match(display, /sidejob_resale/);
-  assert.match(panel, /監視URL一覧/);
-  assert.match(panel, /連続失敗/);
+  assert.match(sourceHealth, /監視URL一覧/);
+  assert.match(sourceHealth, /連続失敗/);
   assert.match(css, /\.knowledge-source-health/);
   assert.match(css, /\.knowledge-source-coverage-grid/);
   assert.match(css, /\.knowledge-source-list/);
@@ -367,8 +369,9 @@ test("knowledge monitor dashboard exposes admin-only source health and side-hust
 
 
 test("admin Knowledge quality analyzer reuses existing RPCs without auto-publish", async () => {
-  const [panel, client, css] = await Promise.all([
+  const [panel, quality, client, css] = await Promise.all([
     readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("components/knowledge-refresh/knowledge-quality-analyzer.tsx"),
     readPwa("lib/knowledge-auto-update.ts"),
     readPwa("app/phase26-knowledge.css"),
   ]);
@@ -389,11 +392,12 @@ test("admin Knowledge quality analyzer reuses existing RPCs without auto-publish
   const prepareSource = client.slice(prepareStart, prepareEnd);
   assert.doesNotMatch(prepareSource, /admin_publish_knowledge_refresh_bundle/);
 
-  assert.match(panel, /Knowledge品質・カバレッジ分析/);
-  assert.match(panel, /追加根拠リサーチを準備/);
-  assert.match(panel, /自動公開はされません/);
-  assert.match(panel, /最多ドメインへの集中率/);
-  assert.match(panel, /追加根拠を確認する項目/);
+  assert.match(quality, /Knowledge品質・カバレッジ分析/);
+  assert.match(quality, /追加根拠リサーチを準備/);
+  assert.match(quality, /公開されません/);
+  assert.match(panel, /KnowledgeQualityAnalyzer/);
+  assert.match(quality, /最多ドメインへの集中率/);
+  assert.match(quality, /追加根拠を確認する項目/);
   assert.match(panel, /正式Knowledgeは変わりません/);
   assert.match(css, /\.knowledge-quality-analyzer/);
   assert.match(css, /\.knowledge-quality-metrics/);
@@ -417,4 +421,23 @@ test("knowledge refresh UI keeps pure display and diff rendering in feature modu
   assert.match(display, /SIDE_HUSTLE_COVERAGE_TASKS/);
   assert.match(diff, /export function KnowledgeDiffSummary/);
   assert.match(diff, /FIELD_LABELS/);
+});
+
+
+test("knowledge source health and quality analysis are isolated from refresh orchestration", async () => {
+  const [panel, sourceHealth, quality] = await Promise.all([
+    readPwa("components/knowledge-refresh-panel.tsx"),
+    readPwa("components/knowledge-refresh/knowledge-source-health-panel.tsx"),
+    readPwa("components/knowledge-refresh/knowledge-quality-analyzer.tsx"),
+  ]);
+
+  assert.match(panel, /KnowledgeSourceHealthPanel/);
+  assert.match(panel, /KnowledgeQualityAnalyzer/);
+  assert.doesNotMatch(panel, /const enabledAutomationSources = useMemo/);
+  assert.doesNotMatch(panel, /const automationCoverage = useMemo/);
+  assert.match(sourceHealth, /useMemo/);
+  assert.match(sourceHealth, /SIDE_HUSTLE_COVERAGE_TASKS/);
+  assert.match(quality, /onPrepareSourceDiversity/);
+  assert.doesNotMatch(sourceHealth, /getSupabaseClient|adminPrepareSourceDiversityResearch/);
+  assert.doesNotMatch(quality, /getSupabaseClient|adminPrepareSourceDiversityResearch/);
 });
