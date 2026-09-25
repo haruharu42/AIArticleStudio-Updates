@@ -164,6 +164,15 @@ test("staged release rollout isolates admin preview, selected user testers, and 
   assert.match(layout, /ReleaseAudienceGate/);
 
   assert.match(manager, /is_admin_preview \|\| state\.is_tester_preview/);
+  assert.match(manager, /HIDDEN_PREFIXES/);
+  for (const route of ["/support", "/commercial-transactions"]) {
+    assert.ok(manager.includes(`"${route}"`), `missing release-manager public route: ${route}`);
+  }
+  assert.ok(
+    manager.indexOf("if (hiddenRoute(pathname))") < manager.indexOf("loadMyAppReleaseState(client)"),
+    "public legal/support routes must skip release RPC before refresh is defined",
+  );
+  assert.match(manager, /\}, \[pathname\]\);/);
   assert.match(manager, /return null/);
   assert.match(previewStatus, /is_admin_preview/);
   assert.match(previewStatus, /is_tester_preview/);
