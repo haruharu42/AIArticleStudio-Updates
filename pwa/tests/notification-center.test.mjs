@@ -146,3 +146,29 @@ test("push worker has immediate trigger and cron recovery", async () => {
   assert.match(migration, /aas-notification-push-worker-5m/);
   assert.match(migration, /\*\/5 \* \* \* \*/);
 });
+
+
+test("notification feature itself follows admin to tester to public rollout on UI and RPC layers", async () => {
+  const [guard, client, bell, settings] = await Promise.all([
+    readRepo("supabase/migrations/20260925014359_notification_feature_rollout_guard_v1.sql"),
+    readPwa("lib/notifications.ts"),
+    readPwa("components/notification-header-button.tsx"),
+    readPwa("components/pwa-settings-page.tsx"),
+  ]);
+
+  assert.match(guard, /'notifications','共通','通知センター'/);
+  assert.match(guard, /'\/notifications',true,'admin',false,false/);
+  assert.match(guard, /private\.assert_notification_feature_access/);
+  assert.match(guard, /private\.can_use_app_feature\('notifications'/);
+  assert.match(guard, /revoke all on function public\.get_my_app_notifications\(integer,boolean\) from authenticated/);
+  assert.match(guard, /grant execute on function public\.get_my_app_notifications_v2\(integer,boolean\) to authenticated/);
+  assert.match(guard, /private\.can_use_app_feature\('notifications',s\.user_id\)/);
+
+  assert.match(client, /get_my_app_notifications_v2/);
+  assert.match(client, /get_my_notification_preferences_v2/);
+  assert.match(client, /register_my_push_subscription_v2/);
+  assert.match(bell, /useAppFeatureAccess\("notifications"\)/);
+  assert.match(bell, /!notificationAccess\.allowed/);
+  assert.match(settings, /useAppFeatureAccess\("notifications"\)/);
+  assert.match(settings, /notificationAccess\.allowed/);
+});
