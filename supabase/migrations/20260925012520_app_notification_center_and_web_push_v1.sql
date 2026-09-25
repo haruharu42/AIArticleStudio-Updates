@@ -250,12 +250,9 @@ begin
     admin_messages_enabled=excluded.admin_messages_enabled,
     updated_at=now();
 
-  if coalesce(p_push_enabled,false)=false then
-    update public.user_push_subscriptions
-    set enabled=false,updated_at=now()
-    where user_id=v_user;
-  end if;
-
+  -- Push preference is account-wide, while browser subscriptions remain device-specific.
+  -- Keeping other device subscriptions intact lets the user re-enable Push later without
+  -- re-authorizing every previously approved device.
   return public.get_my_notification_preferences();
 end;
 $function$;
