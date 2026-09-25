@@ -448,3 +448,20 @@ test("note operation profile definitions are isolated behind a compatibility re-
   assert.match(profileLib, /^export const AAS_ADMIN_NOTE_PROFILE_PRESET/m);
   assert.match(profileLib, /^export function applyAasAdminNoteProfilePreset/m);
 });
+
+
+test("note schedule contracts live in a dedicated type module while note-operations keeps compatibility exports", async () => {
+  const [lib, types] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-schedule-types.ts"),
+  ]);
+
+  assert.match(lib, /from "@\/lib\/note-schedule-types"/);
+  assert.match(lib, /export type \{[\s\S]*?NoteAiSchedulePlan[\s\S]*?NoteScheduleItem[\s\S]*?\} from "@\/lib\/note-schedule-types"/);
+  assert.doesNotMatch(lib, /^export type NoteScheduleItemType =/m);
+  assert.match(types, /export type NoteScheduleItemType = "free_note" \| "paid_note"/);
+  assert.match(types, /export type NoteAiSchedulePlan/);
+  assert.match(types, /schema: "aas-note-schedule-v2"/);
+  assert.match(types, /export type NoteSchedulePerformanceSnapshot/);
+  assert.match(types, /export type NoteArticleOutputSnapshot/);
+});
