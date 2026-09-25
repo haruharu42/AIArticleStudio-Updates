@@ -140,7 +140,8 @@ test("signed and local runtime images stay behind the direct image boundary", as
 
   assert.match(wrapper, /Blob\/Object URLs and expiring signed URLs/);
   assert.match(wrapper, /eslint-disable-next-line @next\/next\/no-img-element/);
-  assert.match(wrapper, /return <img \{\.\.\.props\} \/>/);
+  assert.match(wrapper, /alt: string/);
+  assert.match(wrapper, /return <img alt=\{alt\} \{\.\.\.props\} \/>/);
 
   for (const source of consumers) {
     assert.match(source, /DirectRuntimeImage/);
