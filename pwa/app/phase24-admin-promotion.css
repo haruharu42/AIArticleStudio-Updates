@@ -512,3 +512,109 @@
     text-align: center;
   }
 }
+
+
+/* 2026-09-25 three-step promotion auto setup. */
+.admin-promo-three-step {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #a9cbed;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff, #f2f8ff);
+  padding: 16px;
+  box-shadow: 0 14px 34px rgb(32 93 157 / 9%);
+}
+
+.admin-promo-three-step-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-promo-three-step-head > div {
+  min-width: 0;
+  flex: 1 1 360px;
+}
+
+.admin-promo-three-step-head h2 {
+  margin: 2px 0 0;
+  color: #153d6b;
+  font-size: 20px;
+}
+
+.admin-promo-three-step-head p:last-child {
+  margin: 5px 0 0;
+  color: #687f9b;
+  font-size: 9px;
+  line-height: 1.65;
+}
+
+.admin-promo-three-step-head > strong {
+  border: 1px solid #cdddef;
+  border-radius: 999px;
+  background: #fff;
+  color: #54708f;
+  padding: 7px 10px;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.admin-promo-three-step-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-promo-three-step-grid .admin-promo-field {
+  margin: 0;
+}
+
+.admin-promo-three-step-grid select {
+  min-height: 52px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.admin-promo-three-step-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid #dce8f5;
+  padding-top: 12px;
+}
+
+.admin-promo-three-step-actions button {
+  min-height: 44px;
+  border: 1px solid #1d75d7;
+  border-radius: 11px;
+  background: #1976f3;
+  color: #fff;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-promo-three-step-actions small {
+  color: #71859d;
+  font-size: 8px;
+  line-height: 1.65;
+}
+
+@media (max-width: 880px) {
+  .admin-promo-three-step-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-promo-three-step-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-promo-three-step-actions button {
+    width: 100%;
+  }
+}

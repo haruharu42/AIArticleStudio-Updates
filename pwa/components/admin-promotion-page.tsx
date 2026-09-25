@@ -59,6 +59,33 @@ const QUICK_PRESETS: Array<{ key: QuickPresetKey; label: string; description: st
   { key: "update-campaign", label: "アップデート告知", description: "既存ユーザー向け再訴求をまとめて設計" },
 ];
 
+type SalesProductKey = "aas-pwa" | "pwa-7day" | "pwa-monthly" | "prelaunch";
+type SalesChannelKey = "note" | "brain" | "tips" | "direct" | "stripe" | "social";
+type PromotionMethodKey = "article" | "social" | "campaign" | "preview";
+
+const SALES_PRODUCT_OPTIONS: Array<{ key: SalesProductKey; label: string; note: string }> = [
+  { key: "aas-pwa", label: "AAS PWA版", note: "通常のPWA版紹介・販売向け" },
+  { key: "pwa-7day", label: "PWA 7日利用パス（設定時のみ）", note: "販売設定で7日券を有効にする場合の販促向け" },
+  { key: "pwa-monthly", label: "PWA 月額プラン（設定時のみ）", note: "販売設定で月額を有効にする場合の販促向け" },
+  { key: "prelaunch", label: "販売前・公開予告", note: "まだ販売せず、テスト・開発・公開予定を伝える" },
+];
+
+const SALES_CHANNEL_OPTIONS: Array<{ key: SalesChannelKey; label: string; note: string }> = [
+  { key: "note", label: "note", note: "記事販売・案内ページへ誘導" },
+  { key: "brain", label: "Brain", note: "Brainの商品・案内ページへ誘導" },
+  { key: "tips", label: "Tips", note: "Tipsの商品・案内ページへ誘導" },
+  { key: "direct", label: "AAS公式ページ・直接案内", note: "公式ページや利用開始導線を使う" },
+  { key: "stripe", label: "AAS内Stripe（設定時のみ）", note: "販売設定でStripe受付を有効にした場合だけ利用" },
+  { key: "social", label: "SNSから案内", note: "X・Instagram・Threads等から誘導" },
+];
+
+const PROMOTION_METHOD_OPTIONS: Array<{ key: PromotionMethodKey; label: string; note: string }> = [
+  { key: "article", label: "紹介・販売記事", note: "長文で詳しく説明する" },
+  { key: "social", label: "SNS投稿", note: "短時間で複数投稿案を作る" },
+  { key: "campaign", label: "14日プロモーション計画", note: "記事とSNSをまとめて設計する" },
+  { key: "preview", label: "テスト・公開予告", note: "販売前の進捗・予告を誠実に発信する" },
+];
+
 const PURPOSE_OPTIONS = [
   "実運用テスト状況の共有",
   "note実運用テスト報告",
@@ -289,6 +316,9 @@ export function AdminPromotionPage() {
   const { preference: workspacePreference } = useWorkspacePreset();
   const [mode, setMode] = useState<Mode>("preview");
   const [quickPreset, setQuickPreset] = useState<QuickPresetKey>("");
+  const [salesProduct, setSalesProduct] = useState<SalesProductKey>("aas-pwa");
+  const [salesChannel, setSalesChannel] = useState<SalesChannelKey>("note");
+  const [promotionMethod, setPromotionMethod] = useState<PromotionMethodKey>("article");
   const [message, setMessage] = useState("");
   const [facts, setFacts] = useState<AdminProductFacts>(DEFAULT_ADMIN_PRODUCT_FACTS);
   const [socialLengths, setSocialLengths] = useState<AdminSocialLengthPlan>({ ...DEFAULT_SOCIAL_LENGTH_PLAN });
@@ -392,6 +422,90 @@ export function AdminPromotionPage() {
     () => buildAdminPreviewPromotionPrompt(facts, { ...preview, socialLengths }),
     [facts, preview, socialLengths, workspacePreference],
   );
+
+  const applyThreeStepPromotion = () => {
+    setQuickPreset("");
+
+    const productLabel = SALES_PRODUCT_OPTIONS.find((item) => item.key === salesProduct)?.label ?? "AAS PWA版";
+    const channelLabel = SALES_CHANNEL_OPTIONS.find((item) => item.key === salesChannel)?.label ?? "note";
+    const salesCta = salesChannel === "direct"
+      ? "公式ページへ誘導"
+      : salesChannel === "social"
+        ? "プロフィールへ誘導"
+        : "販売URLへ誘導";
+    const articlePlatform = salesChannel === "brain"
+      ? "brain"
+      : salesChannel === "tips"
+        ? "tips"
+        : "note";
+    const campaignChannels = salesChannel === "brain"
+      ? "Brain, X"
+      : salesChannel === "tips"
+        ? "Tips, X"
+        : salesChannel === "social"
+          ? "X, Instagram, Threads, TikTok, YouTube Shorts"
+          : "note, X, Instagram, Threads";
+    const prelaunch = salesProduct === "prelaunch" || promotionMethod === "preview";
+
+    setFacts((current) => ({
+      ...current,
+      productName: "AI Action Studio",
+      editions: "PWA版のみ",
+      releaseStage: prelaunch ? "内部テスト" : current.releaseStage || "正式販売",
+    }));
+
+    if (promotionMethod === "article") {
+      setMode("article");
+      setArticle((current) => ({
+        ...current,
+        platform: articlePlatform,
+        phase: prelaunch ? "公開前予告" : "販売開始後",
+        purpose: prelaunch ? "公開前の予告" : "新規紹介・販売",
+        audience: current.audience || "副業初心者",
+        focus: productLabel,
+        cta: prelaunch ? "公開予定を知らせる" : salesCta,
+      }));
+    } else if (promotionMethod === "social") {
+      setMode("social");
+      setSocial((current) => ({
+        ...current,
+        platform: "x",
+        phase: prelaunch ? "公開前予告" : "販売開始後",
+        purpose: prelaunch ? "公開予定の案内" : "販売開始告知",
+        audience: current.audience || "副業初心者",
+        focus: productLabel,
+        cta: prelaunch ? "フォローして続報を待ってもらう" : salesCta,
+        variants: 3,
+      }));
+    } else if (promotionMethod === "campaign") {
+      setMode("campaign");
+      setCampaign((current) => ({
+        ...current,
+        campaignName: productLabel + (prelaunch ? " 公開予告" : " 販促"),
+        phase: prelaunch ? "公開前予告" : "販売開始後",
+        goal: prelaunch ? "公開前の期待形成" : "販売開始・認知拡大",
+        audience: current.audience || "副業初心者",
+        channels: campaignChannels,
+        offer: prelaunch ? "公開予定のみ・販売未開始" : "通常販売",
+        cta: prelaunch ? "公開予定を知らせる" : salesCta,
+      }));
+    } else {
+      setMode("preview");
+      setPreview((current) => ({
+        ...current,
+        updateType: salesProduct === "prelaunch" ? "正式公開予告" : "公開予定の案内",
+        testedPlatform: salesChannel === "note" || salesChannel === "brain" || salesChannel === "tips"
+          ? channelLabel
+          : "PWA版",
+        audience: current.audience || "副業初心者",
+        channels: campaignChannels,
+        cta: "フォローして続報を待ってもらう",
+      }));
+    }
+
+    const methodLabel = PROMOTION_METHOD_OPTIONS.find((item) => item.key === promotionMethod)?.label ?? "販促";
+    setMessage("3ステップ設定を反映しました: " + productLabel + " / " + channelLabel + " / " + methodLabel);
+  };
 
   const applyQuickPreset = (presetKey: QuickPresetKey) => {
     setQuickPreset(presetKey);
@@ -530,6 +644,41 @@ export function AdminPromotionPage() {
       <ActiveWorkspacePresetBadge feature="sns" />
       <div className="admin-promo-safety"><strong>確認済み情報を基準に作成</strong><span>販売前は「テスト中・準備中・公開予定」として扱い、未入力の価格・実績・レビュー・公開日をAIに作らせません。製品情報は現在この端末だけに保存されます。</span></div>
       {message && <div className="route-notice">{message}</div>}
+
+      <section className="admin-promo-three-step" aria-label="3ステップかんたん販促">
+        <div className="admin-promo-three-step-head">
+          <div>
+            <p className="eyebrow">3 STEP AUTO SETUP</p>
+            <h2>3ステップかんたん販促</h2>
+            <p>商品・販売先・宣伝方法を選ぶだけで、下の詳細設定をまとめて自動入力します。</p>
+          </div>
+          <strong>販売設定そのものは変更しません</strong>
+        </div>
+        <div className="admin-promo-three-step-grid">
+          <label className="admin-promo-field">
+            <span>① 販売する商品・プラン</span>
+            <select value={salesProduct} onChange={(event) => setSalesProduct(event.target.value as SalesProductKey)}>
+              {SALES_PRODUCT_OPTIONS.map((item) => <option key={item.key} value={item.key}>{item.label} — {item.note}</option>)}
+            </select>
+          </label>
+          <label className="admin-promo-field">
+            <span>② 販売先・誘導先</span>
+            <select value={salesChannel} onChange={(event) => setSalesChannel(event.target.value as SalesChannelKey)}>
+              {SALES_CHANNEL_OPTIONS.map((item) => <option key={item.key} value={item.key}>{item.label} — {item.note}</option>)}
+            </select>
+          </label>
+          <label className="admin-promo-field">
+            <span>③ 宣伝方法</span>
+            <select value={promotionMethod} onChange={(event) => setPromotionMethod(event.target.value as PromotionMethodKey)}>
+              {PROMOTION_METHOD_OPTIONS.map((item) => <option key={item.key} value={item.key}>{item.label} — {item.note}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="admin-promo-three-step-actions">
+          <button type="button" onClick={applyThreeStepPromotion}>この3項目で自動設定</button>
+          <small>Stripe・7日券・月額を選んでも販売受付は有効化されません。実際の受付状態は「販売設定」で別途管理します。</small>
+        </div>
+      </section>
 
       <section className="admin-promo-quick-start" aria-label="かんたん作成">
         <div className="admin-promo-quick-head">

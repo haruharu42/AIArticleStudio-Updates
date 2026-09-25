@@ -95,3 +95,28 @@ test("promotion UI is dropdown-first and remains responsive on phones", async ()
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.admin-promo-quick-grid/);
   assert.match(css, /\.admin-promo-length-grid/);
 });
+
+
+test("sales promotion center supports a safe three-step auto setup", async () => {
+  const [page, css] = await Promise.all([
+    read("components/admin-promotion-page.tsx"),
+    read("app/phase24-admin-promotion.css"),
+  ]);
+
+  assert.match(page, /3ステップかんたん販促/);
+  assert.match(page, /① 販売する商品・プラン/);
+  assert.match(page, /② 販売先・誘導先/);
+  assert.match(page, /③ 宣伝方法/);
+  assert.match(page, /SALES_PRODUCT_OPTIONS/);
+  assert.match(page, /SALES_CHANNEL_OPTIONS/);
+  assert.match(page, /PROMOTION_METHOD_OPTIONS/);
+  assert.match(page, /applyThreeStepPromotion/);
+  assert.match(page, /販売設定そのものは変更しません/);
+  assert.match(page, /AAS内Stripe（設定時のみ）/);
+  assert.match(page, /PWA 7日利用パス（設定時のみ）/);
+  assert.match(page, /PWA 月額プラン（設定時のみ）/);
+  assert.match(page, /Stripe・7日券・月額を選んでも販売受付は有効化されません/);
+  assert.match(css, /\.admin-promo-three-step/);
+  assert.match(css, /\.admin-promo-three-step-grid/);
+  assert.match(css, /@media \(max-width: 880px\)[\s\S]*?\.admin-promo-three-step-grid/);
+});
