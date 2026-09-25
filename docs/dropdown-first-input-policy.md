@@ -26,3 +26,5 @@ AAS uses dropdown-first controls for values that can be represented by reusable 
 Unique or secret values are deliberately not converted to dropdowns.
 
 Validation rerun after access-code import fix.
+
+Validation rerun after effect-free custom-mode fix.
