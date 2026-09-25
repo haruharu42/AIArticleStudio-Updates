@@ -191,9 +191,10 @@ export function AdminReleasePage() {
         <div>
           <p className="eyebrow">RELEASE CONTROL</p>
           <h1>アップデート管理</h1>
-          <p>①管理者確認 → ②指定した一般ユーザーテスター確認 → ③全一般ユーザー公開の3段階で進めます。</p>
+          <p>コード配布は①管理者確認 → ②指定テスター確認 → ③全体公開で進め、機能単位の公開・メンテナンスは全機能管理センターで制御します。</p>
         </div>
         <nav>
+          <Link href="/admin/features">全機能管理センター</Link>
           <Link href="/admin">管理ダッシュボード</Link>
           <Link href="/">ホーム</Link>
         </nav>
@@ -201,6 +202,17 @@ export function AdminReleasePage() {
 
       {message && <p className="route-notice">{message}</p>}
       {error && <p className="route-notice error">{error}</p>}
+
+      <section className="admin-panel release-feature-control-link">
+        <div className="admin-panel-heading">
+          <div>
+            <p className="eyebrow">FEATURE AVAILABILITY</p>
+            <h2>機能単位の公開・メンテナンス</h2>
+          </div>
+          <Link className="primary-action" href="/admin/features">全機能管理センターを開く</Link>
+        </div>
+        <p className="trial-admin-note">この画面はアプリコードのリリースを管理します。実装済み機能を管理者のみ・指定テスター・全一般ユーザーのどこまで使用可能にするか、また一時停止するかは機能管理センターで個別に変更できます。</p>
+      </section>
 
       <section className="release-admin-summary">
         <article>
