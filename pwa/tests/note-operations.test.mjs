@@ -156,10 +156,11 @@ test("note beginner profile builder uses dropdown presets and current-web resear
 
 
 test("AI monthly note schedule uses month-based research, validation, and owner-scoped plan storage", async () => {
-  const [migration, lib, parser, page, helpers, css] = await Promise.all([
+  const [migration, lib, parser, normalizer, page, helpers, css] = await Promise.all([
     readRepo("supabase/migrations/20260919131121_note_ai_monthly_schedule_plans.sql"),
     readPwa("lib/note-operations.ts"),
     readPwa("lib/note-ai-schedule-json.ts"),
+    readPwa("lib/note-ai-schedule-normalize.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
@@ -198,20 +199,20 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
     assert.match(lib, new RegExp(symbol));
   }
 
-  assert.match(lib, /parseSimpleAiArticleSchedule/);
-  assert.match(lib, /fallbackDailyPostingTimes/);
-  assert.match(lib, /ensureDistinctDailyPostingTimes/);
-  assert.match(lib, /2: \["12:00", "20:00"\]/);
-  assert.match(lib, /3: \["09:00", "14:00", "20:00"\]/);
+  assert.match(normalizer, /parseSimpleAiArticleSchedule/);
+  assert.match(normalizer, /fallbackDailyPostingTimes/);
+  assert.match(normalizer, /ensureDistinctDailyPostingTimes/);
+  assert.match(normalizer, /2: \["12:00", "20:00"\]/);
+  assert.match(normalizer, /3: \["09:00", "14:00", "20:00"\]/);
   assert.match(lib, /1日2回以上なら投稿回数と同じ行数/);
   assert.match(lib, /前文、挨拶、説明、要約、理由、注意書き、出典一覧、コードフェンス、表の後の文章は一切出力しない/);
   assert.match(lib, /Markdown表/);
   assert.match(lib, /\| 日付 \| 時刻 \| 種別 \| 記事タイトル \| テーマ \|/);
   assert.match(lib, /最終回答は、AASへそのままコピー＆ペーストする次のMarkdown表だけを返す/);
   assert.match(lib, /AI回答内の無料note・有料note作成予定をAASが直接読み取りました/);
-  assert.match(lib, /normalizeAiArticleScheduleType/);
-  assert.match(lib, /無料note作成/);
-  assert.match(lib, /有料note作成/);
+  assert.match(normalizer, /normalizeAiArticleScheduleType/);
+  assert.match(normalizer, /無料note作成/);
+  assert.match(normalizer, /有料note作成/);
   assert.match(lib, /scheduleに入れてよいtypeは free_note と paid_note の2種類だけ/);
   assert.match(lib, /\.in\("item_type", \["free_note", "paid_note"\]\)/);
   assert.match(page, /articleSchedule/);
@@ -317,25 +318,26 @@ test("note schedule import accepts full AI response prose and keeps file import 
 
 
 test("AI note calendar is article-only and tolerates common free paid aliases", async () => {
-  const [lib, parser, page, today] = await Promise.all([
+  const [lib, parser, normalizer, page, today] = await Promise.all([
     readPwa("lib/note-operations.ts"),
     readPwa("lib/note-ai-schedule-json.ts"),
+    readPwa("lib/note-ai-schedule-normalize.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-today-panel.tsx"),
   ]);
 
-  assert.match(lib, /\["free_note", "free", "free_article", "無料note", "無料ノート", "無料記事", "無料note作成"\]/);
-  assert.match(lib, /\["paid_note", "paid", "paid_article", "有料note", "有料ノート", "有料記事", "有料note作成"\]/);
-  assert.match(lib, /raw\.type \?\? raw\.item_type \?\? raw\.article_type/);
-  assert.match(lib, /raw\.scheduled_date/);
-  assert.match(lib, /raw\.scheduled_time/);
+  assert.match(normalizer, /\["free_note", "free", "free_article", "無料note", "無料ノート", "無料記事", "無料note作成"\]/);
+  assert.match(normalizer, /\["paid_note", "paid", "paid_article", "有料note", "有料ノート", "有料記事", "有料note作成"\]/);
+  assert.match(normalizer, /raw\.type \?\? raw\.item_type \?\? raw\.article_type/);
+  assert.match(normalizer, /raw\.scheduled_date/);
+  assert.match(normalizer, /raw\.scheduled_time/);
   assert.match(parser, /object\.targetMonth/);
   assert.match(parser, /Array\.isArray\(object\.calendar\)/);
   assert.match(parser, /Array\.isArray\(object\.items\)/);
   assert.match(lib, /root\.targetMonth/);
-  assert.match(lib, /raw\.day/);
-  assert.match(lib, /raw\.name/);
-  assert.match(lib, /rawTitle \|\| fallbackTitle/);
+  assert.match(normalizer, /raw\.day/);
+  assert.match(normalizer, /raw\.name/);
+  assert.match(normalizer, /rawTitle \|\| fallbackTitle/);
   assert.match(lib, /isNoteArticleScheduleItem\(item\)/);
   assert.match(page, /schedule\.filter\(\(item\) => isNoteArticleScheduleItem\(item\)\)/);
   assert.match(page, /articleSchedule\.slice\(0, 120\)/);
@@ -507,4 +509,25 @@ test("note schedule date and time helpers live in a dedicated core module", asyn
   assert.match(core, /export function nextJstMonth/);
   assert.match(core, /export function normalizeNoteScheduleTime/);
   assert.match(core, /export function addNoteScheduleDays/);
+});
+
+
+test("AI note schedule normalization is isolated from persistence and UI concerns", async () => {
+  const [lib, normalizer] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-ai-schedule-normalize.ts"),
+  ]);
+
+  assert.match(lib, /from "@\/lib\/note-ai-schedule-normalize"/);
+  assert.doesNotMatch(lib, /^function normalizeAiArticleScheduleType/m);
+  assert.doesNotMatch(lib, /^function fallbackDailyPostingTimes/m);
+  assert.doesNotMatch(lib, /^function parseSimpleAiArticleSchedule/m);
+  assert.match(normalizer, /function normalizeAiArticleScheduleType/);
+  assert.match(normalizer, /function fallbackDailyPostingTimes/);
+  assert.match(normalizer, /export function ensureDistinctDailyPostingTimes/);
+  assert.match(normalizer, /export function parseSimpleAiArticleSchedule/);
+  assert.match(normalizer, /export function parseAiScheduleItem/);
+  assert.match(normalizer, /from "@\/lib\/note-schedule-core"/);
+  assert.match(normalizer, /from "@\/lib\/note-schedule-types"/);
+  assert.doesNotMatch(normalizer, /SupabaseClient|\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
 });
