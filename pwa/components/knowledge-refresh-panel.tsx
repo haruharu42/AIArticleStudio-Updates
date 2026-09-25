@@ -7,11 +7,14 @@ import { PresetNumberSelectWithCustom, SelectWithCustom } from "@/components/sel
 import {
   adminGetKnowledgeAutomationAiConfig,
   adminGetKnowledgeAutomationStatus,
+  adminGetKnowledgeProductionHealth,
   adminGetKnowledgeRefreshChannels,
+  adminGetKnowledgeSourceRiskReport,
   adminListKnowledgeAutomationCandidates,
   adminListKnowledgeAutomationSources,
   adminListKnowledgeRefreshRequests,
   adminPreviewKnowledgeRefreshBundleDiff,
+  adminPrepareSourceDiversityResearch,
   adminPublishKnowledgeRefreshBundle,
   adminRequestKnowledgeAutomationRun,
   adminRequestKnowledgeRefresh,
@@ -26,10 +29,12 @@ import {
   type KnowledgeAutomationCandidate,
   type KnowledgeAutomationSource,
   type KnowledgeAutomationStatus,
+  type KnowledgeProductionHealth,
   type KnowledgeRefreshChangeItem,
   type KnowledgeRefreshChannelState,
   type KnowledgeRefreshDiff,
   type KnowledgeRefreshRequest,
+  type KnowledgeSourceRiskReport,
 } from "@/lib/knowledge-auto-update";
 import { getSupabaseClient } from "@/lib/supabase";
 
@@ -183,6 +188,8 @@ export function KnowledgeRefreshPanel() {
   const [requests, setRequests] = useState<KnowledgeRefreshRequest[]>([]);
   const [channels, setChannels] = useState<KnowledgeRefreshChannelState[]>([]);
   const [automationStatus, setAutomationStatus] = useState<KnowledgeAutomationStatus | null>(null);
+  const [productionHealth, setProductionHealth] = useState<KnowledgeProductionHealth | null>(null);
+  const [sourceRiskReport, setSourceRiskReport] = useState<KnowledgeSourceRiskReport | null>(null);
   const [automationSources, setAutomationSources] = useState<KnowledgeAutomationSource[]>([]);
   const [automationCandidates, setAutomationCandidates] = useState<KnowledgeAutomationCandidate[]>([]);
   const [automationAiConfig, setAutomationAiConfig] = useState<KnowledgeAutomationAiConfig | null>(null);
@@ -226,10 +233,12 @@ export function KnowledgeRefreshPanel() {
 
   const reload = async () => {
     const client = getSupabaseClient();
-    const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
+    const [nextRequests, nextChannels, nextAutomationStatus, nextProductionHealth, nextSourceRiskReport, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
       adminListKnowledgeRefreshRequests(client, null, 30),
       adminGetKnowledgeRefreshChannels(client),
       adminGetKnowledgeAutomationStatus(client),
+      adminGetKnowledgeProductionHealth(client),
+      adminGetKnowledgeSourceRiskReport(client),
       adminListKnowledgeAutomationSources(client, 200),
       adminListKnowledgeAutomationCandidates(client, "pending", 50),
       adminGetKnowledgeAutomationAiConfig(client),
@@ -237,6 +246,8 @@ export function KnowledgeRefreshPanel() {
     setRequests(nextRequests);
     setChannels(nextChannels);
     setAutomationStatus(nextAutomationStatus);
+    setProductionHealth(nextProductionHealth);
+    setSourceRiskReport(nextSourceRiskReport);
     setAutomationSources(nextAutomationSources);
     setAutomationCandidates(nextAutomationCandidates);
     setAutomationAiConfig(nextAiConfig);
@@ -254,10 +265,12 @@ export function KnowledgeRefreshPanel() {
     const boot = async () => {
       try {
         const client = getSupabaseClient();
-        const [nextRequests, nextChannels, nextAutomationStatus, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
+        const [nextRequests, nextChannels, nextAutomationStatus, nextProductionHealth, nextSourceRiskReport, nextAutomationSources, nextAutomationCandidates, nextAiConfig] = await Promise.all([
           adminListKnowledgeRefreshRequests(client, null, 30),
           adminGetKnowledgeRefreshChannels(client),
           adminGetKnowledgeAutomationStatus(client),
+          adminGetKnowledgeProductionHealth(client),
+          adminGetKnowledgeSourceRiskReport(client),
           adminListKnowledgeAutomationSources(client, 200),
           adminListKnowledgeAutomationCandidates(client, "pending", 50),
           adminGetKnowledgeAutomationAiConfig(client),
@@ -266,6 +279,8 @@ export function KnowledgeRefreshPanel() {
         setRequests(nextRequests);
         setChannels(nextChannels);
         setAutomationStatus(nextAutomationStatus);
+        setProductionHealth(nextProductionHealth);
+        setSourceRiskReport(nextSourceRiskReport);
         setAutomationSources(nextAutomationSources);
         setAutomationCandidates(nextAutomationCandidates);
         setAutomationAiConfig(nextAiConfig);
@@ -354,6 +369,27 @@ export function KnowledgeRefreshPanel() {
       setMessage(`公式ソース自動調査 #${runId} を開始しました。候補は自動公開されません。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "公式ソース自動調査を開始できませんでした。");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const prepareSourceDiversity = async () => {
+    if (!sourceRiskReport || sourceRiskReport.reviewItems.length === 0) {
+      setMessage("追加根拠リサーチが必要なKnowledge / Promptはありません。");
+      return;
+    }
+    if (!window.confirm("根拠が1ソースまたは1ドメインに偏る項目をFreshリサーチ対象として準備しますか？ 自動公開はされません。")) return;
+    setBusy(true);
+    setMessage("");
+    try {
+      const result = await adminPrepareSourceDiversityResearch(getSupabaseClient(), 12);
+      setSelectedId(result.requestId);
+      await reload();
+      setSelectedId(result.requestId);
+      setMessage(`追加根拠リサーチ ${result.itemCount}件をFresh更新 #${result.requestId} へ準備しました。差分確認・公開操作を行うまで正式Knowledgeは変わりません。`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "追加根拠リサーチを準備できませんでした。");
     } finally {
       setBusy(false);
     }
@@ -711,6 +747,88 @@ export function KnowledgeRefreshPanel() {
               })}
             </div>
           </details>
+        </section>
+
+        <section className="knowledge-quality-analyzer" aria-label="Knowledge品質カバレッジ分析">
+          <div className="knowledge-quality-head">
+            <div>
+              <p className="eyebrow">QUALITY & COVERAGE</p>
+              <strong>Knowledge品質・カバレッジ分析</strong>
+              <p>正式Knowledge / Promptの根拠数と根拠ドメインの偏りを確認します。ここでの分析・リサーチ準備だけでは公開されません。</p>
+            </div>
+            <button
+              type="button"
+              disabled={busy || !sourceRiskReport || sourceRiskReport.reviewItems.length === 0}
+              onClick={() => void prepareSourceDiversity()}
+            >
+              追加根拠リサーチを準備
+            </button>
+          </div>
+
+          <div className="knowledge-quality-metrics">
+            <article><span>正式Knowledge</span><strong>{productionHealth?.activeKnowledge ?? "-"}</strong></article>
+            <article><span>Prompt最適化</span><strong>{productionHealth?.activePromptOptimizations ?? "-"}</strong></article>
+            <article className={(sourceRiskReport?.zeroSourceCount ?? 0) > 0 ? "warning" : "healthy"}>
+              <span>根拠0件</span><strong>{sourceRiskReport?.zeroSourceCount ?? "-"}</strong>
+            </article>
+            <article className={(sourceRiskReport?.singleSourceCount ?? 0) > 0 ? "warning" : ""}>
+              <span>単一ソース</span><strong>{sourceRiskReport?.singleSourceCount ?? "-"}</strong>
+            </article>
+            <article><span>複数ドメイン</span><strong>{sourceRiskReport?.multiDomainCount ?? "-"}</strong></article>
+            <article><span>根拠ドメイン</span><strong>{sourceRiskReport?.uniqueDomainCount ?? "-"}</strong></article>
+            <article><span>Fresh</span><strong>v{productionHealth?.freshVersion ?? "-"}</strong></article>
+            <article><span>Stable</span><strong>v{productionHealth?.stableVersion ?? "-"}</strong></article>
+          </div>
+
+          {sourceRiskReport && (
+            <>
+              <div className="knowledge-quality-concentration">
+                <div>
+                  <span>最多ドメインへの集中率</span>
+                  <strong>{sourceRiskReport.topDomainSharePercent}%</strong>
+                  <small>{sourceRiskReport.topDomainItemCount} / {sourceRiskReport.itemCount} 項目</small>
+                </div>
+                <div className="knowledge-quality-domain-list">
+                  {sourceRiskReport.domains.slice(0, 8).map((domain) => (
+                    <span key={domain.domain}>{domain.domain} · {domain.itemCount}項目</span>
+                  ))}
+                </div>
+              </div>
+
+              <details className="knowledge-quality-review" open={sourceRiskReport.zeroSourceCount > 0}>
+                <summary>追加根拠を確認する項目（{sourceRiskReport.reviewItems.length}件）</summary>
+                <div>
+                  {sourceRiskReport.reviewItems.map((item) => (
+                    <article key={`${item.itemType}:${item.key}`}>
+                      <header>
+                        <span>{item.itemType === "knowledge" ? "Knowledge" : "Prompt"}</span>
+                        <strong>{item.label || item.key}</strong>
+                        <small>v{item.catalogVersion}</small>
+                      </header>
+                      <p>{item.key}</p>
+                      <dl>
+                        <div><dt>ソース</dt><dd>{item.sourceCount}</dd></div>
+                        <div><dt>ドメイン</dt><dd>{item.domainCount}</dd></div>
+                        <div><dt>最終確認</dt><dd>{formatDate(item.sourceCheckedAt)}</dd></div>
+                      </dl>
+                      {item.sourceUrls.length > 0 && (
+                        <div className="knowledge-quality-links">
+                          {item.sourceUrls.map((url) => <a key={url} href={url} target="_blank" rel="noreferrer">{sourceHost(url)}</a>)}
+                        </div>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              </details>
+            </>
+          )}
+
+          {productionHealth && (
+            <small className="knowledge-quality-foot">
+              最終根拠確認: Knowledge {formatDate(productionHealth.lastKnowledgeCheckedAt)} / Prompt {formatDate(productionHealth.lastPromptCheckedAt)}
+              {" · "}更新キュー: 待機 {productionHealth.pendingRequests} / 処理中 {productionHealth.processingRequests} / 失敗履歴 {productionHealth.failedRequests}
+            </small>
+          )}
         </section>
 
         {automationStatus?.lastError && (

@@ -98,6 +98,59 @@ export type KnowledgeAutomationSource = {
   lastError: string;
 };
 
+export type KnowledgeProductionHealth = {
+  activeKnowledge: number;
+  activePromptOptimizations: number;
+  pendingRequests: number;
+  processingRequests: number;
+  failedRequests: number;
+  cancelledRequests: number;
+  freshVersion: number;
+  stableVersion: number;
+  lastKnowledgeCheckedAt: string | null;
+  lastPromptCheckedAt: string | null;
+};
+
+export type KnowledgeSourceRiskItem = {
+  itemType: "knowledge" | "prompt";
+  key: string;
+  label: string;
+  catalogVersion: number;
+  releaseChannel: string;
+  sourceCheckedAt: string | null;
+  sourceCount: number;
+  domainCount: number;
+  sourceUrls: string[];
+};
+
+export type KnowledgeSourceRiskDomain = {
+  domain: string;
+  itemCount: number;
+  urlCount: number;
+};
+
+export type KnowledgeSourceRiskReport = {
+  itemCount: number;
+  knowledgeCount: number;
+  promptCount: number;
+  zeroSourceCount: number;
+  singleSourceCount: number;
+  singleDomainCount: number;
+  multiDomainCount: number;
+  uniqueDomainCount: number;
+  topDomainItemCount: number;
+  topDomainSharePercent: number;
+  domains: KnowledgeSourceRiskDomain[];
+  reviewItems: KnowledgeSourceRiskItem[];
+};
+
+export type SourceDiversityResearchResult = {
+  requestId: number;
+  itemCount: number;
+  singleSourceCount: number;
+  singleDomainCount: number;
+};
+
 export type KnowledgeAutomationAiConfig = {
   enabled: boolean;
   provider: "openai";
@@ -383,6 +436,84 @@ export async function adminListKnowledgeAutomationSources(
     consecutiveFailures: Math.max(0, asNumber(raw.consecutive_failures)),
     lastError: typeof raw.last_error === "string" ? raw.last_error : "",
   }));
+}
+
+export async function adminGetKnowledgeProductionHealth(
+  client: SupabaseClient,
+): Promise<KnowledgeProductionHealth | null> {
+  const { data, error } = await client.rpc("admin_get_knowledge_production_health");
+  if (error) throw new Error(error.message || "Knowledge本番状態を取得できませんでした。");
+  const raw = Array.isArray(data) ? data[0] : data;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  return {
+    activeKnowledge: Math.max(0, asNumber(row.active_knowledge)),
+    activePromptOptimizations: Math.max(0, asNumber(row.active_prompt_optimizations)),
+    pendingRequests: Math.max(0, asNumber(row.pending_requests)),
+    processingRequests: Math.max(0, asNumber(row.processing_requests)),
+    failedRequests: Math.max(0, asNumber(row.failed_requests)),
+    cancelledRequests: Math.max(0, asNumber(row.cancelled_requests)),
+    freshVersion: Math.max(1, asNumber(row.fresh_version, 1)),
+    stableVersion: Math.max(1, asNumber(row.stable_version, 1)),
+    lastKnowledgeCheckedAt: typeof row.last_knowledge_checked_at === "string" ? row.last_knowledge_checked_at : null,
+    lastPromptCheckedAt: typeof row.last_prompt_checked_at === "string" ? row.last_prompt_checked_at : null,
+  };
+}
+
+export async function adminGetKnowledgeSourceRiskReport(
+  client: SupabaseClient,
+): Promise<KnowledgeSourceRiskReport> {
+  const { data, error } = await client.rpc("admin_get_knowledge_source_risk_report");
+  if (error) throw new Error(error.message || "Knowledge根拠リスクを取得できませんでした。");
+  const row = asObject(data) ?? {};
+  const domains = Array.isArray(row.domains) ? row.domains : [];
+  const reviewItems = Array.isArray(row.review_items) ? row.review_items : [];
+  return {
+    itemCount: Math.max(0, asNumber(row.item_count)),
+    knowledgeCount: Math.max(0, asNumber(row.knowledge_count)),
+    promptCount: Math.max(0, asNumber(row.prompt_count)),
+    zeroSourceCount: Math.max(0, asNumber(row.zero_source_count)),
+    singleSourceCount: Math.max(0, asNumber(row.single_source_count)),
+    singleDomainCount: Math.max(0, asNumber(row.single_domain_count)),
+    multiDomainCount: Math.max(0, asNumber(row.multi_domain_count)),
+    uniqueDomainCount: Math.max(0, asNumber(row.unique_domain_count)),
+    topDomainItemCount: Math.max(0, asNumber(row.top_domain_item_count)),
+    topDomainSharePercent: Math.max(0, asNumber(row.top_domain_share_percent)),
+    domains: domains.map((raw) => asObject(raw)).filter((raw): raw is Record<string, unknown> => Boolean(raw)).map((raw) => ({
+      domain: typeof raw.domain === "string" ? raw.domain : "",
+      itemCount: Math.max(0, asNumber(raw.item_count)),
+      urlCount: Math.max(0, asNumber(raw.url_count)),
+    })).filter((item) => item.domain),
+    reviewItems: reviewItems.map((raw) => asObject(raw)).filter((raw): raw is Record<string, unknown> => Boolean(raw)).map((raw) => ({
+      itemType: raw.item_type === "prompt" ? "prompt" : "knowledge",
+      key: typeof raw.key === "string" ? raw.key : "",
+      label: typeof raw.label === "string" ? raw.label : "",
+      catalogVersion: Math.max(1, asNumber(raw.catalog_version, 1)),
+      releaseChannel: typeof raw.release_channel === "string" ? raw.release_channel : "",
+      sourceCheckedAt: typeof raw.source_checked_at === "string" ? raw.source_checked_at : null,
+      sourceCount: Math.max(0, asNumber(raw.source_count)),
+      domainCount: Math.max(0, asNumber(raw.domain_count)),
+      sourceUrls: asStringArray(raw.source_urls),
+    })).filter((item) => item.key),
+  };
+}
+
+export async function adminPrepareSourceDiversityResearch(
+  client: SupabaseClient,
+  limit = 12,
+): Promise<SourceDiversityResearchResult> {
+  const { data, error } = await client.rpc("admin_prepare_source_diversity_research", {
+    p_limit: Math.max(1, Math.min(30, Math.trunc(limit))),
+  });
+  if (error) throw new Error(error.message || "追加根拠リサーチを準備できませんでした。");
+  const row = asObject(data);
+  if (!row) throw new Error("追加根拠リサーチ結果を確認できませんでした。");
+  return {
+    requestId: asNumber(row.request_id),
+    itemCount: Math.max(0, asNumber(row.item_count)),
+    singleSourceCount: Math.max(0, asNumber(row.single_source_count)),
+    singleDomainCount: Math.max(0, asNumber(row.single_domain_count)),
+  };
 }
 
 export async function adminListKnowledgeAutomationCandidates(
