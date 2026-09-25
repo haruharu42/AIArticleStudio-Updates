@@ -174,7 +174,7 @@ export function SalesSettingsAdminPage() {
         {!settings.stripeCheckoutEnabled && <p className="sales-master-off">StripeマスタースイッチがOFFのため、個別プランをONにしても現在は購入できません。後日の販売準備として設定を保存できます。</p>}
       </section>
 
-      <SalesReadinessPanel settings={settings} />
+      <SalesReadinessPanel settings={settings} hasUnsavedChanges={changed} />
 
       <section className="admin-panel sales-current-mode">
         <h2>現在の販売モード</h2>

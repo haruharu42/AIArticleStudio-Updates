@@ -166,8 +166,10 @@ test("external-sales readiness is isolated and does not treat it as full product
     readPwa("lib/sales-readiness.ts"),
   ]);
 
-  assert.match(page, /SalesReadinessPanel/);
+  assert.match(page, /SalesReadinessPanel settings=\{settings\} hasUnsavedChanges=\{changed\}/);
   assert.match(panel, /外部販売ルートの販売準備/);
+  assert.match(panel, /未保存の変更を含む確認結果/);
+  assert.match(panel, /変更を保存.*本番の販売設定は変わりません/s);
   assert.match(panel, /AAS全体の本番公開判定とは別/);
   assert.match(panel, /実機E2E・法務・サポート・公開段階/);
   assert.match(readiness, /getExternalSalesReadiness/);

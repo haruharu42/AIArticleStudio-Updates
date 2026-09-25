@@ -3,7 +3,13 @@
 import { getExternalSalesReadiness } from "@/lib/sales-readiness";
 import type { SalesSettings } from "@/lib/sales-settings";
 
-export function SalesReadinessPanel({ settings }: { settings: SalesSettings }) {
+export function SalesReadinessPanel({
+  settings,
+  hasUnsavedChanges = false,
+}: {
+  settings: SalesSettings;
+  hasUnsavedChanges?: boolean;
+}) {
   const readiness = getExternalSalesReadiness(settings);
 
   return (
@@ -26,6 +32,11 @@ export function SalesReadinessPanel({ settings }: { settings: SalesSettings }) {
           </div>
         ))}
       </div>
+      {hasUnsavedChanges && (
+        <p className="sales-readiness-draft">
+          未保存の変更を含む確認結果です。「変更を保存」を押すまで本番の販売設定は変わりません。
+        </p>
+      )}
       <p className={readiness.ready ? "sales-readiness-summary ready" : "sales-readiness-summary action"}>
         {readiness.ready
           ? "外部販売の購入導線は設定上準備済みです。販売開始前に実機E2E・法務・サポート・公開段階を別途確認してください。"
