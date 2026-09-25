@@ -75,19 +75,20 @@ export type SocialLengthPreset = {
 export const ADMIN_PRODUCT_FACTS_STORAGE_KEY = "aas:admin:promotion-product:v1";
 
 export const DEFAULT_ADMIN_PRODUCT_FACTS: AdminProductFacts = {
-  productName: "AI Article Studio",
-  editions: "PWA版 / Windows版",
-  releaseStage: "",
-  targetAudience: "",
+  productName: "AI Action Studio",
+  editions: "PWA版のみ",
+  releaseStage: "内部テスト",
+  targetAudience: "副業初心者",
   features: [
-    "7ステップの記事作成",
-    "画像生成計画",
-    "SNS投稿作成",
+    "12種類の副業専用ウィザード",
+    "用途別プロンプトライブラリ",
+    "記事作成・記事ライブラリ",
+    "SNS投稿・SNSアカウント設計",
+    "画像作成支援",
     "AI副業プランナー",
-    "SNSアカウント設計",
-    "記事出力",
-    "公開管理",
-    "コンテンツ分析",
+    "Knowledge自動更新",
+    "通知センター",
+    "公開管理・コンテンツ分析",
   ].join("\n"),
   priceText: "",
   salesUrl: "",
@@ -221,7 +222,7 @@ export function buildAdminArticlePromotionPrompt(
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
   return `あなたは日本語のプロダクトマーケティング編集者です。
-AI Article Studioの紹介・販売を含め、現在の発信フェーズに合った完成記事を作成してください。販売前なら販売記事にせず、テスト状況・開発進捗・公開予告として自然に伝えてください。
+AI Action Studioの紹介・販売を含め、現在の発信フェーズに合った完成記事を作成してください。販売前なら販売記事にせず、テスト状況・開発進捗・公開予告として自然に伝えてください。
 
 ${FACT_SAFETY}
 
@@ -269,7 +270,7 @@ export function buildAdminSocialPromotionPrompt(
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
 
   return `あなたはSNSプロモーション担当者です。
-AI Article Studioについて、現在の発信フェーズに合ったSNS投稿素材を作成してください。販売前なら、実運用テスト・開発状況・公開予定の共有として作り、購入可能と誤認させないでください。
+AI Action Studioについて、現在の発信フェーズに合ったSNS投稿素材を作成してください。販売前なら、実運用テスト・開発状況・公開予定の共有として作り、購入可能と誤認させないでください。
 
 ${FACT_SAFETY}
 
@@ -311,7 +312,7 @@ export function buildAdminCampaignPrompt(
     purpose: input.goal,
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
-  return `あなたはAI Article Studioのプロモーション設計担当者です。
+  return `あなたはAI Action Studioのプロモーション設計担当者です。
 販売開始後だけでなく、販売前の実運用テスト・開発進捗・公開予告も含めて、記事とSNSを連動させた発信計画を設計してください。
 
 ${FACT_SAFETY}
@@ -355,7 +356,7 @@ export function buildAdminPreviewPromotionPrompt(
     purpose: input.updateType,
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "promotion");
-  return `あなたはAI Article Studioの開発・公開予告コンテンツ担当者です。
+  return `あなたはAI Action Studioの開発・公開予告コンテンツ担当者です。
 まだ販売前の段階で、運営者自身が行っている実運用テストや開発進捗、今後の公開予定を誠実に伝えるコンテンツを作成してください。
 
 ${FACT_SAFETY}

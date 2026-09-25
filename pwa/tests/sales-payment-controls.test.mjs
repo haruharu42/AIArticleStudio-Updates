@@ -73,6 +73,12 @@ test("admin UI exposes sales controls while PWA runtime omits legacy plan switch
     "PWA 月額プラン",
   ]) assert.ok(settingsPage.includes(label), `missing admin setting: ${label}`);
   assert.match(settingsPage, /既存の契約・利用期間・利用権は停止・取消しされません/);
+  assert.match(settingsPage, /販売モードプリセット/);
+  assert.match(settingsPage, /外部販売中心（推奨）/);
+  assert.match(settingsPage, /受付する \/ ON/);
+  assert.match(settingsPage, /停止する \/ OFF/);
+  assert.match(settingsPage, /保存するまで本番設定は変わりません/);
+  assert.match(settingsPage, /AI Action Studio（AAS）/);
   assert.doesNotMatch(settingsPage, /title="Windows 月額プラン"/);
   assert.doesNotMatch(settingsPage, /title="PWA \+ Windows 月額"/);
   assert.match(settingsLib, /admin_get_commerce_sales_settings/);

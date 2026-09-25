@@ -73,9 +73,25 @@ test("campaign and preview prompts inherit the same SNS length plan", async () =
   assert.match(page, /<SocialLengthSettings presetIds=\{socialPresetIds\} plan=\{socialLengths\}/);
 });
 
-test("promotion UI stays responsive with five tabs and phone length cards", async () => {
-  const css = await read("app/phase24-admin-promotion.css");
-  assert.match(css, /\.admin-promo-tabs[\s\S]*?grid-template-columns: repeat\(5, minmax\(0, 1fr\)\)/);
+test("promotion UI is dropdown-first and remains responsive on phones", async () => {
+  const [page, lib, css] = await Promise.all([
+    read("components/admin-promotion-page.tsx"),
+    read("lib/admin-promotion.ts"),
+    read("app/phase24-admin-promotion.css"),
+  ]);
+
+  assert.match(page, /かんたん作成/);
+  assert.match(page, /① 作りたいもの/);
+  assert.match(page, /② おすすめプリセット/);
+  assert.match(page, /QUICK_PRESETS/);
+  assert.match(page, /applyQuickPreset/);
+  assert.match(page, /現在の販売設定を確認/);
+  assert.match(page, /AI Action Studio（AAS）/);
+  assert.doesNotMatch(lib, /AI Article Studio/);
+  assert.match(lib, /productName: "AI Action Studio"/);
+  assert.match(lib, /12種類の副業専用ウィザード/);
+  assert.match(css, /\.admin-promo-quick-start/);
+  assert.match(css, /\.admin-promo-quick-grid/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.admin-promo-quick-grid/);
   assert.match(css, /\.admin-promo-length-grid/);
-  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.admin-promo-length-grid \{ grid-template-columns: 1fr; \}/);
 });
