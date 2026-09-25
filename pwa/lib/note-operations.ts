@@ -3,6 +3,15 @@ import { buildPlatformAccountPromptContext } from "@/features/account-design";
 import { buildWorkspacePresetPromptContext, getRuntimeWorkspacePresetDefinition, getRuntimeWorkspacePresetPreference } from "@/features/presets/workspace-presets";
 import type { AiProvider } from "@/lib/user-personalization";
 import { extractNoteAiScheduleJson } from "@/lib/note-ai-schedule-json";
+import {
+  addNoteScheduleDays,
+  currentJstMonth,
+  nextJstMonth,
+  normalizeNoteScheduleTime,
+  noteMonthBounds,
+  previousJstMonth,
+  todayJstDateKey,
+} from "@/lib/note-schedule-core";
 import type {
   NoteAiResearchSource,
   NoteAiSchedulePlan,
@@ -73,30 +82,12 @@ export type {
 
 export { extractNoteAiScheduleJson } from "@/lib/note-ai-schedule-json";
 
-export function currentJstMonth(date = new Date()): string {
-  return todayJstDateKey(date).slice(0, 7);
-}
-
-export function noteMonthBounds(month: string): { start: string; end: string } {
-  if (!/^\d{4}-\d{2}$/.test(month)) throw new Error("対象月の形式を確認できませんでした。");
-  const [year, monthNumber] = month.split("-").map(Number);
-  if (monthNumber < 1 || monthNumber > 12) throw new Error("対象月の形式を確認できませんでした。");
-  const start = `${month}-01`;
-  const end = new Date(Date.UTC(year, monthNumber, 0)).toISOString().slice(0, 10);
-  return { start, end };
-}
-
-export function previousJstMonth(month: string): string {
-  noteMonthBounds(month);
-  const [year, monthNumber] = month.split("-").map(Number);
-  return new Date(Date.UTC(year, monthNumber - 2, 1)).toISOString().slice(0, 7);
-}
-
-function nextJstMonth(month: string): string {
-  noteMonthBounds(month);
-  const [year, monthNumber] = month.split("-").map(Number);
-  return new Date(Date.UTC(year, monthNumber, 1)).toISOString().slice(0, 7);
-}
+export {
+  currentJstMonth,
+  noteMonthBounds,
+  previousJstMonth,
+  todayJstDateKey,
+} from "@/lib/note-schedule-core";
 
 export async function loadNoteArticleOutputSnapshot(
   client: SupabaseClient,
@@ -282,8 +273,8 @@ export async function saveNoteOperationProfile(client: SupabaseClient, profile: 
     operation_goal: profile.operationGoal,
     weekly_post_count: Math.max(1, Math.min(14, Math.trunc(profile.weeklyPostCount))),
     paid_posts_per_month: Math.max(0, Math.min(14, Math.trunc(profile.paidPostsPerMonth))),
-    preferred_time: normalizeTime(profile.preferredTime, "20:00"),
-    secondary_time: normalizeTime(profile.secondaryTime, "12:00"),
+    preferred_time: normalizeNoteScheduleTime(profile.preferredTime, "20:00"),
+    secondary_time: normalizeNoteScheduleTime(profile.secondaryTime, "12:00"),
     timezone: "Asia/Tokyo",
     schedule_weeks: Math.max(1, Math.min(12, Math.trunc(profile.scheduleWeeks))),
     account_ready: profile.accountReady,
@@ -316,7 +307,7 @@ function dbScheduleRow(userId: string, item: NoteScheduleItem) {
     id: item.id,
     user_id: userId,
     scheduled_date: item.scheduledDate,
-    scheduled_time: normalizeTime(item.scheduledTime, "20:00"),
+    scheduled_time: normalizeNoteScheduleTime(item.scheduledTime, "20:00"),
     item_type: item.itemType,
     title: item.title.trim().slice(0, 240),
     theme: item.theme.trim().slice(0, 500),
@@ -371,32 +362,6 @@ export async function setNoteScheduleStatus(
   if (error) throw new Error("予定の状態を更新できませんでした。");
 }
 
-export function todayJstDateKey(date = new Date()): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${value.year}-${value.month}-${value.day}`;
-}
-
-function normalizeTime(value: string, fallback: string): string {
-  const match = value.match(/^(\d{1,2}):(\d{2})/);
-  if (!match) return fallback;
-  const hour = Number(match[1]);
-  const minute = Number(match[2]);
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return fallback;
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-}
-
-function addDays(dateKey: string, days: number): string {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day + days));
-  return date.toISOString().slice(0, 10);
-}
-
 const NOTE_PERFORMANCE_WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"] as const;
 
 function performanceBreakdown(
@@ -447,7 +412,7 @@ export function summarizeNoteSchedulePerformance(
     const [year, month, day] = item.scheduledDate.split("-").map(Number);
     return NOTE_PERFORMANCE_WEEKDAYS[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
   }, ["月", "火", "水", "木", "金", "土", "日"]);
-  const times = performanceBreakdown(posts, (item) => normalizeTime(item.scheduledTime, "20:00"));
+  const times = performanceBreakdown(posts, (item) => normalizeNoteScheduleTime(item.scheduledTime, "20:00"));
 
   return {
     targetMonth,
@@ -543,13 +508,13 @@ export function generateNoteSchedule(
   const postingSlots: Array<{ date: string; time: string }> = [];
 
   for (let offset = 0; offset < weeks * 7; offset += 1) {
-    const date = addDays(startDate, offset);
+    const date = addNoteScheduleDays(startDate, offset);
     const weekday = weekdayMondayZero(date);
     if (days.includes(weekday)) {
-      postingSlots.push({ date, time: normalizeTime(profile.preferredTime, "20:00") });
+      postingSlots.push({ date, time: normalizeNoteScheduleTime(profile.preferredTime, "20:00") });
     }
     if (secondaryPosts > 0 && weekday < secondaryPosts) {
-      postingSlots.push({ date, time: normalizeTime(profile.secondaryTime, "12:00") });
+      postingSlots.push({ date, time: normalizeNoteScheduleTime(profile.secondaryTime, "12:00") });
     }
   }
 
@@ -573,7 +538,7 @@ export function generateNoteSchedule(
   }
   if (!profile.profileReady) {
     items.push({
-      scheduledDate: addDays(startDate, profile.accountReady ? 0 : 1),
+      scheduledDate: addNoteScheduleDays(startDate, profile.accountReady ? 0 : 1),
       scheduledTime: "10:00",
       itemType: "profile_setup",
       title: "プロフィール文と自己紹介記事を整える",
@@ -603,7 +568,7 @@ export function generateNoteSchedule(
 
   for (let week = 0; week < weeks; week += 1) {
     items.push({
-      scheduledDate: addDays(startDate, week * 7 + 6),
+      scheduledDate: addNoteScheduleDays(startDate, week * 7 + 6),
       scheduledTime: "21:30",
       itemType: "review",
       title: "今週のnote運営を振り返る",
@@ -1014,7 +979,7 @@ function parseAiScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | n
 
   return {
     scheduledDate: date,
-    scheduledTime: normalizeTime(
+    scheduledTime: normalizeNoteScheduleTime(
       typeof raw.time === "string"
         ? raw.time
         : typeof raw.scheduled_time === "string"
@@ -1469,7 +1434,7 @@ function importedScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !title) return null;
   return {
     scheduledDate: date,
-    scheduledTime: normalizeTime(typeof raw.time === "string" ? raw.time : "20:00", "20:00"),
+    scheduledTime: normalizeNoteScheduleTime(typeof raw.time === "string" ? raw.time : "20:00", "20:00"),
     itemType: importedType(raw.type),
     title: title.slice(0, 240),
     theme: typeof raw.theme === "string" ? raw.theme.slice(0, 500) : "",
@@ -1512,8 +1477,8 @@ export function parseNoteOperationsImport(text: string, filename: string): NoteS
       operationGoal: p.operation_goal === "growth" || p.operation_goal === "monetize" || p.operation_goal === "portfolio" ? p.operation_goal : "habit",
       weeklyPostCount: Math.max(1, Math.min(14, Number(p.weekly_post_count ?? 3) || 3)),
       paidPostsPerMonth: Math.max(0, Math.min(14, Number(p.paid_posts_per_month ?? 2) || 0)),
-      preferredTime: normalizeTime(typeof p.preferred_time === "string" ? p.preferred_time : "20:00", "20:00"),
-      secondaryTime: normalizeTime(typeof p.secondary_time === "string" ? p.secondary_time : "12:00", "12:00"),
+      preferredTime: normalizeNoteScheduleTime(typeof p.preferred_time === "string" ? p.preferred_time : "20:00", "20:00"),
+      secondaryTime: normalizeNoteScheduleTime(typeof p.secondary_time === "string" ? p.secondary_time : "12:00", "12:00"),
       scheduleWeeks: Math.max(1, Math.min(12, Number(p.schedule_weeks ?? 4) || 4)),
       accountReady: p.account_ready === true,
       profileReady: p.profile_ready === true,

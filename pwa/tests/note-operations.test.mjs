@@ -487,3 +487,24 @@ test("note AI schedule JSON extraction is isolated as a pure parser module", asy
   assert.match(parser, /export function extractNoteAiScheduleJson/);
   assert.doesNotMatch(parser, /SupabaseClient|getSupabaseClient|service[_-]?role|sb_secret_/i);
 });
+
+
+test("note schedule date and time helpers live in a dedicated core module", async () => {
+  const [lib, core] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-schedule-core.ts"),
+  ]);
+
+  assert.match(lib, /from "@\/lib\/note-schedule-core"/);
+  assert.match(lib, /export \{[\s\S]*?currentJstMonth[\s\S]*?noteMonthBounds[\s\S]*?previousJstMonth[\s\S]*?todayJstDateKey[\s\S]*?\} from "@\/lib\/note-schedule-core"/);
+  assert.doesNotMatch(lib, /^export function todayJstDateKey/m);
+  assert.doesNotMatch(lib, /^export function noteMonthBounds/m);
+  assert.match(core, /export function todayJstDateKey/);
+  assert.match(core, /timeZone: "Asia\/Tokyo"/);
+  assert.match(core, /export function currentJstMonth/);
+  assert.match(core, /export function noteMonthBounds/);
+  assert.match(core, /export function previousJstMonth/);
+  assert.match(core, /export function nextJstMonth/);
+  assert.match(core, /export function normalizeNoteScheduleTime/);
+  assert.match(core, /export function addNoteScheduleDays/);
+});
