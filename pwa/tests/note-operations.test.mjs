@@ -210,7 +210,7 @@ test("AI monthly note schedule uses month-based research, validation, and owner-
   assert.match(lib, /Markdown表/);
   assert.match(lib, /\| 日付 \| 時刻 \| 種別 \| 記事タイトル \| テーマ \|/);
   assert.match(lib, /最終回答は、AASへそのままコピー＆ペーストする次のMarkdown表だけを返す/);
-  assert.match(lib, /AI回答内の無料note・有料note作成予定をAASが直接読み取りました/);
+  assert.match(planner, /AI回答内の無料note・有料note作成予定をAASが直接読み取りました/);
   assert.match(normalizer, /normalizeAiArticleScheduleType/);
   assert.match(normalizer, /無料note作成/);
   assert.match(normalizer, /有料note作成/);
@@ -319,10 +319,11 @@ test("note schedule import accepts full AI response prose and keeps file import 
 
 
 test("AI note calendar is article-only and tolerates common free paid aliases", async () => {
-  const [lib, parser, normalizer, page, today] = await Promise.all([
+  const [lib, parser, normalizer, planner, page, today] = await Promise.all([
     readPwa("lib/note-operations.ts"),
     readPwa("lib/note-ai-schedule-json.ts"),
     readPwa("lib/note-ai-schedule-normalize.ts"),
+    readPwa("lib/note-ai-schedule-plan.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-today-panel.tsx"),
   ]);
@@ -359,7 +360,8 @@ test("note schedule can be recovered from a plain markdown table without JSON", 
   assert.match(normalizer, /無料\(\?:note\|ノート\|記事\)/);
   assert.match(normalizer, /text\.split\(\/\\r\?\\n\//);
   assert.match(normalizer, /line\.split\("\|"\)/);
-  assert.match(lib, /JSONではなくAI回答内の予定表・文章から読み取りました/);
+  const planner = await readPwa("lib/note-ai-schedule-plan.ts");
+  assert.match(planner, /JSONではなくAI回答内の予定表・文章から読み取りました/);
   assert.match(page, /AIにはAASへ貼る予定表だけを返すよう指示します/);
   assert.match(page, /貼り付けた内容はこの端末でアカウント別に保存/);
   assert.match(manual, /JSONを作ったり編集したりする必要はありません/);
@@ -477,13 +479,15 @@ test("note schedule contracts live in a dedicated type module while note-operati
 
 
 test("note AI schedule JSON extraction is isolated as a pure parser module", async () => {
-  const [lib, parser] = await Promise.all([
+  const [lib, parser, planner] = await Promise.all([
     readPwa("lib/note-operations.ts"),
     readPwa("lib/note-ai-schedule-json.ts"),
+    readPwa("lib/note-ai-schedule-plan.ts"),
   ]);
 
-  assert.match(lib, /import \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
+  assert.doesNotMatch(lib, /import \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
   assert.match(lib, /export \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
+  assert.match(planner, /import \{ extractNoteAiScheduleJson \} from "@\/lib\/note-ai-schedule-json"/);
   assert.doesNotMatch(lib, /^function stripJsonFence/m);
   assert.doesNotMatch(lib, /^function balancedJsonObjects/m);
   assert.match(parser, /function stripJsonFence/);
