@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { DirectRuntimeImage } from "@/components/direct-runtime-image";
+
 import {
   deleteLocalArticleImage,
   listLocalArticleImages,
@@ -203,7 +205,7 @@ export function NotePostAssistant({ detail, body }: { detail: ArticleDetail; bod
         <h4>画像入り完成プレビュー</h4>
         {cover && previewUrls[recordKey("cover", 0)] && (
           <figure className="note-post-cover-preview">
-            <img src={previewUrls[recordKey("cover", 0)]} alt="アイキャッチプレビュー" />
+            <DirectRuntimeImage src={previewUrls[recordKey("cover", 0)]} alt="アイキャッチプレビュー" />
             <figcaption>アイキャッチ</figcaption>
           </figure>
         )}
@@ -285,7 +287,7 @@ function ImageSlot({
   return (
     <article className="note-post-image-slot">
       <div className="note-post-image-slot-preview">
-        {record && previewUrl ? <img src={previewUrl} alt={`${label}プレビュー`} /> : <span>画像未設定</span>}
+        {record && previewUrl ? <DirectRuntimeImage src={previewUrl} alt={`${label}プレビュー`} /> : <span>画像未設定</span>}
       </div>
       <div className="note-post-image-slot-info">
         <strong>{label}</strong>
@@ -321,7 +323,7 @@ function InlinePreview({
   }
   return (
     <figure className="note-post-inline-preview">
-      <img src={previewUrl} alt={`挿絵${order}プレビュー`} />
+      <DirectRuntimeImage src={previewUrl} alt={`挿絵${order}プレビュー`} />
       <figcaption>挿絵 {order}</figcaption>
     </figure>
   );
