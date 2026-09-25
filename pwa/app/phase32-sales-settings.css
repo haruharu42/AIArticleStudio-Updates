@@ -72,3 +72,119 @@
     width: 100%;
   }
 }
+
+
+/* 2026-09-25 external-sales readiness gate. */
+.sales-readiness-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.sales-readiness-panel .admin-panel-heading {
+  align-items: flex-start;
+}
+
+.sales-readiness-panel .admin-panel-heading p:last-child {
+  margin: 4px 0 0;
+  color: #70839a;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.sales-readiness-panel .admin-panel-heading > strong {
+  min-width: 62px;
+  border-radius: 999px;
+  padding: 8px 11px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.sales-readiness-panel .admin-panel-heading > strong.ready {
+  background: #eaf8f0;
+  color: #26734c;
+}
+
+.sales-readiness-panel .admin-panel-heading > strong.action {
+  background: #fff5df;
+  color: #8a6219;
+}
+
+.sales-readiness-list {
+  display: grid;
+  gap: 8px;
+}
+
+.sales-readiness-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid #dce6f1;
+  border-radius: 13px;
+  background: #fff;
+  padding: 11px 12px;
+}
+
+.sales-readiness-item > span {
+  min-width: 54px;
+  border-radius: 999px;
+  padding: 5px 7px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.sales-readiness-item > span.ready {
+  background: #eaf8f0;
+  color: #26734c;
+}
+
+.sales-readiness-item > span.action {
+  background: #fff5df;
+  color: #8a6219;
+}
+
+.sales-readiness-item > div {
+  display: grid;
+  gap: 3px;
+}
+
+.sales-readiness-item strong {
+  color: #203b5b;
+  font-size: 13px;
+}
+
+.sales-readiness-item small {
+  color: #71849b;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.sales-readiness-summary {
+  margin: 0;
+  border-radius: 12px;
+  padding: 11px 13px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.sales-readiness-summary.ready {
+  background: #eef9f3;
+  color: #326b50;
+}
+
+.sales-readiness-summary.action {
+  background: #fff8e8;
+  color: #775a21;
+}
+
+@media (max-width: 560px) {
+  .sales-readiness-panel .admin-panel-heading {
+    display: grid;
+    gap: 10px;
+  }
+
+  .sales-readiness-panel .admin-panel-heading > strong {
+    width: fit-content;
+  }
+}

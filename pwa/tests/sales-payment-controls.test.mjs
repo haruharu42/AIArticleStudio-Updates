@@ -157,3 +157,22 @@ test("legacy public sales settings RPC is no longer callable by browser roles", 
   assert.match(salesLib, /fetch\("\/api\/sales\/settings"/);
   assert.doesNotMatch(salesLib, /get_public_commerce_sales_settings/);
 });
+
+
+test("external-sales readiness is isolated and does not treat it as full production approval", async () => {
+  const [page, panel, readiness] = await Promise.all([
+    readPwa("components/sales-settings-admin-page.tsx"),
+    readPwa("components/admin-sales/sales-readiness-panel.tsx"),
+    readPwa("lib/sales-readiness.ts"),
+  ]);
+
+  assert.match(page, /SalesReadinessPanel/);
+  assert.match(panel, /外部販売ルートの販売準備/);
+  assert.match(panel, /AAS全体の本番公開判定とは別/);
+  assert.match(panel, /実機E2E・法務・サポート・公開段階/);
+  assert.match(readiness, /getExternalSalesReadiness/);
+  assert.match(readiness, /externalSalesEnabled/);
+  assert.match(readiness, /accessCodeEnabled/);
+  assert.match(readiness, /hasHttpsPurchaseUrl/);
+  assert.match(readiness, /note \/ Brain \/ Tips等の実際の購入ページURL/);
+});

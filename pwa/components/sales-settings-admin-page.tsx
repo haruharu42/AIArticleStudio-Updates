@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { SalesReadinessPanel } from "@/components/admin-sales/sales-readiness-panel";
 import { SalesSelectSetting } from "@/components/admin-sales/sales-select-setting";
 
 import {
@@ -172,6 +173,8 @@ export function SalesSettingsAdminPage() {
         </div>
         {!settings.stripeCheckoutEnabled && <p className="sales-master-off">StripeマスタースイッチがOFFのため、個別プランをONにしても現在は購入できません。後日の販売準備として設定を保存できます。</p>}
       </section>
+
+      <SalesReadinessPanel settings={settings} />
 
       <section className="admin-panel sales-current-mode">
         <h2>現在の販売モード</h2>
