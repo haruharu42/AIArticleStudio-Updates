@@ -4,6 +4,7 @@ import { AccessStateProvider } from "@/components/access-state-provider";
 import { AdminHomeTopbar } from "@/components/admin-home-topbar";
 import { AppErrorReporter } from "@/components/app-error-reporter";
 import { FreeTrialBanner } from "@/components/free-trial-banner";
+import { FeatureAccessGate } from "@/components/feature-access-gate";
 import { WorkspacePresetProvider } from "@/features/presets/workspace-preset-provider";
 import { KnowledgeRuntimeBootstrap } from "@/components/knowledge-runtime-bootstrap";
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
@@ -51,6 +52,7 @@ import "./phase50-admin-action-prompts.css";
 import "./phase51-side-hustle-wizard.css";
 import "./phase52-infrastructure-usage.css";
 import "./phase53-crystal-ui.css";
+import "./phase54-feature-control.css";
 
 export const metadata: Metadata = {
   title: "AI Action Studio PWA",
@@ -84,6 +86,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="aas-crystal-theme">
         <ReleaseAudienceGate>
           <AccessStateProvider>
+            <FeatureAccessGate>
             <WorkspacePresetProvider>
               <AppErrorReporter />
               <Suspense fallback={null}><RouteScrollToTop /></Suspense>
@@ -94,6 +97,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               {children}
               <PersistentMobileNav />
             </WorkspacePresetProvider>
+            </FeatureAccessGate>
           </AccessStateProvider>
         </ReleaseAudienceGate>
       </body>
