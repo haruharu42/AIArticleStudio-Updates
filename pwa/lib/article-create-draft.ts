@@ -2,7 +2,6 @@ import type { ArticleCreationDraft } from "@/lib/phase11-create";
 import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
-  TARGET_LENGTH_OPTIONS,
   isImageStyleValue,
   subgenreOptionsFor,
 } from "@/lib/phase18-content-options";
