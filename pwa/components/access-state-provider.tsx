@@ -53,6 +53,7 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
   }, [loadAccessStateOnce]);
 
   useEffect(() => {
+    const requestLoader = requestLoaderRef.current;
     let active = true;
     let lastBackgroundCheckAt = 0;
     let activeClient: SupabaseClient;
@@ -66,10 +67,10 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
     }
 
     const applyAccessState = async (mode: "strict" | "background") => {
-      const generation = requestLoaderRef.current.generation();
+      const generation = requestLoader.generation();
       try {
         const next = await loadAccessStateOnce(activeClient);
-        if (!next || generation !== requestLoaderRef.current.generation()) return;
+        if (!next || generation !== requestLoader.generation()) return;
         if (active) {
           if (mode === "strict") {
             lastBackgroundCheckAt = Date.now();
@@ -90,7 +91,7 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
           });
         }
       } catch {
-        if (!active || generation !== requestLoaderRef.current.generation()) return;
+        if (!active || generation !== requestLoader.generation()) return;
         if (mode === "background") {
           setState((current) => current.kind === "ready" ? current : { kind: "unavailable" });
           return;
@@ -115,11 +116,11 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
 
     const { data } = activeClient.auth.onAuthStateChange((event, session) => {
       if (!session || (event !== "INITIAL_SESSION" && event !== "TOKEN_REFRESHED")) {
-        requestLoaderRef.current.invalidate();
+        requestLoader.invalidate();
       }
-      const generation = requestLoaderRef.current.generation();
+      const generation = requestLoader.generation();
       window.setTimeout(() => {
-        if (!active || generation !== requestLoaderRef.current.generation()) return;
+        if (!active || generation !== requestLoader.generation()) return;
         if (!session) {
           setState({ kind: "signed_out" });
           return;
@@ -139,7 +140,7 @@ export function AccessStateProvider({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
-      requestLoaderRef.current.invalidate();
+      requestLoader.invalidate();
       data.subscription.unsubscribe();
       window.removeEventListener("focus", recheckInBackground);
       document.removeEventListener("visibilitychange", onVisibilityChange);

@@ -31,6 +31,9 @@ test("broken CSV quoting is rejected instead of silently discarding rows", () =>
 
 test("impossible imported dates are rejected before a schedule replacement", () => {
   assert.throws(() => transfer.parseNoteOperationsImport('date,title\n2026-02-30,記事', "backup.csv"));
+  assert.throws(() => transfer.parseNoteOperationsImport(JSON.stringify({schema: "aas-note-operations-v1", schedule: [null]}), "backup.json"));
+  assert.throws(() => transfer.parseNoteOperationsImport('date,title\n' + '2026-10-01,記事\n'.repeat(501), "backup.csv"));
+  assert.throws(() => transfer.parseNoteOperationsImport(JSON.stringify({schema: "aas-note-operations-v1", schedule: Array(501).fill({date:"2026-10-01",title:"記事"})}), "backup.json"));
 });
 
 test("side-hustle storage failures return a failure result without interrupting the wizard", () => {

@@ -145,6 +145,10 @@ export function parseNoteOperationsImport(text: string, filename: string): NoteS
     const value = raw as Record<string, unknown>;
     if (value.schema !== "aas-note-operations-v1") throw new Error("AAS note運営データの形式ではありません。");
     const rawSchedule = Array.isArray(value.schedule) ? value.schedule : [];
+    if (rawSchedule.length > 500) throw new Error("予定は500件以下にしてください。内容を省略せずに読み込むため、ファイルを分けて確認してください。");
+    if (rawSchedule.some((item) => !item || typeof item !== "object" || Array.isArray(item))) {
+      throw new Error("予定の形式が不正です。ファイルを確認してください。");
+    }
     const schedule = rawSchedule
       .map((item) => item && typeof item === "object" && !Array.isArray(item) ? importedScheduleItem(item as Record<string, unknown>) : null)
       .filter((item): item is NoteScheduleItem => Boolean(item))
@@ -182,6 +186,7 @@ export function parseNoteOperationsImport(text: string, filename: string): NoteS
 
   const lines = parseCsvRecords(text);
   if (lines.length < 2) throw new Error("CSVに予定がありません。");
+  if (lines.length > 501) throw new Error("予定は500件以下にしてください。");
   const headers = lines[0].map((value) => value.trim().toLowerCase());
   if (!headers.includes("date") || !headers.includes("title")) throw new Error("CSVにはdateとtitle列が必要です。");
   const schedule = lines.slice(1).map((values) => {
