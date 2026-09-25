@@ -108,7 +108,7 @@ export function FeatureAccessGate({ children }: { children: ReactNode }) {
       }
     };
 
-    void refresh();
+    queueMicrotask(() => { if (active) void refresh(); });
     const timer = window.setInterval(() => { if (active) void refresh(); }, 60_000);
     return () => {
       active = false;
@@ -131,7 +131,7 @@ export function FeatureAccessGate({ children }: { children: ReactNode }) {
     return <FeatureContext.Provider value={contextValue}>{children}</FeatureContext.Provider>;
   }
 
-  if (accessState.kind !== "ready") {
+  if (accessState.kind !== "ready" || pathname === "/") {
     return <FeatureContext.Provider value={contextValue}>{children}</FeatureContext.Provider>;
   }
 
