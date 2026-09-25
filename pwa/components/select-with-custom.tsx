@@ -26,6 +26,8 @@ export function SelectWithCustom({
   disabled = false,
   inputType = "text",
   maxLength,
+  min,
+  max,
 }: {
   label: string;
   value: string;
@@ -36,8 +38,10 @@ export function SelectWithCustom({
   customPlaceholder?: string;
   className?: string;
   disabled?: boolean;
-  inputType?: "text" | "url";
+  inputType?: "text" | "url" | "number";
   maxLength?: number;
+  min?: number;
+  max?: number;
 }) {
   const inputId = useId();
   const normalized = useMemo(() => normalizeOptions(options), [options]);
@@ -81,6 +85,9 @@ export function SelectWithCustom({
           value={preset ? "" : value}
           disabled={disabled}
           maxLength={maxLength}
+          min={min}
+          max={max}
+          inputMode={inputType === "number" ? "numeric" : undefined}
           onChange={(event) => onChange(event.target.value)}
           placeholder={customPlaceholder}
         />
