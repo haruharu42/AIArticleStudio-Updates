@@ -259,29 +259,24 @@ export function ContentWorkflowPage() {
     () => preflightDetail ? runPrePublishChecks(preflightDetail) : null,
     [preflightDetail],
   );
-  const preflightPrompt = useMemo(
-    () => preflightDetail && preflightReport ? buildPrePublishReviewPrompt(preflightDetail, preflightReport) : "",
-    [preflightDetail, preflightReport, workspacePreference],
-  );
+  const preflightPrompt = preflightDetail && preflightReport
+    ? buildPrePublishReviewPrompt(preflightDetail, preflightReport)
+    : "";
   const enabledReuseChannels = useMemo(
     () => reuseChannels.filter((item) => reuseEnabled[item.platform]),
     [reuseChannels, reuseEnabled],
   );
-  const reusePrompt = useMemo(
-    () => reuseDetail ? buildArticleReusePrompt(reuseDetail, enabledReuseChannels) : "",
-    [reuseDetail, enabledReuseChannels, workspacePreference],
-  );
-  const seriesPrompt = useMemo(
-    () => buildSeriesPlanPrompt({
-      platform: seriesPlatform,
-      name: seriesName,
-      audience: seriesAudience,
-      purpose: seriesPurpose,
-      monetization: seriesMonetization,
-      articleCount: seriesCount,
-    }),
-    [seriesPlatform, seriesName, seriesAudience, seriesPurpose, seriesMonetization, seriesCount, workspacePreference],
-  );
+  const reusePrompt = reuseDetail
+    ? buildArticleReusePrompt(reuseDetail, enabledReuseChannels)
+    : "";
+  const seriesPrompt = buildSeriesPlanPrompt({
+    platform: seriesPlatform,
+    name: seriesName,
+    audience: seriesAudience,
+    purpose: seriesPurpose,
+    monetization: seriesMonetization,
+    articleCount: seriesCount,
+  });
 
   const changeTab = (next: WorkflowTab) => {
     setTab(next);
