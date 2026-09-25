@@ -64,7 +64,7 @@ create table if not exists public.notification_push_settings (
   project_url text not null,
   worker_token_hash text not null default '',
   vapid_public_key text not null default '',
-  vapid_subject text not null default 'mailto:aas-notifications@example.invalid',
+  vapid_subject text not null default 'https://github.com/haruharu42/AIArticleStudio-Updates',
   updated_at timestamptz not null default now()
 );
 
