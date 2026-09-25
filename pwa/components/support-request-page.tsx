@@ -39,7 +39,7 @@ export function SupportRequestPage() {
       <article>
         <Link href="/commercial-transactions">← 特定商取引法に基づく表記へ戻る</Link>
         <p className="legal-commerce-label">お問い合わせ・開示請求</p>
-        <h1>AI記事スタジオ お問い合わせ案内</h1>
+        <h1>AI Action Studio お問い合わせ案内</h1>
         <p className="legal-commerce-lead">
           現在の新規販売は、note・Brain・Tips等の外部販売ページと利用コードによる受付を基本としています。AAS内のStripe新規購入は停止中です。
         </p>

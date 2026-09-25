@@ -72,7 +72,7 @@ export function CommercialTransactionsPage() {
       <article>
         <Link href="/plans">← 利用プランへ戻る</Link>
         <p className="legal-commerce-label">特定商取引法に基づく表記</p>
-        <h1>AI記事スタジオ 販売条件</h1>
+        <h1>AI Action Studio 販売条件</h1>
         <p className="legal-commerce-lead">
           {externalSalesEnabled && !stripeSalesEnabled
             ? "現在は note・Brain・Tips 等の外部販売と利用コードによる受付を行っています。AAS内のStripe新規購入は停止しています。"
@@ -106,7 +106,7 @@ export function CommercialTransactionsPage() {
           <div><dt>解約</dt><dd>{stripeSalesEnabled ? "月額プランは契約管理画面から解約できます。解約予約後は原則として現在の請求期間終了まで利用でき、次回更新を停止します。" : "現在の外部販売商品のキャンセル・解約条件は購入先の販売ページに表示します。AAS内のStripe月額新規受付は停止しています。"}</dd></div>
           {stripeSalesEnabled && salesSettings?.pwa7DayEnabled && <div><dt>7日利用パス</dt><dd>自動更新はありません。有効期間終了後に自動的に利用権が終了します。</dd></div>}
           <div><dt>返金・キャンセル</dt><dd>{stripeSalesEnabled ? "デジタルサービスの性質、法令上の取扱い、重複決済・システム障害等の事情を踏まえた条件を購入確定前に表示します。" : "現在の外部販売における返金・キャンセル条件は購入先の販売ページで購入確定前に表示します。AAS内のStripe直販を開始する場合は、直販向け条件を別途表示します。"}</dd></div>
-          <div><dt>動作環境</dt><dd>PWA版は対応ブラウザ、Windows版は対応Windows環境が必要です。販売ページで対象製品と対応範囲を明示します。</dd></div>
+          <div><dt>動作環境</dt><dd>PWA版は、販売ページで案内する対応ブラウザ・対応端末・ネットワーク環境で利用します。新規販売はPWA版のみを対象とします。</dd></div>
         </dl>
 
         <section className="legal-commerce-plans">

@@ -217,3 +217,29 @@ test("access-code purchase flow owns its own request state", async () => {
   assert.match(accessCode, /const inFlight = useRef/);
   assert.match(accessCode, /await refresh\(\)/);
 });
+
+
+test("sales legal pages match the current AAS PWA-only product model", async () => {
+  const [commercial, terms, privacy, aiTerms, support] = await Promise.all([
+    readPwa("components/commercial-transactions-page.tsx"),
+    readPwa("app/terms/page.tsx"),
+    readPwa("app/privacy/page.tsx"),
+    readPwa("app/ai-terms/page.tsx"),
+    readPwa("components/support-request-page.tsx"),
+  ]);
+
+  for (const source of [commercial, terms, privacy, aiTerms, support]) {
+    assert.doesNotMatch(source, /AI記事スタジオ/);
+  }
+  assert.match(commercial, /AI Action Studio 販売条件/);
+  assert.match(commercial, /新規販売はPWA版のみ/);
+  assert.doesNotMatch(commercial, /Windows版は対応Windows環境/);
+  assert.match(terms, /AI Action Studio PWA 利用規約/);
+  assert.match(terms, /PWA利用権は同一のAASアカウントで管理/);
+  assert.doesNotMatch(terms, /Windows版とPWA版/);
+  assert.match(privacy, /AI Action Studio PWA プライバシーポリシー/);
+  assert.match(privacy, /クラウド保存した記事・画像等/);
+  assert.doesNotMatch(privacy, /Windows版とPWA版/);
+  assert.match(aiTerms, /AI Action Studio PWA AI利用条件/);
+  assert.match(support, /AI Action Studio お問い合わせ案内/);
+});
