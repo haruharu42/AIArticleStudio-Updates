@@ -112,3 +112,7 @@ Push API対応ブラウザでは、PWAインストールの有無とは別にWeb
 - AIプロンプト全文
 
 通知テーブルはRLS + FORCE RLSで直接ブラウザアクセスを禁止し、RPCからのみ利用します。
+
+## 最終Preview検証
+
+通知センター・Web Push・自動通知トリガーを含めてPreview CIで回帰確認します。
