@@ -117,7 +117,7 @@ export function CommercePlansPage() {
       setInviteSuccess(true);
       setInviteMessage(
         result.profileStatus === "active"
-          ? "利用コードを適用し、PWA利用権を再確認しました。AI記事スタジオを利用できます。"
+          ? "利用コードを適用し、PWA利用権を再確認しました。AI Action Studioを利用できます。"
           : "利用コードを登録しました。管理者のアカウント承認後に利用できます。",
       );
     } catch (error) {
@@ -131,7 +131,7 @@ export function CommercePlansPage() {
   return (
     <main className="commerce-page">
       <section className="commerce-hero">
-        <Link href="/" className="commerce-back">← AI記事スタジオへ戻る</Link>
+        <Link href="/" className="commerce-back">← AI Action Studioへ戻る</Link>
         <p className="eyebrow">PLANS</p>
         <h1>利用プラン</h1>
         <p>ログイン後、PWA利用権がない一般ユーザーにはこの画面を案内します。現在受付中のPWA購入方法または利用コードが表示されます。</p>
@@ -156,8 +156,8 @@ export function CommercePlansPage() {
           <div>
             <p className="eyebrow">ACCESS CODE</p>
             <h2 id="commerce-invite-title">利用コードをお持ちの方</h2>
-            <p>購入後に案内された利用コードを、このAASアカウントへ登録できます。内部では既存の安全な招待コード基盤を利用します。</p>
-            <small>旧表記：招待コードをお持ちの方 / 「招待コードを登録」 / AAS ID: {inviteProfile.aas_user_id}</small>
+            <p>購入後に案内された利用コードを、このAASアカウントへ登録できます。</p>
+            <small>AAS ID: {inviteProfile.aas_user_id}</small>
           </div>
           <div className="commerce-invite-form">
             <label>

@@ -175,8 +175,10 @@ test("unentitled logged-in users are routed to plans and can redeem an existing 
   assert.match(access, /window\.location\.pathname !== "\/"/);
   assert.match(access, /window\.location\.replace\("\/plans\?from=login"\)/);
   assert.match(plans, /redeemPwaInvite/);
-  assert.match(plans, /招待コードをお持ちの方/);
-  assert.match(plans, /招待コードを登録/);
+  assert.match(plans, /利用コードをお持ちの方/);
+  assert.match(plans, /利用コードを登録/);
+  assert.match(plans, /AI Action Studio/);
+  assert.doesNotMatch(plans, /AI記事スタジオ|旧表記：招待コード/);
   assert.match(invite, /redeem_pwa_invite/);
 });
 
