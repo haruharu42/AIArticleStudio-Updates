@@ -51,9 +51,10 @@ Required configuration:
 - [x] Rollback-only DB E2E: issue code -> eligible user redemption -> PWA entitlement -> admin redemption audit.
 - [x] Confirm rollback left no test code, entitlement or redemption history.
 - [x] Add admin access-code redemption audit (AAS ID / redeemed time / PWA entitlement state; no email or billing data).
+- [x] Rollback-only DB failure E2E: duplicate-user reuse, exhausted code and expired code all fail closed.
+- [x] Rollback-only DB OFF-gate E2E: disabling new code redemption blocks new redemption while preserving the already-active PWA entitlement.
 - [ ] Verify the same redemption path through the real browser UI.
 - [ ] Verify duplicate/expired/exhausted code failures through disposable browser E2E.
-- [ ] Verify turning new redemption off does not revoke existing access.
 
 This is the recommended first paid-launch path.
 

@@ -35,6 +35,9 @@ export async function redeemPwaInvite(
   });
   if (error) {
     const message = String(error.message ?? "").toLowerCase();
+    if (message.includes("access code redemption is disabled")) {
+      throw new Error("現在、利用コードの新規受付は停止しています。");
+    }
     if (message.includes("entitlement already active")) {
       throw new Error("このアカウントには有効なPWA利用権がすでにあります。");
     }

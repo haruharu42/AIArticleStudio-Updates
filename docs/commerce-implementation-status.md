@@ -43,6 +43,13 @@ Stripe remains implemented as an optional later route, but new Stripe checkout i
   - current PWA entitlement state/expiry
 - User-facing purchase and redemption copy now consistently says "利用コード" while the legacy internal RPC/table names remain unchanged for compatibility.
 - Rollback-only database E2E passed for code issue -> eligible user redemption -> entitlement -> audit history; the transaction was rolled back and left no test data.
+- Rollback-only failure E2E passed for:
+  - duplicate use by the same account
+  - exhausted code
+  - expired code
+  - access-code reception OFF blocking new redemption
+  - already-active PWA entitlement surviving the reception switch being turned OFF
+- Client-side redemption now maps a server-side reception-OFF race to the specific "利用コードの新規受付は停止しています" message instead of a generic failure.
 
 ### Promotion
 

@@ -76,5 +76,7 @@ test("PWA access-code page uses sales terminology and PWA-only device guidance",
   assert.match(page, /PC・スマホ・タブレットで共通/);
   assert.doesNotMatch(page, /Windows利用権/);
   assert.match(api, /この利用コードは使用できません/);
+  assert.match(api, /access code redemption is disabled/);
+  assert.match(api, /現在、利用コードの新規受付は停止しています/);
   assert.doesNotMatch(api, /この招待コードは/);
 });
