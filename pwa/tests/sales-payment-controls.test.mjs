@@ -134,6 +134,9 @@ test("commercial transaction copy follows the active sales mode and exposes a su
   assert.match(page, /planSalesEnabled/);
   assert.match(page, /stripeSalesEnabled/);
   assert.match(page, /externalSalesEnabled/);
+  assert.match(page, /safeExternalSalesUrl/);
+  assert.match(page, /externalSalesReady/);
+  assert.match(page, /購入ページURLが未設定/);
   assert.match(page, /AAS内のStripe新規購入は停止しています/);
   assert.match(page, /外部販売ページで案内する支払方法/);
   assert.match(page, /案内された利用コードをAASへ登録/);
@@ -144,6 +147,8 @@ test("commercial transaction copy follows the active sales mode and exposes a su
 
   assert.match(support, /販売者情報の開示請求/);
   assert.match(support, /fetchPublicSalesSettings/);
+  assert.match(support, /safeExternalSalesUrl/);
+  assert.match(support, /購入ページURLは現在未設定/);
   assert.match(support, /外部販売ページを開く/);
   assert.match(support, /クレジットカード番号/);
   assert.match(support, /アクセストークン/);
