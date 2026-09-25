@@ -557,3 +557,23 @@ test("AI note schedule plan parsing is isolated behind a compatibility export", 
   assert.match(planner, /NoteAiSchedulePlan/);
   assert.doesNotMatch(planner, /SupabaseClient|client\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
 });
+
+
+test("note operation file transfer helpers are isolated from scheduling and persistence", async () => {
+  const [lib, transfer] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-operations-transfer.ts"),
+  ]);
+
+  assert.match(lib, /from "@\/lib\/note-operations-transfer"/);
+  assert.doesNotMatch(lib, /^export function exportNoteScheduleCsv/m);
+  assert.doesNotMatch(lib, /^export function exportNoteOperationsJson/m);
+  assert.doesNotMatch(lib, /^export function parseNoteOperationsImport/m);
+  assert.match(transfer, /export function exportNoteAiSchedulePlanJson/);
+  assert.match(transfer, /export function exportNoteScheduleCsv/);
+  assert.match(transfer, /export function exportNoteOperationsJson/);
+  assert.match(transfer, /export function parseNoteOperationsImport/);
+  assert.match(transfer, /function parseCsvLine/);
+  assert.match(transfer, /aas-note-operations-v1/);
+  assert.doesNotMatch(transfer, /SupabaseClient|client\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
+});
