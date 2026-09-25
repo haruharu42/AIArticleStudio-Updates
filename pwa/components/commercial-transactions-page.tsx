@@ -80,7 +80,7 @@ export function CommercialTransactionsPage() {
             ? "現在は note・Brain・Tips 等の外部販売と利用コードによる受付を行っています。AAS内のStripe新規購入は停止しています。"
             : externalSalesEnabled && !stripeSalesEnabled
               ? "外部販売の受付設定は有効ですが、購入ページURLが未設定のため、現在は購入導線を公開していません。AAS内のStripe新規購入も停止しています。"
-              : "一般販売開始前の表示確認ページです。LIVE販売は、必要な販売者情報と決済設定が揃うまでシステム側で無効になります."}
+              : "一般販売開始前の表示確認ページです。LIVE販売は、必要な販売者情報と決済設定が揃うまでシステム側で無効になります。"}
         </p>
         {stripeSalesEnabled && config?.mode !== "live" && <p className="legal-commerce-warning">現在は正式なLIVE販売状態ではありません。</p>}
         {!stripeSalesEnabled && <p className="legal-commerce-warning">AAS内のStripe新規受付は現在停止中です。</p>}
