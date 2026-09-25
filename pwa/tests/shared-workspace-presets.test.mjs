@@ -159,8 +159,11 @@ test("workspace preset provider persists across routes and recomputes dependent 
   assert.match(provider, /accountPresetsLoading/);
   assert.match(provider, /saveAccountPreset/);
   assert.match(provider, /deleteAccountPreset/);
-  assert.match(workflow, /\[preflightDetail, preflightReport, workspacePreference\]/);
-  assert.match(workflow, /\[reuseDetail, enabledReuseChannels, workspacePreference\]/);
+  assert.match(workflow, /const preflightPrompt = preflightDetail && preflightReport[\s\S]*?buildPrePublishReviewPrompt/);
+  assert.match(workflow, /const reusePrompt = reuseDetail[\s\S]*?buildArticleReusePrompt/);
+  assert.match(workflow, /const seriesPrompt = buildSeriesPlanPrompt/);
+  assert.doesNotMatch(workflow, /\[preflightDetail, preflightReport, workspacePreference\]/);
+  assert.doesNotMatch(workflow, /\[reuseDetail, enabledReuseChannels, workspacePreference\]/);
   assert.match(promotion, /\[facts, article, workspacePreference\]/);
   assert.match(promotion, /\[facts, preview, socialLengths, workspacePreference\]/);
   assert.match(promotion, /void workspacePreference; \/\/ Prompt context reads the runtime workspace preset\./);
