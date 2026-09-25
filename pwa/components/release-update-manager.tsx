@@ -10,7 +10,7 @@ import {
 } from "@/lib/app-release";
 import { getSupabaseClient } from "@/lib/supabase";
 
-const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms"];
+const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support"];
 
 function hiddenRoute(pathname: string): boolean {
   return HIDDEN_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
@@ -55,6 +55,13 @@ export function ReleaseUpdateManager() {
 
   useEffect(() => {
     mounted.current = true;
+    if (hiddenRoute(pathname)) {
+      queueMicrotask(() => {
+        if (mounted.current) setState(null);
+      });
+      return () => { mounted.current = false; };
+    }
+
     let client: ReturnType<typeof getSupabaseClient>;
     try {
       client = getSupabaseClient();
@@ -92,7 +99,7 @@ export function ReleaseUpdateManager() {
       data.subscription.unsubscribe();
       window.removeEventListener("load", registerWorker);
     };
-  }, []);
+  }, [pathname]);
 
   const applyUpdate = async () => {
     const release = state?.available_release;
