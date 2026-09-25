@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SelectWithCustom } from "@/components/select-with-custom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -529,21 +530,30 @@ export function AdminMembershipPage() {
                   onChange={(event) => patchPlan(plan.planCode, { displayName: event.target.value })}
                 />
               </label>
-              <label className="route-field">
-                <span>月額料金（税込・円）</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={1000000}
-                  step={1}
-                  inputMode="numeric"
-                  value={plan.monthlyPriceYen ?? ""}
-                  placeholder="例: 500"
-                  onChange={(event) => patchPlan(plan.planCode, {
-                    monthlyPriceYen: event.target.value === "" ? null : Number(event.target.value),
-                  })}
-                />
-              </label>
+              <SelectWithCustom
+                className="route-field"
+                label="月額料金（税込・円）"
+                value={plan.monthlyPriceYen === null ? "" : String(plan.monthlyPriceYen)}
+                onChange={(value) => patchPlan(plan.planCode, {
+                  monthlyPriceYen: value === "" ? null : Math.max(0, Math.min(1000000, Number(value) || 0)),
+                })}
+                options={[
+                  { value: "0", label: "0円（無料）" },
+                  { value: "300", label: "300円" },
+                  { value: "500", label: "500円" },
+                  { value: "980", label: "980円" },
+                  { value: "1480", label: "1,480円" },
+                  { value: "1980", label: "1,980円" },
+                  { value: "2980", label: "2,980円" },
+                  { value: "4980", label: "4,980円" },
+                  { value: "9800", label: "9,800円" },
+                ]}
+                placeholder="料金を選択"
+                customPlaceholder="その他の月額料金を入力"
+                inputType="number"
+                min={0}
+                max={1000000}
+              />
               <label className="route-field">
                 <span>ユーザー向けプラン説明</span>
                 <textarea
