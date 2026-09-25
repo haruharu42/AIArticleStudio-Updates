@@ -78,7 +78,7 @@ export function Phase11CreatePage() {
   const [createdId, setCreatedId] = useState("");
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [wizardRestored, setWizardRestored] = useState<boolean | null>(null);
-  const [accountDesigns, setAccountDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
+  const [, setAccountDesigns] = useState<Record<AccountDesignPlatform, PlatformAccountDesign> | null>(null);
   const [writingProfile, setWritingProfile] = useState<UserWritingProfile | null>(null);
   const progressOwnerIdRef = useRef("");
   const articleQuotaInFlightRef = useRef(false);
@@ -231,15 +231,6 @@ export function Phase11CreatePage() {
 
   const displayStep = step;
   const articleDraft = useMemo(() => withArticleTags(draft, tagsText), [draft, tagsText]);
-  const activeAccountDesign = draft.publicationTarget === "blog"
-    ? null
-    : accountDesigns?.[draft.publicationTarget] ?? null;
-  const accountDesignPromptKey = activeAccountDesign?.ready
-    ? `${activeAccountDesign.platform}:${activeAccountDesign.updatedAt ?? "unsaved"}`
-    : "none";
-  const accountPresetPromptKey = activeAccountPreset
-    ? `${activeAccountPreset.id}:${activeAccountPreset.updatedAt}`
-    : "none";
   const titlePrompt = buildTitlePrompt(
     articleDraft,
     draft.magazineEnabled ? magazinePlan : undefined,
