@@ -144,6 +144,11 @@ test("commercial transaction copy follows the active sales mode and exposes a su
   assert.match(page, /supportUrl = safeHttpsUrl\(seller\?\.supportUrl\) \|\| "\/support"/);
   assert.match(page, /問い合わせ・開示請求/);
   assert.match(page, /現在の外部販売ページを開く/);
+  for (const pendingCopy of [
+    "外部販売を開始する場合は、購入ページへ支払時期を表示します",
+    "外部販売を開始する場合は、キャンセル・解約条件を購入ページへ表示します",
+    "外部販売を開始する場合は、返金・キャンセル条件を購入確定前に販売ページへ表示します",
+  ]) assert.ok(page.includes(pendingCopy), `missing pre-sale legal copy: ${pendingCopy}`);
 
   assert.match(support, /販売者情報の開示請求/);
   assert.match(support, /fetchPublicSalesSettings/);
@@ -152,6 +157,9 @@ test("commercial transaction copy follows the active sales mode and exposes a su
   assert.match(support, /外部販売ページを開く/);
   assert.match(support, /クレジットカード番号/);
   assert.match(support, /アクセストークン/);
+
+  assert.match(terms, /初回の新規販売は、外部販売ページで購入/);
+  assert.doesNotMatch(terms, /現在の新規販売は/);
 
   for (const legalPage of [terms, privacy, aiTerms]) {
     assert.doesNotMatch(legalPage, /公開準備ドラフト/);
