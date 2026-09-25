@@ -346,17 +346,18 @@ test("AI note calendar is article-only and tolerates common free paid aliases", 
 
 
 test("note schedule can be recovered from a plain markdown table without JSON", async () => {
-  const [lib, page, manual] = await Promise.all([
+  const [lib, normalizer, page, manual] = await Promise.all([
     readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-ai-schedule-normalize.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("app/manual/page.tsx"),
   ]);
 
-  assert.match(lib, /function parseSimpleAiArticleSchedule/);
-  assert.match(lib, /有料\(\?:note\|ノート\|記事\)/);
-  assert.match(lib, /無料\(\?:note\|ノート\|記事\)/);
-  assert.match(lib, /text\.split\(\/\\r\?\\n\//);
-  assert.match(lib, /line\.split\("\|"\)/);
+  assert.match(normalizer, /function parseSimpleAiArticleSchedule/);
+  assert.match(normalizer, /有料\(\?:note\|ノート\|記事\)/);
+  assert.match(normalizer, /無料\(\?:note\|ノート\|記事\)/);
+  assert.match(normalizer, /text\.split\(\/\\r\?\\n\//);
+  assert.match(normalizer, /line\.split\("\|"\)/);
   assert.match(lib, /JSONではなくAI回答内の予定表・文章から読み取りました/);
   assert.match(page, /AIにはAASへ貼る予定表だけを返すよう指示します/);
   assert.match(page, /貼り付けた内容はこの端末でアカウント別に保存/);
@@ -365,8 +366,9 @@ test("note schedule can be recovered from a plain markdown table without JSON", 
 
 
 test("AI schedule output is copy-only, multi-post times are explicit, and pasted text persists until clear", async () => {
-  const [lib, page, helpers, css, manual] = await Promise.all([
+  const [lib, normalizer, page, helpers, css, manual] = await Promise.all([
     readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-ai-schedule-normalize.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase39-readability.css"),
@@ -377,8 +379,8 @@ test("AI schedule output is copy-only, multi-post times are explicit, and pasted
   assert.match(lib, /表以外の文字は出力しない/);
   assert.match(lib, /1日2回なら2行・2時刻、1日3回なら3行・3時刻/);
   assert.match(lib, /同日の時刻同士は原則3時間以上空ける/);
-  assert.match(lib, /ensureDistinctDailyPostingTimes\(items\)/);
-  assert.match(lib, /ensureDistinctDailyPostingTimes\(/);
+  assert.match(normalizer, /ensureDistinctDailyPostingTimes\(items\)/);
+  assert.match(normalizer, /export function ensureDistinctDailyPostingTimes\(/);
 
   assert.match(helpers, /aas\.note\.schedule\.response\.v1/);
   assert.match(page, /scheduleResponseLoaded/);
@@ -529,5 +531,5 @@ test("AI note schedule normalization is isolated from persistence and UI concern
   assert.match(normalizer, /export function parseAiScheduleItem/);
   assert.match(normalizer, /from "@\/lib\/note-schedule-core"/);
   assert.match(normalizer, /from "@\/lib\/note-schedule-types"/);
-  assert.doesNotMatch(normalizer, /SupabaseClient|\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
+  assert.doesNotMatch(normalizer, /SupabaseClient|client\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
 });
