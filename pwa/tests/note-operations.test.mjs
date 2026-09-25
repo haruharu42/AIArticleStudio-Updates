@@ -442,6 +442,7 @@ test("note operation profile definitions are isolated behind a compatibility re-
   assert.doesNotMatch(lib, /^export function defaultNoteOperationProfile/m);
   assert.doesNotMatch(lib, /^export const AAS_ADMIN_NOTE_PROFILE_PRESET/m);
   assert.match(profileLib, /^export type NoteOperationProfile =/m);
+  assert.doesNotMatch(lib, /^export type NoteOperationProfile =/m);
   assert.match(profileLib, /^export const NOTE_OPERATION_GOALS/m);
   assert.match(profileLib, /^export function defaultNoteOperationProfile/m);
   assert.match(profileLib, /^export const AAS_ADMIN_NOTE_PROFILE_PRESET/m);

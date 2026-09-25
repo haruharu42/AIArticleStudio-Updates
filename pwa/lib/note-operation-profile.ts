@@ -5,6 +5,34 @@ export type NoteAudiencePreset = "beginner" | "employee" | "sidejob_beginner" | 
 export type NoteTonePreset = "friendly" | "gentle" | "professional" | "casual" | "expert" | "energetic" | "other";
 export type NoteMonetizationStyle = "free_first" | "free_to_paid" | "paid_expertise" | "membership_future" | "no_monetization" | "other";
 
+export type NoteOperationProfile = {
+  userId: string;
+  noteDisplayName: string;
+  bioDraft: string;
+  targetReader: string;
+  mainTopics: string[];
+  experienceNote: string;
+  accountGenre: NoteAccountGenre;
+  customGenre: string;
+  accountStyle: NoteAccountStyle;
+  customAccountStyle: string;
+  audiencePreset: NoteAudiencePreset;
+  customAudience: string;
+  tonePreset: NoteTonePreset;
+  customTone: string;
+  monetizationStyle: NoteMonetizationStyle;
+  customMonetizationStyle: string;
+  operationGoal: NoteOperationGoal;
+  weeklyPostCount: number;
+  paidPostsPerMonth: number;
+  preferredTime: string;
+  secondaryTime: string;
+  timezone: string;
+  scheduleWeeks: number;
+  accountReady: boolean;
+  profileReady: boolean;
+};
+
 export const NOTE_OPERATION_GOALS: readonly { value: NoteOperationGoal; label: string; description: string }[] = [
   { value: "habit", label: "まず継続したい", description: "無理のない頻度で投稿習慣を作る" },
   { value: "growth", label: "読者を増やしたい", description: "無料記事を軸に継続して発信する" },

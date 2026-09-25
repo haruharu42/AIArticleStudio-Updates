@@ -48,34 +48,6 @@ export type NoteScheduleItemType = "free_note" | "paid_note" | "review" | "profi
 export type NoteScheduleStatus = "planned" | "done" | "skipped";
 export type NoteScheduleSource = "generated" | "imported" | "manual";
 
-export type NoteOperationProfile = {
-  userId: string;
-  noteDisplayName: string;
-  bioDraft: string;
-  targetReader: string;
-  mainTopics: string[];
-  experienceNote: string;
-  accountGenre: NoteAccountGenre;
-  customGenre: string;
-  accountStyle: NoteAccountStyle;
-  customAccountStyle: string;
-  audiencePreset: NoteAudiencePreset;
-  customAudience: string;
-  tonePreset: NoteTonePreset;
-  customTone: string;
-  monetizationStyle: NoteMonetizationStyle;
-  customMonetizationStyle: string;
-  operationGoal: NoteOperationGoal;
-  weeklyPostCount: number;
-  paidPostsPerMonth: number;
-  preferredTime: string;
-  secondaryTime: string;
-  timezone: string;
-  scheduleWeeks: number;
-  accountReady: boolean;
-  profileReady: boolean;
-};
-
 export type NoteScheduleItem = {
   id?: string;
   userId?: string;
