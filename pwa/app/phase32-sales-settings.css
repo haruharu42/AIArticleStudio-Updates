@@ -201,3 +201,104 @@
   font-weight: 800;
   line-height: 1.65;
 }
+
+
+/* 2026-09-25 pre-sale review links. */
+.sales-release-preflight {
+  display: grid;
+  gap: 14px;
+}
+
+.sales-release-preflight .admin-panel-heading p:last-child {
+  margin: 4px 0 0;
+  color: #70839a;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.sales-release-preflight-draft,
+.sales-release-preflight-footnote {
+  margin: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.sales-release-preflight-draft {
+  border: 1px solid #f1d69f;
+  background: #fff8e8;
+  color: #7b5c21;
+  font-weight: 800;
+}
+
+.sales-release-preflight-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sales-release-preflight-grid article {
+  display: grid;
+  gap: 7px;
+  border: 1px solid #dce6f1;
+  border-radius: 13px;
+  background: #fff;
+  padding: 12px;
+}
+
+.sales-release-preflight-grid article > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sales-release-preflight-grid strong {
+  color: #203b5b;
+  font-size: 13px;
+}
+
+.sales-release-preflight-grid span {
+  border-radius: 999px;
+  padding: 4px 7px;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.sales-release-preflight-grid span.ready {
+  background: #eaf8f0;
+  color: #26734c;
+}
+
+.sales-release-preflight-grid span.action,
+.sales-release-preflight-grid span.review {
+  background: #fff5df;
+  color: #8a6219;
+}
+
+.sales-release-preflight-grid small {
+  color: #71849b;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.sales-release-preflight-grid a {
+  width: fit-content;
+  color: #246bb8;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.sales-release-preflight-footnote {
+  background: #f3f7fb;
+  color: #62758c;
+}
+
+@media (max-width: 720px) {
+  .sales-release-preflight-grid {
+    grid-template-columns: 1fr;
+  }
+}

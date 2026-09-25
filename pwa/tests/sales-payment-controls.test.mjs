@@ -178,3 +178,26 @@ test("external-sales readiness is isolated and does not treat it as full product
   assert.match(readiness, /hasHttpsPurchaseUrl/);
   assert.match(readiness, /note \/ Brain \/ Tips等の実際の購入ページURL/);
 });
+
+
+test("sales center groups legal support and access-code review without auto-approving launch", async () => {
+  const [page, preflight, css] = await Promise.all([
+    readPwa("components/sales-settings-admin-page.tsx"),
+    readPwa("components/admin-sales/sales-release-preflight-panel.tsx"),
+    readPwa("app/phase32-sales-settings.css"),
+  ]);
+
+  assert.match(page, /SalesReleasePreflightPanel/);
+  assert.match(preflight, /販売前チェック/);
+  assert.match(preflight, /利用コードの発行・使用履歴を確認/);
+  assert.match(preflight, /href="\/admin\/users"/);
+  for (const route of ["/commercial-transactions", "/terms", "/privacy", "/ai-terms", "/support"]) {
+    assert.ok(preflight.includes(route), `missing pre-sale review route: ${route}`);
+  }
+  assert.match(preflight, /要人確認/);
+  assert.match(preflight, /「販売可能」の自動判定にはしません/);
+  assert.match(preflight, /価格・返金条件・販売者情報・サポート方針・公開段階は自動確定しません/);
+  assert.match(preflight, /未保存の販売設定/);
+  assert.match(css, /\.sales-release-preflight-grid/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.sales-release-preflight-grid/);
+});

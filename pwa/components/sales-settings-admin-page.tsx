@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { SalesReadinessPanel } from "@/components/admin-sales/sales-readiness-panel";
+import { SalesReleasePreflightPanel } from "@/components/admin-sales/sales-release-preflight-panel";
 import { SalesSelectSetting } from "@/components/admin-sales/sales-select-setting";
 
 import {
@@ -175,6 +176,7 @@ export function SalesSettingsAdminPage() {
       </section>
 
       <SalesReadinessPanel settings={settings} hasUnsavedChanges={changed} />
+      <SalesReleasePreflightPanel settings={settings} hasUnsavedChanges={changed} />
 
       <section className="admin-panel sales-current-mode">
         <h2>現在の販売モード</h2>
