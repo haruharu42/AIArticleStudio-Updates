@@ -98,9 +98,10 @@ test("note operations UI covers setup profile planning calendar and home todo", 
 
 
 test("note beginner profile builder uses dropdown presets and current-web research prompts", async () => {
-  const [migration, lib, page, css] = await Promise.all([
+  const [migration, lib, profileLib, page, css] = await Promise.all([
     readRepo("supabase/migrations/20260919125425_note_operations_profile_builder_presets.sql"),
     readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-operation-profile.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("app/phase38-note-operations.css"),
   ]);
@@ -122,6 +123,7 @@ test("note beginner profile builder uses dropdown presets and current-web resear
     "NOTE_TONE_PRESETS",
     "NOTE_MONETIZATION_STYLES",
   ]) {
+    assert.match(profileLib, new RegExp(optionSet));
     assert.match(lib, new RegExp(optionSet));
   }
 
@@ -140,7 +142,7 @@ test("note beginner profile builder uses dropdown presets and current-web resear
   assert.match(page, /主に誰に届けたい/);
   assert.match(page, /文章の雰囲気は/);
   assert.match(page, /収益化はどうしたい/);
-  assert.match(lib, /その他（自由入力）/);
+  assert.match(profileLib, /その他（自由入力）/);
   assert.match(page, /chatgpt","gemini","claude/);
   assert.match(page, /現在のよく使うAI/);
   assert.match(page, /最新情報から構成候補を作る/);
@@ -386,27 +388,28 @@ test("AI schedule output is copy-only, multi-post times are explicit, and pasted
 
 
 test("AAS note operation preset is available only inside the active-admin UI path", async () => {
-  const [lib, page, helpers, css] = await Promise.all([
+  const [lib, profileLib, page, helpers, css] = await Promise.all([
     readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-operation-profile.ts"),
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-operations/note-operations-page-helpers.ts"),
     readPwa("app/phase38-note-operations.css"),
   ]);
 
   assert.match(lib, /AAS_ADMIN_NOTE_PROFILE_PRESET/);
-  assert.match(lib, /AI Action Studio（AAS）・AI副業・コンテンツ制作・運営支援/);
-  assert.match(lib, /副業専用プロンプト/);
-  assert.match(lib, /Knowledge活用/);
-  assert.doesNotMatch(lib, /AI Article Studio（AAS）/);
-  assert.match(lib, /applyAasAdminNoteProfilePreset/);
-  assert.match(lib, /accountGenre: "other"/);
-  assert.match(lib, /accountStyle: "other"/);
-  assert.match(lib, /audiencePreset: "other"/);
-  assert.match(lib, /monetizationStyle: "other"/);
-  assert.match(lib, /operationGoal: "growth"/);
-  assert.match(lib, /experienceNote/);
+  assert.match(profileLib, /AI Action Studio（AAS）・AI副業・コンテンツ制作・運営支援/);
+  assert.match(profileLib, /副業専用プロンプト/);
+  assert.match(profileLib, /Knowledge活用/);
+  assert.doesNotMatch(profileLib, /AI Article Studio（AAS）/);
+  assert.match(profileLib, /applyAasAdminNoteProfilePreset/);
+  assert.match(profileLib, /accountGenre: "other"/);
+  assert.match(profileLib, /accountStyle: "other"/);
+  assert.match(profileLib, /audiencePreset: "other"/);
+  assert.match(profileLib, /monetizationStyle: "other"/);
+  assert.match(profileLib, /operationGoal: "growth"/);
+  assert.match(profileLib, /experienceNote/);
   assert.doesNotMatch(
-    lib.match(/export function applyAasAdminNoteProfilePreset[\s\S]*?\n}/)?.[0] ?? "",
+    profileLib.match(/export function applyAasAdminNoteProfilePreset[\s\S]*?\n}/)?.[0] ?? "",
     /experienceNote:\s*"/,
   );
 
@@ -424,4 +427,23 @@ test("AAS note operation preset is available only inside the active-admin UI pat
   assert.match(css, /\.note-aas-admin-preset/);
   assert.match(css, /\.note-aas-admin-preset-grid/);
   assert.doesNotMatch(`${lib}\n${page}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+});
+
+
+test("note operation profile definitions are isolated behind a compatibility re-export", async () => {
+  const [lib, profileLib] = await Promise.all([
+    readPwa("lib/note-operations.ts"),
+    readPwa("lib/note-operation-profile.ts"),
+  ]);
+
+  assert.match(lib, /from "@\/lib\/note-operation-profile"/);
+  assert.match(lib, /export \{[\s\S]*AAS_ADMIN_NOTE_PROFILE_PRESET[\s\S]*\} from "@\/lib\/note-operation-profile"/);
+  assert.doesNotMatch(lib, /^export const NOTE_OPERATION_GOALS/m);
+  assert.doesNotMatch(lib, /^export function defaultNoteOperationProfile/m);
+  assert.doesNotMatch(lib, /^export const AAS_ADMIN_NOTE_PROFILE_PRESET/m);
+  assert.match(profileLib, /^export type NoteOperationProfile =/m);
+  assert.match(profileLib, /^export const NOTE_OPERATION_GOALS/m);
+  assert.match(profileLib, /^export function defaultNoteOperationProfile/m);
+  assert.match(profileLib, /^export const AAS_ADMIN_NOTE_PROFILE_PRESET/m);
+  assert.match(profileLib, /^export function applyAasAdminNoteProfilePreset/m);
 });
