@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { launchAiApp } from "@/lib/ai-app-links";
 import { MagazinePlannerPanel } from "@/components/article-create/magazine-planner";
+import { PresetNumberSelectWithCustom, SelectWithCustom } from "@/components/select-with-custom";
 import type { MagazinePlanDraft } from "@/lib/magazine-planner";
 import {
   parseTitleCandidates,
@@ -291,7 +292,19 @@ export function ImagePlanStep({
           <small>アニメ風・漫画風・イラスト風・図解・水彩・写真風などから選べます。「AIおまかせ」は共通プリセットや記事内容から最適化します。</small>
         </label>
       )}
-      {draft.inlineEnabled && <label className="route-field"><span>挿絵枚数</span><select value={draft.inlineCount} onChange={(event) => patch("inlineCount", Number(event.target.value))}><option value={1}>1枚</option><option value={2}>2枚</option><option value={3}>3枚</option><option value={4}>4枚</option><option value={5}>5枚</option></select></label>}
+      {draft.inlineEnabled && (
+        <PresetNumberSelectWithCustom
+          className="route-field"
+          label="挿絵枚数"
+          value={draft.inlineCount}
+          onChange={(inlineCount) => patch("inlineCount", inlineCount)}
+          presets={[1, 2, 3, 4, 5]}
+          min={1}
+          max={10}
+          suffix="枚"
+          description="通常は1〜5枚。必要な場合は最大10枚まで自由入力できます。"
+        />
+      )}
     </div>
   );
 }
@@ -327,7 +340,24 @@ export function ArticleConditionsStep({
         <label className="route-field"><span>サブジャンル</span><select value={subgenreSelectValue} onChange={(event) => setSubgenre(event.target.value)}>{subgenreOptions.map((subgenre) => <option key={subgenre} value={subgenre}>{subgenre}</option>)}</select>{subgenreSelectValue === "その他" && <input className="taxonomy-custom-input" value={draft.subgenre === "その他" ? "" : draft.subgenre} onChange={(event) => patch("subgenre", event.target.value.slice(0, 120))} placeholder="サブジャンルを具体的に入力" maxLength={120} />}</label>
         <label className="route-field"><span>対象年齢</span><select value={draft.ageGroup} onChange={(event) => patch("ageGroup", event.target.value)}>{AGE_GROUP_OPTIONS.map((age) => <option key={age} value={age}>{age}</option>)}</select></label>
         <label className="route-field"><span>対象性別</span><select value={draft.gender} onChange={(event) => patch("gender", event.target.value)}>{GENDER_OPTIONS.map((gender) => <option key={gender} value={gender}>{gender}</option>)}</select></label>
-        <label className="route-field"><span>文字数の目安</span><select value={draft.targetLength} onChange={(event) => patch("targetLength", Number(event.target.value))}>{TARGET_LENGTH_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+        <SelectWithCustom
+          className="route-field"
+          label="文字数の目安"
+          value={String(draft.targetLength)}
+          onChange={(value) => patch(
+            "targetLength",
+            Math.max(500, Math.min(50000, Math.trunc(Number(value) || 500))),
+          )}
+          options={TARGET_LENGTH_OPTIONS.map((option) => ({
+            value: String(option.value),
+            label: option.label,
+          }))}
+          placeholder="文字数を選択"
+          customPlaceholder="500〜50,000文字で自由入力"
+          inputType="number"
+          min={500}
+          max={50000}
+        />
         {draft.articleType === "paid" && (
           <div className="paid-price-settings">
             <label className="route-field">
