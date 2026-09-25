@@ -116,3 +116,5 @@ Push API対応ブラウザでは、PWAインストールの有無とは別にWeb
 ## 最終Preview検証
 
 通知センター・Web Push・自動通知トリガーを含めてPreview CIで回帰確認します。
+
+Service Worker通知対応に伴うcache generation v6を含めて再検証します。
