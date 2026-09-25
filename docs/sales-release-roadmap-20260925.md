@@ -11,8 +11,8 @@ Status: in progress.
 - [x] Admin Web Push real-device delivery/tap verified.
 - [x] Notification Center moved to Tester rollout.
 - [x] Designated non-admin tester can access Tester notification UI.
-- [ ] Tester device creates/enables a Web Push subscription.
-- [ ] Send Tester-only push and verify receipt/tap.
+- [ ] Tester device creates/enables a Web Push subscription. Live DB re-check on 2026-09-26 JST: one active non-admin release tester exists, but that tester has no enabled Push subscription.
+- [ ] Send Tester-only push and verify receipt/tap. Do not send until the tester subscription exists and target/content are explicitly confirmed.
 - [ ] Re-check article creation, external-AI return, core side-hustle workflow and mobile navigation on Tester.
 
 Blocker: the tester push step requires an actual tester-device subscription and must not be bypassed by moving Notifications to Public.
@@ -46,7 +46,8 @@ Required configuration:
 - [x] External sales switch enabled.
 - [x] Access-code switch enabled.
 - [ ] Real HTTPS external purchase URL configured.
-- [ ] Verify external purchase CTA appears only when URL is valid.
+- [x] Verify external purchase CTA stays hidden when the external purchase URL is unset; signed-out Preview E2E passed.
+- [ ] Verify the external purchase CTA appears and links correctly after a real valid HTTPS purchase URL is configured.
 - [ ] Verify access code issuance operational process with the real external sales workflow.
 - [x] Rollback-only DB E2E: issue code -> eligible user redemption -> PWA entitlement -> admin redemption audit.
 - [x] Confirm rollback left no test code, entitlement or redemption history.
@@ -63,10 +64,10 @@ This is the recommended first paid-launch path.
 - [x] Add Sales Center pre-sale review links for commercial disclosure, Terms, Privacy, AI terms, Support and access-code operations.
 - [ ] Finalize sales price/offer on the chosen external platform.
 - [ ] Finalize refund/cancellation wording.
-- [ ] Re-check Terms, Privacy and AI terms.
-- [ ] Re-check commercial-transactions disclosure.
-- [ ] Re-check support and seller-disclosure response process.
-- [ ] Verify no private seller data is exposed outside the selected disclosure mode.
+- [x] Re-check Terms, Privacy and AI terms on the current signed-out Preview.
+- [x] Re-check commercial-transactions disclosure on the current signed-out Preview.
+- [ ] Re-check support and seller-disclosure **operational response process**. The public Support page itself was re-checked successfully; the real human response procedure still requires finalization.
+- [x] Verify no private seller data is exposed outside the selected disclosure mode. Public billing config reports individual/on_request and keeps seller identity/contact fields non-public.
 
 ## Phase 5 — Closed paid beta
 
