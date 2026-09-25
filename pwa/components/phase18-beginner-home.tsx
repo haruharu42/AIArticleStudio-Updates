@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AasReferenceBottomNav, AasReferenceHeader } from "@/components/aas-reference-shell";
 import { ActionStudioHomeHero, ActionStudioQuickActions } from "@/components/action-studio-home-hub";
 import { useSharedAccessState } from "@/components/access-state-provider";
+import { useAppFeatureAccess } from "@/components/feature-access-gate";
 import { Phase7App } from "@/components/phase6-app";
 import { Phase7Library } from "@/components/phase7-library";
 import { NoteTodayPanel } from "@/components/note-today-panel";
@@ -141,6 +142,7 @@ function MissionRows({ missions }: { missions: CreatorMission[] }) {
 
 export function Phase18BeginnerHome() {
   const { state, client } = useSharedAccessState();
+  const articleLibraryAccess = useAppFeatureAccess("article-library");
   const [section, setSection] = useState<Section>("home");
   const [imageUnsaved, setImageUnsaved] = useState(false);
   const [imageBusy, setImageBusy] = useState(false);
@@ -289,6 +291,31 @@ export function Phase18BeginnerHome() {
       subgenre: nextSubgenres.includes(current.subgenre) ? current.subgenre : nextSubgenres[0] ?? "AIおまかせ",
     }));
   };
+
+  if (section === "library" && articleLibraryAccess.loading) {
+    return <BeginnerAccessFallback />;
+  }
+
+  if (section === "library" && !articleLibraryAccess.allowed) {
+    const message = articleLibraryAccess.feature?.maintenanceMessage
+      || (articleLibraryAccess.feature?.maintenanceMode
+        ? "記事ライブラリは現在メンテナンス中です。修正確認後に再開します。"
+        : "記事ライブラリは現在、管理者または指定テストユーザーで動作確認中です。");
+    return (
+      <div className="reference-home">
+        <AasReferenceHeader hasUnreadNotifications={hasHeaderNotification} notificationHref={headerNotificationHref} notificationLabel={headerNotificationLabel} />
+        <main className="reference-home-main beginner-library-main">
+          <section className="standalone-card feature-unavailable-card">
+            <p className="eyebrow">{articleLibraryAccess.feature?.maintenanceMode ? "MAINTENANCE" : "FEATURE PREVIEW"}</p>
+            <h1>記事ライブラリ</h1>
+            <p className="route-notice">{message}</p>
+            <button className="primary-action" type="button" onClick={() => openSection("home")}>ホームへ戻る</button>
+          </section>
+        </main>
+        <AasReferenceBottomNav active="library" onHome={() => openSection("home")} onLibrary={() => openSection("library")} />
+      </div>
+    );
+  }
 
   if (section === "library") {
     return (
