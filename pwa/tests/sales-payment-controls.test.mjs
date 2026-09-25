@@ -102,6 +102,11 @@ test("plans and access-code UI obey PWA-only public sales settings", async () =>
   ]);
 
   assert.match(plans, /fetchPublicSalesSettings/);
+  assert.match(plans, /safeExternalSalesUrl/);
+  assert.match(plans, /externalPurchaseUrl/);
+  assert.match(plans, /外部販売ページで購入する/);
+  assert.match(plans, /購入ページURLが未設定/);
+  assert.match(plans, /rel="noopener noreferrer"/);
   assert.match(plans, /plan\.platformScope === "pwa"/);
   assert.match(plans, /planSalesEnabled\(salesSettings, plan\.planCode\)/);
   assert.match(plans, /CommerceAccessCodePanel enabled=\{Boolean\(salesSettings\?\.accessCodeEnabled\)\}/);
@@ -242,4 +247,18 @@ test("sales legal pages match the current AAS PWA-only product model", async () 
   assert.doesNotMatch(privacy, /Windows版とPWA版/);
   assert.match(aiTerms, /AI Action Studio PWA AI利用条件/);
   assert.match(support, /AI Action Studio お問い合わせ案内/);
+});
+
+
+test("external purchase URL is HTTPS-only and credential-free before rendering a CTA", async () => {
+  const [settings, plans] = await Promise.all([
+    readPwa("lib/sales-settings.ts"),
+    readPwa("components/commerce-plans-page.tsx"),
+  ]);
+
+  assert.match(settings, /export function safeExternalSalesUrl/);
+  assert.match(settings, /parsed\.protocol !== "https:" \|\| parsed\.username \|\| parsed\.password/);
+  assert.match(settings, /認証情報を含まない https:\/\//);
+  assert.match(plans, /safeExternalSalesUrl\(salesSettings\.externalSalesUrl\)/);
+  assert.match(plans, /externalPurchaseUrl && \(/);
 });

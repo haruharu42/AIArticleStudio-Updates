@@ -17,6 +17,7 @@ import {
 import {
   fetchPublicSalesSettings,
   planSalesEnabled,
+  safeExternalSalesUrl,
   type SalesSettings,
 } from "@/lib/sales-settings";
 
@@ -54,6 +55,13 @@ export function CommercePlansPage() {
     if (state.kind === "ready" || state.kind === "entitlement_denied") return state.profile;
     return null;
   }, [state]);
+
+  const externalPurchaseUrl = useMemo(
+    () => salesSettings?.externalSalesEnabled
+      ? safeExternalSalesUrl(salesSettings.externalSalesUrl)
+      : "",
+    [salesSettings],
+  );
 
   const visiblePlans = useMemo(
     () => (config?.plans ?? []).filter(
@@ -104,11 +112,23 @@ export function CommercePlansPage() {
       {message && <p className="commerce-message" role="status">{message}</p>}
 
       {salesSettings?.externalSalesEnabled && (
-        <section className="commerce-empty">
-          <h2>外部販売を受付中です</h2>
-          <p>{salesSettings.accessCodeEnabled
-            ? "現在は外部販売ページで購入後、案内された利用コードをAASへ登録する運用に対応しています。"
-            : "現在は外部販売ページで販売を受付中です。購入後の利用方法は販売ページの案内に従ってください。"}</p>
+        <section className="commerce-empty commerce-external-sales">
+          <h2>{externalPurchaseUrl ? "外部販売を受付中です" : "外部販売ページを準備中です"}</h2>
+          <p>{externalPurchaseUrl
+            ? salesSettings.accessCodeEnabled
+              ? "外部販売ページで購入後、案内された利用コードをAASへ登録できます。"
+              : "外部販売ページで販売を受付中です。購入後の利用方法は販売ページの案内に従ってください。"
+            : "外部販売の受付設定は有効ですが、現在は購入ページURLが未設定のため、この画面から購入先へは移動できません。"}</p>
+          {externalPurchaseUrl && (
+            <a
+              className="commerce-external-purchase"
+              href={externalPurchaseUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              外部販売ページで購入する ↗
+            </a>
+          )}
         </section>
       )}
 

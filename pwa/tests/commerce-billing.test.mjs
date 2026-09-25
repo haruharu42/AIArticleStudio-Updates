@@ -208,3 +208,16 @@ test("Worker routes billing before the application handler, filters public billi
     assert.match(entry, new RegExp(header));
   }
 });
+
+
+test("external sales CTA is rendered only from a guarded HTTPS URL", async () => {
+  const [plans, sales] = await Promise.all([
+    read("components/commerce-plans-page.tsx"),
+    read("lib/sales-settings.ts"),
+  ]);
+
+  assert.match(plans, /外部販売ページで購入する/);
+  assert.match(plans, /externalPurchaseUrl \? "外部販売を受付中です" : "外部販売ページを準備中です"/);
+  assert.match(plans, /rel="noopener noreferrer"/);
+  assert.match(sales, /safeExternalSalesUrl/);
+});
