@@ -15,7 +15,7 @@ test("free-trial admin uses the current PWA user admin API", async () => {
 
   assert.match(page, /listPwaAdminUsers/);
   assert.match(page, /type PwaAdminUser/);
-  assert.match(panel, /type PwaAdminUser/);
+  assert.match(panel, /import type \{ PwaAdminUser \} from "@\/lib\/pwa-admin-users"/);
   assert.doesNotMatch(page, /phase10-admin/);
   assert.doesNotMatch(panel, /phase10-admin/);
 });

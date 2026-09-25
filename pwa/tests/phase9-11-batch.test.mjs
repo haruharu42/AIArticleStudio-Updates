@@ -46,33 +46,39 @@ test("Phase 9 invite route redeems entitlement without requiring existing PWA ac
   assert.match(route, /Phase9InvitePage/);
 });
 
-test("Phase 10 admin surface uses existing account and entitlement RPCs plus invite RPCs", async () => {
-  const api = await read("lib/phase10-admin.ts");
-  const page = await read("components/phase10-admin-page.tsx");
-  const helpers = await read("components/phase10-admin/phase10-admin-page-helpers.ts");
+test("Phase 10 admin route uses the current PWA-only account entitlement and access-code modules", async () => {
+  const api = await read("lib/pwa-admin-users.ts");
+  const page = await read("components/pwa-admin-users-page.tsx");
+  const userPanels = await read("components/admin-users/admin-user-panels.tsx");
+  const accessCodes = await read("components/admin-users/admin-access-code-panel.tsx");
   const route = await read("app/admin/users/page.tsx");
   const adminLayout = await read("app/admin/layout.tsx");
-  for (const rpc of ["admin_list_users", "admin_set_user_status", "admin_list_user_entitlements", "admin_grant_entitlement", "admin_revoke_entitlement", "admin_create_pwa_invite", "admin_list_pwa_invites", "admin_revoke_pwa_invite"]) {
+
+  for (const rpc of [
+    "admin_list_users",
+    "admin_set_user_status",
+    "admin_list_user_entitlements",
+    "admin_grant_entitlement",
+    "admin_revoke_entitlement",
+    "admin_create_pwa_invite",
+    "admin_list_pwa_invites",
+    "admin_revoke_pwa_invite",
+    "admin_list_pwa_invite_redemptions",
+  ]) {
     assert.match(api, new RegExp(`\\"${rpc}\\"`));
   }
-  assert.match(api, /AAS-WIN-BETA/);
-  assert.match(api, /AAS-PWA-BETA/);
-  assert.match(page, /accessState\.profile\.role !== "admin" \|\| accessState\.profile\.status !== "active"/);
-  assert.match(page, /useSharedAccessState\(\)/);
-  assert.match(page, /phase10-admin\/phase10-admin-page-helpers/);
-  assert.doesNotMatch(page, /async function loadEntitlementOverview|function statusLabel|function fmt\(/);
-  assert.match(helpers, /export async function loadEntitlementOverview/);
-  assert.match(helpers, /export function statusLabel/);
-  assert.match(helpers, /export function isCurrentEntitlement/);
-  assert.doesNotMatch(page, /auth\.getUser\(\)|\.from\("profiles"\)/);
-  assert.match(page, /Windowsを付与/);
-  assert.match(page, /PWAを付与/);
-  assert.match(page, /Windowsを取消/);
-  assert.match(page, /PWAを取消/);
-  assert.match(page, /招待コードを作成/);
-  assert.match(route, /Phase10AdminPage/);
+
+  assert.match(api, /export const PWA_PRODUCT = "AAS-PWA-BETA" as const/);
+  assert.doesNotMatch(api, /AAS-WIN-BETA/);
+  assert.match(page, /PWAユーザー利用管理/);
+  assert.match(page, /AdminUserSelectionPanel/);
+  assert.match(page, /AdminSelectedUserPanel/);
+  assert.match(page, /AdminAccessCodePanel/);
+  assert.match(userPanels, /PWA利用権/);
+  assert.match(accessCodes, /販売用PWA利用コード/);
+  assert.match(route, /PwaAdminUsersPage as Phase10AdminPage/);
   assert.match(adminLayout, /AdminRouteGuard/);
-  assert.doesNotMatch(`${api}\n${page}`, /sb_secret_|service[_-]?role/i);
+  assert.doesNotMatch(`${api}\n${page}\n${userPanels}\n${accessCodes}`, /sb_secret_|service[_-]?role/i);
 });
 
 test("Phase 11 article creator separates access, controller, draft logic and step UI", async () => {

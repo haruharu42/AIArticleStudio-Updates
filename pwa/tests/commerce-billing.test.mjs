@@ -137,6 +137,7 @@ test("service-role and Stripe secrets stay outside browser-visible configuration
 
 test("purchase UI states renewal and cancellation terms before Checkout", async () => {
   const plans = await read("components/commerce-plans-page.tsx");
+  const accessCode = await read("components/commerce/commerce-access-code-panel.tsx");
   const disclosure = await read("components/commercial-transactions-page.tsx");
   const billing = await read("components/billing-account-page.tsx");
   const client = await read("lib/commerce.ts");
@@ -147,7 +148,8 @@ test("purchase UI states renewal and cancellation terms before Checkout", async 
   assert.match(plans, /accepted/);
   assert.match(plans, /checkoutInFlight/);
   assert.match(plans, /if \(checkoutInFlight\.current\) return/);
-  assert.match(plans, /inviteInFlight/);
+  assert.match(accessCode, /const inFlight = useRef\(false\)/);
+  assert.match(accessCode, /if \(inFlight\.current\) return/);
   assert.match(billing, /portalInFlight/);
   assert.match(billing, /if \(portalInFlight\.current\) return/);
   assert.match(disclosure, /販売価格/);

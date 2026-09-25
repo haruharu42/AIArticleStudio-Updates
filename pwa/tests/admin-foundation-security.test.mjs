@@ -83,7 +83,9 @@ test("public home admin shortcut stays hidden until active-admin state is verifi
 
 test("admin tools use shared choice-first controls with free-input fallback", () => {
   const controls = read("components/admin-form-controls.tsx");
-  const users = read("components/phase10-admin-page.tsx");
+  const users = read("components/pwa-admin-users-page.tsx");
+  const userPanels = read("components/admin-users/admin-user-panels.tsx");
+  const accessCodes = read("components/admin-users/admin-access-code-panel.tsx");
   const freePlan = read("components/free-trial-admin-panel.tsx");
   const operations = read("components/operations-admin-page.tsx");
   const releases = read("components/admin-release-page.tsx");
@@ -97,10 +99,14 @@ test("admin tools use shared choice-first controls with free-input fallback", ()
   assert.match(controls, /AdminPresetNumberField/);
   assert.match(controls, /AdminSimpleSelect/);
 
-  assert.match(users, /AdminSelectWithCustom/);
-  assert.match(users, /AdminPresetNumberField/);
-  assert.match(users, /SALES_CHANNEL_OPTIONS/);
-  assert.match(users, /window\.confirm/);
+  assert.match(users, /AdminUserSelectionPanel/);
+  assert.match(users, /AdminSelectedUserPanel/);
+  assert.match(users, /AdminAccessCodePanel/);
+  assert.match(accessCodes, /SelectWithCustom/);
+  assert.match(accessCodes, /PresetNumberSelectWithCustom/);
+  assert.match(accessCodes, /label="販売チャネル"/);
+  assert.match(accessCodes, /label="最大利用回数"/);
+  assert.match(userPanels, /CREATOR_MEMBERSHIP_PLANS/);
 
   assert.match(freePlan, /AdminPresetNumberField/);
   assert.match(freePlan, /RESET_TIMEZONE_OPTIONS/);
