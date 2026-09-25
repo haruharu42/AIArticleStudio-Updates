@@ -24,6 +24,7 @@ import {
   buildAdminSocialPromotionPrompt,
   sanitizeSocialTargetChars,
   socialLengthPresetsFor,
+  type AdminArticlePromotionInput,
   type AdminProductFacts,
   type AdminSocialLengthPlan,
   type AdminSocialPlatform,
@@ -323,8 +324,8 @@ export function AdminPromotionPage() {
   const [facts, setFacts] = useState<AdminProductFacts>(DEFAULT_ADMIN_PRODUCT_FACTS);
   const [socialLengths, setSocialLengths] = useState<AdminSocialLengthPlan>({ ...DEFAULT_SOCIAL_LENGTH_PLAN });
   const [socialPresetIds, setSocialPresetIds] = useState<Record<AdminSocialPlatform, string>>({ ...DEFAULT_SOCIAL_PRESET_IDS });
-  const [article, setArticle] = useState({
-    platform: "note" as const,
+  const [article, setArticle] = useState<AdminArticlePromotionInput>({
+    platform: "note",
     phase: "実運用テスト中（販売前）",
     purpose: "実運用テスト状況の共有",
     audience: "AI初心者",
@@ -445,13 +446,14 @@ export function AdminPromotionPage() {
         : salesChannel === "social"
           ? "X, Instagram, Threads, TikTok, YouTube Shorts"
           : "note, X, Instagram, Threads";
-    const prelaunch = salesProduct === "prelaunch" || promotionMethod === "preview";
+    const sellingConfirmed = facts.releaseStage === "先行販売" || facts.releaseStage === "正式販売";
+    const prelaunch = salesProduct === "prelaunch" || promotionMethod === "preview" || !sellingConfirmed;
 
     setFacts((current) => ({
       ...current,
       productName: "AI Action Studio",
       editions: "PWA版のみ",
-      releaseStage: prelaunch ? "内部テスト" : current.releaseStage || "正式販売",
+      releaseStage: prelaunch ? current.releaseStage || "内部テスト" : current.releaseStage,
     }));
 
     if (promotionMethod === "article") {
@@ -504,7 +506,10 @@ export function AdminPromotionPage() {
     }
 
     const methodLabel = PROMOTION_METHOD_OPTIONS.find((item) => item.key === promotionMethod)?.label ?? "販促";
-    setMessage("3ステップ設定を反映しました: " + productLabel + " / " + channelLabel + " / " + methodLabel);
+    setMessage(
+      "3ステップ設定を反映しました: " + productLabel + " / " + channelLabel + " / " + methodLabel
+      + (prelaunch && salesProduct !== "prelaunch" ? "（販売中の確認がないため販売前表現で設定）" : ""),
+    );
   };
 
   const applyQuickPreset = (presetKey: QuickPresetKey) => {
