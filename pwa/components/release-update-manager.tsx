@@ -3,12 +3,12 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import {
   acceptAppRelease,
   loadMyAppReleaseState,
   type AppReleaseState,
 } from "@/lib/app-release";
-import { getSupabaseClient } from "@/lib/supabase";
 
 const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support"];
 
@@ -47,6 +47,8 @@ async function activateWaitingWorker(): Promise<void> {
 
 export function ReleaseUpdateManager() {
   const pathname = usePathname();
+  const { state: accessState, client } = useSharedAccessState();
+  const accessUserId = accessState.kind === "ready" ? accessState.profile.id : "";
   const [state, setState] = useState<AppReleaseState | null>(null);
   const [dismissedReleaseId, setDismissedReleaseId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,17 +57,10 @@ export function ReleaseUpdateManager() {
 
   useEffect(() => {
     mounted.current = true;
-    if (hiddenRoute(pathname)) {
+    if (hiddenRoute(pathname) || !accessUserId || !client) {
       queueMicrotask(() => {
         if (mounted.current) setState(null);
       });
-      return () => { mounted.current = false; };
-    }
-
-    let client: ReturnType<typeof getSupabaseClient>;
-    try {
-      client = getSupabaseClient();
-    } catch {
       return () => { mounted.current = false; };
     }
 
@@ -90,25 +85,20 @@ export function ReleaseUpdateManager() {
     else window.addEventListener("load", registerWorker, { once: true });
 
     void refresh();
-    const { data } = client.auth.onAuthStateChange(() => {
-      window.setTimeout(() => { if (mounted.current) void refresh(); }, 0);
-    });
 
     return () => {
       mounted.current = false;
-      data.subscription.unsubscribe();
       window.removeEventListener("load", registerWorker);
     };
-  }, [pathname]);
+  }, [accessUserId, client, pathname]);
 
   const applyUpdate = async () => {
     const release = state?.available_release;
-    if (!release || busy) return;
+    if (!release || busy || !client) return;
 
     setBusy(true);
     setMessage("");
     try {
-      const client = getSupabaseClient();
       const next = await acceptAppRelease(client, release.id);
       if (mounted.current) setState(next);
       await activateWaitingWorker();
