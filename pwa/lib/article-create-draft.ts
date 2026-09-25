@@ -91,7 +91,7 @@ export function createInitialArticleDraft(
   }
 
   const targetLength = Number(params.get("targetLength"));
-  if (TARGET_LENGTH_OPTIONS.some((option) => option.value === targetLength)) {
+  if (Number.isSafeInteger(targetLength) && targetLength >= 500 && targetLength <= 50000) {
     next.targetLength = targetLength;
   }
 
@@ -101,7 +101,7 @@ export function createInitialArticleDraft(
   }
 
   const inlineCount = Number(params.get("inlineCount"));
-  if (Number.isSafeInteger(inlineCount) && inlineCount >= 1 && inlineCount <= 5) {
+  if (Number.isSafeInteger(inlineCount) && inlineCount >= 1 && inlineCount <= 10) {
     next.inlineEnabled = true;
     next.inlineCount = inlineCount;
   } else if (params.get("inlineCount") === "0") {
@@ -202,7 +202,9 @@ export function parseStoredArticleDraft(value: unknown): ArticleCreationDraft | 
     || !AGE_GROUP_OPTIONS.some((option) => option === value.ageGroup)
     || !GENDER_OPTIONS.some((option) => option === value.gender)
     || typeof targetLength !== "number"
-    || !TARGET_LENGTH_OPTIONS.some((option) => option.value === targetLength)
+    || !Number.isSafeInteger(targetLength)
+    || targetLength < 500
+    || targetLength > 50000
     || (price !== null && (typeof price !== "number" || !Number.isInteger(price) || price <= 0))
     || typeof value.affiliateEnabled !== "boolean"
     || typeof value.magazineEnabled !== "boolean"
@@ -212,7 +214,7 @@ export function parseStoredArticleDraft(value: unknown): ArticleCreationDraft | 
     || typeof inlineCount !== "number"
     || !Number.isInteger(inlineCount)
     || inlineCount < 1
-    || inlineCount > 5
+    || inlineCount > 10
     || typeof value.body !== "string"
   ) {
     return null;
