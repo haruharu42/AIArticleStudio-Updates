@@ -3,6 +3,7 @@ import { buildPlatformAccountPromptContext } from "@/features/account-design";
 import { buildWorkspacePresetPromptContext, getRuntimeWorkspacePresetDefinition, getRuntimeWorkspacePresetPreference } from "@/features/presets/workspace-presets";
 import type { AiProvider } from "@/lib/user-personalization";
 import type {
+  NoteAiResearchSource,
   NoteAiSchedulePlan,
   NoteArticleOutputSnapshot,
   NoteScheduleImport,
@@ -10,6 +11,7 @@ import type {
   NoteScheduleItemType,
   NoteSchedulePerformanceBreakdown,
   NoteSchedulePerformanceSnapshot,
+  NoteScheduleSource,
   NoteScheduleStatus,
 } from "@/lib/note-schedule-types";
 import {
