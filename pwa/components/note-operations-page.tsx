@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { NoteMembershipAdvisor } from "@/components/note-operations/note-membership-advisor";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
@@ -66,7 +67,7 @@ import {
   type UserWritingProfile,
 } from "@/lib/user-personalization";
 
-type Tab = "start" | "profile" | "plan" | "calendar";
+type Tab = "start" | "profile" | "plan" | "calendar" | "membership";
 
 const NOTE_HOME_URL = "https://note.com/";
 const NOTE_PROFILE_OFFICIAL = "https://note.com/info/n/n27cb842c7737";
@@ -459,7 +460,7 @@ export function NoteOperationsPage() {
           <div>
             <p className="eyebrow">NOTE OPERATIONS</p>
             <h1>note運営アシスタント</h1>
-            <p>アカウント準備からプロフィール、無料・有料noteの運用予定、毎日のToDoまでAASで管理します。</p>
+            <p>アカウント準備からプロフィール、無料・有料noteの運用予定、メンバーシップ相談、毎日のToDoまでAASで管理します。</p>
           </div>
           <Link href="/">ホームへ</Link>
         </header>
@@ -474,6 +475,7 @@ export function NoteOperationsPage() {
           <button className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}>2. プロフィール</button>
           <button className={tab === "plan" ? "active" : ""} onClick={() => setTab("plan")}>3. 運用プラン</button>
           <button className={tab === "calendar" ? "active" : ""} onClick={() => setTab("calendar")}>4. カレンダー</button>
+          <button className={tab === "membership" ? "active" : ""} onClick={() => setTab("membership")}>5. メンバーシップ相談</button>
         </nav>
 
         {message && <div className="route-notice note-ops-message">{message}</div>}
@@ -759,6 +761,14 @@ export function NoteOperationsPage() {
               </div>
             </details>
           </section>
+        )}
+
+        {tab === "membership" && (
+          <NoteMembershipAdvisor
+            profile={profile}
+            selectedAi={selectedAi}
+            onMessage={setMessage}
+          />
         )}
 
         {tab === "calendar" && (
