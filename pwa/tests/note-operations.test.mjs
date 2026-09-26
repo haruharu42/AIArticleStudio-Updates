@@ -585,3 +585,51 @@ test("note operation file transfer helpers are isolated from scheduling and pers
   assert.match(transfer, /aas-note-operations-v1/);
   assert.doesNotMatch(transfer, /SupabaseClient|client\.from\(|\.rpc\(|React|useState|service[_-]?role|sb_secret_/i);
 });
+
+
+test("note membership advisor is dropdown-first and uses dedicated official knowledge", async () => {
+  const [page, advisor, knowledge, css] = await Promise.all([
+    readPwa("components/note-operations-page.tsx"),
+    readPwa("components/note-operations/note-membership-advisor.tsx"),
+    readPwa("lib/note-membership-advisor.ts"),
+    readPwa("app/phase38-note-operations.css"),
+  ]);
+
+  assert.match(page, /type Tab = "start" \| "profile" \| "plan" \| "calendar" \| "membership"/);
+  assert.match(page, /5\. メンバーシップ相談/);
+  assert.match(page, /NoteMembershipAdvisor/);
+
+  assert.match(advisor, /noteメンバーシップ相談・設計/);
+  assert.match(advisor, /何を相談しますか？/);
+  assert.match(advisor, /希望する料金帯/);
+  assert.match(advisor, /主な特典/);
+  assert.match(advisor, /補助特典/);
+  assert.match(advisor, /更新・提供頻度/);
+  assert.match(advisor, /運営に使える時間/);
+  assert.match(advisor, /1ヶ月無料/);
+  assert.match(advisor, /公開方法/);
+  assert.match(advisor, /プロンプトをコピーして/);
+  assert.match(advisor, /NOTE_MEMBERSHIP_KNOWLEDGE/);
+
+  assert.match(knowledge, /NOTE_MEMBERSHIP_CONSULTATIONS/);
+  assert.match(knowledge, /NOTE_MEMBERSHIP_PRICE_BANDS/);
+  assert.match(knowledge, /NOTE_MEMBERSHIP_BENEFITS/);
+  assert.match(knowledge, /buildNoteMembershipAdvisorPrompt/);
+  assert.match(knowledge, /compileKnowledgeContext/);
+  assert.match(knowledge, /task: "promotion"/);
+  assert.match(knowledge, /publicationTarget: "note"/);
+  assert.match(knowledge, /やりたいこと・得意なこと・読者ニーズ/);
+  assert.match(knowledge, /2026年8月3日以降の新規加入/);
+  assert.match(knowledge, /最大5プラン/);
+  assert.match(knowledge, /会員数、継続率、売上、加入率を保証しない/);
+  assert.match(knowledge, /最初の30日間の運営例/);
+  assert.match(knowledge, /note公式で公開前に確認する項目/);
+  assert.match(knowledge, /https:\/\/note\.com\/help\/pg\/membership/);
+  assert.match(knowledge, /https:\/\/note\.com\/lp\/membership/);
+
+  assert.match(css, /\.note-membership-advisor/);
+  assert.match(css, /\.note-membership-grid/);
+  assert.match(css, /repeat\(5, minmax\(132px, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*?\.note-membership-actions/);
+  assert.doesNotMatch(`${page}\n${advisor}\n${knowledge}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+});
