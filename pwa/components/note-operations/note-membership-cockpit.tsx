@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { NoteMembershipAdvisor } from "@/components/note-operations/note-membership-advisor";
+import { NoteMembershipMetricsPanel } from "@/components/note-operations/note-membership-metrics-panel";
 import {
   NOTE_MEMBERSHIP_LAUNCH_CHECKLIST,
   buildMembershipCalendarPrompt,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/note-membership-cockpit";
 import { launchAiApp } from "@/lib/ai-app-links";
 import type { NoteOperationProfile } from "@/features/note";
+import type { NoteMembershipMetricsEntry } from "@/lib/note-membership-metrics";
 import {
   AI_PROVIDER_LABELS,
   type AiProvider,
@@ -152,6 +154,7 @@ export function NoteMembershipCockpit({
     changeRange: "small",
   });
   const [articleTheme, setArticleTheme] = useState("");
+  const [metricsEntries, setMetricsEntries] = useState<NoteMembershipMetricsEntry[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -185,7 +188,10 @@ export function NoteMembershipCockpit({
   const pagePrompt = useMemo(() => buildMembershipPagePrompt(profile, pageInput), [profile, pageInput]);
   const promotionPrompt = useMemo(() => buildMembershipPromotionPrompt(profile, promotion), [profile, promotion]);
   const calendarPrompt = useMemo(() => buildMembershipCalendarPrompt(profile, calendar), [profile, calendar]);
-  const improvePrompt = useMemo(() => buildMembershipImprovePrompt(profile, improve), [profile, improve]);
+  const improvePrompt = useMemo(
+    () => buildMembershipImprovePrompt(profile, improve, metricsEntries),
+    [profile, improve, metricsEntries],
+  );
 
   const progress = Math.round((checked.length / NOTE_MEMBERSHIP_LAUNCH_CHECKLIST.length) * 100);
 
@@ -385,6 +391,12 @@ export function NoteMembershipCockpit({
               <option value="small">小さく改善</option><option value="medium">料金・特典も見直す</option><option value="large">プラン構造から見直す</option>
             </Field>
           </div>
+          <NoteMembershipMetricsPanel
+            userId={userId}
+            entries={metricsEntries}
+            onEntriesChange={setMetricsEntries}
+            onMessage={onMessage}
+          />
           <CopyActions prompt={improvePrompt} selectedAi={selectedAi} onMessage={onMessage} />
         </section>
       )}
