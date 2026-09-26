@@ -65,8 +65,9 @@ function CopyActions({
           type="button"
           className="primary-action"
           onClick={() => void (async () => {
-            await copy();
+            const copyTask = copy();
             launchAiApp(selectedAi);
+            await copyTask;
           })()}
         >
           プロンプトをコピーして{AI_PROVIDER_LABELS[selectedAi]}を開く
