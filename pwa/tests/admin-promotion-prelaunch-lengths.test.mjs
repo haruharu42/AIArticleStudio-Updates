@@ -81,9 +81,12 @@ test("promotion UI is dropdown-first and remains responsive on phones", async ()
     read("app/phase24-admin-promotion.css"),
   ]);
 
-  assert.match(page, /かんたん作成/);
-  assert.match(page, /① 作りたいもの/);
-  assert.match(page, /② おすすめプリセット/);
+  assert.match(page, /初めての方は、この順番だけでOK/);
+  assert.match(page, /最短4ステップ/);
+  assert.match(page, /スクリーンショットは自分で撮影/);
+  assert.match(page, /詳細調整（必要な場合だけ）/);
+  assert.match(page, /作成内容を変更/);
+  assert.match(page, /目的別プリセット/);
   assert.match(page, /QUICK_PRESETS/);
   assert.match(page, /applyQuickPreset/);
   assert.match(page, /現在の販売設定を確認/);
@@ -107,14 +110,16 @@ test("sales promotion center supports a safe three-step auto setup", async () =>
     read("app/phase24-admin-promotion.css"),
   ]);
 
-  assert.match(component, /3ステップかんたん販促/);
-  assert.match(component, /① 販売する商品・プラン/);
-  assert.match(component, /② 販売先・誘導先/);
-  assert.match(component, /③ 宣伝方法/);
+  assert.match(component, /3ステップで作成開始/);
+  assert.match(component, /① 紹介する商品・状態/);
+  assert.match(component, /② 掲載・案内する場所/);
+  assert.match(component, /③ 作りたい内容/);
   assert.match(component, /SALES_PRODUCT_OPTIONS/);
   assert.match(component, /SALES_CHANNEL_OPTIONS/);
   assert.match(component, /PROMOTION_METHOD_OPTIONS/);
-  assert.match(component, /販売設定そのものは変更しません/);
+  assert.match(component, /ここでは販売設定を変更しません/);
+  assert.match(component, /この内容で作成画面を準備/);
+  assert.match(component, /生成用プロンプトをコピー/);
   assert.match(component, /Stripe・7日券・月額を選んでも販売受付は有効化されません/);
   assert.match(page, /AdminPromotionThreeStep/);
   assert.match(page, /buildPromotionThreeStepPlan/);
@@ -133,35 +138,29 @@ test("sales promotion center supports a safe three-step auto setup", async () =>
 });
 
 
-test("promotion center builds a live Preview screenshot request for ChatGPT", async () => {
-  const [lib, page, screenshotTool, fields, css] = await Promise.all([
+test("promotion articles return manual screenshot placement instructions without image capture", async () => {
+  const [lib, page, screenshotTool, css] = await Promise.all([
     read("lib/admin-promotion.ts"),
     read("components/admin-promotion-page.tsx"),
     read("components/admin-promotion/admin-promotion-screenshot-tool.tsx"),
-    read("components/admin-promotion/admin-promotion-fields.tsx"),
     read("app/phase24-admin-promotion.css"),
   ]);
 
   assert.match(lib, /buildAdminScreenshotCapturePrompt/);
-  assert.match(lib, /ADMIN_SCREENSHOT_TARGETS/);
-  assert.match(lib, /PR #139/);
-  assert.match(lib, /固定SHAを信用せず/);
-  assert.match(lib, /最新Preview URL/);
-  assert.match(lib, /認証回避/);
-  assert.match(lib, /AAS ID、メールアドレス、請求情報/);
-  assert.match(lib, /推奨挿入位置/);
-  assert.match(screenshotTool, /記事用スクリーンショット準備/);
-  assert.match(screenshotTool, /① 紹介する機能/);
-  assert.match(screenshotTool, /② 使用先/);
-  assert.match(screenshotTool, /③ 端末/);
-  assert.match(screenshotTool, /④ スクショ枚数/);
-  assert.match(screenshotTool, /古い画像を使い回さない/);
-  assert.match(screenshotTool, /note="この依頼文をChatGPTへ渡すと/);
-  assert.match(page, /AdminPromotionScreenshotTool/);
-  assert.match(fields, /note\?: string/);
-  assert.match(css, /\.admin-promo-screenshot-tool/);
-  assert.match(css, /\.admin-promo-screenshot-grid/);
-  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.admin-promo-screenshot-grid/);
+  assert.match(lib, /スクリーンショット画像を取得・生成しない/);
+  assert.match(lib, /ブラウザ操作、ログイン、GitHub確認、Preview画面の取得は行わない/);
+  assert.match(lib, /\[スクショ①をここに挿入\]/);
+  assert.match(lib, /スクリーンショット撮影指示/);
+  assert.match(lib, /不要なら0枚でもよい/);
+  assert.match(lib, /ユーザー本人がスクリーンショットを撮影する前提/);
+  assert.doesNotMatch(page, /AdminPromotionScreenshotTool/);
+  assert.match(page, /スクリーンショットは自分で撮影/);
+  assert.match(screenshotTool, /記事用スクショ撮影指示/);
+  assert.match(screenshotTool, /撮影は自分で行う/);
+  assert.match(screenshotTool, /画像取得用ではありません/);
+  assert.match(css, /\.admin-promo-beginner-guide/);
+  assert.match(css, /\.admin-promo-beginner-steps/);
+  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.admin-promo-beginner-steps/);
 });
 
 
@@ -183,19 +182,18 @@ test("promotion page keeps static choices in a dedicated options module", async 
 });
 
 
-test("live screenshot feature owns its own state outside the promotion page", async () => {
+test("manual screenshot helper remains isolated and is not rendered in the beginner flow", async () => {
   const [page, screenshotTool] = await Promise.all([
     read("components/admin-promotion-page.tsx"),
     read("components/admin-promotion/admin-promotion-screenshot-tool.tsx"),
   ]);
 
+  assert.doesNotMatch(page, /AdminPromotionScreenshotTool/);
   assert.doesNotMatch(page, /screenshotTarget/);
   assert.doesNotMatch(page, /screenshotPublication/);
-  assert.doesNotMatch(page, /screenshotDevice/);
-  assert.doesNotMatch(page, /screenshotCount/);
   assert.match(screenshotTool, /useState<AdminScreenshotTarget>/);
   assert.match(screenshotTool, /buildAdminScreenshotCapturePrompt/);
-  assert.match(screenshotTool, /PromptOutput/);
+  assert.match(screenshotTool, /MANUAL SCREENSHOT GUIDE/);
 });
 
 
