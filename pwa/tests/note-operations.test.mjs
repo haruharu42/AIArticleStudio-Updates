@@ -588,11 +588,13 @@ test("note operation file transfer helpers are isolated from scheduling and pers
 
 
 test("note membership cockpit covers design launch AI handoff promotion operation and improvement with dedicated knowledge", async () => {
-  const [page, cockpit, advisor, cockpitLib, knowledge, draftLib, css] = await Promise.all([
+  const [page, cockpit, advisor, metricsPanel, cockpitLib, metricsLib, knowledge, draftLib, css] = await Promise.all([
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-operations/note-membership-cockpit.tsx"),
     readPwa("components/note-operations/note-membership-advisor.tsx"),
+    readPwa("components/note-operations/note-membership-metrics-panel.tsx"),
     readPwa("lib/note-membership-cockpit.ts"),
+    readPwa("lib/note-membership-metrics.ts"),
     readPwa("lib/note-membership-advisor.ts"),
     readPwa("lib/article-create-draft.ts"),
     readPwa("app/phase38-note-operations.css"),
@@ -619,6 +621,9 @@ test("note membership cockpit covers design launch AI handoff promotion operatio
   assert.match(cockpit, /buildMembershipPromotionPrompt/);
   assert.match(cockpit, /buildMembershipCalendarPrompt/);
   assert.match(cockpit, /buildMembershipImprovePrompt/);
+  assert.match(cockpit, /NoteMembershipMetricsPanel/);
+  assert.match(cockpit, /metricsEntries/);
+  assert.match(cockpit, /buildMembershipImprovePrompt\(profile, improve, metricsEntries\)/);
   assert.match(cockpit, /メンバー限定用記事を作る/);
   assert.match(cockpit, /AASの「有料記事の有料エリア」とは別扱い/);
 
@@ -640,6 +645,10 @@ test("note membership cockpit covers design launch AI handoff promotion operatio
   assert.match(cockpitLib, /buildMembershipPromotionPrompt/);
   assert.match(cockpitLib, /buildMembershipCalendarPrompt/);
   assert.match(cockpitLib, /buildMembershipImprovePrompt/);
+  assert.match(cockpitLib, /formatMembershipMetricsForPrompt\(metrics, 6\)/);
+  assert.match(cockpitLib, /【ユーザー入力実績】/);
+  assert.match(cockpitLib, /空欄・未入力の数値は推測、補完、逆算しない/);
+  assert.match(cockpitLib, /実績データがないため、数値に基づく原因断定はしない/);
   assert.match(cockpitLib, /membershipArticleHref/);
   assert.match(cockpitLib, /from: "note-membership"/);
   assert.match(cockpitLib, /articleType: "free"/);
@@ -647,14 +656,38 @@ test("note membership cockpit covers design launch AI handoff promotion operatio
   assert.match(draftLib, /source === "note-membership"/);
   assert.match(draftLib, /メンバー限定公開の設定はnote側で行います/);
 
+  assert.match(metricsLib, /aas\.note\.membership\.metrics\.v1/);
+  assert.match(metricsLib, /NOTE_MEMBERSHIP_METRICS_MAX_ENTRIES = 36/);
+  assert.match(metricsLib, /parseMembershipMetricsEntry/);
+  assert.match(metricsLib, /parseMembershipMetricsEntries/);
+  assert.match(metricsLib, /upsertMembershipMetricsEntry/);
+  assert.match(metricsLib, /formatMembershipMetricsForPrompt/);
+  for (const field of ["month", "memberCount", "newMembers", "cancellations", "revenueYen", "postCount", "operationHours", "memo"]) {
+    assert.match(metricsLib, new RegExp(field));
+  }
+  assert.doesNotMatch(metricsLib, /email|password|cookie|access[_-]?token|refresh[_-]?token/i);
+
+  assert.match(metricsPanel, /実績入力・改善履歴/);
+  assert.match(metricsPanel, /membershipMetricsStorageKey\(userId\)/);
+  assert.match(metricsPanel, /window\.localStorage\.getItem/);
+  assert.match(metricsPanel, /window\.localStorage\.setItem/);
+  assert.match(metricsPanel, /queueMicrotask/);
+  assert.match(metricsPanel, /noteのログイン情報・Cookie・認証情報・会員個人情報は保存しません/);
+  assert.match(metricsPanel, /入力した数値だけを改善相談へ渡します/);
+  assert.match(metricsPanel, /parseMembershipMetricsEntry\(draft\)/);
+
   assert.match(css, /\.note-membership-cockpit/);
   assert.match(css, /\.note-membership-cockpit-tabs/);
   assert.match(css, /repeat\(7, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.note-membership-checklist/);
+  assert.match(css, /\.note-membership-metrics-grid/);
+  assert.match(css, /\.note-membership-metrics-history/);
+  assert.match(css, /@media \(max-width: 820px\)[\s\S]*?\.note-membership-metrics-grid/);
   assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.note-membership-launch-links/);
+  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.note-membership-metrics-grid/);
 
   assert.doesNotMatch(
-    `${page}\n${cockpit}\n${advisor}\n${cockpitLib}\n${knowledge}`,
+    `${page}\n${cockpit}\n${advisor}\n${metricsPanel}\n${cockpitLib}\n${metricsLib}\n${knowledge}`,
     /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i,
   );
 });
