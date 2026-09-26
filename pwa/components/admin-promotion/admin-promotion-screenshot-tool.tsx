@@ -36,11 +36,11 @@ export function AdminPromotionScreenshotTool({
     <section className="admin-promo-screenshot-tool" aria-label="記事用スクリーンショット準備">
       <div className="admin-promo-screenshot-head">
         <div>
-          <p className="eyebrow">LIVE SCREENSHOT ASSIST</p>
-          <h2>記事用スクリーンショット準備</h2>
-          <p>最新GitHub HEADとPreviewを毎回確認し、記事の内容に合う実画面を撮影・配置するためのChatGPT依頼文を作ります。</p>
+          <p className="eyebrow">MANUAL SCREENSHOT GUIDE</p>
+          <h2>記事用スクショ撮影指示</h2>
+          <p>画像そのものは取得しません。記事に必要な画面、撮る場所、本文へ入れる位置だけを整理する依頼文を作ります。</p>
         </div>
-        <strong>古い画像を使い回さない</strong>
+        <strong>撮影は自分で行う</strong>
       </div>
       <div className="admin-promo-screenshot-grid">
         <label className="admin-promo-field">
@@ -72,12 +72,12 @@ export function AdminPromotionScreenshotTool({
       </div>
       <div className="admin-promo-screenshot-note">
         <strong>安全設計</strong>
-        <span>ChatGPTには最新Preview取得・実装照合・記事中の挿入位置選定まで依頼します。認証回避や秘密情報の取得はさせず、AAS ID・メール・請求情報など公開不要の情報を写さないよう指定しています。</span>
+        <span>ChatGPTにはスクリーンショットの取得やブラウザ操作を依頼せず、挿入位置と撮影対象だけを整理させます。AAS ID・メール・請求情報など公開不要の情報が写らないよう、撮影前に確認してください。</span>
       </div>
       <PromptOutput
         prompt={prompt}
         onCopy={() => onCopy(prompt)}
-        note="この依頼文をChatGPTへ渡すと、最新Previewを確認して必要な画面・撮影位置・記事への挿入位置・キャプションまで整理できます。"
+        note="この依頼文は画像取得用ではありません。必要な画面・撮影位置・記事への挿入位置・キャプションだけを整理します。"
       />
     </section>
   );
