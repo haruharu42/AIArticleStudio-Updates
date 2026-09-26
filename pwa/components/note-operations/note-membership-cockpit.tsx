@@ -153,18 +153,23 @@ export function NoteMembershipCockpit({
   const [articleTheme, setArticleTheme] = useState("");
 
   useEffect(() => {
+    let active = true;
     try {
       const raw = window.localStorage.getItem(membershipLaunchStorageKey(userId));
-      if (!raw) return;
+      if (!raw) return () => { active = false; };
       const value: unknown = JSON.parse(raw);
-      if (!Array.isArray(value)) return;
+      if (!Array.isArray(value)) return () => { active = false; };
       const allowed = new Set(NOTE_MEMBERSHIP_LAUNCH_CHECKLIST.map((item) => item.key));
-      setChecked(value.filter((item): item is MembershipLaunchChecklistKey =>
+      const restored = value.filter((item): item is MembershipLaunchChecklistKey =>
         typeof item === "string" && allowed.has(item as MembershipLaunchChecklistKey),
-      ));
+      );
+      queueMicrotask(() => {
+        if (active) setChecked(restored);
+      });
     } catch {
       // Device storage is optional.
     }
+    return () => { active = false; };
   }, [userId]);
 
   useEffect(() => {
