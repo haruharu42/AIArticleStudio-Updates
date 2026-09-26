@@ -171,9 +171,10 @@ export function threeStepPromotionMessage(
   selection: PromotionThreeStepSelection,
   plan: PromotionThreeStepPlan,
 ): string {
-  return "3ステップ設定を反映しました: "
+  return "作成画面を準備しました: "
     + plan.productLabel + " / " + plan.channelLabel + " / " + plan.methodLabel
+    + "。下の内容を確認し、生成用プロンプトをコピーしてください。"
     + (plan.saleUnconfirmed && selection.salesProduct !== "prelaunch"
-      ? "（販売中の確認がないため販売前表現で設定）"
+      ? " 販売中の確認がないため、安全のため販売前表現で設定しています。"
       : "");
 }
