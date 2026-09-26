@@ -223,3 +223,17 @@ test("external sales CTA is rendered only from a guarded HTTPS URL", async () =>
   assert.match(plans, /rel="noopener noreferrer"/);
   assert.match(sales, /safeExternalSalesUrl/);
 });
+
+test("public commerce shortcuts stay below signed-out auth and access status surfaces", async () => {
+  const [home, css] = await Promise.all([
+    read("app/page.tsx"),
+    read("app/phase27-commerce.css"),
+  ]);
+
+  assert.match(home, /commerce-public-shortcuts/);
+  assert.match(
+    css,
+    /\.auth-page \+ \.commerce-public-shortcuts,\s*\.status-page \+ \.commerce-public-shortcuts\s*\{[\s\S]*?margin-top:\s*16px;/,
+  );
+});
+
