@@ -26,6 +26,13 @@ export type PublicationTarget = "note" | "tips" | "brain" | "blog";
 export type ArticleType = "free" | "paid";
 export type GenerationMode = "prompt_export" | "manual";
 export type SaveStatus = "draft" | "writing" | "ready";
+export type ArticleCreationSource = "note-membership" | null;
+export type NoteMembershipArticleKind = "member" | "announcement" | "qa" | null;
+
+export type ArticleCreationContext = {
+  source: ArticleCreationSource;
+  noteMembershipArticleKind: NoteMembershipArticleKind;
+};
 
 export type ArticleCreationDraft = {
   generationMode: GenerationMode;
@@ -280,6 +287,7 @@ export async function createArticleFromWizard(
   input: ArticleCreationDraft,
   magazinePlan?: MagazinePlanDraft,
   presetId?: string | null,
+  creationContext?: ArticleCreationContext,
 ): Promise<CreatedArticle> {
   const draft = validateCreationDraft(input);
   if (draft.magazineEnabled) {
@@ -353,6 +361,11 @@ export async function createArticleFromWizard(
     generation_method: draft.generationMode,
     local_status: draft.saveStatus === "ready" ? "完成" : draft.saveStatus,
     local_updated_at: null,
+    creation_source: creationContext?.source ?? null,
+    note_membership_article_kind:
+      creationContext?.source === "note-membership"
+        ? creationContext.noteMembershipArticleKind
+        : null,
   };
 
   if (draft.magazineEnabled && magazinePlan?.name) {
