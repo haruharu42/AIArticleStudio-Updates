@@ -17,8 +17,14 @@ export function membershipMetricsStorageKey(userId: string): string {
 }
 
 export function currentMembershipMetricsMonth(date = new Date()): string {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  return date.getFullYear() + "-" + month;
+  const parts = new Intl.DateTimeFormat("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value ?? String(date.getUTCFullYear());
+  const month = parts.find((part) => part.type === "month")?.value ?? String(date.getUTCMonth() + 1).padStart(2, "0");
+  return year + "-" + month;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -28,7 +34,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function validMonth(value: unknown): value is string {
   if (typeof value !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return false;
   const year = Number(value.slice(0, 4));
-  return year >= 2000 && year <= 2200;
+  if (year < 2000 || year > 2200) return false;
+  if (value > currentMembershipMetricsMonth()) return false;
+  return true;
 }
 
 function optionalInteger(value: unknown, max: number): number | null | undefined {
