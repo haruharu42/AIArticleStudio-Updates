@@ -330,7 +330,7 @@ export function AdminPromotionPage() {
   return (
     <main className="admin-promo-page">
       <header className="admin-promo-head">
-        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売・プロモーションセンター</h1><p>初めてでも上から順に進めれば、AASの紹介記事・SNS・公開予告・販促計画まで作れる管理者専用センターです。迷った場合は最初の3ステップだけ使ってください。</p></div>
+        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売・プロモーションセンター</h1><p>初めてでも上から順に進めれば、AI Action Studio（AAS）の紹介記事・SNS・公開予告・販促計画まで作れる管理者専用センターです。迷った場合は最初の3ステップだけ使ってください。</p></div>
         <div><Link href="/admin/sales">販売設定</Link><Link href="/admin">管理ダッシュボード</Link><Link href="/">ホーム</Link></div>
       </header>
 
