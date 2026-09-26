@@ -1,4 +1,8 @@
-import type { ArticleCreationDraft } from "@/lib/phase11-create";
+import type {
+  ArticleCreationContext,
+  ArticleCreationDraft,
+  NoteMembershipArticleKind,
+} from "@/lib/phase11-create";
 import {
   AGE_GROUP_OPTIONS,
   GENDER_OPTIONS,
@@ -113,6 +117,30 @@ export function createInitialArticleDraft(
 export function initialDraftFromLocation(): ArticleCreationDraft {
   if (typeof window === "undefined") return createInitialArticleDraft();
   return createInitialArticleDraft(new URLSearchParams(window.location.search));
+}
+
+export function articleCreationContextFromParams(
+  params?: URLSearchParams | null,
+): ArticleCreationContext {
+  if (!params || params.get("from") !== "note-membership") {
+    return { source: null, noteMembershipArticleKind: null };
+  }
+  const rawKind = params.get("membershipArticleKind");
+  const kind: NoteMembershipArticleKind =
+    rawKind === "member" || rawKind === "announcement" || rawKind === "qa"
+      ? rawKind
+      : null;
+  return {
+    source: "note-membership",
+    noteMembershipArticleKind: kind,
+  };
+}
+
+export function initialArticleCreationContextFromLocation(): ArticleCreationContext {
+  if (typeof window === "undefined") {
+    return { source: null, noteMembershipArticleKind: null };
+  }
+  return articleCreationContextFromParams(new URLSearchParams(window.location.search));
 }
 
 export function initialMessageFromLocation(): string {
