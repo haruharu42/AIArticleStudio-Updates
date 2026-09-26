@@ -6,6 +6,10 @@ import {
   noteProfileSelectionLabels,
   type NoteOperationProfile,
 } from "@/lib/note-operation-profile";
+import {
+  formatMembershipMetricsForPrompt,
+  type NoteMembershipMetricsEntry,
+} from "@/lib/note-membership-metrics";
 
 export type NoteMembershipCockpitTab =
   | "consult"
@@ -318,6 +322,7 @@ export function buildMembershipCalendarPrompt(
 export function buildMembershipImprovePrompt(
   profile: NoteOperationProfile,
   input: MembershipImproveInput,
+  metrics: readonly NoteMembershipMetricsEntry[] = [],
 ): string {
   const problemLabels = {
     join: "加入につながりにくい",
@@ -337,6 +342,7 @@ export function buildMembershipImprovePrompt(
     medium: "料金・特典・導線も見直してよい",
     large: "プラン構造から大きく見直してよい",
   } as const;
+  const metricsLines = formatMembershipMetricsForPrompt(metrics, 6);
 
   return [
     "あなたはnoteメンバーシップの改善相談担当です。",
@@ -353,6 +359,13 @@ export function buildMembershipImprovePrompt(
     "困っていること: " + problemLabels[input.problem],
     "実績データの量: " + evidenceLabels[input.evidence],
     "変更してよい範囲: " + rangeLabels[input.changeRange],
+    "",
+    "【ユーザー入力実績】",
+    ...(metricsLines.length ? metricsLines : ["- 実績入力なし"]),
+    metricsLines.length
+      ? "- 上記はユーザーが入力した実績だけです。空欄・未入力の数値は推測、補完、逆算しないでください。"
+      : "- 実績データがないため、数値に基づく原因断定はしないでください。",
+    "- メモに書かれた内容もユーザー入力として扱い、未記載の事実を追加しないでください。",
     "",
     knowledgeBlock(profile, "noteメンバーシップ改善相談"),
     "",
