@@ -608,6 +608,10 @@ test("note membership cockpit covers design launch promotion operation and impro
     assert.match(cockpit, new RegExp(label));
   }
   assert.match(cockpit, /NoteMembershipAdvisor/);
+  assert.match(cockpit, /const copyTask = copy\(\);[\s\S]*?launchAiApp\(selectedAi\);[\s\S]*?await copyTask/);
+  assert.doesNotMatch(cockpit, /await copy\(\);\s*launchAiApp\(selectedAi\)/);
+  assert.match(advisor, /const copyTask = copyPrompt\(\);[\s\S]*?launchAiApp\(selectedAi\);[\s\S]*?await copyTask/);
+  assert.doesNotMatch(advisor, /await copyPrompt\(\);\s*launchAiApp\(selectedAi\)/);
   assert.match(cockpit, /membershipLaunchStorageKey/);
   assert.match(cockpit, /window\.localStorage\.setItem/);
   assert.match(cockpit, /buildMembershipPricingPrompt/);
