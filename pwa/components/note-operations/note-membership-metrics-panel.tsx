@@ -146,6 +146,7 @@ export function NoteMembershipMetricsPanel({
           <div>
             <input
               type="month"
+              max={currentMembershipMetricsMonth()}
               value={draft.month}
               onChange={(event) => setDraft((current) => ({ ...current, month: event.target.value }))}
             />
