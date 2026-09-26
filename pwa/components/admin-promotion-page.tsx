@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
-import { AdminPromotionThreeStep } from "@/components/admin-promotion/admin-promotion-three-step";
+import { AdminPromotionChannelBuilder } from "@/components/admin-promotion/admin-promotion-channel-builder";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { WORKSPACE_PRESETS } from "@/features/presets/workspace-presets";
@@ -51,11 +51,6 @@ import {
   type AdminSocialLengthPlan,
   type AdminSocialPlatform,
 } from "@/lib/admin-promotion";
-import {
-  buildPromotionThreeStepPlan,
-  threeStepPromotionMessage,
-  type PromotionThreeStepSelection,
-} from "@/lib/admin-promotion-three-step";
 
 export function AdminPromotionPage() {
   const { state } = useSharedAccessState();
@@ -177,29 +172,6 @@ export function AdminPromotionPage() {
     },
     [facts, preview, socialLengths, workspacePreference],
   );
-  const applyThreeStepPromotion = (selection: PromotionThreeStepSelection) => {
-    setQuickPreset("");
-    const plan = buildPromotionThreeStepPlan(selection, facts.releaseStage);
-
-    setMode(plan.mode);
-    setFacts((current) => ({ ...current, ...plan.factsPatch }));
-
-    if (plan.articlePatch) {
-      setArticle((current) => ({ ...current, ...plan.articlePatch }));
-    }
-    if (plan.socialPatch) {
-      setSocial((current) => ({ ...current, ...plan.socialPatch }));
-    }
-    if (plan.campaignPatch) {
-      setCampaign((current) => ({ ...current, ...plan.campaignPatch }));
-    }
-    if (plan.previewPatch) {
-      setPreview((current) => ({ ...current, ...plan.previewPatch }));
-    }
-
-    setMessage(threeStepPromotionMessage(selection, plan));
-  };
-
   const applyQuickPreset = (presetKey: QuickPresetKey) => {
     setQuickPreset(presetKey);
     switch (presetKey) {
@@ -330,38 +302,24 @@ export function AdminPromotionPage() {
   return (
     <main className="admin-promo-page">
       <header className="admin-promo-head">
-        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売・プロモーションセンター</h1><p>初めてでも上から順に進めれば、AI Action Studio（AAS）の紹介記事・SNS・公開予告・販促計画まで作れる管理者専用センターです。迷った場合は最初の3ステップだけ使ってください。</p></div>
+        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売・プロモーションセンター</h1><p>投稿先を1つ選ぶだけで、その媒体専用のプロモーションプロンプトへ切り替わります。note・Brain・Tips・X・Threads・Instagramに対応しています。</p></div>
         <div><Link href="/admin/sales">販売設定</Link><Link href="/admin">管理ダッシュボード</Link><Link href="/">ホーム</Link></div>
       </header>
 
       <ActiveWorkspacePresetBadge feature="sns" />
       <div className="admin-promo-safety"><strong>確認済み情報を基準に作成</strong><span>販売前は「テスト中・準備中・公開予定」として扱い、未入力の価格・実績・レビュー・公開日をAIに作らせません。製品情報は現在この端末だけに保存されます。</span></div>
 
-      <section className="admin-promo-beginner-guide" aria-label="はじめての使い方">
-        <div className="admin-promo-beginner-head">
-          <div>
-            <p className="eyebrow">BEGINNER GUIDE</p>
-            <h2>初めての方は、この順番だけでOK</h2>
-            <p>設定項目を全部理解する必要はありません。まず3つ選び、必要な事実だけ確認して、生成用プロンプトをAIへ渡します。</p>
-          </div>
-          <strong>最短4ステップ</strong>
-        </div>
-        <ol className="admin-promo-beginner-steps">
-          <li><strong>1. 3つ選ぶ</strong><span>商品・掲載先・作りたい内容を選び、「作成画面を準備」を押します。</span></li>
-          <li><strong>2. 事実だけ確認</strong><span>価格・販売URL・テスト結果など、実際に確認できている情報だけ直します。未確定は空欄でOKです。</span></li>
-          <li><strong>3. プロンプトをコピー</strong><span>表示された生成用プロンプトをChatGPT等へ貼り付け、完成原稿を作ります。</span></li>
-          <li><strong>4. 原稿を最終確認</strong><span>「公開前チェック」と「スクショ撮影指示」を確認してから投稿します。</span></li>
-        </ol>
-        <div className="admin-promo-beginner-note">
-          <strong>スクリーンショットは自分で撮影</strong>
-          <span>AIには画像を取得させません。記事本文に「ここへ挿入」と、撮影するAAS画面・見せる範囲・推奨端末を明記させるので、その指示どおりに必要な画像だけ撮影してください。</span>
-        </div>
-      </section>
-
       {message && <div className="route-notice">{message}</div>}
 
-      <AdminPromotionThreeStep onApply={applyThreeStepPromotion} />
+      <AdminPromotionChannelBuilder
+        facts={facts}
+        featureOptions={featureOptions}
+        onCopy={(prompt) => void copyPrompt(prompt)}
+      />
 
+      <details className="admin-promo-advanced">
+        <summary>詳細設定・キャンペーン・製品情報</summary>
+        <div className="admin-promo-advanced-body">
       <section className="admin-promo-quick-start" aria-label="詳細調整">
         <div className="admin-promo-quick-head">
           <div><p className="eyebrow">OPTIONAL ADJUSTMENT</p><h2>詳細調整（必要な場合だけ）</h2><p>上の3ステップで自動設定したあと、作成内容や目的を変えたい場合だけ使います。迷ったら触らなくて大丈夫です。</p></div>
@@ -485,6 +443,8 @@ export function AdminPromotionPage() {
           <PromptOutput prompt={campaignPrompt} onCopy={() => void copyPrompt(campaignPrompt)} />
         </section>
       )}
+        </div>
+      </details>
     </main>
   );
 }
