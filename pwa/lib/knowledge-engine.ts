@@ -1,3 +1,5 @@
+import { PROMOTION_COMMON_KNOWLEDGE, PROMOTION_PUBLICATION_KNOWLEDGE } from "@/lib/promotion-knowledge";
+
 export type KnowledgeKind = "age" | "genre" | "subgenre" | "publication" | "task" | "combination";
 
 export const KNOWLEDGE_TASKS = [
@@ -268,6 +270,13 @@ function unique(lines: string[]): string[] {
 
 function allRules(input: KnowledgeCompileInput): KnowledgeRule[] {
   const rules: KnowledgeRule[] = [commonRule, taskRules[input.task]];
+  if (input.task === "promotion") {
+    rules.push(PROMOTION_COMMON_KNOWLEDGE);
+    const promotionPublication = PROMOTION_PUBLICATION_KNOWLEDGE.find(
+      (rule) => matches(rule, input.publicationTarget ?? ""),
+    );
+    if (promotionPublication) rules.push(promotionPublication);
+  }
   const age = ageRules.find((rule) => matches(rule, input.ageGroup ?? ""));
   if (age) rules.push(age);
   const genre = genreRules.find((rule) => matches(rule, input.genre ?? ""));
