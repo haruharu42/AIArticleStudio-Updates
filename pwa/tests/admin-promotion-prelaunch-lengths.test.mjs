@@ -124,9 +124,10 @@ test("legacy three-step promotion setup remains available but is no longer the p
 
 
 test("promotion articles return manual screenshot placement instructions without image capture", async () => {
-  const [lib, page, screenshotTool, css] = await Promise.all([
+  const [lib, page, channelBuilder, screenshotTool, css] = await Promise.all([
     read("lib/admin-promotion.ts"),
     read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-channel-builder.tsx"),
     read("components/admin-promotion/admin-promotion-screenshot-tool.tsx"),
     read("app/phase24-admin-promotion.css"),
   ]);
@@ -139,13 +140,14 @@ test("promotion articles return manual screenshot placement instructions without
   assert.match(lib, /不要なら0枚でもよい/);
   assert.match(lib, /ユーザー本人がスクリーンショットを撮影する前提/);
   assert.doesNotMatch(page, /AdminPromotionScreenshotTool/);
-  assert.match(page, /スクリーンショットは自分で撮影/);
+  assert.match(page, /AdminPromotionChannelBuilder/);
+  assert.match(channelBuilder, /スクリーンショットは自分で撮影/);
   assert.match(screenshotTool, /記事用スクショ撮影指示/);
   assert.match(screenshotTool, /撮影は自分で行う/);
   assert.match(screenshotTool, /画像取得用ではありません/);
-  assert.match(css, /\.admin-promo-beginner-guide/);
-  assert.match(css, /\.admin-promo-beginner-steps/);
-  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.admin-promo-beginner-steps/);
+  assert.match(css, /\.admin-promo-channel-builder/);
+  assert.match(css, /\.admin-promo-channel-overview/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.admin-promo-channel-overview/);
 });
 
 
