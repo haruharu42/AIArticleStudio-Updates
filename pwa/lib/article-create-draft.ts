@@ -124,6 +124,9 @@ export function initialMessageFromLocation(): string {
   if (source === "series-plan") {
     return "シリーズ計画からタイトル・無料/有料設定を引き継ぎました。アカウント設定も必要に応じて反映します。";
   }
+  if (source === "note-membership") {
+    return "noteメンバーシップ運営からテーマを引き継ぎました。メンバー限定公開の設定はnote側で行います。AASの有料記事エリアとは別扱いです。";
+  }
   return "";
 }
 
