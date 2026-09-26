@@ -722,3 +722,120 @@
     flex-direction: column;
   }
 }
+
+
+/* 2026-09-26 beginner-first flow for the sales/promotion center. */
+.admin-promo-beginner-guide {
+  width: min(100%, 1120px);
+  margin: 14px auto 0;
+  display: grid;
+  gap: 14px;
+  border: 1px solid #b9d8f6;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff, #eef7ff);
+  padding: 16px;
+  box-shadow: 0 12px 34px rgb(28 82 143 / 8%);
+}
+
+.admin-promo-beginner-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-promo-beginner-head > div {
+  min-width: 0;
+  flex: 1 1 420px;
+}
+
+.admin-promo-beginner-head h2 {
+  margin: 2px 0 0;
+  color: #153d6b;
+  font-size: 20px;
+}
+
+.admin-promo-beginner-head p:last-child {
+  margin: 5px 0 0;
+  color: #687f9b;
+  font-size: 9px;
+  line-height: 1.7;
+}
+
+.admin-promo-beginner-head > strong {
+  border: 1px solid #b9d8f6;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #176fd9;
+  padding: 7px 10px;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.admin-promo-beginner-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-promo-beginner-steps li {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  border: 1px solid #d7e5f4;
+  border-radius: 12px;
+  background: #fff;
+  padding: 11px;
+}
+
+.admin-promo-beginner-steps strong {
+  color: #176fd9;
+  font-size: 9px;
+}
+
+.admin-promo-beginner-steps span {
+  color: #617895;
+  font-size: 8px;
+  line-height: 1.7;
+}
+
+.admin-promo-beginner-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border-top: 1px solid #dce9f7;
+  padding-top: 11px;
+}
+
+.admin-promo-beginner-note strong {
+  flex: 0 0 auto;
+  color: #285f9e;
+  font-size: 9px;
+}
+
+.admin-promo-beginner-note span {
+  color: #657d99;
+  font-size: 8px;
+  line-height: 1.7;
+}
+
+@media (max-width: 860px) {
+  .admin-promo-beginner-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-promo-beginner-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-promo-beginner-note {
+    flex-direction: column;
+  }
+}
