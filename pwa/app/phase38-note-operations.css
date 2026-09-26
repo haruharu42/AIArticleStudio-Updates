@@ -1469,3 +1469,322 @@
     width: 100%;
   }
 }
+
+
+/* Note membership operations cockpit. */
+.note-membership-cockpit {
+  display: grid;
+  gap: 14px;
+}
+
+.note-membership-cockpit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid #c5ddf2;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #ffffff, #f0f7ff);
+  padding: 16px;
+}
+
+.note-membership-cockpit-head > div {
+  min-width: 0;
+  flex: 1 1 440px;
+}
+
+.note-membership-cockpit-head span {
+  color: #2476ce;
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: .12em;
+}
+
+.note-membership-cockpit-head h2 {
+  margin: 4px 0 5px;
+  color: #1f456d;
+  font-size: 20px;
+}
+
+.note-membership-cockpit-head p {
+  margin: 0;
+  color: #6d829a;
+  font-size: 9px;
+  line-height: 1.75;
+}
+
+.note-membership-cockpit-head > b {
+  border: 1px solid #bad5ed;
+  border-radius: 999px;
+  background: #fff;
+  color: #196bc1;
+  padding: 7px 10px;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.note-membership-cockpit-tabs {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+  overflow-x: auto;
+}
+
+.note-membership-cockpit-tabs button {
+  min-width: 112px;
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "num label"
+    "num short";
+  gap: 2px 7px;
+  align-items: center;
+  border: 1px solid #d4e2ef;
+  border-radius: 12px;
+  background: #fff;
+  color: #52708f;
+  padding: 9px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.note-membership-cockpit-tabs button.active {
+  border-color: #5aa0e7;
+  background: #ebf5ff;
+  color: #1e64ab;
+  box-shadow: 0 7px 20px rgb(27 108 194 / 10%);
+}
+
+.note-membership-cockpit-tabs button > span {
+  grid-area: num;
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #edf4fb;
+  color: #4e789f;
+  font-size: 8px;
+  font-weight: 950;
+}
+
+.note-membership-cockpit-tabs button.active > span {
+  background: #1976f3;
+  color: #fff;
+}
+
+.note-membership-cockpit-tabs strong {
+  grid-area: label;
+  font-size: 8.5px;
+}
+
+.note-membership-cockpit-tabs small {
+  grid-area: short;
+  color: #8294a8;
+  font-size: 7px;
+}
+
+.note-membership-workspace {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #d5e4f1;
+  border-radius: 16px;
+  background: #fbfdff;
+  padding: 15px;
+}
+
+.note-membership-workspace-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.note-membership-workspace-head > div {
+  min-width: 0;
+  flex: 1 1 280px;
+}
+
+.note-membership-workspace-head span {
+  color: #3977b4;
+  font-size: 7.5px;
+  font-weight: 950;
+  letter-spacing: .1em;
+}
+
+.note-membership-workspace-head h3 {
+  margin: 3px 0 0;
+  color: #264f77;
+  font-size: 15px;
+}
+
+.note-membership-workspace-head p {
+  flex: 1 1 360px;
+  margin: 0;
+  color: #76899e;
+  font-size: 8px;
+  line-height: 1.7;
+}
+
+.note-membership-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.note-membership-progress > div {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5eef7;
+}
+
+.note-membership-progress > div > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2b7fe3, #64b3ed);
+  transition: width .2s ease;
+}
+
+.note-membership-progress strong {
+  color: #37658f;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.note-membership-checklist {
+  display: grid;
+  gap: 8px;
+}
+
+.note-membership-checklist label {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  border: 1px solid #dbe7f2;
+  border-radius: 11px;
+  background: #fff;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.note-membership-checklist label > span {
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #edf5fd;
+  color: #4775a2;
+  font-size: 8px;
+  font-weight: 950;
+}
+
+.note-membership-checklist strong {
+  color: #405f7c;
+  font-size: 9px;
+}
+
+.note-membership-launch-links,
+.note-membership-article-links > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.note-membership-launch-links a,
+.note-membership-launch-links button,
+.note-membership-article-links a,
+.note-membership-article-links button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #c8dbea;
+  border-radius: 9px;
+  background: #fff;
+  color: #2f6798;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 900;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.note-membership-article-links {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid #dce8f2;
+  padding-top: 12px;
+}
+
+.note-membership-article-links > label {
+  display: grid;
+  gap: 6px;
+}
+
+.note-membership-article-links > label > span {
+  color: #4c6d8e;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.note-membership-article-links input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #cedfeb;
+  border-radius: 10px;
+  background: #fff;
+  color: #284760;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 9px;
+}
+
+.note-membership-article-links > small {
+  color: #7c8ea2;
+  font-size: 7.5px;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .note-membership-cockpit-tabs {
+    grid-template-columns: repeat(7, minmax(112px, 1fr));
+    padding-bottom: 2px;
+  }
+}
+
+@media (max-width: 560px) {
+  .note-membership-cockpit-head,
+  .note-membership-workspace {
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .note-membership-progress {
+    grid-template-columns: 1fr;
+  }
+
+  .note-membership-progress strong {
+    white-space: normal;
+  }
+
+  .note-membership-launch-links,
+  .note-membership-article-links > div {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .note-membership-launch-links a,
+  .note-membership-launch-links button,
+  .note-membership-article-links a,
+  .note-membership-article-links button {
+    width: 100%;
+  }
+}
