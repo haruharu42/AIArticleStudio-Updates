@@ -264,7 +264,7 @@ function socialLengthPlanBlock(plan: AdminSocialLengthPlan): string {
     })
     .join("\n");
 }
-function factsBlock(facts: AdminProductFacts): string {
+export function factsBlock(facts: AdminProductFacts): string {
   return [
     `製品名: ${facts.productName || "未設定"}`,
     `提供形態: ${facts.editions || "未設定"}`,
@@ -282,7 +282,7 @@ function factsBlock(facts: AdminProductFacts): string {
   ].join("\n");
 }
 
-const FACT_SAFETY = `【絶対ルール】
+export const FACT_SAFETY = `【絶対ルール】
 - 下記の「確認済み製品情報」に書かれていない機能、価格、実績、利用者数、売上、レビュー、キャンペーンを事実として作らない。
 - テスト結果・使った感想・改善効果・数値は、確認済みテスト内容に書かれた事実だけを使う。運営者の体験を推測で作らない。
 - 公開日・販売開始日・価格が未確定なら、具体的な日付・価格・購入可能という表現を作らない。
