@@ -390,6 +390,7 @@ export function membershipArticleHref(theme: string, mode: "member" | "announcem
     articleType: "free",
     theme: prefix + "：" + (theme.trim() || "テーマをAIに提案してもらう"),
     from: "note-membership",
+    membershipArticleKind: mode,
   });
   return "/create?" + params.toString();
 }
