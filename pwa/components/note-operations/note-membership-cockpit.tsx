@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { NoteMembershipAdvisor } from "@/components/note-operations/note-membership-advisor";
 import {
@@ -91,7 +91,7 @@ function Field({
   label: string;
   value: string | number;
   onChange(value: string): void;
-  children: React.ReactNode;
+  children: ReactNode;
   note?: string;
 }) {
   return (
