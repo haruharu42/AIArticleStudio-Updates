@@ -677,6 +677,9 @@ test("note membership cockpit covers grounded improvement metrics and article so
   assert.match(metricsLib, /parseMembershipMetricsEntries/);
   assert.match(metricsLib, /upsertMembershipMetricsEntry/);
   assert.match(metricsLib, /formatMembershipMetricsForPrompt/);
+  assert.match(metricsLib, /timeZone:\s*"Asia\\/Tokyo"/);
+  assert.match(metricsLib, /value > currentMembershipMetricsMonth\(\)/);
+  assert.match(metricsPanel, /max=\{currentMembershipMetricsMonth\(\)\}/);
   for (const field of ["month", "memberCount", "newMembers", "cancellations", "revenueYen", "postCount", "operationHours", "memo"]) {
     assert.match(metricsLib, new RegExp(field));
   }
