@@ -302,7 +302,7 @@ export function AdminPromotionPage() {
   return (
     <main className="admin-promo-page">
       <header className="admin-promo-head">
-        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売・プロモーションセンター</h1><p>投稿先を1つ選ぶだけで、その媒体専用のプロモーションプロンプトへ切り替わります。note・Brain・Tips・X・Threads・Instagramに対応しています。</p></div>
+        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売・プロモーションセンター</h1><p>AI Action Studio（AAS）の投稿先を1つ選ぶだけで、その媒体専用のプロモーションプロンプトへ切り替わります。note・Brain・Tips・X・Threads・Instagramに対応しています。</p></div>
         <div><Link href="/admin/sales">販売設定</Link><Link href="/admin">管理ダッシュボード</Link><Link href="/">ホーム</Link></div>
       </header>
 
