@@ -74,67 +74,52 @@ test("campaign and preview prompts inherit the same SNS length plan", async () =
   assert.match(page, /<SocialLengthSettings presetIds=\{socialPresetIds\} plan=\{socialLengths\}/);
 });
 
-test("promotion UI is dropdown-first and remains responsive on phones", async () => {
-  const [page, lib, css] = await Promise.all([
+test("promotion UI is channel-first and keeps advanced settings collapsed", async () => {
+  const [page, channelBuilder, lib, css] = await Promise.all([
     read("components/admin-promotion-page.tsx"),
+    read("components/admin-promotion/admin-promotion-channel-builder.tsx"),
     read("lib/admin-promotion.ts"),
     read("app/phase24-admin-promotion.css"),
   ]);
 
-  assert.match(page, /初めての方は、この順番だけでOK/);
-  assert.match(page, /最短4ステップ/);
-  assert.match(page, /スクリーンショットは自分で撮影/);
-  assert.match(page, /詳細調整（必要な場合だけ）/);
-  assert.match(page, /作成内容を変更/);
-  assert.match(page, /目的別プリセット/);
-  assert.match(page, /QUICK_PRESETS/);
-  assert.match(page, /applyQuickPreset/);
-  assert.match(page, /現在の販売設定を確認/);
+  assert.match(page, /AdminPromotionChannelBuilder/);
+  assert.match(page, /詳細設定・キャンペーン・製品情報/);
+  assert.doesNotMatch(page, /AdminPromotionThreeStep/);
+  assert.match(channelBuilder, /まず、投稿する場所を選ぶ/);
+  assert.match(channelBuilder, /どこでプロモーションしますか？/);
+  assert.match(channelBuilder, /note/);
+  assert.match(channelBuilder, /brain/);
+  assert.match(channelBuilder, /tips/);
+  assert.match(channelBuilder, /threads/);
+  assert.match(channelBuilder, /instagram/);
+  assert.match(channelBuilder, /スクショ目安/);
   assert.match(page, /AI Action Studio（AAS）/);
   assert.doesNotMatch(lib, /AI Article Studio/);
   assert.match(lib, /productName: "AI Action Studio"/);
   assert.match(lib, /12種類の副業専用ウィザード/);
-  assert.match(css, /\.admin-promo-quick-start/);
-  assert.match(css, /\.admin-promo-quick-grid/);
-  assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.admin-promo-quick-grid/);
-  assert.match(css, /\.admin-promo-length-grid/);
+  assert.match(css, /\.admin-promo-channel-builder/);
+  assert.match(css, /\.admin-promo-channel-overview/);
+  assert.match(css, /\.admin-promo-advanced/);
+  assert.match(css, /@media \(max-width: 760px\)[\s\S]*?\.admin-promo-channel-overview/);
 });
 
 
-test("sales promotion center supports a safe three-step auto setup", async () => {
-  const [page, component, planner, options, css] = await Promise.all([
+test("legacy three-step promotion setup remains available but is no longer the primary UI", async () => {
+  const [page, component, planner, options] = await Promise.all([
     read("components/admin-promotion-page.tsx"),
     read("components/admin-promotion/admin-promotion-three-step.tsx"),
     read("lib/admin-promotion-three-step.ts"),
     read("components/admin-promotion/admin-promotion-options.ts"),
-    read("app/phase24-admin-promotion.css"),
   ]);
 
+  assert.doesNotMatch(page, /AdminPromotionThreeStep/);
   assert.match(component, /3ステップで作成開始/);
-  assert.match(component, /① 紹介する商品・状態/);
-  assert.match(component, /② 掲載・案内する場所/);
-  assert.match(component, /③ 作りたい内容/);
-  assert.match(component, /SALES_PRODUCT_OPTIONS/);
-  assert.match(component, /SALES_CHANNEL_OPTIONS/);
-  assert.match(component, /PROMOTION_METHOD_OPTIONS/);
-  assert.match(component, /ここでは販売設定を変更しません/);
-  assert.match(component, /この内容で作成画面を準備/);
-  assert.match(component, /生成用プロンプトをコピー/);
-  assert.match(component, /Stripe・7日券・月額を選んでも販売受付は有効化されません/);
-  assert.match(page, /AdminPromotionThreeStep/);
-  assert.match(page, /buildPromotionThreeStepPlan/);
-  assert.match(page, /type AdminArticlePromotionInput/);
-  assert.match(page, /useState<AdminArticlePromotionInput>/);
+  assert.match(planner, /buildPromotionThreeStepPlan/);
   assert.match(planner, /sellingConfirmed/);
   assert.match(planner, /saleUnconfirmed = !sellingConfirmed/);
-  assert.match(planner, /plan\.saleUnconfirmed && selection\.salesProduct !== "prelaunch"/);
-  assert.match(planner, /販売中の確認がないため販売前表現で設定/);
   assert.match(options, /AAS内Stripe（設定時のみ）/);
   assert.match(options, /PWA 7日利用パス（設定時のみ）/);
   assert.match(options, /PWA 月額プラン（設定時のみ）/);
-  assert.match(css, /\.admin-promo-three-step/);
-  assert.match(css, /\.admin-promo-three-step-grid/);
-  assert.match(css, /@media \(max-width: 880px\)[\s\S]*?\.admin-promo-three-step-grid/);
 });
 
 
@@ -197,20 +182,24 @@ test("manual screenshot helper remains isolated and is not rendered in the begin
 });
 
 
-test("three-step promotion planning is isolated from page rendering", async () => {
-  const [page, planner, component] = await Promise.all([
+test("channel-specific promotion prompts are isolated by publication", async () => {
+  const [page, builder, channelLib] = await Promise.all([
     read("components/admin-promotion-page.tsx"),
-    read("lib/admin-promotion-three-step.ts"),
-    read("components/admin-promotion/admin-promotion-three-step.tsx"),
+    read("components/admin-promotion/admin-promotion-channel-builder.tsx"),
+    read("lib/admin-promotion-channel.ts"),
   ]);
 
-  assert.doesNotMatch(page, /const \[salesProduct, setSalesProduct\]/);
-  assert.doesNotMatch(page, /const \[salesChannel, setSalesChannel\]/);
-  assert.doesNotMatch(page, /const \[promotionMethod, setPromotionMethod\]/);
-  assert.match(planner, /buildPromotionThreeStepPlan/);
-  assert.match(planner, /promotionMethod === "article"/);
-  assert.match(planner, /promotionMethod === "social"/);
-  assert.match(planner, /promotionMethod === "campaign"/);
-  assert.match(component, /useState<SalesProductKey>/);
-  assert.match(component, /onApply\(\{ salesProduct, salesChannel, promotionMethod \}\)/);
+  assert.match(page, /AdminPromotionChannelBuilder/);
+  assert.match(builder, /ADMIN_PROMOTION_CHANNELS/);
+  assert.match(builder, /buildAdminChannelPromotionPrompt/);
+  assert.match(channelLib, /buildNotePromotionPrompt/);
+  assert.match(channelLib, /buildBrainPromotionPrompt/);
+  assert.match(channelLib, /buildTipsPromotionPrompt/);
+  assert.match(channelLib, /buildXPromotionPrompt/);
+  assert.match(channelLib, /buildThreadsPromotionPrompt/);
+  assert.match(channelLib, /buildInstagramPromotionPrompt/);
+  assert.match(channelLib, /\[スクショ①をここに挿入\]/);
+  assert.match(channelLib, /添付画像1/);
+  assert.match(channelLib, /カルーセル何枚目か/);
+  assert.match(channelLib, /スクリーンショット画像そのものは取得・生成しない/);
 });
