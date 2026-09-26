@@ -220,7 +220,7 @@ export function AdminPromotionChannelBuilder({
 
       <div className="admin-promo-channel-step">
         <div><span>③</span><strong>プロンプトをコピーしてAIへ渡す</strong></div>
-        <p>記事系は本文中の最適位置へスクショ挿入マーカーを入れ、SNS系は必要な添付画像・撮影画面・順番まで指示します。</p>
+        <p>スクリーンショットは自分で撮影します。記事系は本文中の最適位置へ挿入マーカーを入れ、SNS系は必要な添付画像・撮影画面・順番まで指示します。</p>
       </div>
 
       <PromptOutput
