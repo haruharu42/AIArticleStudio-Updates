@@ -839,3 +839,245 @@
     flex-direction: column;
   }
 }
+
+
+/* 2026-09-26 channel-first sales/promotion center. */
+.admin-promo-channel-builder {
+  width: min(100%, 1120px);
+  margin: 14px auto 0;
+  display: grid;
+  gap: 16px;
+  border: 1px solid #a9cbed;
+  border-radius: 20px;
+  background: linear-gradient(145deg, #ffffff, #f1f8ff);
+  padding: clamp(16px, 3vw, 22px);
+  box-shadow: 0 14px 36px rgb(30 88 151 / 9%);
+}
+
+.admin-promo-channel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-promo-channel-head > div {
+  min-width: 0;
+  flex: 1 1 420px;
+}
+
+.admin-promo-channel-head h2 {
+  margin: 2px 0 0;
+  color: #153d6b;
+  font-size: clamp(20px, 3vw, 25px);
+}
+
+.admin-promo-channel-head p:last-child {
+  margin: 6px 0 0;
+  color: #687f9b;
+  font-size: 10px;
+  line-height: 1.7;
+}
+
+.admin-promo-channel-head > strong {
+  border: 1px solid #b9d5f2;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #176fd9;
+  padding: 8px 11px;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.admin-promo-channel-select {
+  display: grid;
+  gap: 7px;
+}
+
+.admin-promo-channel-select > span {
+  color: #244d7a;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-promo-channel-select select {
+  width: 100%;
+  min-height: 56px;
+  border: 2px solid #78afea;
+  border-radius: 13px;
+  background: #fff;
+  color: #173f6f;
+  padding: 11px 13px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-promo-channel-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.admin-promo-channel-overview > div {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  border: 1px solid #d6e5f4;
+  border-radius: 12px;
+  background: #fff;
+  padding: 11px;
+}
+
+.admin-promo-channel-overview span {
+  color: #6a83a1;
+  font-size: 7.5px;
+  font-weight: 900;
+  letter-spacing: .05em;
+}
+
+.admin-promo-channel-overview strong {
+  color: #176fd9;
+  font-size: 15px;
+}
+
+.admin-promo-channel-overview p {
+  margin: 0;
+  color: #58718f;
+  font-size: 8.5px;
+  line-height: 1.7;
+}
+
+.admin-promo-channel-form {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #dce9f6;
+  padding-top: 14px;
+}
+
+.admin-promo-channel-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.admin-promo-channel-step > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.admin-promo-channel-step > div > span {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #1976f3;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.admin-promo-channel-step strong {
+  color: #214d7d;
+  font-size: 11px;
+}
+
+.admin-promo-channel-step p {
+  flex: 1 1 300px;
+  margin: 0;
+  color: #70859f;
+  font-size: 8px;
+  line-height: 1.65;
+}
+
+.admin-promo-channel-length {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 9px;
+  border: 1px solid #d8e6f4;
+  border-radius: 12px;
+  background: #f8fbff;
+  padding: 11px;
+}
+
+.admin-promo-channel-length > small {
+  grid-column: 1 / -1;
+  color: #6c819b;
+  font-size: 8px;
+  line-height: 1.6;
+}
+
+.admin-promo-advanced {
+  width: min(100%, 1120px);
+  margin: 16px auto 0;
+  border: 1px solid #d7e3f0;
+  border-radius: 15px;
+  background: #f9fbfe;
+  overflow: hidden;
+}
+
+.admin-promo-advanced > summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #4a6687;
+  padding: 12px 14px;
+  font-size: 9px;
+  font-weight: 900;
+  list-style-position: inside;
+}
+
+.admin-promo-advanced[open] > summary {
+  border-bottom: 1px solid #dce6f1;
+  background: #f1f6fc;
+}
+
+.admin-promo-advanced-body {
+  display: grid;
+  gap: 16px;
+  padding: 14px;
+}
+
+.admin-promo-advanced-body .admin-promo-quick-start,
+.admin-promo-advanced-body .admin-promo-panel {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+@media (max-width: 760px) {
+  .admin-promo-channel-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-promo-channel-length {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-promo-channel-length > small {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 560px) {
+  .admin-promo-channel-builder {
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .admin-promo-channel-select select {
+    min-height: 54px;
+    font-size: 10px;
+  }
+
+  .admin-promo-channel-head > strong {
+    white-space: normal;
+  }
+}
