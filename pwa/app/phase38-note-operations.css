@@ -1788,3 +1788,242 @@
     width: 100%;
   }
 }
+
+
+/* note membership actual-metrics history. Kept local to the user's device/account. */
+.note-membership-metrics {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #cfe0ef;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #ffffff, #f5faff);
+  padding: 13px;
+}
+
+.note-membership-metrics-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.note-membership-metrics-head > div {
+  min-width: 0;
+  flex: 1 1 360px;
+}
+
+.note-membership-metrics-head span {
+  color: #3878b7;
+  font-size: 7px;
+  font-weight: 950;
+  letter-spacing: .12em;
+}
+
+.note-membership-metrics-head h4 {
+  margin: 3px 0 4px;
+  color: #274f75;
+  font-size: 13px;
+}
+
+.note-membership-metrics-head p {
+  margin: 0;
+  color: #73879c;
+  font-size: 8px;
+  line-height: 1.65;
+}
+
+.note-membership-metrics-head > b {
+  border: 1px solid #c8dcee;
+  border-radius: 999px;
+  background: #fff;
+  color: #3971a6;
+  padding: 6px 9px;
+  font-size: 7px;
+  white-space: nowrap;
+}
+
+.note-membership-metrics-privacy {
+  border: 1px solid #d7e5f1;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #6f8398;
+  padding: 9px 10px;
+  font-size: 7.5px;
+  line-height: 1.6;
+}
+
+.note-membership-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.note-membership-metric-field {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.note-membership-metric-field > span,
+.note-membership-metrics-memo > span {
+  color: #4b6b89;
+  font-size: 7.5px;
+  font-weight: 900;
+}
+
+.note-membership-metric-field > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.note-membership-metric-field input {
+  min-width: 0;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #ccddea;
+  border-radius: 9px;
+  background: #fff;
+  color: #28465f;
+  padding: 8px 9px;
+  font: inherit;
+  font-size: 9px;
+}
+
+.note-membership-metric-field small {
+  flex: 0 0 auto;
+  color: #8496a8;
+  font-size: 7px;
+}
+
+.note-membership-metrics-memo {
+  display: grid;
+  gap: 6px;
+}
+
+.note-membership-metrics-memo textarea {
+  width: 100%;
+  border: 1px solid #ccddea;
+  border-radius: 10px;
+  background: #fff;
+  color: #28465f;
+  padding: 9px 10px;
+  font: inherit;
+  font-size: 9px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.note-membership-metrics-save {
+  width: fit-content;
+  min-height: 42px;
+}
+
+.note-membership-metrics-history {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid #dce7f1;
+  padding-top: 11px;
+}
+
+.note-membership-metrics-history > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 5px 12px;
+}
+
+.note-membership-metrics-history > div:first-child strong {
+  color: #365f83;
+  font-size: 8.5px;
+}
+
+.note-membership-metrics-history > div:first-child small,
+.note-membership-metrics-empty {
+  margin: 0;
+  color: #8192a4;
+  font-size: 7.5px;
+}
+
+.note-membership-metrics-history article {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) auto;
+  gap: 7px 10px;
+  align-items: start;
+  border: 1px solid #dbe7f1;
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px;
+}
+
+.note-membership-metrics-history article > strong {
+  color: #315f89;
+  font-size: 8px;
+}
+
+.note-membership-metrics-history article > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.note-membership-metrics-history article span {
+  border-radius: 999px;
+  background: #edf5fc;
+  color: #55738f;
+  padding: 4px 6px;
+  font-size: 7px;
+}
+
+.note-membership-metrics-history article p {
+  grid-column: 2 / -1;
+  margin: 0;
+  color: #71869a;
+  font-size: 7.5px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.note-membership-metrics-history article button {
+  border: 0;
+  background: transparent;
+  color: #8c6d72;
+  padding: 2px;
+  font: inherit;
+  font-size: 7px;
+  cursor: pointer;
+}
+
+@media (max-width: 820px) {
+  .note-membership-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .note-membership-metrics {
+    border-radius: 12px;
+    padding: 11px;
+  }
+
+  .note-membership-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .note-membership-metrics-save {
+    width: 100%;
+  }
+
+  .note-membership-metrics-history article {
+    grid-template-columns: 1fr;
+  }
+
+  .note-membership-metrics-history article p {
+    grid-column: auto;
+  }
+
+  .note-membership-metrics-history article button {
+    justify-self: start;
+  }
+}
