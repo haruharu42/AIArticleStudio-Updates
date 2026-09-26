@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useSharedAccessState } from "@/components/access-state-provider";
-import { AdminPromotionScreenshotTool } from "@/components/admin-promotion/admin-promotion-screenshot-tool";
 import { AdminPromotionThreeStep } from "@/components/admin-promotion/admin-promotion-three-step";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
@@ -331,26 +330,46 @@ export function AdminPromotionPage() {
   return (
     <main className="admin-promo-page">
       <header className="admin-promo-head">
-        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売・プロモーションセンター</h1><p>AI Action Studio（AAS）の販売準備・公開予告・記事・SNS・キャンペーンを、選ぶだけで組み立てられる管理者専用センターです。</p></div>
+        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売・プロモーションセンター</h1><p>初めてでも上から順に進めれば、AASの紹介記事・SNS・公開予告・販促計画まで作れる管理者専用センターです。迷った場合は最初の3ステップだけ使ってください。</p></div>
         <div><Link href="/admin/sales">販売設定</Link><Link href="/admin">管理ダッシュボード</Link><Link href="/">ホーム</Link></div>
       </header>
 
       <ActiveWorkspacePresetBadge feature="sns" />
       <div className="admin-promo-safety"><strong>確認済み情報を基準に作成</strong><span>販売前は「テスト中・準備中・公開予定」として扱い、未入力の価格・実績・レビュー・公開日をAIに作らせません。製品情報は現在この端末だけに保存されます。</span></div>
+
+      <section className="admin-promo-beginner-guide" aria-label="はじめての使い方">
+        <div className="admin-promo-beginner-head">
+          <div>
+            <p className="eyebrow">BEGINNER GUIDE</p>
+            <h2>初めての方は、この順番だけでOK</h2>
+            <p>設定項目を全部理解する必要はありません。まず3つ選び、必要な事実だけ確認して、生成用プロンプトをAIへ渡します。</p>
+          </div>
+          <strong>最短4ステップ</strong>
+        </div>
+        <ol className="admin-promo-beginner-steps">
+          <li><strong>1. 3つ選ぶ</strong><span>商品・掲載先・作りたい内容を選び、「作成画面を準備」を押します。</span></li>
+          <li><strong>2. 事実だけ確認</strong><span>価格・販売URL・テスト結果など、実際に確認できている情報だけ直します。未確定は空欄でOKです。</span></li>
+          <li><strong>3. プロンプトをコピー</strong><span>表示された生成用プロンプトをChatGPT等へ貼り付け、完成原稿を作ります。</span></li>
+          <li><strong>4. 原稿を最終確認</strong><span>「公開前チェック」と「スクショ撮影指示」を確認してから投稿します。</span></li>
+        </ol>
+        <div className="admin-promo-beginner-note">
+          <strong>スクリーンショットは自分で撮影</strong>
+          <span>AIには画像を取得させません。記事本文に「ここへ挿入」と、撮影するAAS画面・見せる範囲・推奨端末を明記させるので、その指示どおりに必要な画像だけ撮影してください。</span>
+        </div>
+      </section>
+
       {message && <div className="route-notice">{message}</div>}
 
       <AdminPromotionThreeStep onApply={applyThreeStepPromotion} />
 
-      <AdminPromotionScreenshotTool onCopy={(prompt) => void copyPrompt(prompt)} />
-
-      <section className="admin-promo-quick-start" aria-label="かんたん作成">
+      <section className="admin-promo-quick-start" aria-label="詳細調整">
         <div className="admin-promo-quick-head">
-          <div><p className="eyebrow">QUICK START</p><h2>かんたん作成</h2><p>まず2つ選ぶだけ。細かい設定は必要な場合だけ下で変更できます。</p></div>
+          <div><p className="eyebrow">OPTIONAL ADJUSTMENT</p><h2>詳細調整（必要な場合だけ）</h2><p>上の3ステップで自動設定したあと、作成内容や目的を変えたい場合だけ使います。迷ったら触らなくて大丈夫です。</p></div>
           <Link href="/admin/sales">現在の販売設定を確認 →</Link>
         </div>
         <div className="admin-promo-quick-grid">
           <label className="admin-promo-field">
-            <span>① 作りたいもの</span>
+            <span>作成内容を変更</span>
             <select
               value={mode}
               onChange={(event) => {
@@ -362,13 +381,13 @@ export function AdminPromotionPage() {
             </select>
           </label>
           <label className="admin-promo-field">
-            <span>② おすすめプリセット</span>
+            <span>目的別プリセット</span>
             <select value={quickPreset} onChange={(event) => applyQuickPreset(event.target.value as QuickPresetKey)}>
               {QUICK_PRESETS.map((item) => <option key={item.key || "custom"} value={item.key}>{item.label} — {item.description}</option>)}
             </select>
           </label>
         </div>
-        <p className="admin-promo-quick-note">自由入力が必要なのは、確認済みのテスト内容・URL・価格など事実情報だけです。その他は基本的にプルダウンから選べます。</p>
+        <p className="admin-promo-quick-note">初心者は上の3ステップだけで開始できます。ここは再調整用です。自由入力が必要なのは、確認済みのテスト内容・URL・価格など事実情報だけです。</p>
       </section>
 
       {mode === "product" && (
