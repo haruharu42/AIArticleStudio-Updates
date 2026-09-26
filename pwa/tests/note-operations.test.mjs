@@ -587,49 +587,70 @@ test("note operation file transfer helpers are isolated from scheduling and pers
 });
 
 
-test("note membership advisor is dropdown-first and uses dedicated official knowledge", async () => {
-  const [page, advisor, knowledge, css] = await Promise.all([
+test("note membership cockpit covers design launch promotion operation and improvement with dedicated knowledge", async () => {
+  const [page, cockpit, advisor, cockpitLib, knowledge, draftLib, css] = await Promise.all([
     readPwa("components/note-operations-page.tsx"),
+    readPwa("components/note-operations/note-membership-cockpit.tsx"),
     readPwa("components/note-operations/note-membership-advisor.tsx"),
+    readPwa("lib/note-membership-cockpit.ts"),
     readPwa("lib/note-membership-advisor.ts"),
+    readPwa("lib/article-create-draft.ts"),
     readPwa("app/phase38-note-operations.css"),
   ]);
 
   assert.match(page, /type Tab = "start" \| "profile" \| "plan" \| "calendar" \| "membership"/);
   assert.match(page, /5\. メンバーシップ相談/);
-  assert.match(page, /NoteMembershipAdvisor/);
+  assert.match(page, /NoteMembershipCockpit/);
+  assert.match(page, /onOpenCalendar=\{\(\) => setTab\("calendar"\)\}/);
+
+  assert.match(cockpit, /noteメンバーシップ運営コックピット/);
+  for (const label of ["相談・設計","料金・特典診断","開始準備","紹介ページ","告知・集客","月間運営","改善相談"]) {
+    assert.match(cockpit, new RegExp(label));
+  }
+  assert.match(cockpit, /NoteMembershipAdvisor/);
+  assert.match(cockpit, /membershipLaunchStorageKey/);
+  assert.match(cockpit, /window\.localStorage\.setItem/);
+  assert.match(cockpit, /buildMembershipPricingPrompt/);
+  assert.match(cockpit, /buildMembershipPagePrompt/);
+  assert.match(cockpit, /buildMembershipPromotionPrompt/);
+  assert.match(cockpit, /buildMembershipCalendarPrompt/);
+  assert.match(cockpit, /buildMembershipImprovePrompt/);
+  assert.match(cockpit, /メンバー限定用記事を作る/);
+  assert.match(cockpit, /AASの「有料記事の有料エリア」とは別扱い/);
 
   assert.match(advisor, /noteメンバーシップ相談・設計/);
   assert.match(advisor, /何を相談しますか？/);
   assert.match(advisor, /希望する料金帯/);
   assert.match(advisor, /主な特典/);
-  assert.match(advisor, /補助特典/);
-  assert.match(advisor, /更新・提供頻度/);
-  assert.match(advisor, /運営に使える時間/);
   assert.match(advisor, /1ヶ月無料/);
-  assert.match(advisor, /公開方法/);
-  assert.match(advisor, /プロンプトをコピーして/);
-  assert.match(advisor, /NOTE_MEMBERSHIP_KNOWLEDGE/);
 
-  assert.match(knowledge, /NOTE_MEMBERSHIP_CONSULTATIONS/);
-  assert.match(knowledge, /NOTE_MEMBERSHIP_PRICE_BANDS/);
-  assert.match(knowledge, /NOTE_MEMBERSHIP_BENEFITS/);
-  assert.match(knowledge, /buildNoteMembershipAdvisorPrompt/);
-  assert.match(knowledge, /compileKnowledgeContext/);
-  assert.match(knowledge, /task: "promotion"/);
-  assert.match(knowledge, /publicationTarget: "note"/);
+  assert.match(knowledge, /NOTE_MEMBERSHIP_KNOWLEDGE/);
   assert.match(knowledge, /やりたいこと・得意なこと・読者ニーズ/);
   assert.match(knowledge, /2026年8月3日以降の新規加入/);
   assert.match(knowledge, /最大5プラン/);
   assert.match(knowledge, /会員数、継続率、売上、加入率を保証しない/);
-  assert.match(knowledge, /最初の30日間の運営例/);
-  assert.match(knowledge, /note公式で公開前に確認する項目/);
-  assert.match(knowledge, /https:\/\/note\.com\/help\/pg\/membership/);
-  assert.match(knowledge, /https:\/\/note\.com\/lp\/membership/);
 
-  assert.match(css, /\.note-membership-advisor/);
-  assert.match(css, /\.note-membership-grid/);
-  assert.match(css, /repeat\(5, minmax\(132px, 1fr\)\)/);
-  assert.match(css, /@media \(max-width: 480px\)[\s\S]*?\.note-membership-actions/);
-  assert.doesNotMatch(`${page}\n${advisor}\n${knowledge}`, /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i);
+  assert.match(cockpitLib, /NOTE_MEMBERSHIP_LAUNCH_CHECKLIST/);
+  assert.match(cockpitLib, /紹介ページを作成/);
+  assert.match(cockpitLib, /buildMembershipPricingPrompt/);
+  assert.match(cockpitLib, /buildMembershipPromotionPrompt/);
+  assert.match(cockpitLib, /buildMembershipCalendarPrompt/);
+  assert.match(cockpitLib, /buildMembershipImprovePrompt/);
+  assert.match(cockpitLib, /membershipArticleHref/);
+  assert.match(cockpitLib, /from: "note-membership"/);
+  assert.match(cockpitLib, /articleType: "free"/);
+
+  assert.match(draftLib, /source === "note-membership"/);
+  assert.match(draftLib, /メンバー限定公開の設定はnote側で行います/);
+
+  assert.match(css, /\.note-membership-cockpit/);
+  assert.match(css, /\.note-membership-cockpit-tabs/);
+  assert.match(css, /repeat\(7, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.note-membership-checklist/);
+  assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.note-membership-launch-links/);
+
+  assert.doesNotMatch(
+    `${page}\n${cockpit}\n${advisor}\n${cockpitLib}\n${knowledge}`,
+    /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i,
+  );
 });
