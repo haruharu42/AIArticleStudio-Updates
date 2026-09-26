@@ -587,7 +587,7 @@ test("note operation file transfer helpers are isolated from scheduling and pers
 });
 
 
-test("note membership cockpit covers design launch AI handoff promotion operation and improvement with dedicated knowledge", async () => {
+test("note membership cockpit covers design launch AI handoff promotion operation and grounded improvement metrics", async () => {
   const [page, cockpit, advisor, metricsPanel, cockpitLib, metricsLib, knowledge, draftLib, css] = await Promise.all([
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-operations/note-membership-cockpit.tsx"),
