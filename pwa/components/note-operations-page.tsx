@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
-import { NoteMembershipAdvisor } from "@/components/note-operations/note-membership-advisor";
+import { NoteMembershipCockpit } from "@/components/note-operations/note-membership-cockpit";
 import { useSharedAccessState } from "@/components/access-state-provider";
 import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
 import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
@@ -764,10 +764,12 @@ export function NoteOperationsPage() {
         )}
 
         {tab === "membership" && (
-          <NoteMembershipAdvisor
+          <NoteMembershipCockpit
+            userId={gate.userId}
             profile={profile}
             selectedAi={selectedAi}
             onMessage={setMessage}
+            onOpenCalendar={() => setTab("calendar")}
           />
         )}
 
