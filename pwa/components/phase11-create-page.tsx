@@ -19,6 +19,7 @@ import {
 import { DEFAULT_MAGAZINE_PLAN, type MagazinePlanDraft } from "@/lib/magazine-planner";
 import {
   ARTICLE_CREATE_STEPS,
+  initialArticleCreationContextFromLocation,
   initialDraftFromLocation,
   initialMessageFromLocation,
   validateArticleCreateStep,
@@ -68,6 +69,7 @@ export function Phase11CreatePage() {
   const [gate, setGate] = useState<Gate>({ kind: "loading" });
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<ArticleCreationDraft>(() => initialDraftFromLocation());
+  const [creationContext] = useState(() => initialArticleCreationContextFromLocation());
   const [tagsText, setTagsText] = useState("");
   const [titleCandidatesText, setTitleCandidatesText] = useState("");
   const [magazinePlan, setMagazinePlan] = useState<MagazinePlanDraft>(() => ({ ...DEFAULT_MAGAZINE_PLAN, articleTitles: [] }));
@@ -372,6 +374,7 @@ export function Phase11CreatePage() {
         articleDraft,
         draft.magazineEnabled ? magazinePlan : undefined,
         activePresetId,
+        creationContext,
       );
       clearArticleWizardProgress(gate.ownerId);
       setCreatedId(result.id);
