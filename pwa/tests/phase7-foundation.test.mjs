@@ -38,7 +38,8 @@ test("keeps article library boundaries and routes article and image creation to 
   assert.match(app, /navigate\("library"\)/);
   assert.match(app, /記事を作る<small>利用可能<\/small>/);
   assert.equal((app.match(/navigateRoute\("\/create"\)/g) || []).length, 2);
-  assert.match(app, /const navigateRoute = \(path: string\) => \{ if \(mayLeave\(\)\) window\.location\.assign\(path\); \};/);
+  assert.match(app, /useRouter/);
+  assert.match(app, /const navigateRoute = \(path: string\) => \{ if \(mayLeave\(\)\) router\.push\(path\); \};/);
   assert.match(app, /記事の画像<small>画像計画<\/small>/);
   assert.equal((app.match(/navigateRoute\("\/images"\)/g) || []).length, 2);
   assert.match(library, /listArticleLibraryPage/);

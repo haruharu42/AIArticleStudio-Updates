@@ -1,95 +1,73 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 
-import { OPENAI_LINKS } from "@/lib/openai-links";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
-import { getSupabaseClient } from "@/lib/supabase";
-
-type State = AccessState | { kind: "loading" } | { kind: "unavailable" };
-
-type ToolCard = { href: string; category: string; title: string; description: string };
-
-const memberTools: ToolCard[] = [
-  { href: "/create", category: "記事制作", title: "記事を作る", description: "7ステップで条件設定から本文・画像計画・保存まで進められます。" },
-  { href: "/note-operations", category: "note運営", title: "note運営アシスタント", description: "アカウント準備、プロフィール、無料・有料noteの投稿計画、カレンダーと今日のToDoを管理します。" },
-  { href: "/images", category: "画像", title: "画像生成計画", description: "記事条件からアイキャッチ・挿絵用の統一画像プロンプトを作成します。" },
-  { href: "/sns", category: "SNS", title: "SNS投稿を作る", description: "記事ライブラリからX・Instagram・Threads向け投稿プロンプトを作成します。" },
-  { href: "/sidejob", category: "副業支援", title: "AI副業プランナー", description: "作業時間・得意分野・予算から、副業候補と30日プラン用プロンプトを作成します。" },
-  { href: "/sns-plan", category: "SNS設計", title: "SNSアカウント設計", description: "ジャンル選定からプロフィール、投稿の柱、収益導線、改善までまとめて設計します。" },
-  { href: "/export", category: "出力", title: "記事を出力", description: "掲載用本文をコピーし、Markdownファイルとして端末へ保存します。" },
-  { href: "/publish", category: "公開", title: "公開管理", description: "公開予定・公開済みURL・公開日時を記事ライブラリへ記録します。" },
-  { href: "/analytics", category: "分析", title: "コンテンツ分析", description: "記事ストック、掲載先、状態、最近更新した記事をAAS内のデータから集計します。" },
-];
-
-const adminTools: ToolCard[] = [
-  { href: "/admin", category: "運用", title: "管理ダッシュボード", description: "ユーザー、利用権、招待コード、要対応項目をまとめて確認します。" },
-  { href: "/admin/knowledge", category: "ナレッジ", title: "AASナレッジ管理", description: "自由入力されたジャンル候補を匿名集計で確認し、正式Knowledgeへ承認します。" },
-  { href: "/admin/promotion?mode=article", category: "販売", title: "販売・宣伝記事作成", description: "note・Brain・Tips・ブログ向けにAASの紹介・販売記事を作成します。" },
-  { href: "/admin/promotion?mode=social", category: "SNS販促", title: "SNSプロモーション", description: "X・Instagram・Threads・TikTok・YouTube Shorts向け販促素材を作成します。" },
-  { href: "/admin/promotion?mode=campaign", category: "販促設計", title: "キャンペーン設計", description: "記事とSNSを連動させた販売開始・機能紹介の投稿計画を作成します。" },
-  { href: "/admin/promotion?mode=product", category: "製品情報", title: "製品情報管理", description: "宣伝に使用する確認済みの機能、価格、販売URL、注意事項を管理します。" },
-];
+import { useSharedAccessState } from "@/components/access-state-provider";
+import { MEMBER_TOOL_GROUPS } from "@/features/tools/tool-catalog";
 
 export function PhaseToolsPage() {
-  const [state, setState] = useState<State>({ kind: "loading" });
-  useEffect(() => {
-    let active = true;
-    const boot = async () => {
-      try {
-        const client = getSupabaseClient();
-        const value = await loadAccessState(client);
-        if (active) setState(value);
-      } catch {
-        if (active) setState({ kind: "unavailable" });
-      }
-    };
-    void boot();
-    return () => { active = false; };
-  }, []);
+  const { state } = useSharedAccessState();
 
   const ready = state.kind === "ready";
-  const admin = state.kind === "ready" && state.profile.role === "admin" && state.profile.status === "active";
   const invite = state.kind === "pending" || state.kind === "entitlement_denied";
-  const cards = ready ? memberTools : [];
 
   return (
     <main className="creator-page">
       <header className="creator-head">
-        <div><p className="eyebrow">AI ARTICLE STUDIO</p><h1>機能一覧</h1><p>記事制作・画像・SNS・出力・公開・分析など、AASで使える機能をまとめています。</p></div>
-        <a className="route-back" href="/">← ホーム</a>
+        <div>
+          <p className="eyebrow">AI ACTION STUDIO</p>
+          <h1>機能一覧</h1>
+          <p>
+            副業ジャンルと用途ごとに機能をまとめています。
+            ホームに分かれていた「副業から探す」もここへ統合し、必要な機能をジャンルから選べるようにしました。
+            記事生成フロー内で完結する画像設定・タイトル・本文・掲載用コピーは重複表示していません。
+          </p>
+        </div>
+        <Link className="route-back" href="/">← ホーム</Link>
       </header>
 
-      {state.kind === "loading" && <div className="route-notice">利用可能な機能を確認しています…</div>}
       {state.kind === "unavailable" && <div className="route-notice error">アカウントとPWA利用権を確認できませんでした。</div>}
       {state.kind === "signed_out" && <div className="route-notice">ログインすると利用可能な機能が表示されます。</div>}
       {(state.kind === "suspended" || state.kind === "disabled") && <div className="route-notice error">現在のアカウント状態ではPWA機能を利用できません。</div>}
-      {invite && <div className="route-notice">PWA機能を使うには利用権が必要です。<a className="route-inline-link" href="/invite">招待コードを登録</a></div>}
-
-      {admin && (
-        <section className="admin-only-tools-section" aria-labelledby="admin-only-tools-title">
-          <div className="admin-only-tools-heading"><div><p>ADMIN ONLY</p><h2 id="admin-only-tools-title">管理者専用</h2></div><small>一般ユーザーには表示されません</small></div>
-          <div className="admin-only-tools-grid">
-            {adminTools.map((tool) => <a key={tool.href} className="admin-only-tool-card" href={tool.href}><span>{tool.category}</span><h3>{tool.title}</h3><p>{tool.description}</p><strong>開く →</strong></a>)}
-          </div>
-        </section>
-      )}
-
-      <section className="tool-grid">
-        {cards.map((tool) => <a key={tool.href} className="tool-card" href={tool.href}><span>{tool.category}</span><h2>{tool.title}</h2><p>{tool.description}</p><strong>開く →</strong></a>)}
-        {invite && <a className="tool-card" href="/invite"><span>PWA</span><h2>PWA招待</h2><p>購入・招待コードをPWA利用権へ登録します。</p><strong>開く →</strong></a>}
-      </section>
+      {invite && <div className="route-notice">PWA機能を使うには利用権が必要です。<Link className="route-inline-link" href="/invite">招待コードを登録</Link></div>}
 
       {ready && (
-        <section className="openai-tools-section" aria-labelledby="openai-tools-title">
-          <div className="openai-tools-heading"><div><p className="eyebrow">OPENAI</p><h2 id="openai-tools-title">OpenAIツール</h2></div><small>外部の公式サービスを新しい画面で開きます</small></div>
-          <div className="openai-tools-grid">
-            <a href={OPENAI_LINKS.chatgpt} target="_blank" rel="noreferrer"><span>ChatGPT</span><strong>記事・タイトル・相談</strong><b>開く ↗</b></a>
-            <a href={OPENAI_LINKS.work} target="_blank" rel="noreferrer"><span>ChatGPT Work</span><strong>まとまった作業・成果物作成</strong><b>開く ↗</b></a>
-            <a href={OPENAI_LINKS.images} target="_blank" rel="noreferrer"><span>ChatGPT Images</span><strong>画像生成・画像編集</strong><b>開く ↗</b></a>
-            <a href={OPENAI_LINKS.codex} target="_blank" rel="noreferrer"><span>Codex</span><strong>コード作成・開発作業</strong><b>開く ↗</b></a>
-          </div>
-          <p className="openai-tools-note">端末の設定によってChatGPTアプリまたはWeb版で開きます。</p>
+        <div className="tool-group-list">
+          {MEMBER_TOOL_GROUPS.map((group) => (
+            <section className="tool-group-section" key={group.id} aria-labelledby={`tool-group-${group.id}`}>
+              <div className="tool-group-heading">
+                <div>
+                  <p className="eyebrow">FEATURE GENRE</p>
+                  <h2 id={`tool-group-${group.id}`}>{group.title}</h2>
+                </div>
+                <p>{group.description}</p>
+              </div>
+              <div className="tool-grid">
+                {group.tools.map((tool) => (
+                  <Link key={`${tool.href}:${tool.title}`} className="tool-card" href={tool.href}>
+                    <div className="tool-card-meta">
+                      <span>{tool.category}</span>
+                      {tool.badge ? <small>{tool.badge}</small> : null}
+                    </div>
+                    <h3>{tool.title}</h3>
+                    <p>{tool.description}</p>
+                    <strong>開く →</strong>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+
+      {invite && (
+        <section className="tool-grid tool-invite-grid">
+          <Link className="tool-card" href="/invite">
+            <div className="tool-card-meta"><span>PWA</span></div>
+            <h3>PWA招待</h3>
+            <p>購入・招待コードをPWA利用権へ登録します。</p>
+            <strong>開く →</strong>
+          </Link>
         </section>
       )}
     </main>

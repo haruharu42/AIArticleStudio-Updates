@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import questStyles from "@/components/creator-quests.module.css";
 import styles from "@/components/creator-system.module.css";
@@ -12,23 +12,39 @@ import {
   type CreatorDashboard,
   type CreatorMembershipPlan,
 } from "@/lib/creator-system";
+import {
+  getCreatorMembershipPublicSettings,
+  listCreatorMembershipFeatureMatrix,
+  type CreatorMembershipFeatureRow,
+  type CreatorMembershipPublicSettings,
+} from "@/lib/membership-access";
 import { getSupabaseClient } from "@/lib/supabase";
+
+function formatMembershipPrice(value: number | null): string {
+  return value === null ? "料金未設定" : `¥${value.toLocaleString("ja-JP")} / 月`;
+}
 
 export default function CreatorMembershipPage() {
   const [dashboard, setDashboard] = useState<CreatorDashboard | null>(null);
   const [plans, setPlans] = useState<CreatorMembershipPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [publicSettings, setPublicSettings] = useState<CreatorMembershipPublicSettings | null>(null);
+  const [featureMatrix, setFeatureMatrix] = useState<CreatorMembershipFeatureRow[]>([]);
 
   const load = useCallback(async () => {
     try {
       const client = getSupabaseClient();
-      const [nextDashboard, nextPlans] = await Promise.all([
+      const [nextDashboard, nextPlans, nextPublicSettings, nextFeatureMatrix] = await Promise.all([
         getMyCreatorDashboard(client),
         listCreatorMembershipPlans(client),
+        getCreatorMembershipPublicSettings(client),
+        listCreatorMembershipFeatureMatrix(client),
       ]);
       setDashboard(nextDashboard);
       setPlans(nextPlans);
+      setPublicSettings(nextPublicSettings);
+      setFeatureMatrix(nextFeatureMatrix);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Creator Club特典を読み込めませんでした。");
     } finally {
@@ -44,6 +60,17 @@ export default function CreatorMembershipPage() {
     return () => { active = false; };
   }, [load]);
 
+  const featuresByPlan = useMemo(() => {
+    const map = new Map<string, CreatorMembershipFeatureRow[]>();
+    for (const item of featureMatrix) {
+      if (!item.enabled) continue;
+      const items = map.get(item.planCode) ?? [];
+      items.push(item);
+      map.set(item.planCode, items);
+    }
+    return map;
+  }, [featureMatrix]);
+
   return (
     <main className={styles.page}>
       <div className={styles.pageInner}>
@@ -55,6 +82,17 @@ export default function CreatorMembershipPage() {
           </div>
           <Link className={styles.backLink} href="/">← ホームへ</Link>
         </header>
+
+        {publicSettings?.noteMembershipUrl ? (
+          <section className={questStyles.membershipJoinCard}>
+            <div>
+              <p className={styles.eyebrow}>NOTE MEMBERSHIP</p>
+              <h2>{publicSettings.displayName}</h2>
+              <p>{publicSettings.guidance || "noteメンバーシップに参加すると、対象プランのAAS特典を利用できます。"}</p>
+            </div>
+            <a href={publicSettings.noteMembershipUrl} target="_blank" rel="noreferrer">noteメンバーシップを見る ↗</a>
+          </section>
+        ) : null}
 
         {dashboard ? (
           <section className={styles.panel}>
@@ -80,20 +118,37 @@ export default function CreatorMembershipPage() {
                   {plan.isCurrent ? <span className={styles.tierBadge}>利用中</span> : null}
                 </div>
                 <h2>{plan.displayName}</h2>
-                <p>プラン変更時も記事・プロフィール・Creator Levelはそのまま保持されます。</p>
+                <div className={questStyles.membershipPlanPrice}>
+                  <strong>{formatMembershipPrice(plan.monthlyPriceYen)}</strong>
+                  <small>note側の月額料金</small>
+                </div>
+                <p>{plan.description || "このプランで利用できるAAS特典は下に表示されます。"}</p>
                 <div className={questStyles.planBenefits}>
                   <div><small>AI Knowledge</small><strong>{plan.knowledgeChannel === "fresh" ? "Fresh" : "Stable"} / {formatRefreshCadence(plan.knowledgeRefreshHours)}</strong></div>
                   <div><small>完成記事XP</small><strong>×{plan.articleXpMultiplier.toFixed(1)}</strong></div>
                   <div><small>記事ストック上限</small><strong>+{plan.articleQuotaBonus}</strong></div>
                   <div><small>テンプレートTier</small><strong>{plan.templateTier.toUpperCase()}</strong></div>
                 </div>
+                {(featuresByPlan.get(plan.planCode)?.length ?? 0) > 0 ? (
+                  <div className={questStyles.membershipFeatureList}>
+                    <strong>このプランで利用できる機能</strong>
+                    <ul>
+                      {featuresByPlan.get(plan.planCode)?.map((feature) => (
+                        <li key={feature.featureKey}>
+                          <span>✓</span>
+                          <div><b>{feature.featureName}</b><small>{feature.featureDescription}</small></div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </article>
             ))}
           </section>
         ) : null}
 
         <div className={styles.notice}>
-          AAS側ではプランと特典を分離して管理しています。note側の名称や特典を後から変更しても、AASの主要機能を作り直さず設定を差し替えられます。note購入状態の自動取得は別の連携機能として扱います。
+          AAS側ではプランと特典を分離して管理しています。管理者がnote側の加入を確認後、AAS特典を付与・変更・解除します。note購入状態の自動取得は別の連携機能として扱います。
         </div>
       </div>
     </main>

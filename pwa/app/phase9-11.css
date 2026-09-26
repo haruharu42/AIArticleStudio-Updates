@@ -211,7 +211,7 @@
 .wizard-steps {
   width: min(100%, 1100px);
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 7px;
   margin: 0 auto 14px;
   padding: 0;
@@ -221,15 +221,48 @@
 .wizard-steps li {
   min-width: 0;
   display: grid;
-  justify-items: center;
-  gap: 5px;
   border: 1px solid #263650;
   border-radius: 9px;
   background: #0b1729;
   color: #73839c;
-  padding: 9px 4px;
+  overflow: hidden;
   font-size: 8px;
   text-align: center;
+}
+
+.wizard-steps li button {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 8px 4px;
+  font: inherit;
+}
+
+.wizard-steps li.done button {
+  cursor: pointer;
+}
+
+.wizard-steps li.done button:hover,
+.wizard-steps li.done button:focus-visible {
+  background: rgb(124 58 237 / 12%);
+  outline: 2px solid #8157e6;
+  outline-offset: -2px;
+}
+
+.wizard-steps li button:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.wizard-steps li button small {
+  color: inherit;
+  font: inherit;
 }
 
 .wizard-steps li span {
@@ -335,6 +368,30 @@
   border-color: #8058df;
   background: #211b42;
   color: #fff;
+}
+
+.clipboard-edit-actions,
+.body-clipboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 8px 0 14px;
+}
+
+.clear-content-action {
+  border-color: #6b3d4b;
+  color: #ffbac6;
+}
+
+.clear-content-action:not(:disabled):hover,
+.clear-content-action:not(:disabled):focus-visible {
+  border-color: #a64d63;
+  background: #351a25;
+}
+
+.clear-content-action:disabled {
+  opacity: .48;
 }
 
 .preview-meta {
@@ -553,6 +610,17 @@
     overflow-x: auto;
     justify-content: start;
     padding-bottom: 5px;
+  }
+
+  .clipboard-edit-actions,
+  .body-clipboard-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .clipboard-edit-actions > *,
+  .body-clipboard-actions > * {
+    width: 100%;
   }
 
   .creator-form-grid,

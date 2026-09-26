@@ -1,5 +1,32 @@
+import { PROMOTION_COMMON_KNOWLEDGE, PROMOTION_PUBLICATION_KNOWLEDGE } from "@/lib/promotion-knowledge";
+
 export type KnowledgeKind = "age" | "genre" | "subgenre" | "publication" | "task" | "combination";
-export type KnowledgeTask = "title" | "article" | "image" | "social" | "promotion";
+
+export const KNOWLEDGE_TASKS = [
+  "title",
+  "article",
+  "image",
+  "social",
+  "promotion",
+  "sidejob_content",
+  "sidejob_sns",
+  "sidejob_video",
+  "sidejob_affiliate",
+  "sidejob_resale",
+  "sidejob_crowdsourcing",
+  "sidejob_skill_sales",
+  "sidejob_digital_product",
+  "sidejob_outreach",
+  "sidejob_research",
+  "sidejob_efficiency",
+  "sidejob_planning",
+] as const;
+
+export type KnowledgeTask = (typeof KNOWLEDGE_TASKS)[number];
+
+export function isKnowledgeTask(value: unknown): value is KnowledgeTask {
+  return typeof value === "string" && (KNOWLEDGE_TASKS as readonly string[]).includes(value);
+}
 
 export type KnowledgeRule = {
   key: string;
@@ -203,6 +230,19 @@ const taskRules: Record<KnowledgeTask, KnowledgeRule> = {
   image: { key: "task:image", kind: "task", label: "画像計画", priority: 90, source: "seed", tasks: ["image"], guidance: list("記事テーマの中核を1つの視覚メッセージに絞る", "記事と画像で読者像・世界観・用語を一致させる"), deliverables: list("主役", "構図", "背景", "避ける要素"), cautions: list("画像内に未確認の価格・順位・効果を書かない") },
   social: { key: "task:social", kind: "task", label: "SNS投稿", priority: 90, source: "seed", tasks: ["social"], guidance: list("元記事の価値を短く再構成し、SNS単体でも最低限の学びがある内容にする", "媒体の閲覧行動に合わせて文章量と構成を変える"), deliverables: list("投稿案", "狙い", "自然なCTA"), cautions: list("記事にない成果・体験・レビューを追加しない") },
   promotion: { key: "task:promotion", kind: "task", label: "販売・プロモーション", priority: 90, source: "seed", tasks: ["promotion"], guidance: list("確認済み事実 → 読者の課題 → 価値 → 利用イメージ → 注意事項 → CTAの論理を崩さない", "認知・信頼・販売など目的に応じてCTAの強さを調整する"), deliverables: list("訴求軸", "CTA", "公開前確認"), cautions: list("未確認の実績・利用者数・レビュー・割引を作らない") },
+
+  sidejob_content: { key: "task:sidejob_content", kind: "task", label: "記事・コンテンツ販売副業", priority: 94, source: "seed", tasks: ["sidejob_content"], guidance: list("無料部分と有料部分、単品と継続商品の役割を分ける", "購入後に実行できる成果物・手順・テンプレートを具体化する"), deliverables: list("商品設計", "無料/有料境界", "章構成", "販売前チェック"), cautions: list("売上・購入率・販売数を保証しない", "入力されていない実績や購入者の声を作らない") },
+  sidejob_sns: { key: "task:sidejob_sns", kind: "task", label: "SNS運用副業", priority: 94, source: "seed", tasks: ["sidejob_sns"], guidance: list("媒体・目的・投稿の柱・CTA・検証指標を一貫させる", "単発投稿ではなく継続運用できる企画単位へ分解する"), deliverables: list("運用方針", "投稿の柱", "投稿カレンダー", "検証項目"), cautions: list("フォロワー増加・表示回数・売上を保証しない", "媒体仕様やアルゴリズムを未確認で断定しない") },
+  sidejob_video: { key: "task:sidejob_video", kind: "task", label: "YouTube・動画副業", priority: 94, source: "seed", tasks: ["sidejob_video"], guidance: list("視聴者の期待、冒頭フック、維持ポイント、結論、CTAを動画尺に合わせる", "長尺・ショート・ライブの目的を混同しない"), deliverables: list("企画", "台本", "サムネイル文言", "撮影/編集チェック"), cautions: list("再生数・登録者増加を保証しない", "動画内にない内容をサムネイルだけで誇張しない") },
+  sidejob_affiliate: { key: "task:sidejob_affiliate", kind: "task", label: "アフィリエイト副業", priority: 96, source: "seed", tasks: ["sidejob_affiliate"], guidance: list("読者の状況→比較軸→候補→向いている条件→確認事項の順で購入判断を支援する", "広告・紹介であることを前提に事実と評価を分ける"), deliverables: list("比較軸", "記事/投稿構成", "一次情報確認リスト", "CTA案"), cautions: list("価格・在庫・キャンペーン・ランキング・レビューを未確認で断定しない", "実際に使っていない商品を使用済みとして書かない") },
+  sidejob_resale: { key: "task:sidejob_resale", kind: "task", label: "物販・フリマ副業", priority: 96, source: "seed", tasks: ["sidejob_resale"], guidance: list("商品状態、付属品、発送条件、購入前注意を分けて誤解なく伝える", "利益計算では仕入・販売手数料・送料・返品等の入力済み費用だけを使う"), deliverables: list("出品タイトル", "商品説明", "撮影チェック", "発送前チェック"), cautions: list("未確認の動作・傷・購入時期・定価・正規品判定を作らない", "販売可否や規約適合を未確認で断定しない") },
+  sidejob_crowdsourcing: { key: "task:sidejob_crowdsourcing", kind: "task", label: "クラウドソーシング副業", priority: 94, source: "seed", tasks: ["sidejob_crowdsourcing"], guidance: list("案件要件と自分が事実として提示できる経験を対応付ける", "応募前の不明点・納期・成果物・修正範囲を明確にする"), deliverables: list("案件適合チェック", "応募文", "確認質問", "作業計画"), cautions: list("経験年数・実績・資格・ポートフォリオを創作しない", "契約条件を推測で補完しない") },
+  sidejob_skill_sales: { key: "task:sidejob_skill_sales", kind: "task", label: "スキル販売副業", priority: 94, source: "seed", tasks: ["sidejob_skill_sales"], guidance: list("購入前条件、提供範囲、納品物、修正範囲、対応不可を先に定義する", "成果物の価値を作業量ではなく購入者が使える状態で説明する"), deliverables: list("サービス設計", "販売ページ", "購入前質問", "納品チェック"), cautions: list("資格・実績・販売件数・評価を創作しない", "成果保証や無制限対応を安易に約束しない") },
+  sidejob_digital_product: { key: "task:sidejob_digital_product", kind: "task", label: "デジタル商品副業", priority: 94, source: "seed", tasks: ["sidejob_digital_product"], guidance: list("購入前の課題と購入後の完成状態をつなぎ、各章に具体的な成果物を置く", "教材・テンプレート・チェックリストなど再利用可能な形へ落とす"), deliverables: list("商品企画", "章構成", "テンプレート設計", "販売前チェック"), cautions: list("学習成果・収益・期間短縮を保証しない", "架空の利用者レビューや販売実績を作らない") },
+  sidejob_outreach: { key: "task:sidejob_outreach", kind: "task", label: "営業・案件獲得副業", priority: 94, source: "seed", tasks: ["sidejob_outreach"], guidance: list("相手に関係する連絡理由と、自分が提供できる具体的価値を短く対応付ける", "返信しやすい次の一歩を1つだけ提示する"), deliverables: list("営業文", "提案要点", "質問事項", "フォローアップ案"), cautions: list("取引実績・紹介実績・成果を創作しない", "大量送信前提の誇張や圧迫的な表現を避ける") },
+  sidejob_research: { key: "task:sidejob_research", kind: "task", label: "リサーチ副業", priority: 96, source: "seed", tasks: ["sidejob_research"], guidance: list("調査目的を意思決定に必要な問いへ分解し、一次情報と二次情報を区別する", "更新日・対象地域・対象プラン・比較条件を記録する"), deliverables: list("調査設計", "情報源優先順位", "比較表項目", "未確認事項"), cautions: list("検索スニペットだけで断定しない", "古い情報と現在情報を混ぜない") },
+  sidejob_efficiency: { key: "task:sidejob_efficiency", kind: "task", label: "業務効率化副業", priority: 92, source: "seed", tasks: ["sidejob_efficiency"], guidance: list("現状作業を入力・処理・確認・保存・例外対応へ分ける", "自動化候補と人が確認すべき箇所を分離する"), deliverables: list("SOP", "チェックリスト", "再利用テンプレート", "例外時ルール"), cautions: list("入力されていない社内規定・権限・システム仕様を作らない", "機密情報を外部AIへ貼る前提にしない") },
+  sidejob_planning: { key: "task:sidejob_planning", kind: "task", label: "AI副業選定", priority: 96, source: "seed", tasks: ["sidejob_planning"], guidance: list("使える時間・得意分野・初期費用・営業可否・制作物の好みから候補を絞る", "候補ごとに最初の30日で検証する内容を具体化する"), deliverables: list("候補比較", "適合理由", "30日検証計画", "撤退/継続基準"), cautions: list("収益額・案件獲得・成功確率を保証しない", "向き不向きを属性だけで断定しない") },
 };
 
 const publicationRules: KnowledgeRule[] = [
@@ -230,6 +270,13 @@ function unique(lines: string[]): string[] {
 
 function allRules(input: KnowledgeCompileInput): KnowledgeRule[] {
   const rules: KnowledgeRule[] = [commonRule, taskRules[input.task]];
+  if (input.task === "promotion") {
+    rules.push(PROMOTION_COMMON_KNOWLEDGE);
+    const promotionPublication = PROMOTION_PUBLICATION_KNOWLEDGE.find(
+      (rule) => matches(rule, input.publicationTarget ?? ""),
+    );
+    if (promotionPublication) rules.push(promotionPublication);
+  }
   const age = ageRules.find((rule) => matches(rule, input.ageGroup ?? ""));
   if (age) rules.push(age);
   const genre = genreRules.find((rule) => matches(rule, input.genre ?? ""));
@@ -245,7 +292,8 @@ function allRules(input: KnowledgeCompileInput): KnowledgeRule[] {
     if (rule.kind === "subgenre" && matches(rule, input.subgenre ?? "", input.genre)) rules.push(rule);
     if (rule.kind === "age" && matches(rule, input.ageGroup ?? "")) rules.push(rule);
     if (rule.kind === "publication" && matches(rule, input.publicationTarget ?? "")) rules.push(rule);
-    if (rule.kind === "task" && matches(rule, input.task)) rules.push(rule);
+    if (rule.kind === "task" && (!rule.tasks?.length || rule.tasks.includes(input.task))) rules.push(rule);
+    if (rule.kind === "combination") rules.push(rule);
   }
   return rules.sort((a, b) => b.priority - a.priority || a.key.localeCompare(b.key, "ja"));
 }

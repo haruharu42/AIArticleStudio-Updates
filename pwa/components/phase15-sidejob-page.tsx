@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { PresetSelect } from "@/components/preset-select";
@@ -55,7 +56,7 @@ export function Phase15SideJobPage() {
     <main className="creator-page">
       <header className="creator-head">
         <div><p className="eyebrow">AI SIDE JOB</p><h1>AI副業プランナー</h1><p>使える時間・得意分野・顔出し・予算から、取り組みやすいAI副業候補を整理します。</p></div>
-        <a className="route-back" href="/tools">← 機能一覧</a>
+        <Link className="route-back" href="/tools">← 機能一覧</Link>
       </header>
 
       <section className="creator-card">

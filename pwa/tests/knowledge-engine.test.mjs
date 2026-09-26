@@ -90,6 +90,7 @@ test("runtime catalog loads only active membership-aware rules and admin review 
   const admin = await read("components/admin-knowledge-page.tsx");
   const route = await read("app/admin/knowledge/page.tsx");
   const tools = await read("components/phase-tools-page.tsx");
+  const sections = await read("lib/admin-sections.ts");
 
   assert.match(catalog, /client\.rpc\("list_my_active_knowledge_catalog"\)/);
   assert.match(membershipMigration, /catalog\.status = 'active'/);
@@ -102,5 +103,37 @@ test("runtime catalog loads only active membership-aware rules and admin review 
   assert.match(admin, /adminListKnowledgeCandidates/);
   assert.match(admin, /adminReviewKnowledgeCandidate/);
   assert.match(route, /AdminKnowledgePage/);
-  assert.match(tools, /href: "\/admin\/knowledge"/);
+  assert.match(sections, /href: "\/admin\/knowledge"/);
+  assert.doesNotMatch(tools, /href: "\/admin\/knowledge"/);
+});
+
+
+test("promotion knowledge combines a shared attention layer with six channel-specific rules", async () => {
+  const [engine, promotionKnowledge, channelPrompts] = await Promise.all([
+    read("lib/knowledge-engine.ts"),
+    read("lib/promotion-knowledge.ts"),
+    read("lib/admin-promotion-channel.ts"),
+  ]);
+
+  assert.match(engine, /PROMOTION_COMMON_KNOWLEDGE/);
+  assert.match(engine, /PROMOTION_PUBLICATION_KNOWLEDGE/);
+  assert.match(engine, /input\.task === "promotion"/);
+  assert.match(engine, /promotionPublication/);
+
+  assert.match(promotionKnowledge, /販促共通：読まれる・信頼される・行動しやすい構成/);
+  assert.match(promotionKnowledge, /タイトル・冒頭・本文・CTAの約束を一致させ/);
+  assert.match(promotionKnowledge, /インプレッション、クリック、保存、購入、フォロー増加を保証しない/);
+  assert.match(promotionKnowledge, /key: "promotion:publication:note"/);
+  assert.match(promotionKnowledge, /key: "promotion:publication:brain"/);
+  assert.match(promotionKnowledge, /key: "promotion:publication:tips"/);
+  assert.match(promotionKnowledge, /key: "promotion:publication:x"/);
+  assert.match(promotionKnowledge, /key: "promotion:publication:threads"/);
+  assert.match(promotionKnowledge, /key: "promotion:publication:instagram"/);
+
+  assert.match(channelPrompts, /task: "promotion"/);
+  assert.match(channelPrompts, /publicationTarget: input\.channel/);
+  assert.match(promotionKnowledge, /https:\/\/note\.com\/help\/pg\/howto/);
+  assert.match(promotionKnowledge, /business\.x\.com/);
+  assert.match(promotionKnowledge, /find-your-community-with-new-threads-educational-insights/);
+  assert.match(promotionKnowledge, /best-practices-education-hub-creators-instagram/);
 });

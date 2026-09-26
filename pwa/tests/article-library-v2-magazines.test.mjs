@@ -17,6 +17,9 @@ const migration = await fs.readFile(`${repoRoot}/supabase/migrations/20260917061
 const libraryController = await fs.readFile(`${root}/components/phase7-library.tsx`, 'utf8');
 const libraryListUi = await fs.readFile(`${root}/components/article-library/article-library-list.tsx`, 'utf8');
 const libraryDetailUi = await fs.readFile(`${root}/components/article-library/article-library-detail.tsx`, 'utf8');
+const notePostAssistantUi = await fs.readFile(`${root}/components/article-library/note-post-assistant.tsx`, 'utf8');
+const localArticleImagesSource = await fs.readFile(`${root}/lib/local-article-images.ts`, 'utf8');
+const imagePromptUi = await fs.readFile(`${root}/components/phase13-image-page.tsx`, 'utf8');
 const libraryEditorUi = await fs.readFile(`${root}/components/article-library/article-library-editor.tsx`, 'utf8');
 const libraryUi = [libraryController, libraryListUi, libraryDetailUi, libraryEditorUi].join('\n');
 const exportUi = await fs.readFile(`${root}/components/article-export-page.tsx`, 'utf8');
@@ -62,6 +65,50 @@ test('article library exposes filters, sorting, paging, archive, duplicate and P
   assert.match(libraryController, /withNoteMagazineWorkspace/);
   assert.doesNotMatch(libraryListUi, /Windows版またはPWA/);
   assert.match(libraryListUi, /PWAで作成した記事や、これまでに同期済みの記事/);
+});
+
+test('article library filters can be collapsed without clearing the selected conditions', () => {
+  assert.match(libraryListUi, /useState\(true\)/);
+  assert.match(libraryListUi, /検索・絞り込み/);
+  assert.match(libraryListUi, /aria-expanded=\{filtersOpen\}/);
+  assert.match(libraryListUi, /setFiltersOpen\(\(current\) => !current\)/);
+  assert.match(libraryListUi, /絞り込み条件を指定中/);
+  assert.match(libraryListUi, /条件なし・すべての記事/);
+  assert.match(libraryListUi, /filtersOpen && \(/);
+  assert.match(libraryListUi, /value=\{filters\.query\}/);
+  assert.match(libraryListUi, /value=\{filters\.status\}/);
+});
+
+test('article library detail can copy title and rich publication body', () => {
+  assert.match(libraryDetailUi, /掲載用コピー/);
+  assert.match(libraryDetailUi, /タイトルをコピー/);
+  assert.match(libraryDetailUi, /完成本文を装飾付きコピー/);
+  assert.match(libraryDetailUi, /articleExportBody\(detail\)/);
+  assert.match(libraryDetailUi, /publicationBodyForCopy/);
+  assert.match(libraryDetailUi, /copyNoteRichText\(publicationBody\)/);
+  assert.match(libraryDetailUi, /navigator\.clipboard\?\.writeText/);
+  assert.match(libraryDetailUi, /【ここから有料エリア】/);
+  assert.match(libraryDetailUi, /【挿絵/);
+});
+
+test('note article detail exposes local image posting assistant without Supabase Storage', () => {
+  assert.match(libraryDetailUi, /NotePostAssistant/);
+  assert.match(libraryDetailUi, /detail\.publicationTarget === "note"/);
+  assert.match(notePostAssistantUi, /画像込みでnoteへ貼り付ける/);
+  assert.match(notePostAssistantUi, /画像入り完成プレビュー/);
+  assert.match(notePostAssistantUi, /noteへ貼り付ける順番/);
+  assert.match(notePostAssistantUi, /copyNoteRichText/);
+  assert.match(notePostAssistantUi, /copyImageBlobToClipboard/);
+  assert.match(notePostAssistantUi, /https:\/\/note\.com\/new/);
+  assert.match(notePostAssistantUi, /Supabase Storageへは送信しません/);
+  assert.match(localArticleImagesSource, /indexedDB\.open/);
+  assert.match(localArticleImagesSource, /createObjectStore/);
+  assert.match(localArticleImagesSource, /saveLocalArticleImage/);
+  assert.match(localArticleImagesSource, /listLocalArticleImages/);
+  assert.doesNotMatch(localArticleImagesSource, /supabase|\.from\(|storage\./i);
+  assert.match(imagePromptUi, /saveLocalArticleImage/);
+  assert.match(imagePromptUi, /listLocalArticleImages/);
+  assert.match(imagePromptUi, /記事ライブラリのnote投稿アシスト/);
 });
 
 test('article library edit validation matches the positive-price database contract', () => {

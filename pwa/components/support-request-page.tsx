@@ -2,17 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { fetchPublicSalesSettings } from "@/lib/sales-settings";
-
-function safeHttpsUrl(value: string): string {
-  if (!value) return "";
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === "https:" ? parsed.toString() : "";
-  } catch {
-    return "";
-  }
-}
+import { fetchPublicSalesSettings, safeExternalSalesUrl } from "@/lib/sales-settings";
 
 export function SupportRequestPage() {
   const [externalSalesUrl, setExternalSalesUrl] = useState("");
@@ -23,7 +13,7 @@ export function SupportRequestPage() {
     void fetchPublicSalesSettings().then(
       (settings) => {
         if (!active) return;
-        setExternalSalesUrl(settings.externalSalesEnabled ? safeHttpsUrl(settings.externalSalesUrl) : "");
+        setExternalSalesUrl(settings.externalSalesEnabled ? safeExternalSalesUrl(settings.externalSalesUrl) : "");
       },
       () => {
         if (active) setMessage("販売ページ情報を取得できませんでした。購入元に表示されている問い合わせ手段をご利用ください。");
@@ -39,9 +29,11 @@ export function SupportRequestPage() {
       <article>
         <Link href="/commercial-transactions">← 特定商取引法に基づく表記へ戻る</Link>
         <p className="legal-commerce-label">お問い合わせ・開示請求</p>
-        <h1>AI記事スタジオ お問い合わせ案内</h1>
+        <h1>AI Action Studio お問い合わせ案内</h1>
         <p className="legal-commerce-lead">
-          現在の新規販売は、note・Brain・Tips等の外部販売ページと利用コードによる受付を基本としています。AAS内のStripe新規購入は停止中です。
+          {externalSalesUrl
+            ? "現在の新規販売は、note・Brain・Tips等の外部販売ページと利用コードによる受付を基本としています。AAS内のStripe新規購入は停止中です。"
+            : "外部販売と利用コードを初回販売経路として準備していますが、購入ページURLは現在未設定です。AAS内のStripe新規購入も停止中です。"}
         </p>
 
         <section className="legal-commerce-notes">
@@ -52,7 +44,7 @@ export function SupportRequestPage() {
           {externalSalesUrl ? (
             <p><a href={externalSalesUrl} target="_blank" rel="noreferrer">外部販売ページを開く</a></p>
           ) : (
-            <p>外部販売ページのURLが表示されない場合は、購入元ページに記載された販売者への問い合わせ手段をご利用ください。</p>
+            <p>購入ページURLは現在未設定です。販売開始前の開示請求や問い合わせ方法は、運用担当者が購入前に確認できる窓口を確定してから公開します。</p>
           )}
         </section>
 

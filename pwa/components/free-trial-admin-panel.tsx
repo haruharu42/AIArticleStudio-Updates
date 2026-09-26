@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { AdminPresetNumberField, AdminSelectWithCustom, AdminSimpleSelect } from "@/components/admin-form-controls";
+
 import {
   getAdminFreeTrialSettings,
   getAdminUserFreeTrial,
@@ -15,7 +17,7 @@ import {
   getAdminPermanentDailyFreeEnabled,
   updateAdminFreeTierSettings,
 } from "@/lib/free-tier-mode";
-import type { AdminUser } from "@/lib/phase10-admin";
+import type { PwaAdminUser } from "@/lib/pwa-admin-users";
 import { getSupabaseClient } from "@/lib/supabase";
 
 function localInput(value: string | null): string {
@@ -35,6 +37,21 @@ function displayDate(value: string | null): string {
   }
 }
 
+const RESET_TIMEZONE_OPTIONS = [
+  { value: "Asia/Tokyo", label: "日本時間（Asia/Tokyo）", note: "日本向け運用の標準設定です。" },
+  { value: "UTC", label: "UTC（世界標準時）" },
+  { value: "Asia/Seoul", label: "韓国時間（Asia/Seoul）" },
+  { value: "Asia/Singapore", label: "シンガポール時間（Asia/Singapore）" },
+  { value: "America/Los_Angeles", label: "米国西海岸（America/Los_Angeles）" },
+  { value: "America/New_York", label: "米国東海岸（America/New_York）" },
+  { value: "Europe/London", label: "英国（Europe/London）" },
+] as const;
+
+const RESET_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({
+  value: String(hour),
+  label: `${String(hour).padStart(2, "0")}:00`,
+}));
+
 function trialStatusLabel(value: string): string {
   if (value === "active") return "利用中";
   if (value === "expired") return "終了";
@@ -42,20 +59,11 @@ function trialStatusLabel(value: string): string {
   return "未利用";
 }
 
-function NumberField({ label, value, min = 0, max = 10000, onChange }: { label: string; value: number; min?: number; max?: number; onChange: (value: number) => void }) {
-  return (
-    <label className="route-field">
-      <span>{label}</span>
-      <input type="number" min={min} max={max} value={value} onChange={(event) => onChange(Math.max(min, Math.min(max, Number(event.target.value) || 0)))} />
-    </label>
-  );
-}
-
 function UsageCell({ label, used, limit }: { label: string; used: number; limit: number }) {
   return <div><span>{label}</span><strong>{used} / {limit}</strong></div>;
 }
 
-export function FreeTrialAdminPanel({ selectedUser }: { selectedUser: AdminUser | null }) {
+export function FreeTrialAdminPanel({ selectedUser }: { selectedUser: PwaAdminUser | null }) {
   const [settings, setSettings] = useState<FreeTrialSettings | null>(null);
   const [permanentDailyFreeEnabled, setPermanentDailyFreeEnabled] = useState(true);
   const [userTrial, setUserTrial] = useState<AdminUserFreeTrial | null>(null);
@@ -126,7 +134,8 @@ export function FreeTrialAdminPanel({ selectedUser }: { selectedUser: AdminUser 
     }
   };
 
-  const runUserAction = async (action: () => Promise<void>, success: string) => {
+  const runUserAction = async (action: () => Promise<void>, success: string, confirmation?: string) => {
+    if (confirmation && !window.confirm(confirmation)) return;
     setBusy(true); setMessage("");
     try {
       await action();
@@ -175,16 +184,16 @@ export function FreeTrialAdminPanel({ selectedUser }: { selectedUser: AdminUser 
           </div>
 
           <div className="admin-form-grid trial-admin-settings-grid">
-            {!permanentDailyFreeEnabled && <NumberField label="無料期間（日）" value={settings.durationDays} min={1} max={365} onChange={(value) => patch("durationDays", value)} />}
-            <NumberField label="1日の総利用回数" value={settings.dailyTotalLimit} onChange={(value) => patch("dailyTotalLimit", value)} />
-            <NumberField label="記事生成 / 日" value={settings.articleGenerateLimit} onChange={(value) => patch("articleGenerateLimit", value)} />
-            <NumberField label="タイトル候補 / 日" value={settings.titleGenerateLimit} onChange={(value) => patch("titleGenerateLimit", value)} />
-            <NumberField label="記事リライト / 日" value={settings.articleRewriteLimit} onChange={(value) => patch("articleRewriteLimit", value)} />
-            <NumberField label="SNS投稿生成 / 日" value={settings.snsGenerateLimit} onChange={(value) => patch("snsGenerateLimit", value)} />
-            <NumberField label="画像生成 / 日" value={settings.imageGenerateLimit} onChange={(value) => patch("imageGenerateLimit", value)} />
-            <NumberField label="AI補助 / 日" value={settings.aiAssistLimit} onChange={(value) => patch("aiAssistLimit", value)} />
-            <label className="route-field"><span>リセットタイムゾーン</span><input value={settings.resetTimezone} onChange={(event) => patch("resetTimezone", event.target.value)} /></label>
-            <NumberField label="リセット時刻（0〜23時）" value={settings.resetHour} min={0} max={23} onChange={(value) => patch("resetHour", value)} />
+            {!permanentDailyFreeEnabled && <AdminPresetNumberField label="無料期間" value={settings.durationDays} presets={[3, 7, 14, 30, 60, 90, 180, 365]} min={1} max={365} suffix="日" onChange={(value) => patch("durationDays", value)} />}
+            <AdminPresetNumberField label="1日の総利用回数" value={settings.dailyTotalLimit} presets={[3, 5, 10, 15, 20, 30, 50, 100]} onChange={(value) => patch("dailyTotalLimit", value)} suffix="回" />
+            <AdminPresetNumberField label="記事生成 / 日" value={settings.articleGenerateLimit} presets={[0, 1, 2, 3, 5, 10, 20]} onChange={(value) => patch("articleGenerateLimit", value)} suffix="回" />
+            <AdminPresetNumberField label="タイトル候補 / 日" value={settings.titleGenerateLimit} presets={[0, 1, 2, 3, 5, 10, 20]} onChange={(value) => patch("titleGenerateLimit", value)} suffix="回" />
+            <AdminPresetNumberField label="記事リライト / 日" value={settings.articleRewriteLimit} presets={[0, 1, 2, 3, 5, 10, 20]} onChange={(value) => patch("articleRewriteLimit", value)} suffix="回" />
+            <AdminPresetNumberField label="SNS投稿生成 / 日" value={settings.snsGenerateLimit} presets={[0, 1, 2, 3, 5, 10, 20]} onChange={(value) => patch("snsGenerateLimit", value)} suffix="回" />
+            <AdminPresetNumberField label="画像生成 / 日" value={settings.imageGenerateLimit} presets={[0, 1, 2, 3, 5, 10, 20]} onChange={(value) => patch("imageGenerateLimit", value)} suffix="回" />
+            <AdminPresetNumberField label="AI補助 / 日" value={settings.aiAssistLimit} presets={[0, 1, 2, 3, 5, 10, 20, 50]} onChange={(value) => patch("aiAssistLimit", value)} suffix="回" />
+            <AdminSelectWithCustom label="リセットタイムゾーン" value={settings.resetTimezone} onChange={(value) => patch("resetTimezone", value)} options={RESET_TIMEZONE_OPTIONS} description="通常は日本時間を選択してください。" />
+            <AdminSimpleSelect label="リセット時刻" value={String(settings.resetHour)} onChange={(value) => patch("resetHour", Number(value))} options={RESET_HOUR_OPTIONS} description="この時刻を境に新しい利用日へ切り替わります。" />
             <label className="route-field full"><span>新規ユーザー判定の対象開始日時</span><input type="datetime-local" value={localInput(settings.eligibleFrom)} onChange={(event) => event.target.value && patch("eligibleFrom", new Date(event.target.value).toISOString())} /></label>
           </div>
           <p className="trial-admin-note">各機能の上限を0にすると無料ユーザーはその機能を利用できません。期限なしモードでは、日次カウントが指定タイムゾーン・時刻で自動的に新しい利用日へ切り替わります。有料PWA利用権を持つユーザーとactive管理者は回数制限を受けません。カウントはブラウザーではなくSupabase側で管理します。</p>
@@ -213,13 +222,13 @@ export function FreeTrialAdminPanel({ selectedUser }: { selectedUser: AdminUser 
                 {!permanentDailyFreeEnabled && <div className="admin-form-grid trial-user-controls"><label className="route-field full"><span>終了日時</span><input type="datetime-local" value={userEnd} onChange={(event) => setUserEnd(event.target.value)} /></label></div>}
                 <div className="admin-actions trial-user-actions">
                   <button className="primary-action" disabled={busy || (!permanentDailyFreeEnabled && !userEnd)} type="button" onClick={() => void runUserAction(() => updateAdminUserFreeTrial(getSupabaseClient(), selectedUser.id, "active", effectiveUserEnd()), permanentDailyFreeEnabled ? "無料枠を有効化しました。" : "トライアルを有効化し、終了日時を更新しました。")}>有効化</button>
-                  <button className="secondary-action" disabled={busy || (!permanentDailyFreeEnabled && !userEnd)} type="button" onClick={() => void runUserAction(() => updateAdminUserFreeTrial(getSupabaseClient(), selectedUser.id, "stopped", effectiveUserEnd()), "無料枠を停止しました。")}>停止</button>
-                  <button className="secondary-action" disabled={busy} type="button" onClick={() => void runUserAction(() => resetAdminUserFreeTrialUsage(getSupabaseClient(), selectedUser.id), "本日の利用回数を0へリセットしました。")}>本日の回数をリセット</button>
+                  <button className="secondary-action" disabled={busy || (!permanentDailyFreeEnabled && !userEnd)} type="button" onClick={() => void runUserAction(() => updateAdminUserFreeTrial(getSupabaseClient(), selectedUser.id, "stopped", effectiveUserEnd()), "無料枠を停止しました。", "このユーザーの無料枠を停止しますか？")}>停止</button>
+                  <button className="secondary-action" disabled={busy} type="button" onClick={() => void runUserAction(() => resetAdminUserFreeTrialUsage(getSupabaseClient(), selectedUser.id), "本日の利用回数を0へリセットしました。", "本日の利用回数を0へリセットしますか？")}>本日の回数をリセット</button>
                 </div>
               </>
             ) : (
               <div className="trial-manual-start">
-                {!permanentDailyFreeEnabled && <NumberField label="手動開始する日数" value={manualDays} min={1} max={365} onChange={setManualDays} />}
+                {!permanentDailyFreeEnabled && <AdminPresetNumberField label="手動開始する日数" value={manualDays} presets={[3, 7, 14, 30, 60, 90, 180, 365]} min={1} max={365} suffix="日" onChange={setManualDays} />}
                 <button className="primary-action" disabled={busy || selectedUser.status !== "active"} type="button" onClick={() => void runUserAction(() => startAdminUserFreeTrial(getSupabaseClient(), selectedUser.id, permanentDailyFreeEnabled ? (settings?.durationDays ?? 7) : manualDays), permanentDailyFreeEnabled ? "期限なし日次無料枠を開始しました。" : "無料トライアルを開始しました。")}>{permanentDailyFreeEnabled ? "このユーザーの無料枠を開始" : "このユーザーの初回トライアルを開始"}</button>
                 {selectedUser.status !== "active" && <small>手動開始にはactive一般ユーザーが必要です。</small>}
               </div>

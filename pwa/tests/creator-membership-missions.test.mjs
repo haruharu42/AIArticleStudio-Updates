@@ -13,17 +13,22 @@ test("reference home owns creator presentation without duplicating global banner
   const homeRoute = await readPwa("app/page.tsx");
   const home = await readPwa("components/phase18-beginner-home.tsx");
   const shell = await readPwa("components/aas-reference-shell.tsx");
+  const mobileNav = await readPwa("components/shared-mobile-bottom-nav.tsx");
+  const mobilePrefs = await readPwa("lib/mobile-nav-preference.ts");
 
   assert.doesNotMatch(homeRoute, /CreatorHud/);
   assert.doesNotMatch(homeRoute, /FreeTrialBanner/);
   assert.match(home, /getMyCreatorDashboard/);
   assert.match(home, /今日のミッション/);
   assert.match(home, /記事ライブラリ \/ noteマガジン/);
-  assert.match(home, /hasUnreadNotifications=\{Boolean\(dashboard\?\.claimableMissions\)\}/);
+  assert.match(home, /getSupportNotificationSummary/);
+  assert.match(home, /const hasHeaderNotification = Boolean\(dashboard\?\.claimableMissions\) \|\| hasSupportNotification/);
+  assert.match(home, /hasUnreadNotifications=\{hasHeaderNotification\}/);
   assert.match(home, /ranking\.length \? "圏外" : "未集計"/);
-  assert.match(shell, /ホーム/);
-  assert.match(shell, /ランキング/);
-  assert.match(shell, /プロフィール/);
+  assert.match(mobileNav, /ホーム/);
+  assert.match(mobilePrefs, /ランキング/);
+  assert.match(mobilePrefs, /プロフィール/);
+  assert.match(shell, /SharedMobileBottomNav/);
   assert.match(shell, /hasUnreadNotifications/);
 });
 

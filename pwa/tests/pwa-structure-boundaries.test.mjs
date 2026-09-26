@@ -95,12 +95,12 @@ test("article draft URL parsing and step validation stay pure and bounded", () =
   const draft = createInitialArticleDraft(params);
   assert.equal(draft.publicationTarget, "brain");
   assert.equal(draft.articleType, "paid");
-  assert.equal(draft.price, 1);
+  assert.equal(draft.price, 980);
   assert.equal(draft.inlineEnabled, true);
   assert.equal(draft.inlineCount, 3);
-  assert.equal(validateArticleCreateStep(2, draft), null);
+  assert.equal(validateArticleCreateStep(3, draft), null);
   assert.match(
-    validateArticleCreateStep(2, { ...draft, genre: "その他" }) ?? "",
+    validateArticleCreateStep(3, { ...draft, genre: "その他" }) ?? "",
     /ジャンル名/,
   );
 });
@@ -109,17 +109,42 @@ test("article creator keeps UI, access and pure draft responsibilities separated
   const page = await read("components/phase11-create-page.tsx");
   const stepUi = await read("components/article-create/article-create-steps.tsx");
   const draftHelpers = await read("lib/article-create-draft.ts");
-  const setup = await read("components/create-ai-setup.tsx");
   const progress = await read("lib/phase11-wizard-progress.ts");
 
-  assert.match(page, /loadCoreAccessState/);
-  assert.match(setup, /loadCoreAccessState/);
-  assert.doesNotMatch(`${page}\n${setup}`, /\.from\("profiles"\)|can_access_product/);
+  assert.match(page, /useSharedAccessState/);
+  assert.doesNotMatch(page, /loadCoreAccessState/);
+  assert.match(page, /AiSelectionStep/);
+  assert.match(page, /loadWritingProfile/);
+  assert.match(page, /saveWritingProfile/);
+  assert.doesNotMatch(page, /\.from\("profiles"\)|can_access_product/);
   assert.doesNotMatch(page, /aasId/);
+  assert.match(page, /AiSelectionStep/);
   assert.match(page, /GenerationMethodStep/);
   assert.match(page, /SaveStep/);
+  assert.match(stepUi, /export function AiSelectionStep/);
   assert.match(stepUi, /export function GenerationMethodStep/);
   assert.match(stepUi, /export function SaveStep/);
   assert.match(draftHelpers, /export function parseStoredArticleDraft/);
   assert.match(progress, /parseStoredArticleDraft/);
+});
+
+test("signed and local runtime images stay behind the direct image boundary", async () => {
+  const wrapper = await read("components/direct-runtime-image.tsx");
+  const consumers = await Promise.all([
+    read("app/profile/page.tsx"),
+    read("app/ranking/page.tsx"),
+    read("components/article-library/note-post-assistant.tsx"),
+    read("components/creator-hud.tsx"),
+    read("components/phase18-beginner-home.tsx"),
+  ]);
+
+  assert.match(wrapper, /Blob\/Object URLs and expiring signed URLs/);
+  assert.match(wrapper, /eslint-disable-next-line @next\/next\/no-img-element/);
+  assert.match(wrapper, /alt: string/);
+  assert.match(wrapper, /return <img alt=\{alt\} \{\.\.\.props\} \/>/);
+
+  for (const source of consumers) {
+    assert.match(source, /DirectRuntimeImage/);
+    assert.doesNotMatch(source, /<img\b/);
+  }
 });

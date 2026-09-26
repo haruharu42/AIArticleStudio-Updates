@@ -1,11 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
+import { AccessStateProvider } from "@/components/access-state-provider";
 import { AdminHomeTopbar } from "@/components/admin-home-topbar";
 import { AppErrorReporter } from "@/components/app-error-reporter";
 import { FreeTrialBanner } from "@/components/free-trial-banner";
+import { FeatureAccessGate } from "@/components/feature-access-gate";
+import { WorkspacePresetProvider } from "@/features/presets/workspace-preset-provider";
 import { KnowledgeRuntimeBootstrap } from "@/components/knowledge-runtime-bootstrap";
 import { PersistentMobileNav } from "@/components/persistent-mobile-nav";
 import { ReleaseAudienceGate } from "@/components/release-audience-gate";
 import { ReleaseUpdateManager } from "@/components/release-update-manager";
+import { RouteScrollToTop } from "@/components/route-scroll-to-top";
 import "./globals.css";
 import "./phase9-11.css";
 import "./phase12-17.css";
@@ -33,17 +38,34 @@ import "./phase35-device-layout.css";
 import "./phase36-desktop-nav.css";
 import "./phase37-release-management.css";
 import "./phase38-note-operations.css";
+import "./phase39-readability.css";
+import "./phase40-account-design.css";
+import "./phase41-support-center.css";
+import "./phase42-route-transition.css";
+import "./phase43-content-workflow.css";
+import "./phase44-shared-presets.css";
+import "./phase46-account-presets-dev-prompts.css";
+import "./phase47-admin-usability.css";
+import "./phase48-action-studio.css";
+import "./phase49-prompt-library.css";
+import "./phase50-admin-action-prompts.css";
+import "./phase51-side-hustle-wizard.css";
+import "./phase52-infrastructure-usage.css";
+import "./phase53-crystal-ui.css";
+import "./phase54-feature-control.css";
+import "./phase55-notifications.css";
 
 export const metadata: Metadata = {
-  title: "AI記事スタジオ PWA",
+  title: "AI Action Studio PWA",
   description:
-    "AI記事スタジオのPWA版。記事作成、画像計画、SNS投稿、公開管理をスマホとPCブラウザから分かりやすく利用できます。",
-  applicationName: "AI記事スタジオ",
+    "AI Action Studio（AAS）— AIで副業を、もっと簡単に。記事・SNS・画像・副業支援を、スマホとPCから手軽に進められるAIアクション支援PWAです。",
+  applicationName: "AI Action Studio",
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
   other: {
     "aas-phase": "17",
     "aas-release-stage": "production-preview",
+    "aas-build-sha": process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev",
   },
   icons: {
     icon: "/favicon.svg",
@@ -62,15 +84,22 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ja">
-      <body>
+      <body className="aas-crystal-theme">
         <ReleaseAudienceGate>
-          <AppErrorReporter />
-          <KnowledgeRuntimeBootstrap />
-          <AdminHomeTopbar />
-          <div className="free-trial-global-shell"><FreeTrialBanner /></div>
-          <ReleaseUpdateManager />
-          {children}
-          <PersistentMobileNav />
+          <AccessStateProvider>
+            <FeatureAccessGate>
+            <WorkspacePresetProvider>
+              <AppErrorReporter />
+              <Suspense fallback={null}><RouteScrollToTop /></Suspense>
+              <KnowledgeRuntimeBootstrap />
+              <AdminHomeTopbar />
+              <div className="free-trial-global-shell"><FreeTrialBanner /></div>
+              <ReleaseUpdateManager />
+              {children}
+              <PersistentMobileNav />
+            </WorkspacePresetProvider>
+            </FeatureAccessGate>
+          </AccessStateProvider>
         </ReleaseAudienceGate>
       </body>
     </html>

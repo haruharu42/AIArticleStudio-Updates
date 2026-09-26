@@ -14,6 +14,9 @@ test("PWA structure guide records the enforced runtime boundaries", async () => 
   assert.match(guide, /lib\/access-control\.ts/);
   assert.match(guide, /lib\/article-create-draft\.ts/);
   assert.match(guide, /components\/article-create\/magazine-planner\.tsx/);
+  assert.match(guide, /components\/action-prompt-library\//);
+  assert.match(guide, /components\/action-prompt-library-page\.tsx/);
+  assert.match(guide, /features\/prompts\//);
   assert.match(guide, /components\/aas-reference-shell\.tsx/);
   assert.match(guide, /lib\/magazine-planner\.ts/);
   assert.match(guide, /existing article Workspace contract/);
@@ -23,6 +26,10 @@ test("PWA structure guide records the enforced runtime boundaries", async () => 
   assert.match(guide, /ignore stale responses/);
   assert.match(guide, /components\/admin-users\//);
   assert.match(guide, /components\/pwa-admin-users-page\.tsx/);
+  assert.match(guide, /components\/admin-infrastructure-usage-page\.tsx/);
+  assert.match(guide, /lib\/infrastructure-usage\.ts/);
+  assert.match(guide, /phase53-crystal-ui\.css/);
+  assert.match(guide, /public\/aas-axia-rumo-hero\.svg/);
   assert.match(guide, /lib\/admin-users-view\.ts/);
   assert.match(guide, /Browser-stored data is untrusted/);
   assert.match(guide, /UI components must not duplicate profile ownership or PWA entitlement RPC logic/);

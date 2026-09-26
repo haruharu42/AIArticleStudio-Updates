@@ -71,7 +71,7 @@ export default function AuthCallbackPage() {
       <div className="callback-card">
         <span className="brand-mark" aria-hidden="true">✦</span>
         {!failed && <span className="spinner" aria-hidden="true" />}
-        <h1>{failed ? "認証を完了できませんでした" : "AI記事スタジオ"}</h1>
+        <h1>{failed ? "認証を完了できませんでした" : "AI Action Studio"}</h1>
         <p>{message}</p>
         {failed && <Link className="primary-action" href="/">ログインへ戻る</Link>}
       </div>

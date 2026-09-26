@@ -1,4 +1,4 @@
-const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v4-release-control";
+const CACHE_NAME = "aas-pwa-phase17-prod-v2-runtime-v6-notifications";
 const APP_SHELL = [
   "/offline.html",
   "/manifest.webmanifest",
@@ -87,4 +87,57 @@ self.addEventListener("fetch", (event) => {
       ),
     );
   }
+});
+
+
+function notificationPath(value) {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")
+    || /[\\\u0000-\u0020\u007f]/.test(value)) return "/notifications";
+  return value;
+}
+
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+    if (!payload || typeof payload !== "object") payload = {};
+  } catch {
+    payload = { title: "AI Action Studio", body: event.data ? event.data.text() : "" };
+  }
+
+  const title = typeof payload.title === "string" && payload.title ? payload.title : "AI Action Studio";
+  const body = typeof payload.body === "string" ? payload.body : "";
+  const href = notificationPath(payload.href);
+  const notificationId = Number(payload.notificationId || 0);
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: notificationId > 0 ? "aas-notification-" + notificationId : undefined,
+      renotify: false,
+      data: { href, notificationId },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const href = notificationPath(event.notification?.data?.href);
+  const targetUrl = new URL(href, self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ("focus" in client) {
+          if ("navigate" in client) {
+            return client.navigate(targetUrl).then(() => client.focus());
+          }
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow ? self.clients.openWindow(targetUrl) : undefined;
+    }),
+  );
 });

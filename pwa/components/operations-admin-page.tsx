@@ -1,6 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
+import { AdminSelectWithCustom } from "@/components/admin-form-controls";
 
 import {
   loadOpsSnapshot,
@@ -27,6 +31,20 @@ type CapacityDraft = {
 };
 
 const GIB = 1024 ** 3;
+
+
+const PLAN_OPTIONS = [
+  { value: "Free", label: "Free" },
+  { value: "Pro", label: "Pro" },
+  { value: "Team", label: "Team" },
+  { value: "Enterprise", label: "Enterprise" },
+  { value: "Custom", label: "契約上のカスタムプラン" },
+] as const;
+
+const CAPACITY_GB_OPTIONS = ["0.5", "1", "2", "5", "8", "10", "20", "50", "100", "250", "500"] as const;
+const WARNING_PERCENT_OPTIONS = ["50", "60", "65", "70", "75", "80"] as const;
+const DANGER_PERCENT_OPTIONS = ["75", "80", "85", "88", "90"] as const;
+const CRITICAL_PERCENT_OPTIONS = ["90", "92", "95", "97", "99"] as const;
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
@@ -74,7 +92,8 @@ function capacityClass(percent: number | null, warning: number, danger: number, 
 }
 
 export function OperationsAdminPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState, client } = useSharedAccessState();
+  const [initError, setInitError] = useState("");
   const [snapshot, setSnapshot] = useState<OpsSnapshot | null>(null);
   const [worker, setWorker] = useState<{ ok: boolean; latencyMs: number; checkedAt: string } | null>(null);
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
@@ -85,34 +104,44 @@ export function OperationsAdminPage() {
   const [resolutionNotes, setResolutionNotes] = useState<Record<string, string>>({});
   const [capacityDraft, setCapacityDraft] = useState<CapacityDraft | null>(null);
 
+  const gate = useMemo<Gate>(() => {
+    if (accessState.kind === "ready") {
+      if (accessState.profile.role !== "admin" || accessState.profile.status !== "active") return { kind: "denied" };
+      if (initError) return { kind: "error", message: initError };
+      return { kind: "ready", aasId: accessState.profile.aas_user_id };
+    }
+    if (accessState.kind === "loading") return { kind: "loading" };
+    if (accessState.kind === "signed_out") return { kind: "signed_out" };
+    if (accessState.kind === "unavailable") {
+      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
+    }
+    return { kind: "denied" };
+  }, [accessState, initError]);
+
   const refresh = useCallback(async () => {
-    const client = getSupabaseClient();
+    if (!client) return;
     const [nextSnapshot, nextWorker] = await Promise.all([loadOpsSnapshot(client), probeWorkerHealth()]);
     setSnapshot(nextSnapshot);
     setWorker(nextWorker);
-  }, []);
+  }, [client]);
 
   useEffect(() => {
+    if (accessState.kind !== "ready" || accessState.profile.role !== "admin" || accessState.profile.status !== "active" || !client) return;
     let active = true;
+    queueMicrotask(() => {
+      if (active) setInitError("");
+    });
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) { setGate({ kind: "signed_out" }); return; }
-        const { data: profile, error: profileError } = await client.from("profiles").select("id,aas_user_id,role,status").eq("id", user.id).single();
-        if (profileError || !profile || profile.id !== user.id) throw new Error("管理者プロフィールを確認できません。");
-        if (profile.role !== "admin" || profile.status !== "active") { setGate({ kind: "denied" }); return; }
         await refresh();
-        if (active) setGate({ kind: "ready", aasId: profile.aas_user_id });
       } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "Security & Operationsを初期化できませんでした。" });
+        if (active) setInitError(error instanceof Error ? error.message : "Security & Operationsを初期化できませんでした。");
       }
     };
     void boot();
     const timer = window.setInterval(() => { if (active) void refresh().catch(() => undefined); }, 60_000);
     return () => { active = false; window.clearInterval(timer); };
-  }, [refresh]);
+  }, [accessState, client, refresh]);
 
   const sources = useMemo(() => [...new Set((snapshot?.events ?? []).map((event) => event.source))].sort(), [snapshot]);
   const events = useMemo(() => (snapshot?.events ?? []).filter((event) => {
@@ -144,14 +173,15 @@ export function OperationsAdminPage() {
     } finally { setBusy(false); }
   };
 
+  if (gate.kind === "loading") return null;
+
   if (gate.kind !== "ready") {
     return <main className="standalone-page"><section className="standalone-card">
       <p className="eyebrow">SECURITY & OPERATIONS</p><h1>セキュリティ・運用</h1>
-      {gate.kind === "loading" && <p className="route-notice">管理者権限と監視状態を確認しています…</p>}
       {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
       {gate.kind === "denied" && <p className="route-notice error">active管理者のみ利用できます。</p>}
       {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-      <a className="route-back" href="/admin">← 管理ダッシュボード</a>
+      <Link className="route-back" href="/admin">← 管理ダッシュボード</Link>
     </section></main>;
   }
 
@@ -213,7 +243,7 @@ export function OperationsAdminPage() {
     <main className="admin-page ops-admin-page">
       <header className="admin-head admin-dashboard-head">
         <div><p className="eyebrow">SECURITY & OPERATIONS CENTER</p><h1>セキュリティ・運用</h1><p>{gate.aasId} / エラー・セキュリティイベント・定期監査・Supabase容量をまとめて確認します。</p></div>
-        <div className="admin-head-actions"><button className="primary-action" disabled={busy} type="button" onClick={() => void runAudit()}>{busy ? "監査中…" : "今すぐ監査"}</button><a className="route-back" href="/admin">← 管理ダッシュボード</a></div>
+        <div className="admin-head-actions"><button className="primary-action" disabled={busy} type="button" onClick={() => void runAudit()}>{busy ? "監査中…" : "今すぐ監査"}</button><Link className="route-back" href="/admin">← 管理ダッシュボード</Link></div>
       </header>
       {message && <div className="route-notice" role="status">{message}</div>}
 
@@ -241,12 +271,12 @@ export function OperationsAdminPage() {
           <div className="ops-capacity-settings">
             <div><strong>容量監視設定</strong><small>契約プラン変更時も管理画面から変更できます。上限を空欄にすると残容量・使用率警告を停止します。</small></div>
             <div className="ops-capacity-form">
-              <label className="route-field"><span>プラン名</span><input value={capacityForm.planLabel} onChange={(e) => setCapacityDraft({ ...capacityForm, planLabel: e.target.value.slice(0, 80) })} placeholder="例: Free / Pro" /></label>
-              <label className="route-field"><span>Database上限 (GB)</span><input inputMode="decimal" value={capacityForm.databaseLimitGb} onChange={(e) => setCapacityDraft({ ...capacityForm, databaseLimitGb: e.target.value })} placeholder="例: 0.5" /></label>
-              <label className="route-field"><span>Storage上限 (GB)</span><input inputMode="decimal" value={capacityForm.storageLimitGb} onChange={(e) => setCapacityDraft({ ...capacityForm, storageLimitGb: e.target.value })} placeholder="例: 1" /></label>
-              <label className="route-field"><span>注意 (%)</span><input inputMode="numeric" value={capacityForm.warningPercent} onChange={(e) => setCapacityDraft({ ...capacityForm, warningPercent: e.target.value })} /></label>
-              <label className="route-field"><span>警告 (%)</span><input inputMode="numeric" value={capacityForm.dangerPercent} onChange={(e) => setCapacityDraft({ ...capacityForm, dangerPercent: e.target.value })} /></label>
-              <label className="route-field"><span>重大 (%)</span><input inputMode="numeric" value={capacityForm.criticalPercent} onChange={(e) => setCapacityDraft({ ...capacityForm, criticalPercent: e.target.value })} /></label>
+              <AdminSelectWithCustom label="プラン名" value={capacityForm.planLabel} onChange={(value) => setCapacityDraft({ ...capacityForm, planLabel: value.slice(0, 80) })} options={PLAN_OPTIONS} customPlaceholder="契約プラン名を入力" />
+              <AdminSelectWithCustom label="Database上限 (GB)" value={capacityForm.databaseLimitGb} onChange={(value) => setCapacityDraft({ ...capacityForm, databaseLimitGb: value })} options={CAPACITY_GB_OPTIONS} placeholder="上限なし" customPlaceholder="GB数を自由入力" />
+              <AdminSelectWithCustom label="Storage上限 (GB)" value={capacityForm.storageLimitGb} onChange={(value) => setCapacityDraft({ ...capacityForm, storageLimitGb: value })} options={CAPACITY_GB_OPTIONS} placeholder="上限なし" customPlaceholder="GB数を自由入力" />
+              <AdminSelectWithCustom label="注意ライン (%)" value={capacityForm.warningPercent} onChange={(value) => setCapacityDraft({ ...capacityForm, warningPercent: value })} options={WARNING_PERCENT_OPTIONS} description="標準は70%。早めに気づくための目安です。" />
+              <AdminSelectWithCustom label="警告ライン (%)" value={capacityForm.dangerPercent} onChange={(value) => setCapacityDraft({ ...capacityForm, dangerPercent: value })} options={DANGER_PERCENT_OPTIONS} description="標準は85%。対応を検討する目安です。" />
+              <AdminSelectWithCustom label="重大ライン (%)" value={capacityForm.criticalPercent} onChange={(value) => setCapacityDraft({ ...capacityForm, criticalPercent: value })} options={CRITICAL_PERCENT_OPTIONS} description="標準は95%。至急対応する目安です。" />
             </div>
             <div className="admin-actions"><button className="primary-action" disabled={busy} type="button" onClick={() => void saveCapacitySettings()}>容量設定を保存</button>{capacityDraft && <button className="secondary-action" disabled={busy} type="button" onClick={() => setCapacityDraft(null)}>変更を破棄</button>}</div>
           </div>

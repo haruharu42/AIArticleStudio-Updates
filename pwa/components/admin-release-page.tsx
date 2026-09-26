@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { AdminSelectWithCustom } from "@/components/admin-form-controls";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -21,6 +23,18 @@ type FormState = {
   notes: string;
   updateKind: "optional" | "required";
 };
+
+const RELEASE_TITLE_OPTIONS = [
+  "記事作成UI改善",
+  "記事作成の不具合修正",
+  "管理者ツール改善",
+  "表示・操作性改善",
+  "認証・ログイン改善",
+  "パフォーマンス改善",
+  "安定性・セキュリティ改善",
+  "新機能追加",
+  "軽微な修正",
+] as const;
 
 const EMPTY_FORM: FormState = {
   version: "",
@@ -49,11 +63,6 @@ export function AdminReleasePage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [testerAasId, setTesterAasId] = useState("AAS-000002");
-
-  const reload = async () => {
-    const next = await adminListAppReleases(getSupabaseClient());
-    setSnapshot(next);
-  };
 
   useEffect(() => {
     let active = true;
@@ -182,9 +191,10 @@ export function AdminReleasePage() {
         <div>
           <p className="eyebrow">RELEASE CONTROL</p>
           <h1>アップデート管理</h1>
-          <p>①管理者確認 → ②指定した一般ユーザーテスター確認 → ③全一般ユーザー公開の3段階で進めます。</p>
+          <p>コード配布は①管理者確認 → ②指定テスター確認 → ③全体公開で進め、機能単位の公開・メンテナンスは全機能管理センターで制御します。</p>
         </div>
         <nav>
+          <Link href="/admin/features">全機能管理センター</Link>
           <Link href="/admin">管理ダッシュボード</Link>
           <Link href="/">ホーム</Link>
         </nav>
@@ -192,6 +202,17 @@ export function AdminReleasePage() {
 
       {message && <p className="route-notice">{message}</p>}
       {error && <p className="route-notice error">{error}</p>}
+
+      <section className="admin-panel release-feature-control-link">
+        <div className="admin-panel-heading">
+          <div>
+            <p className="eyebrow">FEATURE AVAILABILITY</p>
+            <h2>機能単位の公開・メンテナンス</h2>
+          </div>
+          <Link className="primary-action" href="/admin/features">全機能管理センターを開く</Link>
+        </div>
+        <p className="trial-admin-note">この画面はアプリコードのリリースを管理します。実装済み機能を管理者のみ・指定テスター・全一般ユーザーのどこまで使用可能にするか、また一時停止するかは機能管理センターで個別に変更できます。</p>
+      </section>
 
       <section className="release-admin-summary">
         <article>
@@ -221,6 +242,7 @@ export function AdminReleasePage() {
         <p className="trial-admin-note">
           登録した時点では一般ユーザーへは反映されません。まず管理者だけで確認し、問題がなければ第2段階として指定テスターへ反映します。第2段階を通過するまで全体公開はDB側でも禁止します。
         </p>
+        <div className="admin-safety-confirm">入力順：①バージョン → ②更新名を選択 → ③ユーザー向け変更内容 → ④任意/必須を選択。登録後も、テスター確認と全体公開は別操作です。</div>
 
         <div className="release-admin-form">
           <label className="editor-field">
@@ -232,15 +254,14 @@ export function AdminReleasePage() {
               autoComplete="off"
             />
           </label>
-          <label className="editor-field">
-            <span>アップデート名</span>
-            <input
-              value={form.title}
-              onChange={(event) => setForm((value) => ({ ...value, title: event.target.value }))}
-              placeholder="例: 記事作成UI改善"
-              maxLength={120}
-            />
-          </label>
+          <AdminSelectWithCustom
+            label="アップデート名"
+            value={form.title}
+            onChange={(title) => setForm((value) => ({ ...value, title: title.slice(0, 120) }))}
+            options={RELEASE_TITLE_OPTIONS}
+            description="よく使う更新名から選択できます。固有の内容は「その他・自由入力」を使ってください。"
+            customPlaceholder="例: 記事ライブラリ検索改善"
+          />
           <label className="editor-field release-admin-notes">
             <span>ユーザーへ表示する更新内容</span>
             <textarea

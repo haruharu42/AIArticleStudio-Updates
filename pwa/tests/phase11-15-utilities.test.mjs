@@ -34,7 +34,11 @@ test("paid article pricing stays compatible with positive-price validation", asy
   assert.match(api, /有料記事は1以上の整数価格を設定してください/);
   assert.match(page, /const setArticleType = \(value: ArticleType\)/);
   assert.match(page, /value === "free"\s*\? null/);
-  assert.match(stepUi, /type="number" min=\{1\} value=\{draft\.price \?\? 1\}/);
+  assert.match(stepUi, /PAID_ARTICLE_PRICE_OPTIONS/);
+  assert.match(stepUi, /paidArticlePriceSelectionValue/);
+  assert.match(stepUi, /<option value="custom">自由入力<\/option>/);
+  assert.match(stepUi, /type="number" min=\{1\} step=\{1\} value=\{draft\.price \?\? 980\}/);
+  assert.match(page, /current\.price : 980/);
   assert.match(migration, /articles_paid_price_positive_check/);
   assert.match(migration, /price is not null and price > 0/);
 });
@@ -44,6 +48,7 @@ test("magazine creation is dropdown-first, validated and persisted without a new
   const plannerUi = await read("components/article-create/magazine-planner.tsx");
   const page = await read("components/phase11-create-page.tsx");
   const steps = await read("components/article-create/article-create-steps.tsx");
+  const draftHelpers = await read("lib/article-create-draft.ts");
   const api = await read("lib/phase11-create.ts");
   const progress = await read("lib/phase11-wizard-progress.ts");
 
@@ -72,10 +77,11 @@ test("magazine creation is dropdown-first, validated and persisted without a new
   assert.match(plannerUi, /その他の記事の並び方/);
   assert.match(plannerUi, /その他の補足・目的/);
   assert.match(plannerUi, /条件が変更されました。マガジン構成をもう一度生成してください。/);
-  for (const label of ["種類の選択", "条件の入力", "タイトルの選択", "記事の生成"]) {
-    assert.match(page, new RegExp(label));
+  for (const label of ["記事の種類", "画像設定", "記事条件", "タイトル", "本文", "内容確認", "保存・タグ"]) {
+    assert.match(draftHelpers, new RegExp(label));
   }
-  assert.match(page, /displayStepForInternalStep/);
+  assert.match(page, /ARTICLE_CREATE_STEPS\.map/);
+  assert.doesNotMatch(page, /displayStepForInternalStep|ARTICLE_CREATE_UI_STEPS/);
   assert.match(steps, /マガジンモード/);
   assert.match(steps, /disabled=\{draft\.magazineEnabled\}/);
   assert.match(page, /magazinePlan\.name\.trim\(\)/);
@@ -116,36 +122,47 @@ test("Phase 15 member tools require the same PWA access gate as the rest of the 
   const sideJobRoute = await read("app/sidejob/page.tsx");
   const snsPlanRoute = await read("app/sns-plan/page.tsx");
   const tools = await read("components/phase-tools-page.tsx");
+  const toolCatalog = await read("features/tools/tool-catalog.ts");
 
-  assert.match(gate, /loadAccessState\(getSupabaseClient\(\)\)/);
+  assert.match(gate, /useSharedAccessState\(\)/);
+  assert.doesNotMatch(gate, /loadAccessState|getSupabaseClient/);
   assert.match(gate, /state\.kind === "ready"/);
+  assert.match(gate, /state\.kind === "loading"\) return null/);
   assert.match(gate, /state\.kind === "entitlement_denied"/);
   assert.match(sideJobRoute, /Phase15MemberGate/);
   assert.match(snsPlanRoute, /Phase15MemberGate/);
   assert.doesNotMatch(tools, /const publicTools/);
-  assert.match(tools, /const cards = ready \? memberTools : \[\]/);
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
+  assert.match(toolCatalog, /export const MEMBER_TOOL_GROUPS/);
+  assert.match(tools, /\{ready && \(/);
 });
 
-test("tools hub exposes output and SNS planning with public-facing categories", async () => {
+test("tools hub keeps supporting workflows grouped and leaves article-integrated tools out of the list", async () => {
   const tools = await read("components/phase-tools-page.tsx");
+  const toolCatalog = await read("features/tools/tool-catalog.ts");
   const packageJson = JSON.parse(await read("package.json"));
 
-  assert.match(tools, /href: "\/export"/);
-  assert.match(tools, /href: "\/sns-plan"/);
-  assert.match(tools, /category: "出力"/);
-  assert.match(tools, /SNSアカウント設計/);
-  assert.doesNotMatch(tools, /Phase 11 出力/);
-  assert.match(packageJson.scripts.test, /phase11-15-utilities\.test\.mjs/);
+  assert.match(toolCatalog, /href: "\/sns-plan"/);
+  assert.match(toolCatalog, /SNSアカウント設計/);
+  assert.match(toolCatalog, /SNS・動画・集客/);
+  assert.match(toolCatalog, /公開・分析/);
+  assert.match(toolCatalog, /販売・収益化/);
+  assert.match(toolCatalog, /受託・案件獲得/);
+  assert.doesNotMatch(toolCatalog, /href: "\/export"/);
+  assert.doesNotMatch(toolCatalog, /href: "\/images"/);
+  assert.doesNotMatch(toolCatalog, /href: "\/create"/);
+  assert.match(tools, /MEMBER_TOOL_GROUPS/);
+  assert.match(packageJson.scripts.test, /node --test --test-concurrency=1/);
 });
 
 
-test("article creator UI v2 keeps the four-step rail readable and preserves two-column mobile planning", async () => {
+test("article creator UI v2 keeps the eight-step rail readable and preserves two-column mobile planning", async () => {
   const css = await read("app/phase33-reference-ui.css");
   const plannerUi = await read("components/article-create/magazine-planner.tsx");
 
   assert.match(plannerUi, /マガジンタイトル一括生成/);
-  assert.match(css, /Article creator UI v2: reference density, readable type, and 390-430px two-column layout/);
-  assert.match(css, /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(css, /Article creator UI v2: eight-step progress, readable type, and 390-430px two-column layout/);
+  assert.match(css, /grid-template-columns: repeat\(8, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /@media \(max-width: 360px\)[\s\S]*?\.reference-create-shell \.article-kind-grid,[\s\S]*?\.reference-create-shell \.magazine-dropdown-grid \{[\s\S]*?grid-template-columns: 1fr/);
 });

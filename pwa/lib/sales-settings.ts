@@ -16,17 +16,26 @@ function optionalText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function safeExternalSalesUrl(value: string): string {
+  const cleaned = value.trim();
+  if (!cleaned) return "";
+  try {
+    const parsed = new URL(cleaned);
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password) return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
 export function validateExternalSalesUrl(value: string): string {
   const cleaned = value.trim();
   if (!cleaned) return "";
-  let parsed: URL;
-  try {
-    parsed = new URL(cleaned);
-  } catch {
-    throw new Error("購入ページURLを確認してください。");
+  const safe = safeExternalSalesUrl(cleaned);
+  if (!safe) {
+    throw new Error("購入ページURLは認証情報を含まない https:// のURLを設定してください。");
   }
-  if (parsed.protocol !== "https:") throw new Error("購入ページURLは https:// から始まるURLを設定してください。");
-  return parsed.toString();
+  return safe;
 }
 
 function parseSettings(value: unknown): SalesSettings {

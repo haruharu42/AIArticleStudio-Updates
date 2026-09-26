@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - feat/note-easy-import-manual-contrast-20260920
   workflow_dispatch:
     inputs:
       expected_sha:
@@ -25,6 +26,7 @@ concurrency:
 
 jobs:
   preview-upload:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || contains(github.event.head_commit.message, '[preview]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -51,6 +53,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_SHA: ${{ github.sha }}
           EVENT_REF: ${{ github.ref }}
+          EVENT_MESSAGE: ${{ github.event.head_commit.message }}
           INPUT_EXPECTED_SHA: ${{ inputs.expected_sha }}
           CONFIRMATION: ${{ inputs.confirmation }}
         run: |
@@ -68,8 +71,17 @@ jobs:
               exit 1
             fi
           else
-            if [ "$EVENT_NAME" != "push" ] || [ "$EVENT_REF" != "refs/heads/main" ]; then
-              echo 'Automatic Preview deploy is allowed only for pushes to main.' >&2
+            if [ "$EVENT_NAME" != "push" ]; then
+              echo 'Automatic Preview deploy requires a push event.' >&2
+              exit 1
+            fi
+
+            if [ "$EVENT_REF" = "refs/heads/main" ]; then
+              :
+            elif [ "$EVENT_REF" = "refs/heads/feat/note-easy-import-manual-contrast-20260920" ]; then
+              :
+            else
+              echo 'Automatic Preview deploy is restricted to main or the approved feature branch.' >&2
               exit 1
             fi
             expected_sha="$EVENT_SHA"
@@ -148,6 +160,8 @@ jobs:
         run: npm run lint
 
       - name: Build and regression tests
+        env:
+          NEXT_PUBLIC_AAS_BUILD_SHA: ${{ steps.target.outputs.sha }}
         run: npm test
 
       - name: Dependency audit
@@ -275,7 +289,7 @@ jobs:
         run: |
           set -euo pipefail
           {
-            echo '## AI Article Studio PWA Preview'
+            echo '## AI Action Studio PWA Preview'
             echo
             echo "- SHA: \`$EXPECTED_SHA\`"
             echo '- Worker: `ai-article-studio-pwa-preview`'

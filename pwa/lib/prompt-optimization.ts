@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { KnowledgeTask } from "@/lib/knowledge-engine";
+import { isKnowledgeTask, type KnowledgeTask } from "@/lib/knowledge-engine";
 import type { AiPlan, AiProvider } from "@/lib/user-personalization";
 
 export type PromptOptimizationRule = {
@@ -23,6 +23,8 @@ export type KnowledgeRuntimeState = {
   lastPublishedAt: string | null;
   nextRefreshDueAt: string | null;
 };
+
+export const KNOWLEDGE_RUNTIME_EVENT = "aas:knowledge-runtime-updated";
 
 let runtimePromptOptimizations: PromptOptimizationRule[] = [];
 let runtimeKnowledgeState: KnowledgeRuntimeState = {
@@ -51,7 +53,7 @@ function parseRule(row: Record<string, unknown>): PromptOptimizationRule | null 
     !key
     || (provider !== "all" && provider !== "chatgpt" && provider !== "claude" && provider !== "gemini")
     || (plan !== "all" && plan !== "free" && plan !== "paid")
-    || (task !== "all" && task !== "title" && task !== "article" && task !== "image" && task !== "social" && task !== "promotion")
+    || (task !== "all" && !isKnowledgeTask(task))
   ) {
     return null;
   }
@@ -109,6 +111,9 @@ export function setRuntimePromptOptimizations(rules: PromptOptimizationRule[]): 
 
 export function setRuntimeKnowledgeState(state: KnowledgeRuntimeState): void {
   runtimeKnowledgeState = state;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(KNOWLEDGE_RUNTIME_EVENT));
+  }
 }
 
 export function getRuntimeKnowledgeState(): KnowledgeRuntimeState {

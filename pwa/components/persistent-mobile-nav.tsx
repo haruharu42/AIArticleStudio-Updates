@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
+import { AasReferenceBottomNav, type ReferenceNavKey } from "@/components/aas-reference-shell";
 import {
-  DEFAULT_MOBILE_NAV_ITEMS,
-  MOBILE_NAV_ITEMS_EVENT,
-  MOBILE_NAV_ITEMS_KEY,
   MOBILE_NAV_PREFERENCE_EVENT,
   MOBILE_NAV_PREFERENCE_KEY,
-  mobileNavItemFor,
   readMobileNavAlways,
-  readMobileNavItems,
-  type MobileNavItemKey,
-} from "@/lib/mobile-nav-preference";
-import { getSupabaseClient } from "@/lib/supabase";
+} from "@/features/navigation";
+import { MOBILE_NAV_ITEM_OPTIONS } from "@/lib/mobile-nav-preference";
 
 const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms"];
 const REFERENCE_SHELL_ROUTES = new Set(["/", "/create", "/ranking", "/profile"]);
@@ -23,114 +19,53 @@ function matchesPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
+function activeKeyForPathname(pathname: string): ReferenceNavKey {
+  const matches = MOBILE_NAV_ITEM_OPTIONS
+    .filter((item) => {
+      const path = item.href.split("?")[0] || "/";
+      return path !== "/" && (pathname === path || pathname.startsWith(path + "/"));
+    })
+    .sort((a, b) => (b.href.split("?")[0]?.length ?? 0) - (a.href.split("?")[0]?.length ?? 0));
+  return matches[0]?.key ?? "";
+}
+
 export function PersistentMobileNav() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [signedIn, setSignedIn] = useState(false);
-  const [admin, setAdmin] = useState(false);
+  const { state } = useSharedAccessState();
+  const signedIn = state.kind !== "loading" && state.kind !== "unavailable" && state.kind !== "signed_out";
   const [alwaysShow, setAlwaysShow] = useState(true);
-  const [customItems, setCustomItems] = useState<MobileNavItemKey[]>([...DEFAULT_MOBILE_NAV_ITEMS]);
-
-  useEffect(() => {
-    let active = true;
-    let client: ReturnType<typeof getSupabaseClient>;
-    try {
-      client = getSupabaseClient();
-    } catch {
-      return;
-    }
-
-    const syncAccount = async (session: Awaited<ReturnType<typeof client.auth.getSession>>["data"]["session"]) => {
-      if (!active) return;
-      setSignedIn(Boolean(session));
-      if (!session?.user) {
-        setAdmin(false);
-        return;
-      }
-      try {
-        const { data } = await client.from("profiles").select("id,role,status").eq("id", session.user.id).single();
-        if (active) setAdmin(Boolean(data && data.id === session.user.id && data.role === "admin" && data.status === "active"));
-      } catch {
-        if (active) setAdmin(false);
-      }
-    };
-
-    void client.auth.getSession().then(({ data }) => syncAccount(data.session));
-    const { data } = client.auth.onAuthStateChange((_event, session) => {
-      window.setTimeout(() => { if (active) void syncAccount(session); }, 0);
-    });
-
-    return () => {
-      active = false;
-      data.subscription.unsubscribe();
-    };
-  }, []);
 
   useEffect(() => {
     const syncVisibility = () => setAlwaysShow(readMobileNavAlways());
-    const syncItems = () => setCustomItems(readMobileNavItems());
     const onVisibilityPreference = (event: Event) => {
       const custom = event as CustomEvent<boolean>;
       setAlwaysShow(typeof custom.detail === "boolean" ? custom.detail : readMobileNavAlways());
     };
-    const onItemsPreference = (event: Event) => {
-      const custom = event as CustomEvent<MobileNavItemKey[]>;
-      setCustomItems(Array.isArray(custom.detail) ? custom.detail : readMobileNavItems());
-    };
     const onStorage = (event: StorageEvent) => {
       if (event.key === MOBILE_NAV_PREFERENCE_KEY) syncVisibility();
-      if (event.key === MOBILE_NAV_ITEMS_KEY) syncItems();
     };
 
-    queueMicrotask(() => {
-      syncVisibility();
-      syncItems();
-    });
+    queueMicrotask(syncVisibility);
     window.addEventListener(MOBILE_NAV_PREFERENCE_EVENT, onVisibilityPreference);
-    window.addEventListener(MOBILE_NAV_ITEMS_EVENT, onItemsPreference);
     window.addEventListener("storage", onStorage);
     return () => {
       window.removeEventListener(MOBILE_NAV_PREFERENCE_EVENT, onVisibilityPreference);
-      window.removeEventListener(MOBILE_NAV_ITEMS_EVENT, onItemsPreference);
       window.removeEventListener("storage", onStorage);
     };
   }, []);
 
   const hiddenRoute = HIDDEN_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));
   const referenceShellRoute = REFERENCE_SHELL_ROUTES.has(pathname);
-  const visible = signedIn && !hiddenRoute && !referenceShellRoute && (alwaysShow || pathname === "/" || pathname === "/settings");
-  const activeKey = useMemo(() => {
-    if (pathname === "/") return "home";
-    if (matchesPrefix(pathname, "/admin")) return "admin";
-    if (matchesPrefix(pathname, "/settings")) return "settings";
-    for (const item of customItems) {
-      const href = mobileNavItemFor(item).href;
-      if (matchesPrefix(pathname, href)) return item;
-    }
-    return "";
-  }, [customItems, pathname]);
+  const visible = signedIn && !hiddenRoute && !referenceShellRoute && (alwaysShow || pathname === "/settings");
 
   if (!visible) return null;
 
-  const go = (href: string) => router.push(href);
-  const needsSpacer = pathname !== "/" && pathname !== "/settings";
+  const activeKey = activeKeyForPathname(pathname);
 
   return (
     <>
-      {needsSpacer && <div className="persistent-mobile-nav-spacer" aria-hidden="true" />}
-      <nav className={`beginner-bottom-nav beginner-mobile-nav persistent-mobile-nav${admin ? " admin-enabled" : ""}`} aria-label="メインナビゲーション">
-        <button className={activeKey === "home" ? "active" : ""} type="button" aria-current={activeKey === "home" ? "page" : undefined} onClick={() => go("/")}><span aria-hidden="true">⌂</span>ホーム</button>
-        {customItems.map((key) => {
-          const item = mobileNavItemFor(key);
-          return (
-            <button key={key} className={activeKey === key ? "active" : ""} type="button" aria-current={activeKey === key ? "page" : undefined} onClick={() => go(item.href)}>
-              <span aria-hidden="true">{item.icon}</span>{item.label}
-            </button>
-          );
-        })}
-        <button className={activeKey === "settings" ? "active" : ""} type="button" aria-current={activeKey === "settings" ? "page" : undefined} onClick={() => go("/settings")}><span aria-hidden="true">⚙</span>設定</button>
-        {admin && <button className={activeKey === "admin" ? "active" : ""} type="button" aria-current={activeKey === "admin" ? "page" : undefined} onClick={() => go("/admin")}><span aria-hidden="true">◆</span>管理</button>}
-      </nav>
+      <div className="persistent-mobile-nav-spacer" aria-hidden="true" />
+      <AasReferenceBottomNav active={activeKey} />
     </>
   );
 }

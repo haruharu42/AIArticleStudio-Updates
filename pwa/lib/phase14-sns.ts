@@ -1,3 +1,4 @@
+import { buildPlatformAccountPromptContext } from "@/features/account-design";
 import type { ArticleDetail } from "@/lib/phase7-articles";
 import { compileKnowledgeContext } from "@/lib/knowledge-engine";
 import { buildUserPromptContext, getRuntimeWritingProfile } from "@/lib/user-personalization";
@@ -67,6 +68,7 @@ export function buildSocialPrompt(article: ArticleDetail, input: SocialPromptInp
     audience: `SNS媒体: ${platformName} / トーン: ${input.tone.trim() || "親しみやすく具体的"}`,
   }).promptBlock;
   const promptOptimization = buildUserPromptContext(getRuntimeWritingProfile(), "social");
+  const accountContext = buildPlatformAccountPromptContext(article.publicationTarget);
 
-  return `あなたは日本語のSNS編集者です。以下の記事を元に${platformName}投稿案を作成してください。\n\n【絶対ルール】\n- 記事にない実体験・実績・レビュー・成果を追加しない。\n- 未確認の価格・在庫・統計・ランキング・最新仕様を断定しない。\n- 記事本文や第三者コンテンツを長くそのまま転載せず、SNS向けに要約・再構成する。\n- 過度な煽り、成果保証、架空の権威づけをしない。\n- リンク先を読まないと意味が分からない釣り投稿にしない。\n\n【投稿条件】\nプラットフォーム: ${platformName}\n目的: ${input.goal}\nトーン: ${input.tone.trim() || "親しみやすく具体的"}\n${maxRule}\n${hashRule}\n${platformRules[input.platform].map((rule) => `- ${rule}`).join("\n")}\n- ${goalRule[input.goal]}\n\n${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}\n\n【元記事】\nタイトル: ${article.title}\n掲載先: ${article.publicationTarget}\n記事タイプ: ${article.articleType}\nジャンル: ${article.genre || "未指定"}\nサブジャンル: ${article.subgenre || "未指定"}\n公開URL: ${article.publishedUrl || "未公開"}\n\n【本文】\n${sourceBody(article)}\n\n【出力】\n1. そのまま使える投稿案を3案\n2. 各案の狙いを1行\n3. 記事URLがある場合だけ自然なCTAへ含める\n4. 誇張なし・コピペ投稿しやすい形で出力`;
+  return `あなたは日本語のSNS編集者です。以下の記事を元に${platformName}投稿案を作成してください。\n\n【絶対ルール】\n- 記事にない実体験・実績・レビュー・成果を追加しない。\n- 未確認の価格・在庫・統計・ランキング・最新仕様を断定しない。\n- 記事本文や第三者コンテンツを長くそのまま転載せず、SNS向けに要約・再構成する。\n- 過度な煽り、成果保証、架空の権威づけをしない。\n- リンク先を読まないと意味が分からない釣り投稿にしない。\n\n【投稿条件】\nプラットフォーム: ${platformName}\n目的: ${input.goal}\nトーン: ${input.tone.trim() || "親しみやすく具体的"}\n${maxRule}\n${hashRule}\n${platformRules[input.platform].map((rule) => `- ${rule}`).join("\n")}\n- ${goalRule[input.goal]}\n\n${knowledge}${promptOptimization ? `\n\n${promptOptimization}` : ""}${accountContext}\n\n【元記事】\nタイトル: ${article.title}\n掲載先: ${article.publicationTarget}\n記事タイプ: ${article.articleType}\nジャンル: ${article.genre || "未指定"}\nサブジャンル: ${article.subgenre || "未指定"}\n公開URL: ${article.publishedUrl || "未公開"}\n\n【本文】\n${sourceBody(article)}\n\n【出力】\n1. そのまま使える投稿案を3案\n2. 各案の狙いを1行\n3. 記事URLがある場合だけ自然なCTAへ含める\n4. 誇張なし・コピペ投稿しやすい形で出力`;
 }

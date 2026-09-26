@@ -1,151 +1,87 @@
+import { replaceNoteScheduleAtomically } from "@/lib/note-schedule-persistence";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildPlatformAccountPromptContext } from "@/features/account-design";
+import { buildWorkspacePresetPromptContext, getRuntimeWorkspacePresetDefinition, getRuntimeWorkspacePresetPreference } from "@/features/presets/workspace-presets";
 import type { AiProvider } from "@/lib/user-personalization";
+import {
+  addNoteScheduleDays,
+  nextJstMonth,
+  normalizeNoteScheduleTime,
+  noteMonthBounds,
+  previousJstMonth,
+  todayJstDateKey,
+} from "@/lib/note-schedule-core";
+import type {
+  NoteAiResearchSource,
+  NoteAiSchedulePlan,
+  NoteArticleOutputSnapshot,
+  NoteScheduleItem,
+  NoteScheduleItemType,
+  NoteSchedulePerformanceSnapshot,
+  NoteScheduleStatus,
+} from "@/lib/note-schedule-types";
+import {
+  formatSchedulePerformanceForPrompt,
+} from "@/lib/note-schedule-performance";
+import {
+  NOTE_OPERATION_GOALS,
+  applyAasAdminNoteProfilePreset,
+  defaultNoteOperationProfile,
+  noteProfileSelectionLabels,
+  type NoteAccountGenre,
+  type NoteAccountStyle,
+  type NoteAudiencePreset,
+  type NoteMonetizationStyle,
+  type NoteOperationProfile,
+  type NoteTonePreset,
+} from "@/lib/note-operation-profile";
 
-export type NoteOperationGoal = "habit" | "growth" | "monetize" | "portfolio";
-export type NoteAccountGenre = "ai" | "sidejob" | "business" | "lifestyle" | "gadget" | "learning" | "parenting" | "health_beauty" | "money" | "creative" | "entertainment" | "other";
-export type NoteAccountStyle = "beginner" | "howto" | "experience" | "essay" | "review" | "trend" | "expert" | "creative" | "other";
-export type NoteAudiencePreset = "beginner" | "employee" | "sidejob_beginner" | "student" | "parent" | "senior" | "creator" | "business_owner" | "broad" | "other";
-export type NoteTonePreset = "friendly" | "gentle" | "professional" | "casual" | "expert" | "energetic" | "other";
-export type NoteMonetizationStyle = "free_first" | "free_to_paid" | "paid_expertise" | "membership_future" | "no_monetization" | "other";
-export type NoteScheduleItemType = "free_note" | "paid_note" | "review" | "profile_setup" | "sns_share";
-export type NoteScheduleStatus = "planned" | "done" | "skipped";
-export type NoteScheduleSource = "generated" | "imported" | "manual";
+export {
+  AAS_ADMIN_NOTE_PROFILE_PRESET,
+  NOTE_ACCOUNT_GENRES,
+  NOTE_ACCOUNT_STYLES,
+  NOTE_AUDIENCE_PRESETS,
+  NOTE_MONETIZATION_STYLES,
+  NOTE_OPERATION_GOALS,
+  NOTE_TONE_PRESETS,
+  applyAasAdminNoteProfilePreset,
+  defaultNoteOperationProfile,
+  noteProfileSelectionLabels,
+} from "@/lib/note-operation-profile";
+export type {
+  NoteAccountGenre,
+  NoteAccountStyle,
+  NoteAudiencePreset,
+  NoteMonetizationStyle,
+  NoteOperationGoal,
+  NoteOperationProfile,
+  NoteTonePreset,
+} from "@/lib/note-operation-profile";
 
-export type NoteOperationProfile = {
-  userId: string;
-  noteDisplayName: string;
-  bioDraft: string;
-  targetReader: string;
-  mainTopics: string[];
-  experienceNote: string;
-  accountGenre: NoteAccountGenre;
-  customGenre: string;
-  accountStyle: NoteAccountStyle;
-  customAccountStyle: string;
-  audiencePreset: NoteAudiencePreset;
-  customAudience: string;
-  tonePreset: NoteTonePreset;
-  customTone: string;
-  monetizationStyle: NoteMonetizationStyle;
-  customMonetizationStyle: string;
-  operationGoal: NoteOperationGoal;
-  weeklyPostCount: number;
-  paidPostsPerMonth: number;
-  preferredTime: string;
-  secondaryTime: string;
-  timezone: string;
-  scheduleWeeks: number;
-  accountReady: boolean;
-  profileReady: boolean;
-};
+export type {
+  NoteAiResearchSource,
+  NoteAiSchedulePlan,
+  NoteAiScheduleRecommendation,
+  NoteArticleOutputSnapshot,
+  NoteScheduleImport,
+  NoteScheduleItem,
+  NoteScheduleItemType,
+  NoteSchedulePerformanceBreakdown,
+  NoteSchedulePerformanceSnapshot,
+  NoteScheduleSource,
+  NoteScheduleStatus,
+} from "@/lib/note-schedule-types";
 
-export type NoteScheduleItem = {
-  id?: string;
-  userId?: string;
-  scheduledDate: string;
-  scheduledTime: string;
-  itemType: NoteScheduleItemType;
-  title: string;
-  theme: string;
-  status: NoteScheduleStatus;
-  source: NoteScheduleSource;
-  notes: string;
-};
+export { extractNoteAiScheduleJson } from "@/lib/note-ai-schedule-json";
+export { parseNoteAiSchedulePlan } from "@/lib/note-ai-schedule-plan";
+export { summarizeNoteSchedulePerformance } from "@/lib/note-schedule-performance";
 
-export type NoteScheduleImport = {
-  profile: Partial<NoteOperationProfile> | null;
-  schedule: NoteScheduleItem[];
-};
-
-export type NoteAiResearchSource = {
-  title: string;
-  url: string;
-  publishedAt: string;
-  whyUsed: string;
-};
-
-export type NoteAiScheduleRecommendation = {
-  postsPerWeek: number;
-  paidPostsPerWeek: number;
-  maxPostsPerDay: number;
-  totalPosts: number;
-  freePosts: number;
-  paidPosts: number;
-  reason: string;
-};
-
-export type NoteAiSchedulePlan = {
-  schema: "aas-note-schedule-v2";
-  targetMonth: string;
-  generatedForJst: string;
-  provider: AiProvider;
-  researchSummary: string;
-  strategySummary: string;
-  assumptions: string[];
-  sources: NoteAiResearchSource[];
-  recommendation: NoteAiScheduleRecommendation;
-  schedule: NoteScheduleItem[];
-  warnings: string[];
-};
-
-export type NoteSchedulePerformanceBreakdown = {
-  key: string;
-  scheduled: number;
-  done: number;
-  skipped: number;
-  remainingPlanned: number;
-};
-
-export type NoteSchedulePerformanceSnapshot = {
-  targetMonth: string;
-  scheduledPosts: number;
-  donePosts: number;
-  skippedPosts: number;
-  remainingPlannedPosts: number;
-  freeScheduled: number;
-  paidScheduled: number;
-  freeDone: number;
-  paidDone: number;
-  adherenceRate: number;
-  weekdays: NoteSchedulePerformanceBreakdown[];
-  times: NoteSchedulePerformanceBreakdown[];
-};
-
-export type NoteArticleOutputSnapshot = {
-  targetMonth: string;
-  createdPosts: number;
-  freeCreated: number;
-  paidCreated: number;
-  draftLike: number;
-  readyLike: number;
-  published: number;
-  statusCounts: Record<string, number>;
-};
-
-export function currentJstMonth(date = new Date()): string {
-  return todayJstDateKey(date).slice(0, 7);
-}
-
-export function noteMonthBounds(month: string): { start: string; end: string } {
-  if (!/^\d{4}-\d{2}$/.test(month)) throw new Error("対象月の形式を確認できませんでした。");
-  const [year, monthNumber] = month.split("-").map(Number);
-  if (monthNumber < 1 || monthNumber > 12) throw new Error("対象月の形式を確認できませんでした。");
-  const start = `${month}-01`;
-  const end = new Date(Date.UTC(year, monthNumber, 0)).toISOString().slice(0, 10);
-  return { start, end };
-}
-
-export function previousJstMonth(month: string): string {
-  noteMonthBounds(month);
-  const [year, monthNumber] = month.split("-").map(Number);
-  return new Date(Date.UTC(year, monthNumber - 2, 1)).toISOString().slice(0, 7);
-}
-
-function nextJstMonth(month: string): string {
-  noteMonthBounds(month);
-  const [year, monthNumber] = month.split("-").map(Number);
-  return new Date(Date.UTC(year, monthNumber, 1)).toISOString().slice(0, 7);
-}
+export {
+  currentJstMonth,
+  noteMonthBounds,
+  previousJstMonth,
+  todayJstDateKey,
+} from "@/lib/note-schedule-core";
 
 export async function loadNoteArticleOutputSnapshot(
   client: SupabaseClient,
@@ -210,124 +146,16 @@ function providerSearchInstruction(provider: AiProvider): string {
   return "Web検索機能が利用できる場合は必ず使う";
 }
 
-export const NOTE_OPERATION_GOALS: readonly { value: NoteOperationGoal; label: string; description: string }[] = [
-  { value: "habit", label: "まず継続したい", description: "無理のない頻度で投稿習慣を作る" },
-  { value: "growth", label: "読者を増やしたい", description: "無料記事を軸に継続して発信する" },
-  { value: "monetize", label: "収益化も育てたい", description: "無料記事と有料記事を組み合わせる" },
-  { value: "portfolio", label: "実績・作品を整理したい", description: "専門性や制作物を分かりやすく蓄積する" },
-] as const;
-
-
-export const NOTE_ACCOUNT_GENRES: readonly { value: NoteAccountGenre; label: string }[] = [
-  { value: "ai", label: "AI・ChatGPT・生成AI" },
-  { value: "sidejob", label: "副業・働き方" },
-  { value: "business", label: "ビジネス・キャリア" },
-  { value: "lifestyle", label: "暮らし・ライフスタイル" },
-  { value: "gadget", label: "ガジェット・IT" },
-  { value: "learning", label: "学習・資格" },
-  { value: "parenting", label: "子育て・教育" },
-  { value: "health_beauty", label: "健康・美容" },
-  { value: "money", label: "お金・家計・投資" },
-  { value: "creative", label: "創作・クリエイティブ" },
-  { value: "entertainment", label: "趣味・エンタメ" },
-  { value: "other", label: "その他（自由入力）" },
-] as const;
-
-export const NOTE_ACCOUNT_STYLES: readonly { value: NoteAccountStyle; label: string }[] = [
-  { value: "beginner", label: "初心者向けにやさしく解説" },
-  { value: "howto", label: "実践ノウハウ・手順中心" },
-  { value: "experience", label: "経験・学び・試行錯誤中心" },
-  { value: "essay", label: "日記・エッセイ・考え方中心" },
-  { value: "review", label: "レビュー・比較・おすすめ中心" },
-  { value: "trend", label: "ニュース・最新トレンド整理" },
-  { value: "expert", label: "専門知識・深掘り中心" },
-  { value: "creative", label: "作品・創作活動中心" },
-  { value: "other", label: "その他（自由入力）" },
-] as const;
-
-export const NOTE_AUDIENCE_PRESETS: readonly { value: NoteAudiencePreset; label: string }[] = [
-  { value: "beginner", label: "そのジャンルの完全初心者" },
-  { value: "employee", label: "会社員・働く人" },
-  { value: "sidejob_beginner", label: "副業を始めたい人" },
-  { value: "student", label: "学生・学び直し層" },
-  { value: "parent", label: "子育て中の人" },
-  { value: "senior", label: "50代・60代以上" },
-  { value: "creator", label: "クリエイター・発信者" },
-  { value: "business_owner", label: "個人事業主・経営者" },
-  { value: "broad", label: "年齢を限定せず幅広く" },
-  { value: "other", label: "その他（自由入力）" },
-] as const;
-
-export const NOTE_TONE_PRESETS: readonly { value: NoteTonePreset; label: string }[] = [
-  { value: "friendly", label: "親しみやすい" },
-  { value: "gentle", label: "やさしく丁寧" },
-  { value: "professional", label: "落ち着いた・信頼感重視" },
-  { value: "casual", label: "カジュアル・会話調" },
-  { value: "expert", label: "専門的・簡潔" },
-  { value: "energetic", label: "明るく前向き" },
-  { value: "other", label: "その他（自由入力）" },
-] as const;
-
-export const NOTE_MONETIZATION_STYLES: readonly { value: NoteMonetizationStyle; label: string }[] = [
-  { value: "free_first", label: "無料note中心で読者を増やす" },
-  { value: "free_to_paid", label: "無料noteから有料noteへ自然につなぐ" },
-  { value: "paid_expertise", label: "専門ノウハウを有料noteで深掘り" },
-  { value: "membership_future", label: "将来メンバーシップも検討" },
-  { value: "no_monetization", label: "収益化せず発信・記録を優先" },
-  { value: "other", label: "その他（自由入力）" },
-] as const;
-
-function optionLabel<T extends string>(options: readonly { value: T; label: string }[], value: T, custom: string): string {
-  if (value === "other" && custom.trim()) return custom.trim();
-  return options.find((item) => item.value === value)?.label ?? value;
-}
-
-export function noteProfileSelectionLabels(profile: NoteOperationProfile) {
-  return {
-    genre: optionLabel(NOTE_ACCOUNT_GENRES, profile.accountGenre, profile.customGenre),
-    style: optionLabel(NOTE_ACCOUNT_STYLES, profile.accountStyle, profile.customAccountStyle),
-    audience: optionLabel(NOTE_AUDIENCE_PRESETS, profile.audiencePreset, profile.customAudience),
-    tone: optionLabel(NOTE_TONE_PRESETS, profile.tonePreset, profile.customTone),
-    monetization: optionLabel(NOTE_MONETIZATION_STYLES, profile.monetizationStyle, profile.customMonetizationStyle),
-  };
-}
-
 export const NOTE_SCHEDULE_TYPE_LABELS: Record<NoteScheduleItemType, string> = {
-  free_note: "無料note",
-  paid_note: "有料note",
+  free_note: "無料note作成",
+  paid_note: "有料note作成",
   review: "振り返り",
   profile_setup: "初期設定",
   sns_share: "SNS告知",
 };
 
-export function defaultNoteOperationProfile(userId: string): NoteOperationProfile {
-  return {
-    userId,
-    noteDisplayName: "",
-    bioDraft: "",
-    targetReader: "",
-    mainTopics: [],
-    experienceNote: "",
-    accountGenre: "ai",
-    customGenre: "",
-    accountStyle: "beginner",
-    customAccountStyle: "",
-    audiencePreset: "beginner",
-    customAudience: "",
-    tonePreset: "friendly",
-    customTone: "",
-    monetizationStyle: "free_to_paid",
-    customMonetizationStyle: "",
-    operationGoal: "habit",
-    weeklyPostCount: 3,
-    paidPostsPerMonth: 2,
-    preferredTime: "20:00",
-    secondaryTime: "12:00",
-    timezone: "Asia/Tokyo",
-    scheduleWeeks: 4,
-    accountReady: false,
-    profileReady: false,
-  };
+export function isNoteArticleScheduleItem(item: NoteScheduleItem): boolean {
+  return item.itemType === "free_note" || item.itemType === "paid_note";
 }
 
 function parseProfileRow(row: Record<string, unknown>, userId: string): NoteOperationProfile {
@@ -378,6 +206,36 @@ function parseScheduleRow(row: Record<string, unknown>): NoteScheduleItem {
   };
 }
 
+
+export function applyRuntimeWorkspacePresetToNoteProfile(profile: NoteOperationProfile): NoteOperationProfile {
+  const preference = getRuntimeWorkspacePresetPreference();
+  if (!preference?.applyNote) return profile;
+  if (preference.presetKey === "aas_official") return applyAasAdminNoteProfilePreset(profile);
+
+  const preset = getRuntimeWorkspacePresetDefinition();
+  const note = preset.note;
+  const topics = [...new Set([
+    ...profile.mainTopics,
+    ...(note.topics ?? preset.article.tags ?? []),
+  ])].slice(0, 30);
+
+  return {
+    ...profile,
+    mainTopics: topics,
+    accountGenre: note.genre ? "other" : profile.accountGenre,
+    customGenre: note.genre ?? profile.customGenre,
+    accountStyle: note.style ? "other" : profile.accountStyle,
+    customAccountStyle: note.style ?? profile.customAccountStyle,
+    audiencePreset: note.audience ? "other" : profile.audiencePreset,
+    customAudience: note.audience ?? profile.customAudience,
+    tonePreset: note.tone ? "other" : profile.tonePreset,
+    customTone: note.tone ?? profile.customTone,
+    monetizationStyle: note.monetization ? "other" : profile.monetizationStyle,
+    customMonetizationStyle: note.monetization ?? profile.customMonetizationStyle,
+    operationGoal: note.goal?.includes("読者") ? "growth" : profile.operationGoal,
+  };
+}
+
 export async function loadNoteOperationProfile(client: SupabaseClient, userId: string): Promise<NoteOperationProfile> {
   const { data, error } = await client
     .from("note_operation_profiles")
@@ -409,8 +267,8 @@ export async function saveNoteOperationProfile(client: SupabaseClient, profile: 
     operation_goal: profile.operationGoal,
     weekly_post_count: Math.max(1, Math.min(14, Math.trunc(profile.weeklyPostCount))),
     paid_posts_per_month: Math.max(0, Math.min(14, Math.trunc(profile.paidPostsPerMonth))),
-    preferred_time: normalizeTime(profile.preferredTime, "20:00"),
-    secondary_time: normalizeTime(profile.secondaryTime, "12:00"),
+    preferred_time: normalizeNoteScheduleTime(profile.preferredTime, "20:00"),
+    secondary_time: normalizeNoteScheduleTime(profile.secondaryTime, "12:00"),
     timezone: "Asia/Tokyo",
     schedule_weeks: Math.max(1, Math.min(12, Math.trunc(profile.scheduleWeeks))),
     account_ready: profile.accountReady,
@@ -438,50 +296,13 @@ export async function listNoteSchedule(
   return (data ?? []).map((row) => parseScheduleRow(row as Record<string, unknown>));
 }
 
-function dbScheduleRow(userId: string, item: NoteScheduleItem) {
-  return {
-    id: item.id,
-    user_id: userId,
-    scheduled_date: item.scheduledDate,
-    scheduled_time: normalizeTime(item.scheduledTime, "20:00"),
-    item_type: item.itemType,
-    title: item.title.trim().slice(0, 240),
-    theme: item.theme.trim().slice(0, 500),
-    status: item.status,
-    source: item.source,
-    notes: item.notes.trim().slice(0, 1200),
-  };
-}
-
 export async function replaceNoteSchedule(
   client: SupabaseClient,
   userId: string,
   items: NoteScheduleItem[],
 ): Promise<NoteScheduleItem[]> {
-  const clean = items
-    .filter((item) => /^\d{4}-\d{2}-\d{2}$/.test(item.scheduledDate) && item.title.trim())
-    .slice(0, 500)
-    .map((item) => ({ ...item, id: undefined }));
-
-  const previous = await listNoteSchedule(client, userId);
-  const { error: deleteError } = await client
-    .from("note_operation_schedule_items")
-    .delete()
-    .eq("user_id", userId);
-  if (deleteError) throw new Error("既存スケジュールを更新できませんでした。");
-
-  if (clean.length) {
-    const { error: insertError } = await client
-      .from("note_operation_schedule_items")
-      .insert(clean.map((item) => dbScheduleRow(userId, item)));
-    if (insertError) {
-      if (previous.length) {
-        await client.from("note_operation_schedule_items").insert(previous.map((item) => dbScheduleRow(userId, item)));
-      }
-      throw new Error("新しいスケジュールを保存できませんでした。");
-    }
-  }
-  return listNoteSchedule(client, userId);
+  const rows = await replaceNoteScheduleAtomically(client, userId, items);
+  return rows.map(parseScheduleRow);
 }
 
 export async function setNoteScheduleStatus(
@@ -496,121 +317,6 @@ export async function setNoteScheduleStatus(
     .eq("id", itemId)
     .eq("user_id", userId);
   if (error) throw new Error("予定の状態を更新できませんでした。");
-}
-
-export function todayJstDateKey(date = new Date()): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  return `${value.year}-${value.month}-${value.day}`;
-}
-
-function normalizeTime(value: string, fallback: string): string {
-  const match = value.match(/^(\d{1,2}):(\d{2})/);
-  if (!match) return fallback;
-  const hour = Number(match[1]);
-  const minute = Number(match[2]);
-  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return fallback;
-  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-}
-
-function addDays(dateKey: string, days: number): string {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day + days));
-  return date.toISOString().slice(0, 10);
-}
-
-const NOTE_PERFORMANCE_WEEKDAYS = ["日", "月", "火", "水", "木", "金", "土"] as const;
-
-function performanceBreakdown(
-  posts: NoteScheduleItem[],
-  keyOf: (item: NoteScheduleItem) => string,
-  orderedKeys?: readonly string[],
-): NoteSchedulePerformanceBreakdown[] {
-  const buckets = new Map<string, NoteSchedulePerformanceBreakdown>();
-  for (const item of posts) {
-    const key = keyOf(item);
-    const bucket = buckets.get(key) ?? { key, scheduled: 0, done: 0, skipped: 0, remainingPlanned: 0 };
-    bucket.scheduled += 1;
-    if (item.status === "done") bucket.done += 1;
-    else if (item.status === "skipped") bucket.skipped += 1;
-    else bucket.remainingPlanned += 1;
-    buckets.set(key, bucket);
-  }
-  const order = new Map<string, number>();
-  (orderedKeys ?? []).forEach((key, index) => order.set(key, index));
-  return [...buckets.values()].sort((a, b) => {
-    const aOrder = order.get(a.key);
-    const bOrder = order.get(b.key);
-    if (aOrder !== undefined || bOrder !== undefined) {
-      return (aOrder ?? Number.MAX_SAFE_INTEGER) - (bOrder ?? Number.MAX_SAFE_INTEGER);
-    }
-    return a.key.localeCompare(b.key);
-  });
-}
-
-export function summarizeNoteSchedulePerformance(
-  items: NoteScheduleItem[],
-  targetMonth: string,
-): NoteSchedulePerformanceSnapshot | null {
-  noteMonthBounds(targetMonth);
-  const posts = items.filter(
-    (item) =>
-      item.scheduledDate.startsWith(`${targetMonth}-`) &&
-      (item.itemType === "free_note" || item.itemType === "paid_note"),
-  );
-  if (!posts.length) return null;
-
-  const donePosts = posts.filter((item) => item.status === "done").length;
-  const skippedPosts = posts.filter((item) => item.status === "skipped").length;
-  const remainingPlannedPosts = posts.length - donePosts - skippedPosts;
-  const freePosts = posts.filter((item) => item.itemType === "free_note");
-  const paidPosts = posts.filter((item) => item.itemType === "paid_note");
-  const weekdays = performanceBreakdown(posts, (item) => {
-    const [year, month, day] = item.scheduledDate.split("-").map(Number);
-    return NOTE_PERFORMANCE_WEEKDAYS[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
-  }, ["月", "火", "水", "木", "金", "土", "日"]);
-  const times = performanceBreakdown(posts, (item) => normalizeTime(item.scheduledTime, "20:00"));
-
-  return {
-    targetMonth,
-    scheduledPosts: posts.length,
-    donePosts,
-    skippedPosts,
-    remainingPlannedPosts,
-    freeScheduled: freePosts.length,
-    paidScheduled: paidPosts.length,
-    freeDone: freePosts.filter((item) => item.status === "done").length,
-    paidDone: paidPosts.filter((item) => item.status === "done").length,
-    adherenceRate: posts.length ? Math.round((donePosts / posts.length) * 1000) / 10 : 0,
-    weekdays,
-    times,
-  };
-}
-
-function formatSchedulePerformanceForPrompt(performance: NoteSchedulePerformanceSnapshot | null, expectedMonth: string): string {
-  if (!performance || performance.targetMonth !== expectedMonth) {
-    return `- ${expectedMonth}のfree_note / paid_note実績はAAS内にありません。一般論だけで頻度を増やさず、初心者が継続できる保守的な仮説から始める。`;
-  }
-  const weekdays = performance.weekdays
-    .map((item) => `${item.key}曜: 予定${item.scheduled}/完了${item.done}/スキップ${item.skipped}/未完了${item.remainingPlanned}`)
-    .join("、");
-  const times = performance.times
-    .map((item) => `${item.key}: 予定${item.scheduled}/完了${item.done}/スキップ${item.skipped}/未完了${item.remainingPlanned}`)
-    .join("、");
-  return [
-    `- 対象月: ${performance.targetMonth}`,
-    `- 記事予定: ${performance.scheduledPosts}件（無料 ${performance.freeScheduled} / 有料 ${performance.paidScheduled}）`,
-    `- 完了: ${performance.donePosts}件 / スキップ: ${performance.skippedPosts}件 / 未完了: ${performance.remainingPlannedPosts}件`,
-    `- 無料note完了: ${performance.freeDone}件 / 有料note完了: ${performance.paidDone}件`,
-    `- 投稿予定に対する完了率: ${performance.adherenceRate}%`,
-    `- 曜日別: ${weekdays || "データなし"}`,
-    `- 時刻別: ${times || "データなし"}`,
-  ].join("\n");
 }
 
 function weekdayMondayZero(dateKey: string): number {
@@ -670,13 +376,13 @@ export function generateNoteSchedule(
   const postingSlots: Array<{ date: string; time: string }> = [];
 
   for (let offset = 0; offset < weeks * 7; offset += 1) {
-    const date = addDays(startDate, offset);
+    const date = addNoteScheduleDays(startDate, offset);
     const weekday = weekdayMondayZero(date);
     if (days.includes(weekday)) {
-      postingSlots.push({ date, time: normalizeTime(profile.preferredTime, "20:00") });
+      postingSlots.push({ date, time: normalizeNoteScheduleTime(profile.preferredTime, "20:00") });
     }
     if (secondaryPosts > 0 && weekday < secondaryPosts) {
-      postingSlots.push({ date, time: normalizeTime(profile.secondaryTime, "12:00") });
+      postingSlots.push({ date, time: normalizeNoteScheduleTime(profile.secondaryTime, "12:00") });
     }
   }
 
@@ -700,7 +406,7 @@ export function generateNoteSchedule(
   }
   if (!profile.profileReady) {
     items.push({
-      scheduledDate: addDays(startDate, profile.accountReady ? 0 : 1),
+      scheduledDate: addNoteScheduleDays(startDate, profile.accountReady ? 0 : 1),
       scheduledTime: "10:00",
       itemType: "profile_setup",
       title: "プロフィール文と自己紹介記事を整える",
@@ -730,7 +436,7 @@ export function generateNoteSchedule(
 
   for (let week = 0; week < weeks; week += 1) {
     items.push({
-      scheduledDate: addDays(startDate, week * 7 + 6),
+      scheduledDate: addNoteScheduleDays(startDate, week * 7 + 6),
       scheduledTime: "21:30",
       itemType: "review",
       title: "今週のnote運営を振り返る",
@@ -772,6 +478,8 @@ export function buildNoteAccountResearchPrompt(profile: NoteOperationProfile, ai
   const factualBackground = profile.experienceNote.trim() || "未入力。経歴・実績・資格を推測して追加しない";
   const readerExtra = profile.targetReader.trim() || "なし";
   const displayName = profile.noteDisplayName.trim() || "未定";
+  const workspacePresetContext = buildWorkspacePresetPromptContext("note");
+  const accountPresetContext = buildPlatformAccountPromptContext("note");
 
   return `あなたは日本のnote運営に詳しい編集者・コンテンツ戦略担当です。
 目的は、初心者でも継続しやすい「noteアカウント構成案」を、最新情報と直近トレンドを調査したうえで3案作ることです。
@@ -798,7 +506,11 @@ export function buildNoteAccountResearchPrompt(profile: NoteOperationProfile, ai
 - 希望表示名: ${displayName}
 - ユーザーが事実として入力した経験・資格・背景: ${factualBackground}
 
-【絶対ルール】
+${workspacePresetContext ? `${workspacePresetContext}
+
+` : ""}${accountPresetContext ? `${accountPresetContext}
+
+` : ""}【絶対ルール】
 - ユーザーが入力していない経歴、年齢、職業、収入、実績、資格、利用経験、成功体験を作らない。
 - 「稼げる」「伸びる」「この時間が正解」など成果を保証しない。
 - 有料noteを提案する場合も、無料部分で十分な価値を提供し、誇張や不安煽りを使わない。
@@ -845,6 +557,8 @@ export function buildNoteScheduleResearchPrompt(
 ): string {
   const { start, end } = noteMonthBounds(targetMonth);
   const selected = noteProfileSelectionLabels(profile);
+  const workspacePresetContext = buildWorkspacePresetPromptContext("note");
+  const accountPresetContext = buildPlatformAccountPromptContext("note");
   const providerName = aiProviderName(aiProvider);
   const topics = profile.mainTopics.length ? profile.mainTopics.join(" / ") : "未指定（最新調査から候補を決める）";
   const readerExtra = profile.targetReader.trim() || "なし";
@@ -878,7 +592,7 @@ ${formatArticleOutputForPrompt(articleOutput, articleOutputMonth)}
 `;
 
   return `あなたは日本のnote運営に詳しい編集者・コンテンツ戦略担当です。
-目的は、ユーザーに投稿回数を手入力させるのではなく、${targetMonth}の1か月について、最新情報を調査したうえで「無理なく継続でき、無料noteと有料noteの役割が分かれた運用スケジュール」を設計し、AASが読み込めるJSONで返すことです。
+目的は、ユーザーに投稿回数を手入力させるのではなく、${targetMonth}の1か月について、最新情報を調査したうえで「無理なく継続でき、無料noteと有料noteの役割が分かれた運用スケジュール」を設計し、AASが読み込めるMarkdown表で返すことです。
 
 【対象期間】
 - 基準日: ${currentDate}（日本時間）
@@ -897,7 +611,7 @@ ${formatArticleOutputForPrompt(articleOutput, articleOutputMonth)}
 - 「毎日投稿すれば伸びる」「20時が正解」などの断定は禁止。時間帯は検証用の仮説として扱う。
 - 有料noteは数を増やすことを目的にせず、無料記事で信頼や入口を作れるか、選択ジャンルで深掘り価値を出せるかを考えて頻度を決める。
 - 新規/初心者アカウントでは、制作負荷と継続性を特に重視する。
-- 根拠にした情報源はURLと公開/更新日をJSONに入れる。
+- 根拠にした情報源は内部判断に使うが、最終回答には出典一覧や説明文を出さない。
 
 【アカウント条件】
 - 主ジャンル: ${selected.genre}
@@ -913,17 +627,23 @@ ${formatArticleOutputForPrompt(articleOutput, articleOutputMonth)}
 - ユーザーが事実として入力した経験・資格・背景: ${factualBackground}
 ${performanceSection}
 ${articleOutputSection}
-【スケジュール設計】
+${workspacePresetContext ? `${workspacePresetContext}
+` : ""}${accountPresetContext ? `${accountPresetContext}
+` : ""}【スケジュール設計】
 - あなた自身が、平均の週投稿数・有料noteの週平均・1日の最大投稿数・無料/有料の本数を決定する。
+- scheduleに入れてよいtypeは free_note と paid_note の2種類だけ。review / sns_share / profile_setup は出力しない。
 - free_note / paid_note には、実際に記事作成へ進める具体的なテーマとタイトルを入れる。
-- 必要なら review（週次振り返り）、sns_share（SNS告知）、profile_setup（初期設定）を入れてよい。
-- 同じ日・同じ時間に記事投稿を重複させない。
+- カレンダーは「無料note作成」「有料note作成」の制作予定として使う。SNS告知、振り返り、初期設定などの記事制作以外の予定は入れない。
+- 同じ日・同じ時間に記事作成予定を重複させない。
+- 1日に2回以上投稿する日を作る場合は、投稿回数と同じ数だけ行を分け、各行に異なる投稿時刻を必ず入れる。
+- 例：1日2回なら2行・2時刻、1日3回なら3行・3時刻。複数投稿を1行にまとめたり、時刻を省略したりしない。
+- 複数投稿の時刻は調査結果と読者像を踏まえて決め、同日の時刻同士は原則3時間以上空ける。
 - 休む日も含めて、初心者が現実的に続けられる計画にする。
 - トレンド記事だけで埋めず、対象月の旬の記事と半年後も読まれる記事を混ぜる。
 - 有料noteを置く場合、その前後に関連する無料noteがあるなど読者導線を考える。
-- 投稿時間は検証案として理由をnotesまたはresearch.strategy_summaryに残す。
-- recommendation.recommendation_reasonには、なぜその投稿頻度と無料/有料比率にしたのかを具体的に書く。AAS実績がある場合は、最新リサーチ・予定実績・実際の作成本数をどう組み合わせたかも明記する。
-- 対象月が今月の場合、recommendationとscheduleは「今日から月末までに新しく行う分」だけを表す。すでに作成済み・完了済みの記事を本数へ二重計上しない。
+- 投稿時間は検証案として扱い、最終表では各投稿の時刻だけを明示する。
+- 投稿頻度・無料/有料比率・投稿時刻の理由は内部判断に使い、最終回答へ説明文として追加しない。
+- 対象月が今月の場合、予定表は「今日から月末までに新しく行う分」だけを表す。すでに作成済み・完了済みの記事を本数へ二重計上しない。
 - 月途中の再計画では、今日より前の履歴は変更対象にせず、今日以降だけを新しい計画にする。
 - ユーザーはスケジュール通りに完璧に運用する必要はない。予定より多く作れた場合も少なかった場合も、その実績から次回再計画できる柔軟な案にする。
 
@@ -934,55 +654,20 @@ ${articleOutputSection}
 - 調査で確認できない数値やトレンドを事実として断定しない。
 
 【出力形式】
-説明文やMarkdownコードフェンスを付けず、次の構造の有効なJSONだけを返す。
-{
-  "schema": "aas-note-schedule-v2",
-  "target_month": "${targetMonth}",
-  "generated_for_jst": "${currentDate}",
-  "provider": "${aiProvider}",
-  "research": {
-    "summary": "今回確認した最新動向の要約",
-    "strategy_summary": "この月の運用方針",
-    "assumptions": ["仮定1", "仮定2"],
-    "sources": [
-      {
-        "title": "出典名",
-        "url": "https://...",
-        "published_at": "YYYY-MM-DD",
-        "why_used": "この計画にどう使ったか"
-      }
-    ]
-  },
-  "recommendation": {
-    "posts_per_week": 3.0,
-    "paid_posts_per_week": 0.5,
-    "max_posts_per_day": 1,
-    "total_posts": 12,
-    "free_posts": 10,
-    "paid_posts": 2,
-    "recommendation_reason": "この頻度・比率にした理由"
-  },
-  "schedule": [
-    {
-      "date": "${firstAllowedDate}",
-      "time": "20:00",
-      "type": "free_note",
-      "title": "具体的な記事タイトル",
-      "theme": "記事テーマ",
-      "notes": "狙い・公開タイミングの理由"
-    }
-  ]
-}
+最終回答は、AASへそのままコピー＆ペーストする次のMarkdown表だけを返す。
+前文、挨拶、説明、要約、理由、注意書き、出典一覧、コードフェンス、表の後の文章は一切出力しない。
 
-recommendation内の本数とschedule内のfree_note / paid_note件数は一致させる。
-対象月が今月の場合、この一致対象は「今日以降の残り期間の予定件数」とする。
-JSONとして解析できることを最終確認してから返すこと。`;
-}
+| 日付 | 時刻 | 種別 | 記事タイトル | テーマ |
+|---|---|---|---|---|
+| ${firstAllowedDate} | 20:00 | 無料note作成 | 具体的な記事タイトル | 記事テーマ |
 
-function stripJsonFence(text: string): string {
-  const trimmed = text.trim();
-  const withoutOpen = trimmed.replace(/^\`\`\`(?:json)?\s*/i, "");
-  return withoutOpen.replace(/\s*\`\`\`\s*$/i, "").trim();
+- 種別は「無料note作成」または「有料note作成」の2種類だけ。
+- 日付はYYYY-MM-DD形式。
+- 時刻はHH:MM形式。
+- 対象月が今月の場合、今日より前の日付は入れない。
+- 1日2回以上なら投稿回数と同じ行数を作り、各行に異なる時刻を書く。
+- 表には記事作成予定だけを入れ、振り返り・SNS告知・初期設定は入れない。
+- 表以外の文字は出力しない。`;
 }
 
 function asObject(value: unknown): Record<string, unknown> {
@@ -1004,192 +689,14 @@ function safeHttpUrl(value: unknown): string {
   }
 }
 
-function parseAiScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | null {
-  const date = typeof raw.date === "string" ? raw.date : "";
-  const title = typeof raw.title === "string" ? raw.title.trim() : "";
-  const type = raw.type;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !title) return null;
-  if (type !== "free_note" && type !== "paid_note" && type !== "review" && type !== "profile_setup" && type !== "sns_share") return null;
-  return {
-    scheduledDate: date,
-    scheduledTime: normalizeTime(typeof raw.time === "string" ? raw.time : "20:00", "20:00"),
-    itemType: type,
-    title: title.slice(0, 240),
-    theme: typeof raw.theme === "string" ? raw.theme.trim().slice(0, 500) : "",
-    status: "planned",
-    source: "imported",
-    notes: typeof raw.notes === "string" ? raw.notes.trim().slice(0, 1200) : "",
-  };
-}
-
-export function parseNoteAiSchedulePlan(
-  text: string,
-  expectedMonth: string,
-  currentDate = todayJstDateKey(),
-): NoteAiSchedulePlan {
-  noteMonthBounds(expectedMonth);
-  let raw: unknown;
-  try {
-    raw = JSON.parse(stripJsonFence(text));
-  } catch {
-    throw new Error("AIの回答をJSONとして読み込めませんでした。JSON全体をそのまま貼り付けてください。");
-  }
-  const root = asObject(raw);
-  if (root.schema !== "aas-note-schedule-v2") throw new Error("AAS用の運用スケジュール形式ではありません。");
-  if (root.target_month !== expectedMonth) throw new Error(`AIの対象月（${String(root.target_month ?? "")}）とAASで選択した対象月（${expectedMonth}）が一致しません。`);
-
-  const provider = root.provider === "gemini" || root.provider === "claude" ? root.provider : "chatgpt";
-  const generatedForJst = typeof root.generated_for_jst === "string" && /^\d{4}-\d{2}-\d{2}$/.test(root.generated_for_jst)
-    ? root.generated_for_jst
-    : currentDate;
-  const research = asObject(root.research);
-  const recommendationRaw = asObject(root.recommendation);
-  const scheduleRaw = Array.isArray(root.schedule) ? root.schedule : [];
-  const { start, end } = noteMonthBounds(expectedMonth);
-  const schedule = scheduleRaw
-    .map((item) => item && typeof item === "object" && !Array.isArray(item) ? parseAiScheduleItem(item as Record<string, unknown>) : null)
-    .filter((item): item is NoteScheduleItem => Boolean(item));
-
-  if (!schedule.length) throw new Error("AIのJSONに読み込める予定がありません。");
-  const outside = schedule.filter((item) => item.scheduledDate < start || item.scheduledDate > end);
-  if (outside.length) throw new Error("対象月の外にある予定が含まれています。AIに対象月だけで再作成してもらってください。");
-  if (schedule.length > 200) throw new Error("1か月の予定が多すぎます。200件以下にしてください。");
-
-  const articleItems = schedule.filter((item) => item.itemType === "free_note" || item.itemType === "paid_note");
-  const actualFree = articleItems.filter((item) => item.itemType === "free_note").length;
-  const actualPaid = articleItems.filter((item) => item.itemType === "paid_note").length;
-  const perDay = new Map<string, number>();
-  const duplicateKeys = new Set<string>();
-  const seen = new Set<string>();
-  for (const item of articleItems) {
-    const key = `${item.scheduledDate}|${item.scheduledTime}`;
-    if (seen.has(key)) duplicateKeys.add(key);
-    seen.add(key);
-    perDay.set(item.scheduledDate, (perDay.get(item.scheduledDate) ?? 0) + 1);
-  }
-  const actualMaxPerDay = Math.max(0, ...perDay.values());
-  const warnings: string[] = [];
-  if (duplicateKeys.size) warnings.push(`同じ日時に記事投稿が重複しています（${duplicateKeys.size}件）。`);
-  if (actualMaxPerDay >= 3) warnings.push(`1日に最大${actualMaxPerDay}本の記事投稿があります。制作負荷を確認してください。`);
-  if (!Array.isArray(research.sources) || research.sources.length === 0) warnings.push("調査元URLがありません。最新情報の根拠をAIに再確認することをおすすめします。");
-  if (expectedMonth === currentDate.slice(0, 7)) {
-    const pastCount = articleItems.filter((item) => item.scheduledDate < currentDate).length;
-    if (pastCount) warnings.push(`今日より前の投稿予定が${pastCount}件あります。必要なら削除してから反映してください。`);
-  }
-
-  const sources: NoteAiResearchSource[] = (Array.isArray(research.sources) ? research.sources : [])
-    .map((value) => {
-      const source = asObject(value);
-      const url = safeHttpUrl(source.url);
-      if (!url) return null;
-      return {
-        title: typeof source.title === "string" ? source.title.trim().slice(0, 300) : "",
-        url,
-        publishedAt: typeof source.published_at === "string" ? source.published_at.trim().slice(0, 40) : "",
-        whyUsed: typeof source.why_used === "string" ? source.why_used.trim().slice(0, 800) : "",
-      };
-    })
-    .filter((value): value is NoteAiResearchSource => Boolean(value))
-    .slice(0, 30);
-
-  if (sources.length > 0 && !sources.some((source) => {
-    try {
-      const url = new URL(source.url);
-      return url.hostname === "note.com" && url.pathname.startsWith("/info/");
-    } catch {
-      return false;
-    }
-  })) {
-    warnings.push("note公式（note.com/info）の出典が確認できません。note現行仕様や企画の根拠を再確認してください。");
-  }
-
-  const generatedDate = new Date(generatedForJst + "T00:00:00Z");
-  const recentSourceCutoff = new Date(generatedDate);
-  recentSourceCutoff.setUTCDate(recentSourceCutoff.getUTCDate() - 180);
-  const datedSources = sources
-    .map((source) => /^\d{4}-\d{2}-\d{2}/.test(source.publishedAt) ? new Date(source.publishedAt.slice(0, 10) + "T00:00:00Z") : null)
-    .filter((value): value is Date => value instanceof Date && !Number.isNaN(value.getTime()));
-  if (sources.length > 0 && datedSources.length === 0) {
-    warnings.push("出典の公開・更新日を確認できません。最新トレンドの根拠日付をAIに再確認してください。");
-  } else if (datedSources.length > 0 && !datedSources.some((date) => date >= recentSourceCutoff && date <= generatedDate)) {
-    warnings.push("直近180日以内の出典が確認できません。最新トレンド部分は再調査をおすすめします。");
-  }
-
-  const declaredTotal = Math.max(0, Math.round(finiteNumber(recommendationRaw.total_posts, articleItems.length)));
-  const declaredFree = Math.max(0, Math.round(finiteNumber(recommendationRaw.free_posts, actualFree)));
-  const declaredPaid = Math.max(0, Math.round(finiteNumber(recommendationRaw.paid_posts, actualPaid)));
-  if (declaredTotal !== articleItems.length || declaredFree !== actualFree || declaredPaid !== actualPaid) {
-    warnings.push("AIのrecommendation本数と実際のschedule件数が一致しないため、AASは実際の予定件数を採用します。");
-  }
-
-  return {
-    schema: "aas-note-schedule-v2",
-    targetMonth: expectedMonth,
-    generatedForJst,
-    provider,
-    researchSummary: typeof research.summary === "string" ? research.summary.trim().slice(0, 6000) : "",
-    strategySummary: typeof research.strategy_summary === "string" ? research.strategy_summary.trim().slice(0, 6000) : "",
-    assumptions: Array.isArray(research.assumptions)
-      ? research.assumptions.filter((item): item is string => typeof item === "string").map((item) => item.trim().slice(0, 500)).filter(Boolean).slice(0, 30)
-      : [],
-    sources,
-    recommendation: {
-      postsPerWeek: Math.max(0, Math.min(21, finiteNumber(recommendationRaw.posts_per_week))),
-      paidPostsPerWeek: Math.max(0, Math.min(14, finiteNumber(recommendationRaw.paid_posts_per_week))),
-      maxPostsPerDay: actualMaxPerDay,
-      totalPosts: articleItems.length,
-      freePosts: actualFree,
-      paidPosts: actualPaid,
-      reason: typeof recommendationRaw.recommendation_reason === "string" ? recommendationRaw.recommendation_reason.trim().slice(0, 6000) : "",
-    },
-    schedule: schedule.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate) || a.scheduledTime.localeCompare(b.scheduledTime)),
-    warnings,
-  };
-}
-
 export async function replaceNoteScheduleMonth(
   client: SupabaseClient,
   userId: string,
   targetMonth: string,
   items: NoteScheduleItem[],
-  currentDate = todayJstDateKey(),
 ): Promise<NoteScheduleItem[]> {
-  const { start, end } = noteMonthBounds(targetMonth);
-  const replacementStart = targetMonth === currentDate.slice(0, 7) ? currentDate : start;
-  const previous = await listNoteSchedule(client, userId, start, end);
-  const preserved = previous.filter((item) => item.scheduledDate < replacementStart || item.status !== "planned");
-  const preservedKeys = new Set(
-    preserved.map((item) => `${item.scheduledDate}|${item.scheduledTime}|${item.itemType}`),
-  );
-  const clean = items
-    .filter((item) => item.scheduledDate >= replacementStart && item.scheduledDate <= end && item.title.trim())
-    .filter((item) => !preservedKeys.has(`${item.scheduledDate}|${item.scheduledTime}|${item.itemType}`))
-    .slice(0, 200)
-    .map((item) => ({ ...item, id: undefined, source: "imported" as NoteScheduleSource }));
-  const previousReplaceable = previous.filter((item) => item.scheduledDate >= replacementStart && item.status === "planned");
-
-  const deleteQuery = client
-    .from("note_operation_schedule_items")
-    .delete()
-    .eq("user_id", userId)
-    .gte("scheduled_date", replacementStart)
-    .lte("scheduled_date", end)
-    .eq("status", "planned");
-  const { error: deleteError } = await deleteQuery;
-  if (deleteError) throw new Error("対象月の既存スケジュールを更新できませんでした。");
-
-  if (clean.length) {
-    const { error: insertError } = await client
-      .from("note_operation_schedule_items")
-      .insert(clean.map((item) => dbScheduleRow(userId, item)));
-    if (insertError) {
-      if (previousReplaceable.length) {
-        await client.from("note_operation_schedule_items").insert(previousReplaceable.map((item) => dbScheduleRow(userId, item)));
-      }
-      throw new Error("AIの月間スケジュールを保存できませんでした。");
-    }
-  }
-  return listNoteSchedule(client, userId);
+  const rows = await replaceNoteScheduleAtomically(client, userId, items, targetMonth);
+  return rows.map(parseScheduleRow);
 }
 
 export async function saveNoteAiSchedulePlan(
@@ -1246,7 +753,8 @@ export async function loadNoteAiSchedulePlan(
       whyUsed: typeof source.why_used === "string" ? source.why_used : "",
     };
   }).filter((source: NoteAiResearchSource) => source.url);
-  const monthSchedule = await listNoteSchedule(client, userId, targetMonth + "-01", noteMonthBounds(targetMonth).end);
+  const monthSchedule = (await listNoteSchedule(client, userId, targetMonth + "-01", noteMonthBounds(targetMonth).end))
+    .filter((item) => isNoteArticleScheduleItem(item));
   return {
     schema: "aas-note-schedule-v2",
     targetMonth,
@@ -1270,202 +778,9 @@ export async function loadNoteAiSchedulePlan(
   };
 }
 
-
-export function exportNoteAiSchedulePlanJson(plan: NoteAiSchedulePlan): string {
-  return JSON.stringify({
-    schema: "aas-note-schedule-v2",
-    target_month: plan.targetMonth,
-    generated_for_jst: plan.generatedForJst,
-    provider: plan.provider,
-    research: {
-      summary: plan.researchSummary,
-      strategy_summary: plan.strategySummary,
-      assumptions: plan.assumptions,
-      sources: plan.sources.map((source) => ({
-        title: source.title,
-        url: source.url,
-        published_at: source.publishedAt,
-        why_used: source.whyUsed,
-      })),
-    },
-    recommendation: {
-      posts_per_week: plan.recommendation.postsPerWeek,
-      paid_posts_per_week: plan.recommendation.paidPostsPerWeek,
-      max_posts_per_day: plan.recommendation.maxPostsPerDay,
-      total_posts: plan.recommendation.totalPosts,
-      free_posts: plan.recommendation.freePosts,
-      paid_posts: plan.recommendation.paidPosts,
-      recommendation_reason: plan.recommendation.reason,
-    },
-    schedule: plan.schedule.map((item) => ({
-      date: item.scheduledDate,
-      time: item.scheduledTime,
-      type: item.itemType,
-      title: item.title,
-      theme: item.theme,
-      notes: item.notes,
-    })),
-  }, null, 2);
-}
-
-
-function csvCell(value: string): string {
-  return `"${value.replace(/"/g, '""')}"`;
-}
-
-export function exportNoteScheduleCsv(items: NoteScheduleItem[]): string {
-  const header = ["date","time","type","title","theme","status","notes"].join(",");
-  const rows = items.map((item) => [
-    item.scheduledDate,
-    item.scheduledTime,
-    item.itemType,
-    item.title,
-    item.theme,
-    item.status,
-    item.notes,
-  ].map((value) => csvCell(value)).join(","));
-  return "\uFEFF" + [header, ...rows].join("\r\n");
-}
-
-export function exportNoteOperationsJson(profile: NoteOperationProfile, items: NoteScheduleItem[]): string {
-  return JSON.stringify({
-    schema: "aas-note-operations-v1",
-    exported_at: new Date().toISOString(),
-    timezone: "Asia/Tokyo",
-    profile: {
-      note_display_name: profile.noteDisplayName,
-      bio_draft: profile.bioDraft,
-      target_reader: profile.targetReader,
-      main_topics: profile.mainTopics,
-      experience_note: profile.experienceNote,
-      account_genre: profile.accountGenre,
-      custom_genre: profile.customGenre,
-      account_style: profile.accountStyle,
-      custom_account_style: profile.customAccountStyle,
-      audience_preset: profile.audiencePreset,
-      custom_audience: profile.customAudience,
-      tone_preset: profile.tonePreset,
-      custom_tone: profile.customTone,
-      monetization_style: profile.monetizationStyle,
-      custom_monetization_style: profile.customMonetizationStyle,
-      operation_goal: profile.operationGoal,
-      weekly_post_count: profile.weeklyPostCount,
-      paid_posts_per_month: profile.paidPostsPerMonth,
-      preferred_time: profile.preferredTime,
-      secondary_time: profile.secondaryTime,
-      schedule_weeks: profile.scheduleWeeks,
-      account_ready: profile.accountReady,
-      profile_ready: profile.profileReady,
-    },
-    schedule: items.map((item) => ({
-      date: item.scheduledDate,
-      time: item.scheduledTime,
-      type: item.itemType,
-      title: item.title,
-      theme: item.theme,
-      status: item.status,
-      notes: item.notes,
-    })),
-  }, null, 2);
-}
-
-function parseCsvLine(line: string): string[] {
-  const values: string[] = [];
-  let value = "";
-  let quoted = false;
-  for (let index = 0; index < line.length; index += 1) {
-    const char = line[index];
-    if (char === '"') {
-      if (quoted && line[index + 1] === '"') {
-        value += '"';
-        index += 1;
-      } else {
-        quoted = !quoted;
-      }
-    } else if (char === "," && !quoted) {
-      values.push(value);
-      value = "";
-    } else {
-      value += char;
-    }
-  }
-  values.push(value);
-  return values;
-}
-
-function importedType(value: unknown): NoteScheduleItemType {
-  return value === "paid_note" || value === "review" || value === "profile_setup" || value === "sns_share" ? value : "free_note";
-}
-
-function importedStatus(value: unknown): NoteScheduleStatus {
-  return value === "done" || value === "skipped" ? value : "planned";
-}
-
-function importedScheduleItem(raw: Record<string, unknown>): NoteScheduleItem | null {
-  const date = typeof raw.date === "string" ? raw.date : "";
-  const title = typeof raw.title === "string" ? raw.title.trim() : "";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !title) return null;
-  return {
-    scheduledDate: date,
-    scheduledTime: normalizeTime(typeof raw.time === "string" ? raw.time : "20:00", "20:00"),
-    itemType: importedType(raw.type),
-    title: title.slice(0, 240),
-    theme: typeof raw.theme === "string" ? raw.theme.slice(0, 500) : "",
-    status: importedStatus(raw.status),
-    source: "imported",
-    notes: typeof raw.notes === "string" ? raw.notes.slice(0, 1200) : "",
-  };
-}
-
-export function parseNoteOperationsImport(text: string, filename: string): NoteScheduleImport {
-  if (filename.toLowerCase().endsWith(".json") || text.trim().startsWith("{")) {
-    const raw: unknown = JSON.parse(text);
-    if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("JSON形式を確認できませんでした。");
-    const value = raw as Record<string, unknown>;
-    if (value.schema !== "aas-note-operations-v1") throw new Error("AAS note運営データの形式ではありません。");
-    const rawSchedule = Array.isArray(value.schedule) ? value.schedule : [];
-    const schedule = rawSchedule
-      .map((item) => item && typeof item === "object" && !Array.isArray(item) ? importedScheduleItem(item as Record<string, unknown>) : null)
-      .filter((item): item is NoteScheduleItem => Boolean(item))
-      .slice(0, 500);
-    const p = value.profile && typeof value.profile === "object" && !Array.isArray(value.profile)
-      ? value.profile as Record<string, unknown>
-      : null;
-    const profile: Partial<NoteOperationProfile> | null = p ? {
-      noteDisplayName: typeof p.note_display_name === "string" ? p.note_display_name.slice(0, 120) : "",
-      bioDraft: typeof p.bio_draft === "string" ? p.bio_draft.slice(0, 1200) : "",
-      targetReader: typeof p.target_reader === "string" ? p.target_reader.slice(0, 600) : "",
-      mainTopics: Array.isArray(p.main_topics) ? p.main_topics.filter((item): item is string => typeof item === "string").slice(0, 12) : [],
-      experienceNote: typeof p.experience_note === "string" ? p.experience_note.slice(0, 1200) : "",
-      accountGenre: ["ai","sidejob","business","lifestyle","gadget","learning","parenting","health_beauty","money","creative","entertainment","other"].includes(String(p.account_genre)) ? p.account_genre as NoteAccountGenre : "ai",
-      customGenre: typeof p.custom_genre === "string" ? p.custom_genre.slice(0, 120) : "",
-      accountStyle: ["beginner","howto","experience","essay","review","trend","expert","creative","other"].includes(String(p.account_style)) ? p.account_style as NoteAccountStyle : "beginner",
-      customAccountStyle: typeof p.custom_account_style === "string" ? p.custom_account_style.slice(0, 180) : "",
-      audiencePreset: ["beginner","employee","sidejob_beginner","student","parent","senior","creator","business_owner","broad","other"].includes(String(p.audience_preset)) ? p.audience_preset as NoteAudiencePreset : "beginner",
-      customAudience: typeof p.custom_audience === "string" ? p.custom_audience.slice(0, 300) : "",
-      tonePreset: ["friendly","gentle","professional","casual","expert","energetic","other"].includes(String(p.tone_preset)) ? p.tone_preset as NoteTonePreset : "friendly",
-      customTone: typeof p.custom_tone === "string" ? p.custom_tone.slice(0, 120) : "",
-      monetizationStyle: ["free_first","free_to_paid","paid_expertise","membership_future","no_monetization","other"].includes(String(p.monetization_style)) ? p.monetization_style as NoteMonetizationStyle : "free_to_paid",
-      customMonetizationStyle: typeof p.custom_monetization_style === "string" ? p.custom_monetization_style.slice(0, 180) : "",
-      operationGoal: p.operation_goal === "growth" || p.operation_goal === "monetize" || p.operation_goal === "portfolio" ? p.operation_goal : "habit",
-      weeklyPostCount: Math.max(1, Math.min(14, Number(p.weekly_post_count ?? 3) || 3)),
-      paidPostsPerMonth: Math.max(0, Math.min(14, Number(p.paid_posts_per_month ?? 2) || 0)),
-      preferredTime: normalizeTime(typeof p.preferred_time === "string" ? p.preferred_time : "20:00", "20:00"),
-      secondaryTime: normalizeTime(typeof p.secondary_time === "string" ? p.secondary_time : "12:00", "12:00"),
-      scheduleWeeks: Math.max(1, Math.min(12, Number(p.schedule_weeks ?? 4) || 4)),
-      accountReady: p.account_ready === true,
-      profileReady: p.profile_ready === true,
-    } : null;
-    return { profile, schedule };
-  }
-
-  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(Boolean);
-  if (lines.length < 2) throw new Error("CSVに予定がありません。");
-  const headers = parseCsvLine(lines[0]).map((value) => value.trim().toLowerCase());
-  const schedule = lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
-    const row = Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
-    return importedScheduleItem(row);
-  }).filter((item): item is NoteScheduleItem => Boolean(item)).slice(0, 500);
-  return { profile: null, schedule };
-}
+export {
+  exportNoteAiSchedulePlanJson,
+  exportNoteOperationsJson,
+  exportNoteScheduleCsv,
+  parseNoteOperationsImport,
+} from "@/lib/note-operations-transfer";

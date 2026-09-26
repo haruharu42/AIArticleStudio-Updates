@@ -3,14 +3,14 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import {
   acceptAppRelease,
   loadMyAppReleaseState,
   type AppReleaseState,
 } from "@/lib/app-release";
-import { getSupabaseClient } from "@/lib/supabase";
 
-const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms"];
+const HIDDEN_PREFIXES = ["/auth", "/invite", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support"];
 
 function hiddenRoute(pathname: string): boolean {
   return HIDDEN_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + "/"));
@@ -47,6 +47,8 @@ async function activateWaitingWorker(): Promise<void> {
 
 export function ReleaseUpdateManager() {
   const pathname = usePathname();
+  const { state: accessState, client } = useSharedAccessState();
+  const accessUserId = accessState.kind === "ready" ? accessState.profile.id : "";
   const [state, setState] = useState<AppReleaseState | null>(null);
   const [dismissedReleaseId, setDismissedReleaseId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,10 +57,10 @@ export function ReleaseUpdateManager() {
 
   useEffect(() => {
     mounted.current = true;
-    let client: ReturnType<typeof getSupabaseClient>;
-    try {
-      client = getSupabaseClient();
-    } catch {
+    if (hiddenRoute(pathname) || !accessUserId || !client) {
+      queueMicrotask(() => {
+        if (mounted.current) setState(null);
+      });
       return () => { mounted.current = false; };
     }
 
@@ -83,25 +85,20 @@ export function ReleaseUpdateManager() {
     else window.addEventListener("load", registerWorker, { once: true });
 
     void refresh();
-    const { data } = client.auth.onAuthStateChange(() => {
-      window.setTimeout(() => { if (mounted.current) void refresh(); }, 0);
-    });
 
     return () => {
       mounted.current = false;
-      data.subscription.unsubscribe();
       window.removeEventListener("load", registerWorker);
     };
-  }, []);
+  }, [accessUserId, client, pathname]);
 
   const applyUpdate = async () => {
     const release = state?.available_release;
-    if (!release || busy) return;
+    if (!release || busy || !client) return;
 
     setBusy(true);
     setMessage("");
     try {
-      const client = getSupabaseClient();
       const next = await acceptAppRelease(client, release.id);
       if (mounted.current) setState(next);
       await activateWaitingWorker();
@@ -116,24 +113,9 @@ export function ReleaseUpdateManager() {
 
   if (hiddenRoute(pathname) || !state?.signed_in || state.active === false) return null;
 
-  if (state.is_admin_preview && state.effective_release) {
-    return (
-      <aside className="release-admin-preview" aria-label="管理者テスト版">
-        <strong>管理者テスト版</strong>
-        <span>v{state.effective_release.version}</span>
-        <small>この候補版は一般ユーザーにはまだ反映されていません。</small>
-      </aside>
-    );
-  }
-
-  if (state.is_tester_preview && state.effective_release) {
-    return (
-      <aside className="release-admin-preview" aria-label="指定テスターテスト版">
-        <strong>一般ユーザーテスト版</strong>
-        <span>v{state.effective_release.version}</span>
-        <small>指定されたテスターだけに反映中です。他の一般ユーザーにはまだ公開されていません。</small>
-      </aside>
-    );
+  if ((state.is_admin_preview || state.is_tester_preview) && state.effective_release) {
+    // Preview identity is shown only inside the home screen so it never covers feature pages.
+    return null;
   }
 
   const available = state.available_release;

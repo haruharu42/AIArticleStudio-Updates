@@ -1,6 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
 
 import {
   listArticleLibraryPage,
@@ -24,13 +27,6 @@ import {
   type ArticleDetail,
   type ArticleStatus,
 } from "@/lib/phase7-articles";
-import { getSupabaseClient } from "@/lib/supabase";
-
-type Gate =
-  | { kind: "loading" }
-  | { kind: "signed_out" }
-  | { kind: "ready"; ownerId: string; aasId: string }
-  | { kind: "error"; message: string };
 
 const STATUS_LABELS: Record<ArticleStatus, string> = {
   draft: "下書き",
@@ -70,7 +66,8 @@ function saveBlob(blob: Blob, name: string): void {
 }
 
 export function ArticleExportPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState, client } = useSharedAccessState();
+  const [loadError, setLoadError] = useState("");
   const [articles, setArticles] = useState<ArticleLibraryItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [detail, setDetail] = useState<ArticleDetail | null>(null);
@@ -87,33 +84,23 @@ export function ArticleExportPage() {
   }, []);
 
   useEffect(() => {
+    if (accessState.kind !== "ready" || !client) return;
     let active = true;
-    const boot = async () => {
-      try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) { setGate({ kind: "signed_out" }); return; }
-        const { data: profile, error: profileError } = await client
-          .from("profiles")
-          .select("id,aas_user_id,status")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !profile || profile.id !== user.id || profile.status !== "active") {
-          throw new Error("activeプロフィールを確認できません。");
-        }
-        const page = await listArticleLibraryPage(client, user.id, { limit: 100, sort: "updated_desc" });
+    queueMicrotask(() => {
+      if (active) setLoadError("");
+    });
+    void listArticleLibraryPage(client, accessState.profile.id, { limit: 100, sort: "updated_desc" }).then(
+      (page) => {
         if (!active) return;
         setArticles(page.items);
         setTotalCount(page.totalCount);
-        setGate({ kind: "ready", ownerId: user.id, aasId: profile.aas_user_id });
-      } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "初期化に失敗しました。" });
-      }
-    };
-    void boot();
+      },
+      (error) => {
+        if (active) setLoadError(error instanceof Error ? error.message : "記事ライブラリを読み込めませんでした。");
+      },
+    );
     return () => { active = false; };
-  }, []);
+  }, [accessState, client]);
 
   const body = useMemo(() => detail ? articleExportBody(detail) : "", [detail]);
   const filename = useMemo(() => detail ? articleExportFilename(detail) : "", [detail]);
@@ -134,11 +121,11 @@ export function ArticleExportPage() {
     }), [articles, magazineFilter, statusFilter]);
 
   const choose = async (articleId: string) => {
-    if (gate.kind !== "ready") return;
+    if (accessState.kind !== "ready" || !client) return;
     setDetail(null); setMessage("");
     if (!articleId) return;
     setBusy(true);
-    try { setDetail(await getCloudArticleDetail(getSupabaseClient(), gate.ownerId, articleId)); }
+    try { setDetail(await getCloudArticleDetail(client, accessState.profile.id, articleId)); }
     catch (error) { setMessage(error instanceof Error ? error.message : "記事を読み込めませんでした。"); }
     finally { setBusy(false); }
   };
@@ -188,13 +175,13 @@ export function ArticleExportPage() {
   };
 
   const downloadBulkZip = async () => {
-    if (gate.kind !== "ready" || !desktop || bulkBusy || !bulkCandidates.length) return;
+    if (accessState.kind !== "ready" || !client || !desktop || bulkBusy || !bulkCandidates.length) return;
     if (bulkCandidates.length > 100) { setMessage("一度の一括保存は100記事以内にしてください。"); return; }
     setBulkBusy(true); setMessage("");
     try {
       const details: ArticleDetail[] = [];
       for (const item of bulkCandidates) {
-        details.push(await getCloudArticleDetail(getSupabaseClient(), gate.ownerId, item.id));
+        details.push(await getCloudArticleDetail(client, accessState.profile.id, item.id));
       }
       const files: ArticleExportFile[] = details.map((item, index) => ({
         name: `${String(index + 1).padStart(3, "0")}_${safeArticleBaseName(item)}.md`,
@@ -219,14 +206,18 @@ export function ArticleExportPage() {
     } finally { setBulkBusy(false); }
   };
 
-  if (gate.kind !== "ready") {
+  if (accessState.kind === "loading") return null;
+
+  if (accessState.kind !== "ready" || !client) {
     return (
       <main className="standalone-page"><section className="standalone-card">
         <p className="eyebrow">ARTICLE OUTPUT</p><h1>記事出力</h1>
-        {gate.kind === "loading" && <p className="route-notice">記事ライブラリを確認しています…</p>}
-        {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
-        {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-        <a className="route-back" href="/tools">← 機能一覧へ戻る</a>
+        {accessState.kind === "unavailable" && <p className="route-notice error">AASへ接続できませんでした。通信状態を確認してください。</p>}
+        {accessState.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
+        {accessState.kind === "pending" && <p className="route-notice">アカウント承認後に利用できます。</p>}
+        {(accessState.kind === "suspended" || accessState.kind === "disabled") && <p className="route-notice error">現在のアカウント状態では利用できません。</p>}
+        {accessState.kind === "entitlement_denied" && <p className="route-notice error">PWA利用権が必要です。</p>}
+        <Link className="route-back" href="/tools">← 機能一覧へ戻る</Link>
       </section></main>
     );
   }
@@ -234,10 +225,11 @@ export function ArticleExportPage() {
   return (
     <main className="creator-page">
       <header className="creator-head">
-        <div><p className="eyebrow">ARTICLE OUTPUT</p><h1>記事をコピー・PC保存</h1><p>{gate.aasId} / note装飾コピー・Markdown・TXT・HTML・JSON・ZIP</p></div>
-        <a className="route-back" href="/tools">← 機能一覧</a>
+        <div><p className="eyebrow">ARTICLE OUTPUT</p><h1>記事をコピー・PC保存</h1><p>{accessState.profile.aas_user_id} / note装飾コピー・Markdown・TXT・HTML・JSON・ZIP</p></div>
+        <Link className="route-back" href="/tools">← 機能一覧</Link>
       </header>
       <section className="creator-card">
+        {loadError && <div className="route-notice error" role="alert">{loadError}</div>}
         {!desktop && <div className="route-notice">ファイル保存・ZIP一括バックアップはPC版Chrome / Edge等から利用してください。スマホではテキストコピーを利用できます。</div>}
         {totalCount > articles.length && <div className="route-notice">現在の一括保存画面は先頭100記事までを対象にします。記事ライブラリ側では50件単位のページングで全記事を閲覧できます。</div>}
 

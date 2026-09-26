@@ -125,6 +125,8 @@ jobs:
         run: npm run lint
 
       - name: Build and regression tests
+        env:
+          NEXT_PUBLIC_AAS_BUILD_SHA: ${{ steps.target.outputs.sha }}
         run: npm test
 
       - name: Dependency audit

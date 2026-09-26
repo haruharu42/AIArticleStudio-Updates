@@ -12,7 +12,7 @@ import {
 } from "@/lib/app-release";
 import { getSupabaseClient } from "@/lib/supabase";
 
-const ALWAYS_PUBLIC_PREVIEW_PATHS = ["/auth/callback", "/logout", "/terms", "/privacy", "/ai-terms"];
+const ALWAYS_PUBLIC_PREVIEW_PATHS = ["/auth/callback", "/logout", "/terms", "/privacy", "/ai-terms", "/commercial-transactions", "/support"];
 
 function alwaysPublicPreviewPath(pathname: string): boolean {
   return ALWAYS_PUBLIC_PREVIEW_PATHS.some((path) => pathname === path || pathname.startsWith(path + "/"));
@@ -64,7 +64,11 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
     void refresh();
     const { data } = client.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
-      if (session) setGate({ kind: "loading" });
+      if (!session) {
+        clearEffectiveRelease();
+        setGate({ kind: "signed_out" });
+        return;
+      }
       window.setTimeout(() => { if (active) void refresh(); }, 0);
     });
     return () => {
@@ -76,14 +80,13 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
   if (audience === "public" || gate.kind === "public" || alwaysPublicPreviewPath(pathname) || gate.kind === "allowed") return <>{children}</>;
 
   if (gate.kind === "signed_out" && pathname === "/") return <>{children}</>;
+  if (gate.kind === "loading") return null;
 
   const message = gate.kind === "denied" && gate.state?.is_release_tester
     ? "現在は第1段階の管理者確認中です。管理者が第2段階へ進めると、この一般ユーザーテストアカウントで候補版を確認できます。"
     : gate.kind === "denied"
       ? "この候補版は管理者と、管理者が指定した一般ユーザーテスターだけが利用できます。"
-      : gate.kind === "error"
-        ? "候補版の利用権を確認できませんでした。"
-        : "候補版の利用権を確認しています。";
+      : "候補版の利用権を確認できませんでした。";
 
   return (
     <main className="standalone-page">
@@ -95,7 +98,7 @@ export function ReleaseAudienceGate({ children }: { children: ReactNode }) {
           <Link className="primary-action" href="/">ログイン画面へ</Link>
         ) : (
           <div className="status-actions">
-            <a className="primary-action" href="/logout">ログアウトして別のアカウントでログイン</a>
+            <Link className="primary-action" href="/logout">ログアウトして別のアカウントでログイン</Link>
             <Link className="route-back" href="/">← ホームへ戻る</Link>
           </div>
         )}

@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
+import { SalesReadinessPanel } from "@/components/admin-sales/sales-readiness-panel";
+import { SalesReleasePreflightPanel } from "@/components/admin-sales/sales-release-preflight-panel";
+import { SalesSelectSetting } from "@/components/admin-sales/sales-select-setting";
 
 import {
   loadAdminSalesSettings,
@@ -8,6 +14,12 @@ import {
   type SalesSettings,
 } from "@/lib/sales-settings";
 import { getSupabaseClient } from "@/lib/supabase";
+import {
+  SALES_PRESETS,
+  applySalesPresetToSettings,
+  inferSalesPreset,
+  type SalesPresetKey,
+} from "@/lib/sales-presets";
 
 type Gate =
   | { kind: "loading" }
@@ -25,61 +37,66 @@ const EMPTY: SalesSettings = {
   pwaMonthlyEnabled: false,
 };
 
-function Toggle({
-  checked,
-  onChange,
-  title,
-  description,
-}: {
-  checked: boolean;
-  onChange(value: boolean): void;
-  title: string;
-  description: string;
-}) {
-  return (
-    <label className="sales-setting-row">
-      <span><strong>{title}</strong><small>{description}</small></span>
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
-    </label>
-  );
-}
-
 export function SalesSettingsAdminPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState, client } = useSharedAccessState();
+  const [initError, setInitError] = useState("");
   const [settings, setSettings] = useState<SalesSettings>(EMPTY);
   const [saved, setSaved] = useState<SalesSettings>(EMPTY);
+  const [salesPreset, setSalesPreset] = useState<SalesPresetKey>("custom");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
+  const gate = useMemo<Gate>(() => {
+    if (accessState.kind === "ready") {
+      if (accessState.profile.role !== "admin" || accessState.profile.status !== "active") return { kind: "denied" };
+      if (initError) return { kind: "error", message: initError };
+      return { kind: "ready", aasId: accessState.profile.aas_user_id };
+    }
+    if (accessState.kind === "loading") return { kind: "loading" };
+    if (accessState.kind === "signed_out") return { kind: "signed_out" };
+    if (accessState.kind === "unavailable") {
+      return { kind: "error", message: "AASへ接続できませんでした。通信状態を確認してください。" };
+    }
+    return { kind: "denied" };
+  }, [accessState, initError]);
+
   useEffect(() => {
+    if (
+      accessState.kind !== "ready" ||
+      accessState.profile.role !== "admin" ||
+      accessState.profile.status !== "active" ||
+      !client
+    ) return;
     let active = true;
+    queueMicrotask(() => {
+      if (active) setInitError("");
+    });
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) { setGate({ kind: "signed_out" }); return; }
-        const { data: profile, error: profileError } = await client
-          .from("profiles")
-          .select("id,aas_user_id,role,status")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !profile || profile.id !== user.id) throw new Error("管理者プロフィールを確認できません。");
-        if (profile.role !== "admin" || profile.status !== "active") { setGate({ kind: "denied" }); return; }
         const next = await loadAdminSalesSettings(client);
         if (!active) return;
-        setSettings(next); setSaved(next); setGate({ kind: "ready", aasId: profile.aas_user_id });
+        setSettings(next);
+        setSaved(next);
+        setSalesPreset(inferSalesPreset(next));
       } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "販売設定を初期化できませんでした。" });
+        if (active) setInitError(error instanceof Error ? error.message : "販売設定を初期化できませんでした。");
       }
     };
     void boot();
     return () => { active = false; };
-  }, []);
+  }, [accessState, client]);
 
   const changed = JSON.stringify(settings) !== JSON.stringify(saved);
   const set = <K extends keyof SalesSettings,>(key: K, value: SalesSettings[K]) => {
     setSettings((current) => ({ ...current, [key]: value }));
+  };
+
+  const applySalesPreset = (preset: SalesPresetKey) => {
+    setSalesPreset(preset);
+    if (preset === "custom") return;
+    const next = applySalesPresetToSettings(settings, preset);
+    setSettings(next);
+    setMessage("販売モードプリセットを反映しました。保存するまで本番設定は変わりません。");
   };
 
   const save = async () => {
@@ -88,38 +105,50 @@ export function SalesSettingsAdminPage() {
     try {
       await updateAdminSalesSettings(getSupabaseClient(), settings);
       const next = await loadAdminSalesSettings(getSupabaseClient());
-      setSettings(next); setSaved(next);
+      setSettings(next); setSaved(next); setSalesPreset(inferSalesPreset(next));
       setMessage("販売・決済設定を保存しました。既存の契約・利用権は変更していません。");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "販売・決済設定を保存できませんでした。");
     } finally { setBusy(false); }
   };
 
+  if (gate.kind === "loading") return null;
+
   if (gate.kind !== "ready") return (
     <main className="standalone-page"><section className="standalone-card">
       <p className="eyebrow">SALES & BILLING</p><h1>販売・決済設定</h1>
-      {gate.kind === "loading" && <p className="route-notice">管理者権限を確認しています…</p>}
       {gate.kind === "signed_out" && <p className="route-notice error">先にログインしてください。</p>}
       {gate.kind === "denied" && <p className="route-notice error">active管理者のみ利用できます。</p>}
       {gate.kind === "error" && <p className="route-notice error">{gate.message}</p>}
-      <a className="route-back" href="/admin">← 管理ダッシュボード</a>
+      <Link className="route-back" href="/admin">← 管理ダッシュボード</Link>
     </section></main>
   );
 
   return (
     <main className="admin-page sales-settings-page">
       <header className="admin-head admin-dashboard-head">
-        <div><p className="eyebrow">SALES & BILLING</p><h1>販売・決済設定</h1><p>{gate.aasId} / PWA版の新規販売受付を管理します。</p></div>
-        <div className="admin-head-actions"><a className="route-back" href="/admin">← 管理ダッシュボード</a></div>
+        <div><p className="eyebrow">SALES & PROMOTION</p><h1>販売センター</h1><p>{gate.aasId} / AI Action Studio（AAS）のPWA新規販売受付を、プルダウン中心で管理します。</p></div>
+        <div className="admin-head-actions"><Link className="route-back" href="/admin/promotion">プロモーション作成</Link><Link className="route-back" href="/admin">← 管理ダッシュボード</Link></div>
       </header>
 
       <div className="route-notice">OFFにしても、既存の契約・利用期間・利用権は停止・取消しされません。新規受付だけを止めます。</div>
       {message && <div className="route-notice">{message}</div>}
 
+      <section className="admin-panel sales-quick-settings">
+        <div className="admin-panel-heading"><div><p className="eyebrow">QUICK SALES MODE</p><h2>販売モードを選ぶ</h2><p>まず運用方法を1つ選ぶだけで、下の受付設定をまとめて切り替えられます。</p></div></div>
+        <label className="sales-preset-field">
+          <span>販売モードプリセット</span>
+          <select value={salesPreset} onChange={(event) => applySalesPreset(event.target.value as SalesPresetKey)}>
+            {SALES_PRESETS.map((preset) => <option key={preset.key} value={preset.key}>{preset.label} — {preset.note}</option>)}
+          </select>
+          <small>プリセット選択だけでは保存されません。内容を確認してから最下部の「変更を保存」を押してください。</small>
+        </label>
+      </section>
+
       <section className="admin-panel sales-settings-section">
         <div className="admin-panel-heading"><div><p className="eyebrow">EXTERNAL SALES</p><h2>外部販売・利用コード</h2></div></div>
-        <Toggle checked={settings.externalSalesEnabled} onChange={(value) => set("externalSalesEnabled", value)} title="note / Brain / Tips等の外部販売" description="外部サービスで販売する運用を受付中として表示します。" />
-        <Toggle checked={settings.accessCodeEnabled} onChange={(value) => set("accessCodeEnabled", value)} title="利用コード受付" description="購入者へ渡した利用コード（既存の招待コード基盤）の新規登録を許可します。" />
+        <SalesSelectSetting checked={settings.externalSalesEnabled} onChange={(value) => set("externalSalesEnabled", value)} title="note / Brain / Tips等の外部販売" description="外部サービスで販売する運用を受付中として表示します。" />
+        <SalesSelectSetting checked={settings.accessCodeEnabled} onChange={(value) => set("accessCodeEnabled", value)} title="利用コード受付" description="購入者へ渡した利用コード（既存の招待コード基盤）の新規登録を許可します。" />
         <label className="sales-url-field">
           <span><strong>購入ページURL（note等）</strong><small>無料利用回数を使い切ったユーザーへ表示する購入先です。空欄なら購入ボタンは表示しません。HTTPSのみ設定できます。</small></span>
           <input
@@ -138,13 +167,16 @@ export function SalesSettingsAdminPage() {
 
       <section className="admin-panel sales-settings-section">
         <div className="admin-panel-heading"><div><p className="eyebrow">STRIPE</p><h2>PWA Stripe新規決済</h2></div></div>
-        <Toggle checked={settings.stripeCheckoutEnabled} onChange={(value) => set("stripeCheckoutEnabled", value)} title="Stripe新規購入受付" description="PWA向けStripeプラン共通のマスタースイッチです。OFFならCheckoutをサーバー側でも拒否します。" />
+        <SalesSelectSetting checked={settings.stripeCheckoutEnabled} onChange={(value) => set("stripeCheckoutEnabled", value)} title="Stripe新規購入受付" description="PWA向けStripeプラン共通のマスタースイッチです。OFFならCheckoutをサーバー側でも拒否します。" />
         <div className="sales-plan-grid">
-          <Toggle checked={settings.pwa7DayEnabled} onChange={(value) => set("pwa7DayEnabled", value)} title="PWA 7日利用パス" description="自動更新なしの7日券を表示・受付します。" />
-          <Toggle checked={settings.pwaMonthlyEnabled} onChange={(value) => set("pwaMonthlyEnabled", value)} title="PWA 月額プラン" description="PWA版の月額新規契約を表示・受付します。" />
+          <SalesSelectSetting checked={settings.pwa7DayEnabled} onChange={(value) => set("pwa7DayEnabled", value)} title="PWA 7日利用パス" description="自動更新なしの7日券を表示・受付します。" />
+          <SalesSelectSetting checked={settings.pwaMonthlyEnabled} onChange={(value) => set("pwaMonthlyEnabled", value)} title="PWA 月額プラン" description="PWA版の月額新規契約を表示・受付します。" />
         </div>
         {!settings.stripeCheckoutEnabled && <p className="sales-master-off">StripeマスタースイッチがOFFのため、個別プランをONにしても現在は購入できません。後日の販売準備として設定を保存できます。</p>}
       </section>
+
+      <SalesReadinessPanel settings={settings} hasUnsavedChanges={changed} />
+      <SalesReleasePreflightPanel settings={settings} hasUnsavedChanges={changed} />
 
       <section className="admin-panel sales-current-mode">
         <h2>現在の販売モード</h2>
@@ -155,7 +187,7 @@ export function SalesSettingsAdminPage() {
 
       <div className="sales-save-bar">
         <button type="button" className="primary-action" disabled={busy || !changed} onClick={() => void save()}>{busy ? "保存中…" : changed ? "変更を保存" : "保存済み"}</button>
-        {changed && <button type="button" className="secondary-action" disabled={busy} onClick={() => setSettings(saved)}>変更を元に戻す</button>}
+        {changed && <button type="button" className="secondary-action" disabled={busy} onClick={() => { setSettings(saved); setSalesPreset(inferSalesPreset(saved)); }}>変更を元に戻す</button>}
       </div>
     </main>
   );

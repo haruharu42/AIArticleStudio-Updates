@@ -4,9 +4,14 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { AasReferenceHeader } from "@/components/aas-reference-shell";
+import { NoteMembershipCockpit } from "@/components/note-operations/note-membership-cockpit";
+import { useSharedAccessState } from "@/components/access-state-provider";
+import { ActiveWorkspacePresetBadge } from "@/features/presets/active-workspace-preset-badge";
+import { useWorkspacePreset } from "@/features/presets/workspace-preset-provider";
 import { launchAiApp } from "@/lib/ai-app-links";
-import { APP_RELEASE_STATE_EVENT, readEffectiveRelease, releaseVersionAtLeast } from "@/lib/app-release";
+import { APP_RELEASE_STATE_EVENT } from "@/lib/app-release";
 import {
+  AAS_ADMIN_NOTE_PROFILE_PRESET,
   NOTE_ACCOUNT_GENRES,
   NOTE_ACCOUNT_STYLES,
   NOTE_AUDIENCE_PRESETS,
@@ -14,6 +19,8 @@ import {
   NOTE_OPERATION_GOALS,
   NOTE_SCHEDULE_TYPE_LABELS,
   NOTE_TONE_PRESETS,
+  applyAasAdminNoteProfilePreset,
+  applyRuntimeWorkspacePresetToNoteProfile,
   buildNoteAccountResearchPrompt,
   buildNoteProfileDraft,
   buildNoteScheduleResearchPrompt,
@@ -27,6 +34,7 @@ import {
   listNoteSchedule,
   loadNoteAiSchedulePlan,
   loadNoteOperationProfile,
+  isNoteArticleScheduleItem,
   parseNoteAiSchedulePlan,
   parseNoteOperationsImport,
   replaceNoteSchedule,
@@ -39,7 +47,17 @@ import {
   type NoteArticleOutputSnapshot,
   type NoteOperationProfile,
   type NoteScheduleItem,
-} from "@/lib/note-operations";
+} from "@/features/note";
+import {
+  createHref,
+  downloadText,
+  monthCells,
+  moveMonth,
+  noteOperationsGateFor,
+  notePerformanceLoopAvailable,
+  noteScheduleResponseStorageKey,
+  typeClass,
+} from "@/components/note-operations/note-operations-page-helpers";
 import { getSupabaseClient } from "@/lib/supabase";
 import {
   AI_PROVIDER_LABELS,
@@ -49,83 +67,16 @@ import {
   type UserWritingProfile,
 } from "@/lib/user-personalization";
 
-type Gate =
-  | { kind: "loading" }
-  | { kind: "signed_out" }
-  | { kind: "ready"; userId: string }
-  | { kind: "error"; message: string };
-
-type Tab = "start" | "profile" | "plan" | "calendar";
+type Tab = "start" | "profile" | "plan" | "calendar" | "membership";
 
 const NOTE_HOME_URL = "https://note.com/";
 const NOTE_PROFILE_OFFICIAL = "https://note.com/info/n/n27cb842c7737";
 const NOTE_PAID_OFFICIAL = "https://note.com/info/n/na5f43ec69740";
 const NOTE_RESERVATION_OFFICIAL = "https://note.com/info/n/nc84e9a40b092";
-const NOTE_PERFORMANCE_LOOP_MIN_RELEASE = "0.1.1";
-
-function notePerformanceLoopAvailable(): boolean {
-  if (typeof window === "undefined") return false;
-  const isGuardedPreview = window.location.hostname.includes("ai-article-studio-pwa-preview");
-  return isGuardedPreview || releaseVersionAtLeast(readEffectiveRelease()?.version, NOTE_PERFORMANCE_LOOP_MIN_RELEASE);
-}
-
-function downloadText(filename: string, text: string, type: string) {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
-function monthStart(value: string): string {
-  return /^\d{4}-\d{2}$/.test(value) ? value + "-01" : todayJstDateKey().slice(0, 7) + "-01";
-}
-
-function moveMonth(value: string, delta: number): string {
-  const [year, month] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1 + delta, 1));
-  return date.toISOString().slice(0, 7);
-}
-
-function monthCells(value: string): Array<{ date: string; current: boolean }> {
-  const start = monthStart(value);
-  const [year, month] = start.split("-").map(Number);
-  const first = new Date(Date.UTC(year, month - 1, 1));
-  const lead = first.getUTCDay();
-  const base = new Date(Date.UTC(year, month - 1, 1 - lead));
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(base);
-    date.setUTCDate(base.getUTCDate() + index);
-    return {
-      date: date.toISOString().slice(0, 10),
-      current: date.getUTCMonth() === month - 1,
-    };
-  });
-}
-
-function typeClass(item: NoteScheduleItem): string {
-  if (item.itemType === "paid_note") return "paid";
-  if (item.itemType === "free_note") return "free";
-  if (item.itemType === "review") return "review";
-  return "setup";
-}
-
-function createHref(item: NoteScheduleItem): string {
-  const params = new URLSearchParams({
-    publicationTarget: "note",
-    articleType: item.itemType === "paid_note" ? "paid" : "free",
-    theme: item.theme || "",
-    from: "note-operations",
-  });
-  return "/create?" + params.toString();
-}
-
 export function NoteOperationsPage() {
-  const [gate, setGate] = useState<Gate>({ kind: "loading" });
+  const { state: accessState, client } = useSharedAccessState();
+  const { preference: workspacePreference } = useWorkspacePreset();
+  const [initError, setInitError] = useState("");
   const [tab, setTab] = useState<Tab>("start");
   const [profile, setProfile] = useState<NoteOperationProfile | null>(null);
   const [schedule, setSchedule] = useState<NoteScheduleItem[]>([]);
@@ -138,51 +89,48 @@ export function NoteOperationsPage() {
   const [accountPrompt, setAccountPrompt] = useState("");
   const [schedulePrompt, setSchedulePrompt] = useState("");
   const [scheduleResponse, setScheduleResponse] = useState("");
+  const [scheduleResponseLoaded, setScheduleResponseLoaded] = useState(false);
   const [schedulePreview, setSchedulePreview] = useState<NoteAiSchedulePlan | null>(null);
   const [performanceLoopEnabled, setPerformanceLoopEnabled] = useState(false);
   const [articleOutput, setArticleOutput] = useState<NoteArticleOutputSnapshot | null>(null);
 
-  const reload = async (userId: string) => {
-    const client = getSupabaseClient();
-    const [nextProfile, nextSchedule, nextWritingProfile] = await Promise.all([
-      loadNoteOperationProfile(client, userId),
-      listNoteSchedule(client, userId),
-      loadWritingProfile(client, userId),
-    ]);
-    setProfile(nextProfile);
-    setSchedule(nextSchedule);
-    setWritingProfile(nextWritingProfile);
-    setSelectedAi(nextWritingProfile.preferredAi);
-  };
+  const gate = useMemo(() => noteOperationsGateFor(accessState, initError), [accessState, initError]);
 
   useEffect(() => {
+    if (accessState.kind !== "ready" || !client) return;
     let active = true;
+    const userId = accessState.profile.id;
+    queueMicrotask(() => {
+      if (active) setInitError("");
+    });
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const { data: { user }, error } = await client.auth.getUser();
-        if (!active) return;
-        if (error || !user) {
-          setGate({ kind: "signed_out" });
-          return;
+        const [nextProfile, nextSchedule, nextWritingProfile] = await Promise.all([
+          loadNoteOperationProfile(client, userId),
+          listNoteSchedule(client, userId),
+          loadWritingProfile(client, userId),
+        ]);
+        let savedScheduleResponse = "";
+        try {
+          savedScheduleResponse = window.localStorage.getItem(noteScheduleResponseStorageKey(userId)) ?? "";
+        } catch {
+          // Device storage is optional. The current session still works without it.
         }
-        const { data: account, error: profileError } = await client
-          .from("profiles")
-          .select("id,status")
-          .eq("id", user.id)
-          .single();
-        if (profileError || !account || account.id !== user.id || account.status !== "active") {
-          throw new Error("activeアカウントを確認できません。");
+        if (active) {
+          setProfile(nextProfile);
+          setSchedule(nextSchedule);
+          setWritingProfile(nextWritingProfile);
+          setSelectedAi(nextWritingProfile.preferredAi);
+          setScheduleResponse(savedScheduleResponse);
+          setScheduleResponseLoaded(true);
         }
-        await reload(user.id);
-        if (active) setGate({ kind: "ready", userId: user.id });
       } catch (error) {
-        if (active) setGate({ kind: "error", message: error instanceof Error ? error.message : "note運営を初期化できませんでした。" });
+        if (active) setInitError(error instanceof Error ? error.message : "note運営を初期化できませんでした。");
       }
     };
     void boot();
     return () => { active = false; };
-  }, []);
+  }, [accessState, client]);
 
   const referenceMonth = useMemo(
     () => targetMonth === currentJstMonth() ? targetMonth : previousJstMonth(targetMonth),
@@ -201,6 +149,20 @@ export function NoteOperationsPage() {
   }, []);
 
   useEffect(() => {
+    if (gate.kind !== "ready" || !scheduleResponseLoaded) return;
+    try {
+      const key = noteScheduleResponseStorageKey(gate.userId);
+      if (scheduleResponse) {
+        window.localStorage.setItem(key, scheduleResponse);
+      } else {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Ignore storage failures. Do not block schedule import.
+    }
+  }, [gate, scheduleResponse, scheduleResponseLoaded]);
+
+  useEffect(() => {
     if (gate.kind !== "ready" || !performanceLoopEnabled) return;
     let active = true;
     void loadNoteArticleOutputSnapshot(getSupabaseClient(), gate.userId, referenceMonth).then(
@@ -210,15 +172,36 @@ export function NoteOperationsPage() {
     return () => { active = false; };
   }, [gate, performanceLoopEnabled, referenceMonth]);
 
+  const articleSchedule = useMemo(
+    () => schedule.filter((item) => isNoteArticleScheduleItem(item)),
+    [schedule],
+  );
+
   const groupedByDate = useMemo(() => {
     const map = new Map<string, NoteScheduleItem[]>();
-    for (const item of schedule) {
+    for (const item of articleSchedule) {
       const list = map.get(item.scheduledDate) ?? [];
       list.push(item);
       map.set(item.scheduledDate, list);
     }
     return map;
-  }, [schedule]);
+  }, [articleSchedule]);
+
+  const previewPostingTimes = useMemo(() => {
+    if (!schedulePreview) return [] as string[];
+    const byDate = new Map<string, string[]>();
+    for (const item of schedulePreview.schedule) {
+      const times = byDate.get(item.scheduledDate) ?? [];
+      if (!times.includes(item.scheduledTime)) times.push(item.scheduledTime);
+      byDate.set(item.scheduledDate, times);
+    }
+    let result: string[] = [];
+    for (const times of byDate.values()) {
+      const sorted = [...times].sort();
+      if (sorted.length > result.length) result = sorted;
+    }
+    return result;
+  }, [schedulePreview]);
 
   const saveProfile = async () => {
     if (gate.kind !== "ready" || !profile) return;
@@ -283,11 +266,10 @@ export function NoteOperationsPage() {
         freshArticleOutput,
       );
       setSchedulePrompt(prompt);
-      setScheduleResponse("");
       setSchedulePreview(null);
       try {
         await navigator.clipboard.writeText(prompt);
-        setMessage(`${AI_PROVIDER_LABELS[selectedAi]}用の月間運用リサーチプロンプトをコピーしました。AIのJSON回答をAASへ貼り付けてください。`);
+        setMessage(`${AI_PROVIDER_LABELS[selectedAi]}用の月間運用リサーチプロンプトをコピーしました。AIが回答したら、回答全文をコピーしてAASへ戻ってください。`);
       } catch {
         setMessage("クリップボードへコピーできなかったため、下のプロンプト欄からコピーしてください。");
       }
@@ -312,23 +294,24 @@ export function NoteOperationsPage() {
     }
   };
 
-  const applyAiSchedule = async () => {
-    if (gate.kind !== "ready" || !schedulePreview) return;
+  const applySchedulePlan = async (plan: NoteAiSchedulePlan) => {
+    if (gate.kind !== "ready") return;
     setBusy(true);
     setMessage("");
     try {
       const client = getSupabaseClient();
-      const next = await replaceNoteScheduleMonth(client, gate.userId, targetMonth, schedulePreview.schedule);
+      const next = await replaceNoteScheduleMonth(client, gate.userId, targetMonth, plan.schedule);
       setSchedule(next);
+      setSchedulePreview(plan);
       setCalendarMonth(targetMonth);
       let historySaved = true;
       try {
-        await saveNoteAiSchedulePlan(client, gate.userId, schedulePreview);
+        await saveNoteAiSchedulePlan(client, gate.userId, plan);
       } catch {
         historySaved = false;
       }
       setMessage(historySaved
-        ? `${targetMonth.replace("-", "年")}月のAI運用スケジュールをAASへ反映しました。他の月の予定は変更していません。`
+        ? `${targetMonth.replace("-", "年")}月のAI運用スケジュールをAASへ反映しました。カレンダーで確認できます。`
         : `${targetMonth.replace("-", "年")}月の予定は反映できましたが、AI調査メモだけ保存できませんでした。予定自体は利用できます。`);
       setTab("calendar");
     } catch (error) {
@@ -338,13 +321,58 @@ export function NoteOperationsPage() {
     }
   };
 
+  const applyAiSchedule = async () => {
+    if (!schedulePreview) return;
+    await applySchedulePlan(schedulePreview);
+  };
+
+  const importAndApplyAiSchedule = async (text: string) => {
+    setMessage("");
+    try {
+      const plan = parseNoteAiSchedulePlan(text, targetMonth);
+      setScheduleResponse(text);
+      setSchedulePreview(plan);
+      await applySchedulePlan(plan);
+    } catch (error) {
+      setSchedulePreview(null);
+      setMessage(error instanceof Error ? error.message : "AIの運用スケジュールを読み込めませんでした。");
+    }
+  };
+
+  const pasteAndApplyAiSchedule = async () => {
+    try {
+      if (!navigator.clipboard?.readText) {
+        throw new Error("この端末ではクリップボードの自動読み込みを利用できません。回答全文を下の欄へ貼り付けてください。");
+      }
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) throw new Error("クリップボードに読み込めるAI回答がありません。AIの回答全文をコピーしてからお試しください。");
+      await importAndApplyAiSchedule(text);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "クリップボードからAI回答を読み込めませんでした。");
+    }
+  };
+
   const importAiScheduleFile = async (file: File) => {
     try {
       const text = await file.text();
-      previewAiSchedule(text);
+      await importAndApplyAiSchedule(text);
     } catch {
       setMessage("AIスケジュールファイルを読み込めませんでした。");
     }
+  };
+
+
+  const clearScheduleResponse = () => {
+    setScheduleResponse("");
+    setSchedulePreview(null);
+    if (gate.kind === "ready") {
+      try {
+        window.localStorage.removeItem(noteScheduleResponseStorageKey(gate.userId));
+      } catch {
+        // The UI state is already cleared even if browser storage is unavailable.
+      }
+    }
+    setMessage("貼り付けたAI回答をクリアしました。");
   };
 
 
@@ -407,6 +435,8 @@ export function NoteOperationsPage() {
     return () => { active = false; };
   }, [gate, targetMonth]);
 
+  if (gate.kind === "loading" || (gate.kind === "ready" && !profile)) return null;
+
   if (gate.kind !== "ready" || !profile) {
     return (
       <div className="note-ops-shell">
@@ -414,7 +444,6 @@ export function NoteOperationsPage() {
         <main className="note-ops-gate">
           <p className="eyebrow">NOTE OPERATIONS</p>
           <h1>note運営アシスタント</h1>
-          {gate.kind === "loading" && <p>アカウントと運営データを確認しています…</p>}
           {gate.kind === "signed_out" && <p>先にログインしてください。</p>}
           {gate.kind === "error" && <p>{gate.message}</p>}
           <Link href="/">← ホームへ戻る</Link>
@@ -431,7 +460,7 @@ export function NoteOperationsPage() {
           <div>
             <p className="eyebrow">NOTE OPERATIONS</p>
             <h1>note運営アシスタント</h1>
-            <p>アカウント準備からプロフィール、無料・有料noteの運用予定、毎日のToDoまでAASで管理します。</p>
+            <p>アカウント準備からプロフィール、無料・有料noteの運用予定、メンバーシップ相談、毎日のToDoまでAASで管理します。</p>
           </div>
           <Link href="/">ホームへ</Link>
         </header>
@@ -446,6 +475,7 @@ export function NoteOperationsPage() {
           <button className={tab === "profile" ? "active" : ""} onClick={() => setTab("profile")}>2. プロフィール</button>
           <button className={tab === "plan" ? "active" : ""} onClick={() => setTab("plan")}>3. 運用プラン</button>
           <button className={tab === "calendar" ? "active" : ""} onClick={() => setTab("calendar")}>4. カレンダー</button>
+          <button className={tab === "membership" ? "active" : ""} onClick={() => setTab("membership")}>5. メンバーシップ相談</button>
         </nav>
 
         {message && <div className="route-notice note-ops-message">{message}</div>}
@@ -462,7 +492,7 @@ export function NoteOperationsPage() {
               <article><b>3</b><div><strong>プロフィール文と自己紹介記事を準備</strong><p>noteでは投稿した記事をプロフィールとして表示できる仕組みがあります。AASでは入力した事実だけから下書きを作ります。</p><a href={NOTE_PROFILE_OFFICIAL} target="_blank" rel="noreferrer">note公式のプロフィール案内 ↗</a></div></article>
               <article><b>4</b><div><strong>無料noteで読者の入口を作る</strong><p>AASおすすめとして、最初は無料記事を軸に投稿習慣とテーマの反応を確認します。これは成果を保証するものではありません。</p></div></article>
               <article><b>5</b><div><strong>必要に応じて有料noteを組み合わせる</strong><p>有料記事は価格と無料で読める範囲をnote側で設定します。</p><a href={NOTE_PAID_OFFICIAL} target="_blank" rel="noreferrer">note公式の有料記事案内 ↗</a></div></article>
-              <article><b>6</b><div><strong>AASカレンダーで継続する</strong><p>投稿日時・無料/有料・週次振り返りをAASに保存します。AASカレンダー自体はプランを問わず使えます。note側の予約投稿はnoteプレミアム / note pro向け機能として案内されています。</p><a href={NOTE_RESERVATION_OFFICIAL} target="_blank" rel="noreferrer">note公式の予約投稿案内 ↗</a></div></article>
+              <article><b>6</b><div><strong>AASカレンダーで継続する</strong><p>AIが決めた「無料note作成」「有料note作成」の日付と時間だけをAASカレンダーへ保存します。AASカレンダー自体はプランを問わず使えます。note側の予約投稿はnoteプレミアム / note pro向け機能として案内されています。</p><a href={NOTE_RESERVATION_OFFICIAL} target="_blank" rel="noreferrer">note公式の予約投稿案内 ↗</a></div></article>
             </div>
             <div className="note-ready-checks">
               <label><input type="checkbox" checked={profile.accountReady} onChange={(event) => setProfile({ ...profile, accountReady: event.target.checked })} /> noteアカウントの作成が完了した</label>
@@ -474,8 +504,68 @@ export function NoteOperationsPage() {
 
         {tab === "profile" && (
           <section className="note-ops-panel">
-            <div className="note-ops-section-head"><div><span>PROFILE BUILDER</span><h2>初心者向け・選ぶだけプロフィール設計</h2></div></div>
-            <p className="note-ops-hint">まずプルダウンで近いものを選ぶだけで大丈夫です。「その他」を選んだ場合だけ自由入力できます。経験・資格・実績は、実際に事実として書ける内容だけ使用します。</p>
+            <div className="note-ops-section-head">
+              <div><span>PROFILE BUILDER</span><h2>初心者向け・選ぶだけプロフィール設計</h2></div>
+              <Link href="/account-design">note / Tips / Brain 共通設計へ ›</Link>
+            </div>
+            <p className="note-ops-hint">この画面はnote運営専用の既存設定です。3媒体をまとめて設計する場合は「note / Tips / Brain 共通設計」を使えます。まずプルダウンで近いものを選ぶだけで大丈夫です。「その他」を選んだ場合だけ自由入力できます。経験・資格・実績は、実際に事実として書ける内容だけ使用します。</p>
+
+            <ActiveWorkspacePresetBadge feature="note" />
+            {workspacePreference?.applyNote && (
+              <div className="note-shared-preset-apply">
+                <div>
+                  <strong>設定画面の共通プリセットをnote運営設定にも使う</strong>
+                  <small>経験・資格・背景、投稿頻度、投稿時間、準備完了チェックは変更しません。</small>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = applyRuntimeWorkspacePresetToNoteProfile(profile);
+                    setProfile(next);
+                    setMessage("共通プリセットをnoteプロフィール条件へ反映しました。内容を確認してから保存してください。");
+                  }}
+                >
+                  note設定へ反映
+                </button>
+              </div>
+            )}
+
+            {gate.isAdmin && (
+              <section className="note-aas-admin-preset" aria-labelledby="aas-note-admin-preset-title">
+                <div className="note-aas-admin-preset-head">
+                  <div>
+                    <span>ADMIN ONLY</span>
+                    <h3 id="aas-note-admin-preset-title">AAS運営用プロフィール設定</h3>
+                    <p>AI Article Studio自体のnote運営に使う管理者専用プリセットです。一般ユーザーには表示されません。</p>
+                  </div>
+                  <b>管理者限定</b>
+                </div>
+                <div className="note-aas-admin-preset-grid">
+                  <div><small>主ジャンル</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.genre}</strong></div>
+                  <div><small>運営スタイル</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.style}</strong></div>
+                  <div><small>想定読者</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.audience}</strong></div>
+                  <div><small>文章の雰囲気</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.tone}</strong></div>
+                  <div><small>収益化方針</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.monetization}</strong></div>
+                  <div><small>運営目的</small><strong>{AAS_ADMIN_NOTE_PROFILE_PRESET.goal}</strong></div>
+                </div>
+                <div className="note-aas-admin-topics">
+                  <small>AAS向けの主なテーマ</small>
+                  <div>{AAS_ADMIN_NOTE_PROFILE_PRESET.mainTopics.map((topic) => <span key={topic}>{topic}</span>)}</div>
+                </div>
+                <p className="note-aas-admin-warning">既存の「経験・資格・背景」、投稿時間、投稿頻度、準備完了チェックは変更しません。プリセット反映後も各項目を自由に編集でき、自動保存はされません。</p>
+                <button
+                  className="primary-action"
+                  type="button"
+                  onClick={() => {
+                    const next = applyAasAdminNoteProfilePreset(profile);
+                    setProfile(next);
+                    setMessage("AAS運営用の管理者プリセットを反映しました。内容を確認し、「設定をAASに保存」で保存してください。");
+                  }}
+                >
+                  AAS運営用設定を反映
+                </button>
+              </section>
+            )}
 
             <div className="note-profile-choice-grid">
               <label><span>① どのジャンルで運営したい？</span><select value={profile.accountGenre} onChange={(event) => setProfile({ ...profile, accountGenre: event.target.value as NoteOperationProfile["accountGenre"] })}>{NOTE_ACCOUNT_GENRES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select>{profile.accountGenre === "other" && <input value={profile.customGenre} maxLength={120} onChange={(event) => setProfile({ ...profile, customGenre: event.target.value })} placeholder="運営したいジャンルを入力" />}</label>
@@ -538,7 +628,7 @@ export function NoteOperationsPage() {
             <div className="note-ai-month-controls">
               <label>
                 <span>① 計画したい月</span>
-                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setScheduleResponse(""); setSchedulePreview(null); setArticleOutput(null); }} />
+                <input type="month" min={currentJstMonth()} value={targetMonth} onChange={(event) => { setTargetMonth(event.target.value || currentJstMonth()); setSchedulePreview(null); setArticleOutput(null); }} />
               </label>
               <div>
                 <span>② リサーチに使うAI</span>
@@ -558,14 +648,14 @@ export function NoteOperationsPage() {
               <div>
                 <span>週に何回投稿するか</span><span>1日に何回まで投稿するか</span><span>無料note / 有料noteの比率</span>
                 <span>有料noteを週何回にするか</span><span>投稿する曜日・時間帯</span><span>その月の記事テーマ</span>
-                <span>トレンド記事と長期記事の配分</span><span>SNS告知・週次振り返り</span>
+                <span>トレンド記事と長期記事の配分</span><span>無料note / 有料noteの作成日・時間</span>
                 {performanceLoopEnabled && <span>実際の作成本数に合わせた途中再計画</span>}
               </div>
             </div>
 
             <div className="note-ai-research-note">
               <strong>最新情報を毎回調査</strong>
-              <span>note公式、創作カレンダー、現在の企画・お題、カテゴリ/おすすめの仕組み、選択ジャンルの直近30日・90日・12か月を確認し、出典URLと日付をJSONへ入れるよう指示します。検索できない場合は最新情報を作らないルールです。</span>
+              <span>note公式、創作カレンダー、現在の企画・お題、カテゴリ/おすすめの仕組み、選択ジャンルの直近30日・90日・12か月を確認します。AIが決めるカレンダー予定は「無料note作成」「有料note作成」の2種類だけです。</span>
             </div>
 
             {performanceLoopEnabled && (
@@ -593,13 +683,32 @@ export function NoteOperationsPage() {
 
             {schedulePrompt && <details className="note-account-prompt"><summary>AIへ渡す月間スケジュール用プロンプトを確認</summary><textarea readOnly value={schedulePrompt} rows={18} onFocus={(event) => event.currentTarget.select()} /></details>}
 
-            <div className="note-ai-import-box">
-              <div><strong>③ AIのJSON回答をAASへ読み込む</strong><small>AIの回答全体を貼り付けるか、JSONファイルをアップロードしてください。</small></div>
-              <textarea value={scheduleResponse} onChange={(event) => setScheduleResponse(event.target.value)} placeholder={'{"schema":"aas-note-schedule-v2", ...}'} rows={10} />
-              <div className="note-data-actions">
-                <button type="button" disabled={!scheduleResponse.trim()} onClick={() => previewAiSchedule(scheduleResponse)}>読み込み・確認</button>
-                <label className="note-import-button">JSONファイルを読み込む<input type="file" accept=".json,.txt,application/json,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAiScheduleFile(file); event.currentTarget.value = ""; }} /></label>
+            <div className="note-ai-import-box note-ai-easy-import">
+              <div>
+                <strong>③ AIの回答をそのままAASへ反映</strong>
+                <small>JSONは不要です。ChatGPT / Gemini / Claudeの回答全文をそのままコピーしてください。AASが回答内の「無料note作成」「有料note作成」の予定表を自動で探します。</small>
               </div>
+              <div className="note-ai-easy-actions">
+                <button type="button" className="primary-action" disabled={busy} onClick={() => void pasteAndApplyAiSchedule()}>
+                  {busy ? "反映中…" : "コピーしたAI回答を読み込んで反映"}
+                </button>
+                <span>または</span>
+              </div>
+              <textarea
+                value={scheduleResponse}
+                onChange={(event) => setScheduleResponse(event.target.value)}
+                placeholder={"ここにAIの回答全文をそのまま貼り付けてください。前後に説明文があっても大丈夫です。"}
+                rows={10}
+              />
+              <div className="note-data-actions">
+                <button type="button" className="primary-action" disabled={busy || !scheduleResponse.trim()} onClick={() => void importAndApplyAiSchedule(scheduleResponse)}>
+                  貼り付けた回答をそのまま反映
+                </button>
+                <button type="button" disabled={!scheduleResponse.trim()} onClick={() => previewAiSchedule(scheduleResponse)}>反映前に内容だけ確認</button>
+                <button type="button" className="note-clear-response-button" disabled={!scheduleResponse} onClick={clearScheduleResponse}>貼り付け内容をクリア</button>
+                <label className="note-import-button">ファイルから反映<input type="file" accept=".json,.txt,application/json,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAiScheduleFile(file); event.currentTarget.value = ""; }} /></label>
+              </div>
+              <p className="note-data-note">AIにはAASへ貼る予定表だけを返すよう指示します。貼り付けた内容はこの端末でアカウント別に保存され、「貼り付け内容をクリア」を押すまで再読み込みやAI再実行でも消えません。対象月が今月の場合、過去・完了・スキップ履歴は残し、今日以降の未実行記事予定だけを入れ替えます。</p>
             </div>
 
             {schedulePreview && (
@@ -610,6 +719,7 @@ export function NoteOperationsPage() {
                   <article><small>有料note/週</small><strong>{schedulePreview.recommendation.paidPostsPerWeek}</strong></article>
                   <article><small>無料 / 有料</small><strong>{schedulePreview.recommendation.freePosts} / {schedulePreview.recommendation.paidPosts}</strong></article>
                   <article><small>1日最大</small><strong>{schedulePreview.recommendation.maxPostsPerDay}</strong></article>
+                  <article className="note-plan-times"><small>投稿時間</small><strong>{previewPostingTimes.length ? previewPostingTimes.join(" / ") : "—"}</strong></article>
                 </div>
 
                 {schedulePreview.researchSummary && <div className="note-ai-plan-text"><strong>最新動向</strong><p>{schedulePreview.researchSummary}</p></div>}
@@ -628,10 +738,13 @@ export function NoteOperationsPage() {
 
                 {schedulePreview.sources.length > 0 && <details className="note-ai-plan-sources"><summary>AIが参照した情報源（{schedulePreview.sources.length}件）</summary>{schedulePreview.sources.map((source) => <div key={source.url}><strong>{source.title || "出典"}</strong><span>{source.publishedAt}</span><code>{source.url}</code>{source.whyUsed && <p>{source.whyUsed}</p>}</div>)}</details>}
 
-                <div className="note-data-actions">
-                  <button type="button" onClick={() => void copyAiScheduleJson()}>AAS用JSONをコピー</button>
-                  <button type="button" onClick={() => downloadText(`aas-note-schedule-${schedulePreview.targetMonth}.json`, exportNoteAiSchedulePlanJson(schedulePreview), "application/json;charset=utf-8")}>JSONファイルで保存</button>
-                </div>
+                <details className="note-profile-advanced">
+                  <summary>上級者向け：JSONバックアップ</summary>
+                  <div className="note-data-actions">
+                    <button type="button" onClick={() => void copyAiScheduleJson()}>AAS用JSONをコピー</button>
+                    <button type="button" onClick={() => downloadText(`aas-note-schedule-${schedulePreview.targetMonth}.json`, exportNoteAiSchedulePlanJson(schedulePreview), "application/json;charset=utf-8")}>JSONファイルで保存</button>
+                  </div>
+                </details>
                 <button type="button" className="primary-action note-ai-apply-button" disabled={busy} onClick={() => void applyAiSchedule()}>
                   {targetMonth === currentJstMonth() ? "今日以降の予定を組み直して反映" : "この月のAASスケジュールに反映"}
                 </button>
@@ -648,6 +761,16 @@ export function NoteOperationsPage() {
               </div>
             </details>
           </section>
+        )}
+
+        {tab === "membership" && (
+          <NoteMembershipCockpit
+            userId={gate.userId}
+            profile={profile}
+            selectedAi={selectedAi}
+            onMessage={setMessage}
+            onOpenCalendar={() => setTab("calendar")}
+          />
         )}
 
         {tab === "calendar" && (
@@ -672,7 +795,7 @@ export function NoteOperationsPage() {
 
             <div className="note-schedule-list">
               <h3>予定一覧</h3>
-              {schedule.length === 0 ? <p>まだ予定がありません。「運用プラン」から作成してください。</p> : schedule.slice(0, 120).map((item, index) => (
+              {articleSchedule.length === 0 ? <p>無料note・有料noteの作成予定はまだありません。「運用プラン」からAIに作成してもらってください。</p> : articleSchedule.slice(0, 120).map((item, index) => (
                 <article key={item.id ?? item.scheduledDate + item.scheduledTime + index} className={item.status === "done" ? "done" : ""}>
                   <div className={"note-schedule-type " + typeClass(item)}>{NOTE_SCHEDULE_TYPE_LABELS[item.itemType]}</div>
                   <div>

@@ -1,6 +1,10 @@
 "use client";
 
 import Link from "next/link";
+
+import { SharedMobileBottomNav } from "@/components/shared-mobile-bottom-nav";
+import { NotificationHeaderButton } from "@/components/notification-header-button";
+import type { MobileNavItemKey } from "@/lib/mobile-nav-preference";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -14,24 +18,34 @@ import {
   type DesktopNavItemKey,
 } from "@/lib/desktop-nav-preference";
 
-export type ReferenceNavKey = "home" | "create" | "library" | "ranking" | "profile";
+export type ReferenceNavKey = "home" | MobileNavItemKey | "";
+
+const AAS_BUILD_SHA = (process.env.NEXT_PUBLIC_AAS_BUILD_SHA ?? "dev").slice(0, 7);
 
 export function AasReferenceHeader({
   hasUnreadNotifications = false,
+  notificationHref = "/missions",
+  notificationLabel = "ミッション・お知らせ",
 }: {
   hasUnreadNotifications?: boolean;
+  notificationHref?: string;
+  notificationLabel?: string;
 } = {}) {
   return (
     <header className="aas-reference-header">
-      <Link className="aas-reference-brand" href="/" aria-label="AI Article Studio ホーム">
+      <Link className="aas-reference-brand" href="/" aria-label="AI Action Studio ホーム">
         <strong>AAS</strong>
         <span>
-          <b>AI Article Studio</b>
-          <small>書くを、もっとシンプルに。</small>
+          <b>AI Action Studio</b>
+          <small>AIで副業を、もっと簡単に。</small>
         </span>
       </Link>
+      <span className="aas-reference-build" aria-label={`AAS build ${AAS_BUILD_SHA}`}>
+        build {AAS_BUILD_SHA}
+      </span>
       <nav className="aas-reference-header-actions" aria-label="クイックメニュー">
-        <Link href="/missions" aria-label="ミッション・お知らせ"><span aria-hidden="true">♧</span>{hasUnreadNotifications ? <i aria-hidden="true" /> : null}</Link>
+        <NotificationHeaderButton />
+        <Link href={notificationHref} aria-label={notificationLabel}><span aria-hidden="true">♧</span>{hasUnreadNotifications ? <i aria-hidden="true" /> : null}</Link>
         <Link href="/settings" aria-label="メニュー"><span aria-hidden="true">☰</span></Link>
       </nav>
     </header>
@@ -153,9 +167,11 @@ function DesktopNavCustomizer({
 
 export function AasReferenceBottomNav({
   active,
+  onHome,
   onLibrary,
 }: {
   active: ReferenceNavKey;
+  onHome?: () => void;
   onLibrary?: () => void;
 }) {
   const [desktopItems, setDesktopItems] = useState<DesktopNavItemKey[]>([...DEFAULT_DESKTOP_NAV_ITEMS]);
@@ -178,16 +194,15 @@ export function AasReferenceBottomNav({
 
   return (
     <>
-      <nav className="aas-reference-bottom-nav aas-reference-mobile-main-nav" aria-label="メインナビゲーション">
-        <NavItem active={active === "home"} href="/" icon="⌂" label="ホーム" />
-        <NavItem active={active === "create"} href="/create" icon="＋" label="作成" />
-        <NavItem active={active === "library"} href="/?section=library" icon="▤" label="ライブラリ" onClick={onLibrary} />
-        <NavItem active={active === "ranking"} href="/ranking" icon="♛" label="ランキング" />
-        <NavItem active={active === "profile"} href="/profile" icon="♙" label="プロフィール" />
-      </nav>
+      <SharedMobileBottomNav
+        activeKey={active}
+        onHome={onHome}
+        onLibrary={onLibrary}
+        className="aas-reference-mobile-main-nav"
+      />
 
       <nav className="aas-reference-desktop-nav" aria-label="PCメインナビゲーション">
-        <NavItem active={active === "home"} href="/" icon="⌂" label="ホーム" />
+        <NavItem active={active === "home"} href="/" icon="⌂" label="ホーム" onClick={onHome} />
         {desktopItems.map((key) => {
           const item = desktopNavItemFor(key);
           const isActive = key === active;
@@ -202,7 +217,7 @@ export function AasReferenceBottomNav({
             />
           );
         })}
-        <NavItem active={false} href="/settings" icon="⚙" label="設定" />
+        <NavItem active={active === "settings"} href="/settings" icon="⚙" label="設定" />
         <button
           className={customizing ? "customize active" : "customize"}
           type="button"

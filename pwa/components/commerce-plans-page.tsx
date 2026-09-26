@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+import { useSharedAccessState } from "@/components/access-state-provider";
+import { CommerceAccessCodePanel } from "@/components/commerce/commerce-access-code-panel";
 import {
   COMMERCE_PLAN_COPY,
   beginCheckout,
@@ -11,47 +14,35 @@ import {
   type CommercePlanCode,
   type PublicCommerceConfig,
 } from "@/lib/commerce";
-import { loadAccessState, type AccessState } from "@/lib/phase6-access";
-import { redeemPwaInvite } from "@/lib/phase9-invite";
 import {
   fetchPublicSalesSettings,
   planSalesEnabled,
+  safeExternalSalesUrl,
   type SalesSettings,
 } from "@/lib/sales-settings";
-import { getSupabaseClient } from "@/lib/supabase";
-
-type PageState = AccessState | { kind: "loading" } | { kind: "unavailable" };
 
 export function CommercePlansPage() {
-  const [state, setState] = useState<PageState>({ kind: "loading" });
+  const { state } = useSharedAccessState();
   const [config, setConfig] = useState<PublicCommerceConfig | null>(null);
   const [salesSettings, setSalesSettings] = useState<SalesSettings | null>(null);
   const [message, setMessage] = useState("");
   const [busyPlan, setBusyPlan] = useState<CommercePlanCode | null>(null);
   const [accepted, setAccepted] = useState(false);
-  const [inviteCode, setInviteCode] = useState("");
-  const [inviteBusy, setInviteBusy] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState("");
-  const [inviteSuccess, setInviteSuccess] = useState(false);
   const checkoutInFlight = useRef(false);
-  const inviteInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
     void Promise.all([
       fetchCommerceConfig(),
       fetchPublicSalesSettings(),
-      loadAccessState(getSupabaseClient()).catch(() => ({ kind: "unavailable" }) as const),
     ]).then(
-      ([nextConfig, nextSalesSettings, nextState]) => {
+      ([nextConfig, nextSalesSettings]) => {
         if (!active) return;
         setConfig(nextConfig);
         setSalesSettings(nextSalesSettings);
-        setState(nextState);
       },
       (error) => {
         if (!active) return;
-        setState({ kind: "unavailable" });
         setMessage(error instanceof Error ? error.message : "販売情報を取得できませんでした。");
       },
     );
@@ -65,10 +56,12 @@ export function CommercePlansPage() {
     return null;
   }, [state]);
 
-  const inviteProfile = useMemo(() => {
-    if (state.kind === "entitlement_denied" || state.kind === "pending") return state.profile;
-    return null;
-  }, [state]);
+  const externalPurchaseUrl = useMemo(
+    () => salesSettings?.externalSalesEnabled
+      ? safeExternalSalesUrl(salesSettings.externalSalesUrl)
+      : "",
+    [salesSettings],
+  );
 
   const visiblePlans = useMemo(
     () => (config?.plans ?? []).filter(
@@ -104,41 +97,10 @@ export function CommercePlansPage() {
     }
   };
 
-  const redeemInvite = async () => {
-    if (inviteInFlight.current) return;
-    if (!salesSettings?.accessCodeEnabled) {
-      setInviteMessage("現在、利用コードの新規受付は停止しています。");
-      return;
-    }
-    inviteInFlight.current = true;
-    setInviteBusy(true);
-    setInviteMessage("");
-    setInviteSuccess(false);
-    try {
-      const result = await redeemPwaInvite(getSupabaseClient(), inviteCode);
-      const nextState = await loadAccessState(getSupabaseClient());
-      setState(nextState);
-      setInviteCode("");
-      setInviteSuccess(true);
-      setInviteMessage(
-        nextState.kind === "ready"
-          ? "利用コードを適用し、PWA利用権を有効化しました。AI記事スタジオを利用できます。"
-          : result.profileStatus === "active"
-            ? "利用コードを適用しました。利用権を再確認してください。"
-            : "利用コードを登録しました。管理者のアカウント承認後に利用できます。",
-      );
-    } catch (error) {
-      setInviteMessage(error instanceof Error ? error.message : "利用コードの登録に失敗しました。");
-    } finally {
-      inviteInFlight.current = false;
-      setInviteBusy(false);
-    }
-  };
-
   return (
     <main className="commerce-page">
       <section className="commerce-hero">
-        <Link href="/" className="commerce-back">← AI記事スタジオへ戻る</Link>
+        <Link href="/" className="commerce-back">← AI Action Studioへ戻る</Link>
         <p className="eyebrow">PLANS</p>
         <h1>利用プラン</h1>
         <p>ログイン後、PWA利用権がない一般ユーザーにはこの画面を案内します。現在受付中のPWA購入方法または利用コードが表示されます。</p>
@@ -150,45 +112,27 @@ export function CommercePlansPage() {
       {message && <p className="commerce-message" role="status">{message}</p>}
 
       {salesSettings?.externalSalesEnabled && (
-        <section className="commerce-empty">
-          <h2>外部販売を受付中です</h2>
-          <p>{salesSettings.accessCodeEnabled
-            ? "現在は外部販売ページで購入後、案内された利用コードをAASへ登録する運用に対応しています。"
-            : "現在は外部販売ページで販売を受付中です。購入後の利用方法は販売ページの案内に従ってください。"}</p>
-        </section>
-      )}
-
-      {salesSettings?.accessCodeEnabled && inviteProfile && inviteProfile.role === "user" && (
-        <section className="commerce-invite" aria-labelledby="commerce-invite-title">
-          <div>
-            <p className="eyebrow">ACCESS CODE</p>
-            <h2 id="commerce-invite-title">利用コードをお持ちの方</h2>
-            <p>購入後に案内された利用コードを、このAASアカウントへ登録できます。内部では既存の安全な招待コード基盤を利用します。</p>
-            <small>旧表記：招待コードをお持ちの方 / 「招待コードを登録」 / AAS ID: {inviteProfile.aas_user_id}</small>
-          </div>
-          <div className="commerce-invite-form">
-            <label>
-              <span>利用コード</span>
-              <input
-                value={inviteCode}
-                onChange={(event) => setInviteCode(event.target.value)}
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                autoComplete="off"
-                inputMode="text"
-              />
-            </label>
-            <button type="button" disabled={inviteBusy || !inviteCode.trim()} onClick={() => void redeemInvite()}>
-              {inviteBusy ? "確認中…" : "利用コードを登録"}
-            </button>
-          </div>
-          {inviteMessage && (
-            <p className={inviteSuccess ? "commerce-invite-message success" : "commerce-invite-message error"} role="status">
-              {inviteMessage}
-              {inviteSuccess && state.kind === "ready" && <> <Link href="/">ホームへ進む</Link></>}
-            </p>
+        <section className="commerce-empty commerce-external-sales">
+          <h2>{externalPurchaseUrl ? "外部販売を受付中です" : "外部販売ページを準備中です"}</h2>
+          <p>{externalPurchaseUrl
+            ? salesSettings.accessCodeEnabled
+              ? "外部販売ページで購入後、案内された利用コードをAASへ登録できます。"
+              : "外部販売ページで販売を受付中です。購入後の利用方法は販売ページの案内に従ってください。"
+            : "外部販売の受付設定は有効ですが、現在は購入ページURLが未設定のため、この画面から購入先へは移動できません。"}</p>
+          {externalPurchaseUrl && (
+            <a
+              className="commerce-external-purchase"
+              href={externalPurchaseUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              外部販売ページで購入する ↗
+            </a>
           )}
         </section>
       )}
+
+      <CommerceAccessCodePanel enabled={Boolean(salesSettings?.accessCodeEnabled)} />
 
       {visiblePlans.length > 0 && (
         <section className="commerce-grid" aria-label="料金プラン">

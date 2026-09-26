@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useSharedAccessState } from "@/components/access-state-provider";
 import { Phase11CreatePage } from "@/components/phase11-create-page";
-import { loadCoreAccessState } from "@/lib/access-control";
-import { getSupabaseClient } from "@/lib/supabase";
+import { loadArticleWizardProgress } from "@/lib/phase11-wizard-progress";
 import {
   AI_PLAN_LABELS,
   AI_PROVIDER_LABELS,
@@ -25,28 +25,34 @@ type SetupState =
   | { kind: "error"; message: string };
 
 export function CreateAiSetup() {
+  const { state: accessState, client } = useSharedAccessState();
   const [state, setState] = useState<SetupState>({ kind: "loading" });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
+    if (accessState.kind === "loading") return;
+    if (accessState.kind !== "ready" || !client) {
+      queueMicrotask(() => setState({ kind: "bypass" }));
+      return;
+    }
+
     let active = true;
     setRuntimeWritingProfile(null);
 
     const boot = async () => {
       try {
-        const client = getSupabaseClient();
-        const access = await loadCoreAccessState(client);
+        const writingProfile = await loadWritingProfile(client, accessState.profile.id);
         if (!active) return;
-        if (access.kind !== "ready") {
-          setState({ kind: "bypass" });
-          return;
-        }
 
-        const writingProfile = await loadWritingProfile(client, access.user.id);
-        if (!active) return;
+        // Every new article starts by confirming the AI/provider plan so the prompt
+        // matches the AI the user will actually use. Resume flows must not interrupt
+        // in-progress work, so only an existing wizard draft bypasses this first step.
+        setRuntimeWritingProfile(writingProfile);
+        const wizardProgress = loadArticleWizardProgress(accessState.profile.id);
         setState({ kind: "setup", profile: writingProfile });
+        setConfirmed(Boolean(wizardProgress));
       } catch (error) {
         if (active) {
           setState({
@@ -61,21 +67,11 @@ export function CreateAiSetup() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [accessState, client]);
 
   if (state.kind === "bypass") return <Phase11CreatePage />;
 
-  if (state.kind === "loading") {
-    return (
-      <main className="creator-page beginner-creator-page ai-setup-page">
-        <section className="creator-card ai-setup-card">
-          <p className="eyebrow">AI SETUP</p>
-          <h1>使用AIを確認しています</h1>
-          <p className="panel-muted">あなたのAI設定を安全に読み込んでいます…</p>
-        </section>
-      </main>
-    );
-  }
+  if (state.kind === "loading") return null;
 
   if (state.kind === "error") {
     return (
@@ -117,10 +113,11 @@ export function CreateAiSetup() {
   };
 
   const confirm = async () => {
+    if (!client) return;
     setBusy(true);
     setMessage("");
     try {
-      const saved = await saveWritingProfile(getSupabaseClient(), profile);
+      const saved = await saveWritingProfile(client, profile);
       setRuntimeWritingProfile(saved);
       setState({ kind: "setup", profile: saved });
       setConfirmed(true);
@@ -136,8 +133,8 @@ export function CreateAiSetup() {
       <header className="creator-head ai-setup-head">
         <div>
           <p className="eyebrow">AI SETUP</p>
-          <h1>最初に使用するAIを選びます</h1>
-          <p>選択したAIと利用プランに合わせて、AASが記事プロンプトの指示構造を調整します。</p>
+          <h1>使用するAIを選びます</h1>
+          <p>新しい記事を作る最初に、今回使うAIと無料版・有料版を確認します。途中作業を復元する場合は、この確認を飛ばして同じ工程へ戻ります。</p>
         </div>
         <Link className="route-back" href="/">← ホーム</Link>
       </header>
@@ -170,7 +167,7 @@ export function CreateAiSetup() {
           <span className="ai-setup-number">2</span>
           <div>
             <h2>利用プラン</h2>
-            <p>モデル名を固定せず、無料版・有料版それぞれで扱いやすい指示量に調整します。</p>
+            <p>モデル名は固定せず、無料版は重要条件を優先した簡潔な指示、有料版は構成・推敲・整合性確認まで含む詳細な指示へ調整します。</p>
           </div>
         </div>
         <div className="ai-plan-grid" role="radiogroup" aria-label="利用プラン">
