@@ -7,6 +7,7 @@ import {
   hasMembershipMetrics,
   membershipMetricsStorageKey,
   parseMembershipMetricsEntries,
+  parseMembershipMetricsEntry,
   upsertMembershipMetricsEntry,
   type NoteMembershipMetricsEntry,
 } from "@/lib/note-membership-metrics";
@@ -108,10 +109,15 @@ export function NoteMembershipMetricsPanel({
       onMessage("会員数・加入・解約・売上・投稿数・運営時間・メモのどれかを入力してください。");
       return;
     }
-    const next = upsertMembershipMetricsEntry(entries, draft);
+    const validated = parseMembershipMetricsEntry(draft);
+    if (!validated) {
+      onMessage("対象月または数値を確認してください。負の値や大きすぎる値は保存できません。");
+      return;
+    }
+    const next = upsertMembershipMetricsEntry(entries, validated);
     persist(next);
-    setDraft(emptyEntry(draft.month));
-    onMessage(draft.month + " のメンバーシップ実績を保存しました。");
+    setDraft(emptyEntry(validated.month));
+    onMessage(validated.month + " のメンバーシップ実績を保存しました。");
   };
 
   const remove = (month: string) => {
