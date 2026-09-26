@@ -588,15 +588,17 @@ test("note operation file transfer helpers are isolated from scheduling and pers
 
 
 test("note membership cockpit covers design launch AI handoff promotion operation and grounded improvement metrics", async () => {
-  const [page, cockpit, advisor, metricsPanel, cockpitLib, metricsLib, knowledge, draftLib, css] = await Promise.all([
+  const [page, cockpit, advisor, metricsPanel, createPage, cockpitLib, metricsLib, knowledge, draftLib, createLib, css] = await Promise.all([
     readPwa("components/note-operations-page.tsx"),
     readPwa("components/note-operations/note-membership-cockpit.tsx"),
     readPwa("components/note-operations/note-membership-advisor.tsx"),
     readPwa("components/note-operations/note-membership-metrics-panel.tsx"),
+    readPwa("components/phase11-create-page.tsx"),
     readPwa("lib/note-membership-cockpit.ts"),
     readPwa("lib/note-membership-metrics.ts"),
     readPwa("lib/note-membership-advisor.ts"),
     readPwa("lib/article-create-draft.ts"),
+    readPwa("lib/phase11-create.ts"),
     readPwa("app/phase38-note-operations.css"),
   ]);
 
@@ -651,10 +653,23 @@ test("note membership cockpit covers design launch AI handoff promotion operatio
   assert.match(cockpitLib, /実績データがないため、数値に基づく原因断定はしない/);
   assert.match(cockpitLib, /membershipArticleHref/);
   assert.match(cockpitLib, /from: "note-membership"/);
+  assert.match(cockpitLib, /membershipArticleKind: mode/);
   assert.match(cockpitLib, /articleType: "free"/);
 
   assert.match(draftLib, /source === "note-membership"/);
+  assert.match(draftLib, /articleCreationContextFromParams/);
+  assert.match(draftLib, /membershipArticleKind/);
+  assert.match(draftLib, /rawKind === "member" \|\| rawKind === "announcement" \|\| rawKind === "qa"/);
   assert.match(draftLib, /メンバー限定公開の設定はnote側で行います/);
+
+  assert.match(createPage, /initialArticleCreationContextFromLocation/);
+  assert.match(createPage, /const \[creationContext\] = useState/);
+  assert.match(createPage, /activePresetId,[\s\S]*?creationContext/);
+
+  assert.match(createLib, /export type ArticleCreationContext/);
+  assert.match(createLib, /creation_source: creationContext\?\.source \?\? null/);
+  assert.match(createLib, /note_membership_article_kind/);
+  assert.match(createLib, /creationContext\?\.source === "note-membership"/);
 
   assert.match(metricsLib, /aas\.note\.membership\.metrics\.v1/);
   assert.match(metricsLib, /NOTE_MEMBERSHIP_METRICS_MAX_ENTRIES = 36/);
@@ -687,7 +702,7 @@ test("note membership cockpit covers design launch AI handoff promotion operatio
   assert.match(css, /@media \(max-width: 560px\)[\s\S]*?\.note-membership-metrics-grid/);
 
   assert.doesNotMatch(
-    `${page}\n${cockpit}\n${advisor}\n${metricsPanel}\n${cockpitLib}\n${metricsLib}\n${knowledge}`,
+    `${page}\n${cockpit}\n${advisor}\n${metricsPanel}\n${createPage}\n${cockpitLib}\n${metricsLib}\n${knowledge}\n${draftLib}\n${createLib}`,
     /service[_-]?role|sb_secret_|sk_(?:live|test)_|whsec_/i,
   );
 });
