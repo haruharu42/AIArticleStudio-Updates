@@ -141,6 +141,11 @@
   justify-content: center;
   gap: 8px;
 }
+.auth-page + .commerce-public-shortcuts,
+.status-page + .commerce-public-shortcuts {
+  margin-top: 16px;
+}
+
 .commerce-public-shortcuts a {
   border: 1px solid #d2dfed;
   border-radius: 999px;
